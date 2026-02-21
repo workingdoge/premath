@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-- Core crates live in `crates/`: `premath-kernel` (laws/gate/witnesses), `premath-tusk` (runtime identity/descent/witness envelope), `premath-bd` (JSONL memory), `premath-jj`, `premath-surreal`, and `premath-cli`.
+- Core crates live in `crates/`: `premath-kernel` (laws/gate/witnesses), `premath-tusk` (runtime identity/descent/witness envelope), `premath-bd` (JSONL memory), `premath-jj`, `premath-surreal` (query/index adapters), `premath-ux` (frontend/query composition surface), and `premath-cli`.
 - Specs are lifecycle-scoped:
   - `specs/premath/draft/` for promoted contract specs
   - `specs/premath/raw/` for exploratory/informational specs
@@ -60,6 +60,7 @@
 - `cargo run --package premath-cli -- <args>` — run CLI commands locally.
 - `cargo run --package premath-cli -- mock-gate --json` — emit a mock Gate witness envelope.
 - `cargo run --package premath-cli -- tusk-eval --identity <run_identity.json> --descent-pack <descent_pack.json> --json` — evaluate a Tusk descent pack and emit envelope + glue result.
+- `cargo run --package premath-cli -- observe --mode latest --json` — query Observation Surface v0 through the UX composition layer.
 
 ## CI Workflow Instructions
 

@@ -108,14 +108,18 @@ Runtime crates are split by responsibility:
   - Canonical memory/storage model (`Issue`, `Dependency`, JSONL, `MemoryStore`).
   - No orchestration with VCS or query backends.
 - `crates/premath-surreal`:
-  - Query/index cache over `MemoryStore` projections.
+  - Query/index adapters (issue graph cache + observation-surface indexing).
+- `crates/premath-ux`:
+  - UX composition layer over query adapters (`latest`, `needs_attention`,
+    `instruction`, `projection` views).
 - `crates/premath-jj`:
   - JJ snapshot/status adapter.
 - `crates/premath-cli`:
-  - Composition point for workflows and verification commands.
+  - Composition point for workflows, verification commands, and UX queries.
 
 This keeps the kernel backend-generic while allowing Beads-style workflows to
-compose runtime (`tusk`) + storage (`bd`) + query (`surreal`) + versioning (`jj`) at the edges.
+compose runtime (`tusk`) + storage (`bd`) + query adapters (`surreal`) + UX
+composition (`ux`) + versioning (`jj`) at the edges.
 
 ### Kernel vs KCIR note
 
@@ -354,7 +358,8 @@ surface.
 
 ## Tusk Runtime Sketch (CLI)
 
-`premath-cli` now includes two runtime-facing commands for `premath-tusk`:
+`premath-cli` now includes runtime-facing commands for `premath-tusk` and
+`premath-ux`:
 
 - `premath mock-gate --json`
   - emits a deterministic Gate witness envelope from synthetic failures.
@@ -362,3 +367,6 @@ surface.
   - evaluates a `DescentPack` with a deterministic v0 policy and emits:
     - Gate witness envelope
     - optional `GlueResult` when admissible.
+- `premath observe --surface artifacts/observation/latest.json --mode latest --json`
+  - queries Observation Surface v0 through `premath-ux` (backed by
+    `premath-surreal` observation index adapter).

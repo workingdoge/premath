@@ -6,6 +6,7 @@ members = [
     "crates/premath-bd",
     "crates/premath-jj",
     "crates/premath-surreal",
+    "crates/premath-ux",
     "crates/premath-cli",
 ]
 
@@ -23,6 +24,7 @@ premath-tusk = { path = "crates/premath-tusk" }
 premath-bd = { path = "crates/premath-bd" }
 premath-jj = { path = "crates/premath-jj" }
 premath-surreal = { path = "crates/premath-surreal" }
+premath-ux = { path = "crates/premath-ux" }
 
 # Core
 serde = { version = "1", features = ["derive"] }

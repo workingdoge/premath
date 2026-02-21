@@ -507,6 +507,7 @@ dependencies = [
  "premath-kernel",
  "premath-surreal",
  "premath-tusk",
+ "premath-ux",
  "serde",
  "serde_json",
 ]
@@ -550,6 +551,15 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
+]
+
+[[package]]
+name = "premath-ux"
+version = "0.1.0"
+dependencies = [
+ "premath-surreal",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]

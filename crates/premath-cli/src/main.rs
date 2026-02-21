@@ -80,5 +80,19 @@ fn main() {
         ),
 
         Commands::Init { path } => commands::init::run(path),
+
+        Commands::Observe {
+            surface,
+            mode,
+            instruction_id,
+            projection_digest,
+            json,
+        } => commands::observe::run(commands::observe::Args {
+            surface,
+            mode,
+            instruction_id,
+            projection_digest,
+            json,
+        }),
     }
 }

@@ -158,6 +158,29 @@ pub enum Commands {
         #[arg(default_value = ".")]
         path: String,
     },
+
+    /// Query Observation Surface v0 for frontend/user judgement views
+    Observe {
+        /// Observation surface JSON path
+        #[arg(long, default_value = "artifacts/observation/latest.json")]
+        surface: String,
+
+        /// Query mode
+        #[arg(long, default_value = "latest")]
+        mode: ObserveModeArg,
+
+        /// Instruction ID (required for mode=instruction)
+        #[arg(long)]
+        instruction_id: Option<String>,
+
+        /// Projection digest (required for mode=projection)
+        #[arg(long)]
+        projection_digest: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -174,4 +197,16 @@ pub enum MockFailureArg {
     NonContractibleSelection,
     #[value(name = "mode_comparison_unavailable")]
     ModeComparisonUnavailable,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum ObserveModeArg {
+    #[value(name = "latest")]
+    Latest,
+    #[value(name = "needs_attention")]
+    NeedsAttention,
+    #[value(name = "instruction")]
+    Instruction,
+    #[value(name = "projection")]
+    Projection,
 }

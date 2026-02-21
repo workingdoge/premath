@@ -124,6 +124,74 @@ fn write_tusk_eval_inputs(dir: &Path) -> (PathBuf, PathBuf) {
     (identity_path, pack_path)
 }
 
+fn write_observation_surface(path: &Path) {
+    let payload = serde_json::json!({
+        "schema": 1,
+        "surfaceKind": "ci.observation.surface.v0",
+        "summary": {
+            "state": "accepted",
+            "needsAttention": false,
+            "topFailureClass": "verified_accept",
+            "latestProjectionDigest": "proj1_alpha",
+            "latestInstructionId": "20260221T010000Z-ci-wiring-golden",
+            "requiredCheckCount": 1,
+            "executedCheckCount": 1,
+            "changedPathCount": 2
+        },
+        "latest": {
+            "delta": {
+                "ref": "artifacts/ciwitness/latest-delta.json",
+                "projectionPolicy": "ci-topos-v0",
+                "projectionDigest": "proj1_alpha",
+                "deltaSource": "explicit",
+                "fromRef": "origin/main",
+                "toRef": "HEAD",
+                "changedPaths": ["README.md", "tools/ci/README.md"],
+                "changedPathCount": 2
+            },
+            "required": {
+                "ref": "artifacts/ciwitness/latest-required.json",
+                "witnessKind": "ci.required.v1",
+                "projectionPolicy": "ci-topos-v0",
+                "projectionDigest": "proj1_alpha",
+                "verdictClass": "accepted",
+                "requiredChecks": ["baseline"],
+                "executedChecks": ["baseline"],
+                "failureClasses": []
+            },
+            "decision": {
+                "ref": "artifacts/ciwitness/latest-decision.json",
+                "decisionKind": "ci.required.decision.v1",
+                "projectionDigest": "proj1_alpha",
+                "decision": "accept",
+                "reasonClass": "verified_accept",
+                "witnessPath": "artifacts/ciwitness/latest-required.json",
+                "deltaSnapshotPath": "artifacts/ciwitness/latest-delta.json",
+                "requiredChecks": ["baseline"]
+            }
+        },
+        "instructions": [{
+            "ref": "artifacts/ciwitness/20260221T010000Z-ci-wiring-golden.json",
+            "witnessKind": "ci.instruction.v1",
+            "instructionId": "20260221T010000Z-ci-wiring-golden",
+            "instructionDigest": "instr1_alpha",
+            "instructionClassification": {"state": "typed", "kind": "ci.gate.check"},
+            "intent": "verify ci wiring",
+            "scope": {"kind": "repo"},
+            "policyDigest": "policy.ci.v1",
+            "verdictClass": "accepted",
+            "requiredChecks": ["ci-wiring-check"],
+            "executedChecks": ["ci-wiring-check"],
+            "failureClasses": []
+        }]
+    });
+    fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload).expect("surface should serialize"),
+    )
+    .expect("surface should be written");
+}
+
 #[test]
 fn check_json_smoke() {
     let tmp = TempDirGuard::new("check-json");
@@ -215,4 +283,55 @@ fn init_text_smoke() {
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(stdout.contains("premath init ."));
     assert!(stdout.contains("Creates local layout for adapter composition"));
+}
+
+#[test]
+fn observe_latest_json_smoke() {
+    let tmp = TempDirGuard::new("observe-latest-json");
+    let surface = tmp.path().join("surface.json");
+    write_observation_surface(&surface);
+
+    let output = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("latest"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["summary"]["state"], "accepted");
+    assert_eq!(payload["summary"]["latestProjectionDigest"], "proj1_alpha");
+    assert_eq!(
+        payload["latest"]["required"]["requiredChecks"][0],
+        "baseline"
+    );
+}
+
+#[test]
+fn observe_instruction_json_smoke() {
+    let tmp = TempDirGuard::new("observe-instruction-json");
+    let surface = tmp.path().join("surface.json");
+    write_observation_surface(&surface);
+
+    let output = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("instruction"),
+        OsString::from("--instruction-id"),
+        OsString::from("20260221T010000Z-ci-wiring-golden"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(
+        payload["instructionId"],
+        "20260221T010000Z-ci-wiring-golden"
+    );
+    assert_eq!(payload["verdictClass"], "accepted");
 }

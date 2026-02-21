@@ -6,6 +6,13 @@
 //! It does not own canonical storage (that's `premath-bd`) and does not own
 //! versioning/snapshots (that's `premath-jj`).
 
+mod observation;
+
+pub use observation::{
+    DecisionSummary, DeltaSummary, InstructionSummary, LatestObservation, ObservationError,
+    ObservationIndex, ObservationSummary, ObservationSurface, ProjectionView, RequiredSummary,
+};
+
 use premath_bd::{Dependency, Issue, MemoryStore};
 use std::collections::BTreeMap;
 
