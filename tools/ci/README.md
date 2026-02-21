@@ -40,6 +40,10 @@ verified witness semantics (`accept` or `reject`).
 - decision hash bindings (`witnessSha256`, `deltaSha256`) match artifact bytes,
 - projection/required-check semantics align across decision, witness, and snapshot.
 
+`tools/ci/check_ci_wiring.py` validates that CI workflow wiring uses the
+canonical attested gate chain entrypoint and does not split the required gate
+steps.
+
 It separates:
 
 - **semantic gate surface**: `hk` profiles/tasks (`hk-check`, `hk-pre-commit`, ...)
@@ -72,7 +76,7 @@ See `tools/ci/executors/README.md` for runner responsibilities.
 
 ## Required Check Mapping
 
-Canonical CI decision surface is `mise run ci-decide-required`.
+Canonical CI decision surface is `mise run ci-required-attested`.
 
 Provider-specific check naming/binding guidance lives in
 `docs/design/CI-PROVIDER-BINDINGS.md`.
@@ -114,6 +118,7 @@ PREMATH_SQUEAK_SITE_PROFILE=external \
 PREMATH_SQUEAK_SITE_RUNNER=./tools/ci/executors/my_runner.sh \
 mise run ci-required
 
+mise run ci-wiring-check
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-required-attested

@@ -40,6 +40,10 @@ conformance-check:
 doctrine-check:
     python3 tools/conformance/check_doctrine_site.py
 
+# Validate CI workflow wiring invariants (canonical attested gate entrypoint)
+ci-wiring-check:
+    python3 tools/ci/check_ci_wiring.py
+
 # Run executable capability vectors
 conformance-run:
     python3 tools/conformance/run_capability_vectors.py
@@ -59,6 +63,7 @@ baseline:
     just test-kcir-toy
     just conformance-check
     just doctrine-check
+    just ci-wiring-check
     just conformance-run
 
 # Required closure gate projected from current delta
