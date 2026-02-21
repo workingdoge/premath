@@ -45,7 +45,7 @@ Example invocation:
 ```bash
 PREMATH_SQUEAK_SITE_PROFILE=external \
 PREMATH_SQUEAK_SITE_RUNNER=./tools/ci/executors/my_runner.sh \
-mise run ci-required-verified
+mise run ci-required-attested
 ```
 
 This keeps gate semantics stable while allowing host-specific implementations

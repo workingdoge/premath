@@ -90,9 +90,16 @@ ci-required-verified:
     just ci-required
     just ci-verify-required
 
+# Authoritative local/CI gate chain with strict delta + decision attestation
+ci-required-attested:
+    just ci-required
+    just ci-verify-required-strict
+    just ci-decide-required
+    just ci-verify-decision
+
 # Recommended local gate before commit
 precommit:
-    just ci-required-verified
+    just ci-required-attested
 
 # Clippy lint
 lint:
@@ -136,7 +143,7 @@ infra-down:
 
 # Run closure gate through Terraform/OpenTofu-resolved runner
 ci-check-tf:
-    sh tools/ci/run_gate_terraform.sh ci-required-verified
+    sh tools/ci/run_gate_terraform.sh ci-required-attested
 
 # Run one instruction envelope and emit a CI witness artifact
 ci-instruction INSTRUCTION:
@@ -144,8 +151,8 @@ ci-instruction INSTRUCTION:
 
 # Run closure gate through Terraform/OpenTofu with local runner profile
 ci-check-tf-local:
-    TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required-verified
+    TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required-attested
 
 # Run closure gate through Terraform/OpenTofu with experimental microvm profile
 ci-check-tf-microvm:
-    TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required-verified
+    TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required-attested

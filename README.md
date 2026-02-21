@@ -177,11 +177,12 @@ mise run ci-verify-required-strict-native
 mise run ci-decide-required
 mise run ci-verify-decision
 mise run ci-required-verified
+mise run ci-required-attested
 mise run ci-check
 ```
 
 `hk` keeps fast hygiene checks in `pre-commit` and runs the required projected
-closure gate (`mise run ci-required-verified`) on `pre-push`/`check`. This is optional and can coexist
+closure gate (`mise run ci-required-attested`) on `pre-push`/`check`. This is optional and can coexist
 with `.githooks`-based local hooks.
 
 `mise run ci-required` is the canonical SqueakSite gate entrypoint:
@@ -200,6 +201,8 @@ with `.githooks`-based local hooks.
 - `mise run ci-verify-required` verifies witness determinism/binding
 - `mise run ci-required-verified` runs both execution and verification
 - `mise run ci-decide-required` emits deterministic `accept|reject` from verified witness
+- `mise run ci-required-attested` runs the authoritative local/CI gate chain
+  (`ci-required` + strict verify + decision + decision attestation)
 
 - default: local execution (`PREMATH_SQUEAK_SITE_PROFILE=local`)
 - optional external runner: set

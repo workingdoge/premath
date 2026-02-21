@@ -44,7 +44,7 @@ local fast_steps = new Mapping<String, Step> {
 
 local baseline_steps = new Mapping<String, Step> {
   ["baseline"] {
-    check = "mise run ci-required-verified"
+    check = "mise run ci-required-attested"
     exclusive = true
   }
 }
