@@ -180,6 +180,8 @@ mise run ci-verify-decision
 mise run ci-required-verified
 mise run ci-required-attested
 mise run ci-check
+mise run ci-instruction-check
+mise run ci-instruction-smoke
 ```
 
 `hk` keeps fast hygiene checks in `pre-commit` and runs the required projected
@@ -246,12 +248,18 @@ execution via `hk-check`.
 Instruction-envelope flow:
 
 ```bash
+mise run ci-instruction-check
 INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
+mise run ci-instruction-smoke
 ```
 
 This executes requested checks through the same gate surface and writes a CI
 witness artifact to `artifacts/ciwitness/<instruction-id>.json`.
+
+GitHub manual dispatch workflow: `.github/workflows/instruction.yml`
+(`instruction_path`, optional `allow_failure`) validates envelope shape first,
+then runs the instruction and uploads the witness artifact.
 
 Optional Terraform/OpenTofu provisioning shape:
 

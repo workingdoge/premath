@@ -51,6 +51,8 @@ run = [
   "mise run conformance-check",
   "mise run doctrine-check",
   "mise run ci-wiring-check",
+  "mise run ci-instruction-check",
+  "mise run ci-instruction-smoke",
   "mise run conformance-run",
 ]
 
@@ -115,6 +117,12 @@ run = "sh tools/ci/run_gate.sh hk-pre-commit"
 
 [tasks.ci-instruction]
 run = "sh tools/ci/run_instruction.sh ${INSTRUCTION:?set INSTRUCTION=instructions/<ts>-<id>.json}"
+
+[tasks.ci-instruction-check]
+run = "sh -lc 'if [ -n \"${INSTRUCTION:-}\" ]; then python3 tools/ci/check_instruction_envelope.py \"$INSTRUCTION\"; else python3 tools/ci/check_instruction_envelope.py; fi'"
+
+[tasks.ci-instruction-smoke]
+run = "python3 tools/ci/test_instruction_smoke.py --instruction tests/ci/fixtures/instructions/20260221T010000Z-ci-wiring-golden.json"
 
 [tasks.ci-instruction-example]
 run = "sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json"
