@@ -30,7 +30,7 @@ Scope: design-level, non-normative
 - `tools/ci/verify_required_witness.py`
 - `tools/ci/run_instruction.py`
 - `tools/ci/run_gate.sh`
-- `hk.pkl`, `.mise.toml`, `justfile`
+- `hk.pkl`, `.mise.toml`
 
 ## 2. Doctrine to Operation Path
 

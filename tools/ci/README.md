@@ -44,6 +44,10 @@ verified witness semantics (`accept` or `reject`).
 canonical attested gate chain entrypoint and does not split the required gate
 steps.
 
+`tools/ci/check_command_surface.py` validates the repository command surface is
+`mise`-only and rejects legacy task-runner command/file references
+(`mise run ci-command-surface-check`).
+
 `tools/ci/check_instruction_envelope.py` validates instruction envelope
 schema/shape before execution (`mise run ci-instruction-check`).
 
@@ -125,6 +129,7 @@ PREMATH_SQUEAK_SITE_RUNNER=./tools/ci/executors/my_runner.sh \
 mise run ci-required
 
 mise run ci-wiring-check
+mise run ci-command-surface-check
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-required-attested

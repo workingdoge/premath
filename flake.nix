@@ -141,7 +141,6 @@
 
               # Tools
               direnv
-              just
               mise
               opentofu
               terraform

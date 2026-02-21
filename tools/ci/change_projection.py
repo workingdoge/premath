@@ -60,7 +60,6 @@ SEMANTIC_BASELINE_PREFIXES: Sequence[str] = (
 SEMANTIC_BASELINE_EXACT: Set[str] = {
     ".mise.toml",
     "hk.pkl",
-    "justfile",
     "pitchfork.toml",
 }
 
