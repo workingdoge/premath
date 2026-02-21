@@ -109,30 +109,46 @@ In DevOps terms:
 
 - **control policy**: what checks are required (`G(Delta)`)
 - **executor**: where checks run (`local`, `CI`, `remote worker`)
-- **evidence**: what gets emitted (`GateWitnessEnvelope` now; `CIWitness` wrapper later)
+- **evidence**: `ci.required.v1` CI witness artifacts now
+  (`artifacts/ciwitness/*.json`), with optional `gateWitnessRefs` to
+  `GateWitnessEnvelope` artifacts when available
 
 This keeps us vendor-agnostic: GitHub Actions, local hooks, and future runners
 can all host the same semantics.
 
-## 6. Next Step (toward premath-CI)
+## 6. CIWitness <-> GateWitnessEnvelope Contract (v0)
 
-Promote execution output to first-class records:
+Current implementation contract:
 
 ```text
 CIWitness {
-  run_id
-  delta_ref
-  required_checks
-  executed_checks
+  witnessKind = "ci.required.v1"
+  projectionDigest
+  changedPaths
+  requiredChecks
+  executedChecks
   results
-  policy_digest
-  projection_digest
-  gate_witness_envelopes?
+  verdictClass
+  failureClasses
+  policyDigest
+  gateWitnessRefs?   // optional list of refs to GateWitnessEnvelope artifacts
 }
 ```
 
-`CIWitness` is intended as a CI-layer wrapper around one or more
-`premath_tusk::GateWitnessEnvelope` artifacts plus execution metadata.
+Source-of-truth split:
 
-Then make acceptance/merge/update decisions depend on witness verification, not
-on one specific CI provider.
+- `GateWitnessEnvelope` remains the authority for kernel admissibility classes.
+- `CIWitness` records CI projection/requiredness execution and attestation metadata.
+- `gateWitnessRefs` can point to gate envelopes; it cannot override or upgrade
+  gate verdict classes.
+
+Current status in this repo:
+
+- `ci.required.v1` witnesses are emitted and strictly verified.
+- `gateWitnessRefs` is not populated yet because required checks currently
+  return command-level pass/fail without emitting per-check gate envelopes.
+
+Next extension:
+
+- when a check emits gate envelopes, attach deterministic `gateWitnessRefs`
+  keyed by `checkId`, and keep CI verification deterministic over that linkage.
