@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.commitment_checkpoints",
+  "vectorId": "invariance/same_semantics_with_checkpoint",
+  "profile": "checkpoint_enabled",
+  "semanticScenarioId": "checkpoint_invariance_01",
+  "description": "Checkpoint-enabled run paired with baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "op": "sum",
+        "terms": ["n", "m", "m"]
+      }
+    },
+    "claimedCapabilities": ["capabilities.commitment_checkpoints"],
+    "runMaterial": {
+      "runId": "run1_checkpoint_invariance",
+      "worldId": "world.dev",
+      "unitId": "unit.ckpt.inv",
+      "witnessIds": ["w1_inv"]
+    },
+    "checkpoint": {
+      "runMaterialRef": "run1_53c312567bd603ad752e8feebdef6bbe39594e42488fe4d156d3d70fb7593e4d",
+      "policyDigest": "policy.checkpoint.v1",
+      "normalizerId": "normalizer.checkpoint.v1",
+      "witnessSummary": {
+        "result": "accepted",
+        "failureClasses": []
+      },
+      "checkpointRef": "ckpt1_51f72d5c5915be5dccb8a883c4ae3af84231dc6f69369ad7807ecc3a150a3111"
+    }
+  }
+}

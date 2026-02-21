@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "required checks and bindings agree on overlap"
+  ]
+}

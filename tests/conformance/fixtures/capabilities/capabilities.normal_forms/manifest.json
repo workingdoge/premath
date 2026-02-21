@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.normal_forms",
+  "vectors": [
+    "golden/nf_binding_stable",
+    "golden/nf_equiv_accept",
+    "adversarial/nf_requires_claim",
+    "adversarial/nf_policy_binding_mismatch",
+    "invariance/same_semantics_opaque",
+    "invariance/same_semantics_normalized"
+  ]
+}

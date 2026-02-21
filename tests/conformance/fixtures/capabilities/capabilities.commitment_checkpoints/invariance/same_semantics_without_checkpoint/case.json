@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.commitment_checkpoints",
+  "vectorId": "invariance/same_semantics_without_checkpoint",
+  "profile": "no_checkpoint",
+  "semanticScenarioId": "checkpoint_invariance_01",
+  "description": "Baseline run without checkpoint generation.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "op": "sum",
+        "terms": ["m", "n"]
+      }
+    },
+    "claimedCapabilities": []
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "assertions": [
+    "kernel verdict matches paired KCIR-linked profile",
+    "Gate failure classes (if any) match paired KCIR-linked profile"
+  ]
+}

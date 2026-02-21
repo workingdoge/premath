@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "golden/instruction_typed_deterministic",
+  "description": "Equivalent classifiers produce deterministic typed(kind) output for one instruction envelope.",
+  "semanticScenarioId": "instruction_typed_determinism_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "instruction": {
+      "intent": "Run repo closure checks.",
+      "scope": {
+        "kind": "repo",
+        "target": "premath"
+      },
+      "policyDigest": "policy.ci.v1",
+      "requestedChecks": ["hk-check", "conformance-run"]
+    },
+    "policy": {
+      "allowUnknown": false
+    },
+    "classificationA": {
+      "state": "typed",
+      "kind": "ci.gate.check"
+    },
+    "classificationB": {
+      "state": "typed",
+      "kind": "ci.gate.check"
+    }
+  }
+}

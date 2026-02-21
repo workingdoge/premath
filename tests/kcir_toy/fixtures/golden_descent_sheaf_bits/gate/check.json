@@ -1,0 +1,24 @@
+{
+  "check": {
+    "baseMask": 7,
+    "contractibleNode": "663ecf79d0f44fda8e96bec444593d2e415eb05dbe0f8ff24b03697ad2f95192",
+    "coverSig": "7022fd1e5d3385c65ded02fb4124c6e2bba5b0fa3ea10fd17c197d7c000c0092",
+    "glueObj": "f18347a9ee16009e7a508d5d88581f9e050209ae682c25e18571a00cdb800154",
+    "kind": "descent",
+    "localNodes": [
+      "a89780735edefd257af5beb81dfc8a93d483d068c9cb02fb3abc73bff7579c43",
+      "78218e65fb134fd69ee1d639e55336f824fe38685d50bb28ec1bc5c8dcd3b4af"
+    ],
+    "localObjs": [
+      "52e1baa12a16fd923b55982d2c69de4ebf77d03990bbf51bb87e0a7f86ea247f",
+      "5b0220b0f577eb364dfa3a72f08d0f6e3eaf9051c0a71a7a15fd2ed7294ddf4b"
+    ],
+    "overlapNodes": [
+      "5c99f999dfc1413cd8831e99550c37b4be14e8ea229ee5e9f273461a62b8258d"
+    ],
+    "tokenPath": null,
+    "tripleNodes": []
+  },
+  "schema": 1,
+  "world": "sheaf_bits"
+}

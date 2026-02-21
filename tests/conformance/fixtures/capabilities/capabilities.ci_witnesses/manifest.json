@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectors": [
+    "golden/instruction_witness_deterministic",
+    "adversarial/instruction_witness_non_deterministic_reject",
+    "adversarial/instruction_witness_requires_claim",
+    "invariance/same_instruction_local",
+    "invariance/same_instruction_external"
+  ]
+}

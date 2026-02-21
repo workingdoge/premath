@@ -1,0 +1,10 @@
+# Default profile for Darwin hosts that want Linux guest execution.
+cheese_profile = "local"
+
+# Override example:
+# cheese_profile = "darwin_microvm_vfkit"
+# cheese_relpath_override = "../../tools/ci/executors/local_runner.sh"
+#
+# Legacy aliases (still accepted):
+# runner_profile = "local"
+# runner_relpath_override = "../../tools/ci/executors/local_runner.sh"

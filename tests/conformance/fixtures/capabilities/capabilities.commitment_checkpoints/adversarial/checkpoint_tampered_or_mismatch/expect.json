@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "assertions": [
+    "deterministic reject on tampered checkpoint payload",
+    "deterministic reject on checkpoint reference mismatch"
+  ]
+}

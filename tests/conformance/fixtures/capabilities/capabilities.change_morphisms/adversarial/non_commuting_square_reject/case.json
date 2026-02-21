@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "stub",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/non_commuting_square_reject",
+  "description": "Change record with non-commuting square rejects deterministically.",
+  "semanticScenarioId": "change_morphism_non_commuting_01",
+  "artifacts": {
+    "changeRecord": "TODO"
+  }
+}

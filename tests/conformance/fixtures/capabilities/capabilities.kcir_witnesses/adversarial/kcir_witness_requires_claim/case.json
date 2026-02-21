@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.kcir_witnesses",
+  "vectorId": "adversarial/kcir_witness_requires_claim",
+  "description": "Explicit KCIR-linked witness request rejects when capability is not claimed.",
+  "semanticScenarioId": "kcir_requires_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "kcir_linked_witness",
+      "claimedCapabilities": [],
+      "witnessRefMode": "kcir"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "adversarial/instruction_witness_requires_claim",
+  "description": "Instruction witness determinism checks require explicit capability claim.",
+  "semanticScenarioId": "ci_instruction_requires_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "instruction_witness_determinism",
+      "claimedCapabilities": []
+    }
+  }
+}

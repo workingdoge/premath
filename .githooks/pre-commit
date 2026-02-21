@@ -1,0 +1,28 @@
+#!/usr/bin/env sh
+set -eu
+
+repo_root="$(git rev-parse --show-toplevel)"
+cd "$repo_root"
+
+if command -v just >/dev/null 2>&1; then
+  just precommit
+  exit 0
+fi
+
+echo "[pre-commit] just not found; running fallback gate"
+
+python3 -m pip install -r requirements.txt
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo build --workspace
+
+if cargo nextest --version >/dev/null 2>&1; then
+  cargo nextest run --workspace
+else
+  cargo test --workspace
+fi
+
+python3 tools/toy/run_toy_vectors.py --fixtures tests/toy/fixtures
+python3 tools/kcir_toy/run_kcir_toy_vectors.py --fixtures tests/kcir_toy/fixtures
+python3 tools/conformance/check_stub_invariance.py
+python3 tools/conformance/run_capability_vectors.py

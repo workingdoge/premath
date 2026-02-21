@@ -1,0 +1,14 @@
+{
+  "check": {
+    "a": 1,
+    "gammaMask": 3,
+    "kind": "locality",
+    "legs": [
+      1,
+      2
+    ],
+    "tokenPath": null
+  },
+  "schema": 1,
+  "world": "partial_restrict"
+}

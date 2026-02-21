@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "stub",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/change_id_deterministic",
+  "description": "Deterministic changeId for stable canonical change-record input.",
+  "semanticScenarioId": "change_morphism_change_id_01",
+  "artifacts": {
+    "changeRecordRunA": "TODO",
+    "changeRecordRunB": "TODO"
+  }
+}

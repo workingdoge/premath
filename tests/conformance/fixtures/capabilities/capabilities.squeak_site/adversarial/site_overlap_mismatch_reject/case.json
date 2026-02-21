@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.squeak_site",
+  "vectorId": "adversarial/site_overlap_mismatch_reject",
+  "description": "Overlap mismatch rejects deterministic site agreement.",
+  "semanticScenarioId": "site_overlap_mismatch_01",
+  "artifacts": {
+    "leftSection": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure"],
+      "requiredChecks": ["hk-check", "conformance-run"],
+      "policyDigest": "policy.ci.v1",
+      "projectionDigest": "proj.delta.v1"
+    },
+    "rightSection": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["locality_failure"],
+      "requiredChecks": ["hk-check", "conformance-run"],
+      "policyDigest": "policy.ci.v1",
+      "projectionDigest": "proj.delta.v1"
+    }
+  }
+}

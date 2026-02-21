@@ -1,0 +1,11 @@
+[package]
+name = "premath-jj"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "JJ (Jujutsu) backend: versioning, branches, conflicts-as-values"
+
+[dependencies]
+thiserror = { workspace = true }
+serde = { workspace = true }
+# jj-lib = "0.28"  # TODO: pin when stabilized

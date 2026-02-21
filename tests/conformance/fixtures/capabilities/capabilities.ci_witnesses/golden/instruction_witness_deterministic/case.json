@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "golden/instruction_witness_deterministic",
+  "description": "Same instruction envelope produces stable verdict class and check set.",
+  "semanticScenarioId": "ci_instruction_determinism_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.ci_witnesses"],
+    "instruction": {
+      "intent": "Run closure checks for repo changes.",
+      "scope": {
+        "kind": "repo",
+        "target": "premath"
+      },
+      "policyDigest": "policy.ci.v1",
+      "requestedChecks": ["hk-check", "conformance-run"]
+    },
+    "witnessA": {
+      "instructionDigest": "instr1_80282b533e7f4535461b88d357c750fc53fea081d183125ebb8cce63738b50be",
+      "verdictClass": "accepted",
+      "requiredChecks": ["hk-check", "conformance-run"],
+      "executedChecks": ["hk-check", "conformance-run"]
+    },
+    "witnessB": {
+      "instructionDigest": "instr1_80282b533e7f4535461b88d357c750fc53fea081d183125ebb8cce63738b50be",
+      "verdictClass": "accepted",
+      "requiredChecks": ["conformance-run", "hk-check"],
+      "executedChecks": ["conformance-run", "hk-check"]
+    }
+  }
+}

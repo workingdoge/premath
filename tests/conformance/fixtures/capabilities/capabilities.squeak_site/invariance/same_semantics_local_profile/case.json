@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.squeak_site",
+  "vectorId": "invariance/same_semantics_local_profile",
+  "profile": "local",
+  "semanticScenarioId": "site_invariance_01",
+  "description": "Local profile baseline for SqueakSite invariance.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure"],
+      "semantic": {
+        "op": "sum",
+        "terms": ["x", "x", "y"]
+      }
+    }
+  }
+}

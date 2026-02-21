@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "intent": "Run baseline closure checks for repository readiness.",
+  "scope": {
+    "kind": "repo",
+    "target": "premath"
+  },
+  "policyDigest": "policy.ci.v1",
+  "requestedChecks": [
+    "hk-check"
+  ]
+}

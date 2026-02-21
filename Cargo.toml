@@ -1,0 +1,43 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/premath-kernel",
+    "crates/premath-tusk",
+    "crates/premath-bd",
+    "crates/premath-jj",
+    "crates/premath-surreal",
+    "crates/premath-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+repository = "https://github.com/premath/premath"
+description = "Premath: a kernel doctrine of definability for agent orchestration"
+
+[workspace.dependencies]
+# Internal crates
+premath-kernel = { path = "crates/premath-kernel" }
+premath-tusk = { path = "crates/premath-tusk" }
+premath-bd = { path = "crates/premath-bd" }
+premath-jj = { path = "crates/premath-jj" }
+premath-surreal = { path = "crates/premath-surreal" }
+
+# Core
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+thiserror = "2"
+tokio = { version = "1", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1", features = ["v4", "serde"] }
+
+# Database
+surrealdb = { version = "2", features = ["kv-mem", "kv-rocksdb"] }
+
+# CLI
+clap = { version = "4", features = ["derive"] }
+
+# Testing
+insta = { version = "1", features = ["json"] }

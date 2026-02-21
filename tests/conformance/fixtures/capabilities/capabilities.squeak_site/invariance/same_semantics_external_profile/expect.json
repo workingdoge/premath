@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "assertions": [
+    "kernel verdict matches paired local profile",
+    "Gate failure classes (if any) match paired local profile"
+  ]
+}

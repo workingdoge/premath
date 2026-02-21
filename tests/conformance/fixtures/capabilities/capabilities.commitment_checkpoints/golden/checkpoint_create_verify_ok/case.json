@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.commitment_checkpoints",
+  "vectorId": "golden/checkpoint_create_verify_ok",
+  "description": "Checkpoint creation and verification succeed for valid artifacts.",
+  "semanticScenarioId": "checkpoint_create_verify_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.commitment_checkpoints"],
+    "runMaterial": {
+      "runId": "run1_demo_checkpoint",
+      "worldId": "world.dev",
+      "unitId": "unit.ckpt",
+      "witnessIds": ["w1_demo_a", "w1_demo_b"]
+    },
+    "checkpoint": {
+      "runMaterialRef": "run1_7283c9921335c7bb6f734649b7e54aaeb4af0213bd5b2b9016bc85dc86e943ea",
+      "policyDigest": "policy.checkpoint.v1",
+      "normalizerId": "normalizer.checkpoint.v1",
+      "witnessSummary": {
+        "result": "rejected",
+        "failureClasses": ["descent_failure", "locality_failure"]
+      },
+      "checkpointRef": "ckpt1_33703e442f36271dd9cdc69e7ffa24947917d79a96065e931fad2422252972a7"
+    }
+  }
+}

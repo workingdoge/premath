@@ -1,0 +1,15 @@
+[package]
+name = "premath-surreal"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "SurrealDB embedded query cache: graph-native issue queries"
+
+[dependencies]
+premath-bd = { workspace = true }
+thiserror = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+chrono = { workspace = true }
+# surrealdb = { workspace = true }  # TODO: enable when wiring up

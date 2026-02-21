@@ -1,0 +1,18 @@
+{
+  "check": {
+    "a": 1,
+    "f": {
+      "src": 3,
+      "tgt": 7
+    },
+    "g": {
+      "src": 1,
+      "tgt": 3
+    },
+    "gammaMask": 7,
+    "kind": "stability",
+    "tokenPath": null
+  },
+  "schema": 1,
+  "world": "bad_stability"
+}

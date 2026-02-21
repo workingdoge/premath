@@ -1,0 +1,3 @@
+# Python dependencies for repository tooling (`tools/` scripts).
+# Keep this file authoritative even when scripts are stdlib-only.
+# Intentionally empty for now.

@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.kcir_witnesses",
+  "vectorId": "invariance/same_semantics_opaque",
+  "profile": "opaque_witness",
+  "semanticScenarioId": "kcir_invariance_01",
+  "description": "Baseline opaque witness run for invariance pairing.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure"],
+      "semantic": {
+        "op": "sum",
+        "terms": ["p", "q"]
+      }
+    },
+    "claimedCapabilities": []
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "invariance/same_instruction_external",
+  "profile": "external",
+  "semanticScenarioId": "ci_instruction_invariance_01",
+  "description": "External instruction witness profile paired with local baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "instruction": "repo-check"
+      }
+    },
+    "claimedCapabilities": ["capabilities.ci_witnesses"]
+  }
+}

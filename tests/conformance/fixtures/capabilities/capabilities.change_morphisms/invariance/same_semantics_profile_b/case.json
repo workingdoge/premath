@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "stub",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_semantics_profile_b",
+  "profile": "change_morphism_profile_b",
+  "semanticScenarioId": "change_morphism_invariance_01",
+  "description": "Alternate change-morphism profile output paired with baseline.",
+  "artifacts": {
+    "input": "TODO"
+  }
+}

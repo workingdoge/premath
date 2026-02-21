@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.normal_forms",
+  "vectorId": "adversarial/nf_policy_binding_mismatch",
+  "description": "Mismatch in policyDigest or normalizerId rejects deterministically.",
+  "semanticScenarioId": "nf_policy_binding_mismatch_01",
+  "artifacts": {
+    "left": {
+      "semantic": {
+        "op": "sum",
+        "terms": ["x", "y"]
+      },
+      "normalizerId": "nf.toy.v1",
+      "policyDigest": "policy.toy.v1"
+    },
+    "right": {
+      "semantic": {
+        "op": "sum",
+        "terms": ["x", "y"]
+      },
+      "normalizerId": "nf.toy.v2",
+      "policyDigest": "policy.toy.v1"
+    }
+  }
+}

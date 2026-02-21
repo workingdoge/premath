@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "assertions": [
+    "instruction typing mode requires explicit capability claim"
+  ]
+}

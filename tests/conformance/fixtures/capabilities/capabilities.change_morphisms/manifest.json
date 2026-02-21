@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "status": "stub",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectors": [
+    "golden/change_record_commuting_square",
+    "golden/change_id_deterministic",
+    "adversarial/non_commuting_square_reject",
+    "adversarial/duplicate_normative_source_reject",
+    "invariance/same_semantics_profile_a",
+    "invariance/same_semantics_profile_b"
+  ]
+}

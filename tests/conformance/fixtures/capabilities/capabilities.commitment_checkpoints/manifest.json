@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.commitment_checkpoints",
+  "vectors": [
+    "golden/checkpoint_create_verify_ok",
+    "adversarial/checkpoint_requires_claim",
+    "adversarial/checkpoint_tampered_or_mismatch",
+    "invariance/same_semantics_without_checkpoint",
+    "invariance/same_semantics_with_checkpoint"
+  ]
+}

@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "cmpRef equal across runs",
+    "normalizerId equal across runs",
+    "policyDigest equal across runs"
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "check": {
+    "aObj": "187ed01992673c544684e23ca4fae229ccb98be24bc03ed8e723eb0cdb19926b",
+    "coverSig": "171dcb2aee0dd2d616484c5ad1072b1b25f607f301773d2dd0aa715fbd30ed92",
+    "gammaMask": 3,
+    "kind": "locality",
+    "tokenPath": null
+  },
+  "schema": 1,
+  "world": "partial_restrict"
+}

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "invariance/same_instruction_local",
+  "profile": "local",
+  "semanticScenarioId": "ci_instruction_invariance_01",
+  "description": "Local instruction witness profile baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "instruction": "repo-check"
+      }
+    }
+  }
+}

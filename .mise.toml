@@ -1,0 +1,117 @@
+[tools]
+rust = "1.89.0"
+python = "3.11.8"
+hk = "1.36.0"
+pkl = "0.30.2"
+pitchfork = "1.5.0"
+
+[tasks.py-setup]
+run = "python3 -m pip install -r requirements.txt"
+
+[tasks.rust-setup]
+run = "rustup component add rustfmt clippy"
+
+[tasks.fmt]
+run = "cargo fmt --all -- --check"
+
+[tasks.lint]
+run = "cargo clippy --workspace --all-targets -- -D warnings"
+
+[tasks.build]
+run = "cargo build --workspace"
+
+[tasks.test]
+run = "cargo test --workspace"
+
+[tasks.test-toy]
+run = "python3 tools/toy/run_toy_vectors.py --fixtures tests/toy/fixtures"
+
+[tasks.test-kcir-toy]
+run = "python3 tools/kcir_toy/run_kcir_toy_vectors.py --fixtures tests/kcir_toy/fixtures"
+
+[tasks.conformance-check]
+run = "python3 tools/conformance/check_stub_invariance.py"
+
+[tasks.doctrine-check]
+run = "python3 tools/conformance/check_doctrine_site.py"
+
+[tasks.conformance-run]
+run = "python3 tools/conformance/run_capability_vectors.py"
+
+[tasks.baseline]
+run = [
+  "mise run py-setup",
+  "mise run rust-setup",
+  "mise run fmt",
+  "mise run lint",
+  "mise run build",
+  "mise run test",
+  "mise run test-toy",
+  "mise run test-kcir-toy",
+  "mise run conformance-check",
+  "mise run doctrine-check",
+  "mise run conformance-run",
+]
+
+[tasks.hk-install]
+run = "HK_MISE=1 hk install --mise"
+
+[tasks.hk-check]
+run = "hk run check"
+
+[tasks.hk-fix]
+run = "hk run fix --all --no-stage"
+
+[tasks.hk-pre-commit]
+run = "hk run pre-commit"
+
+[tasks.hk-pre-push]
+run = "hk run pre-push"
+
+[tasks.ci-check]
+run = "sh tools/ci/run_gate.sh hk-check"
+
+[tasks.ci-pre-commit]
+run = "sh tools/ci/run_gate.sh hk-pre-commit"
+
+[tasks.ci-instruction]
+run = "sh tools/ci/run_instruction.sh ${INSTRUCTION:?set INSTRUCTION=instructions/<ts>-<id>.json}"
+
+[tasks.ci-instruction-example]
+run = "sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json"
+
+[tasks.infra-up]
+run = "sh tools/infra/terraform/up.sh"
+
+[tasks.infra-down]
+run = "sh tools/infra/terraform/down.sh"
+
+[tasks.ci-check-tf]
+run = "sh tools/ci/run_gate_terraform.sh hk-check"
+
+[tasks.ci-pre-commit-tf]
+run = "sh tools/ci/run_gate_terraform.sh hk-pre-commit"
+
+[tasks.ci-check-tf-local]
+run = "TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh hk-check"
+
+[tasks.ci-check-tf-microvm]
+run = "TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh hk-check"
+
+[tasks.jj-alias-install]
+run = "sh tools/jj/install_aliases.sh"
+
+[tasks.pf-start]
+run = "pitchfork start docs-preview"
+
+[tasks.pf-stop]
+run = "sh -lc 'if pitchfork supervisor status >/dev/null 2>&1; then pitchfork stop --all; else echo \"pitchfork supervisor not running\"; fi'"
+
+[tasks.pf-status]
+run = "pitchfork list"
+
+[tasks.pf-gate-loop-start]
+run = "pitchfork start gate-check-loop"
+
+[tasks.pf-gate-loop-stop]
+run = "pitchfork stop gate-check-loop"

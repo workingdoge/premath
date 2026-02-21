@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.normal_forms",
+  "vectorId": "golden/nf_binding_stable",
+  "description": "Same semantic input yields stable cmpRef/normalizerId/policyDigest across runs.",
+  "semanticScenarioId": "nf_stable_binding_01",
+  "artifacts": {
+    "input": {
+      "op": "sum",
+      "terms": ["beta", "alpha", "alpha"],
+      "metadata": {
+        "lane": "x",
+        "weight": 2
+      }
+    },
+    "claimedCapabilities": ["capabilities.normal_forms"],
+    "runs": [
+      {
+        "normalizerId": "nf.toy.v1",
+        "policyDigest": "policy.toy.v1"
+      },
+      {
+        "normalizerId": "nf.toy.v1",
+        "policyDigest": "policy.toy.v1"
+      }
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.normal_forms",
+  "vectorId": "invariance/same_semantics_normalized",
+  "profile": "normalized",
+  "semanticScenarioId": "nf_invariance_01",
+  "description": "Normalized profile run paired with opaque baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "op": "sum",
+        "terms": ["v", "u"]
+      }
+    },
+    "normalizerId": "nf.toy.v1",
+    "policyDigest": "policy.toy.v1",
+    "claimedCapabilities": ["capabilities.normal_forms"]
+  }
+}

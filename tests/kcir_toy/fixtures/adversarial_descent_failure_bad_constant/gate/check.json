@@ -1,0 +1,23 @@
+{
+  "check": {
+    "baseMask": 3,
+    "coverSig": "171dcb2aee0dd2d616484c5ad1072b1b25f607f301773d2dd0aa715fbd30ed92",
+    "glueObj": "4332c2a4426b71c213a37873a27a794ddfbb9b2a3fb08e07527e2bd1367b865a",
+    "kind": "descent",
+    "localNodes": [
+      "5c05e55394dce5d4b1da14c1d0466f462ed36ef02ec25da6e95bdad9da77f179",
+      "c1122549291e26e211f03323dbe893ba1a4944b7ef1031fd8281adddadb21eea"
+    ],
+    "localObjs": [
+      "1073c792d5df5ee62f442894a442dc910e5674f98b79d1f452cde0f3ce34f123",
+      "ac4f400c8261c0fe3057d16a59e02ab93232349de539327ffe1e53db6a411340"
+    ],
+    "overlapNodes": [
+      "61679b9b549f704bd85e8028c75ae906648562d1756d5e795748bef0cc1aead4"
+    ],
+    "tokenPath": null,
+    "tripleNodes": []
+  },
+  "schema": 1,
+  "world": "bad_constant"
+}

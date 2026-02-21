@@ -1,0 +1,12 @@
+[package]
+name = "premath-tusk"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Tusk core runtime contracts: run identity, descent artifacts, and witness emission"
+
+[dependencies]
+premath-kernel = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }

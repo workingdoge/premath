@@ -1,0 +1,30 @@
+{
+  "check": {
+    "baseMask": 15,
+    "contractibleNode": "cbb55e3c503bc43673ebcc6a9971c8f7e9e2dcd1694835139d51310d41575590",
+    "coverSig": "179274986b18703248eeed190a18d9040f4b85a59bd34d813e9ba85c569d269c",
+    "glueObj": "0de49c5717998ca9443d7d997bca43ddc87bb9271e0007eb3f98336eed5d8353",
+    "kind": "descent",
+    "localNodes": [
+      "5ac4375d79c64d65c60c278421958d5ddb49f3a6d4a3c287644211fbb1a02b00",
+      "86a3a22c385d66219412a79deb3050224f84d7a31b634be36acaad73cedca6aa",
+      "13e8fb6ca3f1a843063a8bbb2d706e5556f3e7a0790c3fe620243f9da7a7bc24"
+    ],
+    "localObjs": [
+      "d28a9c5c51e5f24c4aaea2554fbeb0ed525c501a1371845dd297c3e8c140c239",
+      "003a9d38da35d084a867e1f229e2a59f173b80cff12f014502d66db441203c06",
+      "341aefc7e273de0103a53dbc4ea5d84ac818a31c6584100741b7c34277274909"
+    ],
+    "overlapNodes": [
+      "25e5d12e5e4132fd1fea2f1e0bfc98388a5170123a91983aedbe9080affa8247",
+      "c670b3b020253756f8f64eb0b38a580e3375d3483304e56d575e4ea133e6076c",
+      "d8dd24bb294b7beef38fab8772511d45d17fbb9de26b18373fac086d9397c588"
+    ],
+    "tokenPath": null,
+    "tripleNodes": [
+      "a491f922bc5e5f3f8bf9e8e04c50e5bf1b14db6143ef51609834cf616879edca"
+    ]
+  },
+  "schema": 1,
+  "world": "sheaf_bits"
+}

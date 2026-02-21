@@ -1,0 +1,17 @@
+{
+  "check": {
+    "baseMask": 3,
+    "kind": "descent",
+    "legs": [
+      1,
+      2
+    ],
+    "locals": [
+      0,
+      0
+    ],
+    "tokenPath": null
+  },
+  "schema": 1,
+  "world": "non_separated"
+}

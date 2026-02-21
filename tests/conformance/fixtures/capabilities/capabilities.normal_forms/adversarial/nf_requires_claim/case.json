@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.normal_forms",
+  "vectorId": "adversarial/nf_requires_claim",
+  "description": "Explicit normalized-mode request rejects when capability is not claimed.",
+  "semanticScenarioId": "nf_requires_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "normalized",
+      "claimedCapabilities": [],
+      "normalizerId": "nf.toy.v1",
+      "policyDigest": "policy.toy.v1",
+      "semantic": {
+        "op": "sum",
+        "terms": ["x", "y"]
+      }
+    }
+  }
+}

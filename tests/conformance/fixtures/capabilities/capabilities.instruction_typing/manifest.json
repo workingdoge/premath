@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectors": [
+    "golden/instruction_typed_deterministic",
+    "adversarial/instruction_unknown_unroutable_reject",
+    "adversarial/instruction_typing_requires_claim",
+    "invariance/same_instruction_typing_local",
+    "invariance/same_instruction_typing_external"
+  ]
+}

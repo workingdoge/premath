@@ -1,0 +1,12 @@
+# Optional orchestration layer for local coding-runtime processes.
+# hk/mise remain the canonical gate semantics.
+
+[daemons.docs-preview]
+run = "python3 -m http.server 43173"
+dir = "docs"
+ready_delay = 1
+auto = ["start", "stop"]
+
+[daemons.gate-check-loop]
+run = "sh -lc 'while true; do mise run ci-check; sleep 1800; done'"
+ready_delay = 1

@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "adversarial/instruction_typing_requires_claim",
+  "description": "Instruction typing checks require explicit capability claim.",
+  "semanticScenarioId": "instruction_typing_requires_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "instruction_typing",
+      "claimedCapabilities": []
+    }
+  }
+}

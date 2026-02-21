@@ -1,0 +1,23 @@
+{
+  "check": {
+    "baseMask": 7,
+    "kind": "descent",
+    "legs": [
+      3,
+      6
+    ],
+    "locals": [
+      {
+        "0": 1,
+        "1": 0
+      },
+      {
+        "1": 0,
+        "2": 1
+      }
+    ],
+    "tokenPath": null
+  },
+  "schema": 1,
+  "world": "sheaf_bits"
+}

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.kcir_witnesses",
+  "vectorId": "golden/kcir_witness_refs_resolve",
+  "description": "KCIR-linked witness references resolve and verify.",
+  "semanticScenarioId": "kcir_refs_resolve_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.kcir_witnesses"],
+    "witnessBundle": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure", "locality_failure"],
+      "refs": [
+        "kcir1_db017ce639fa9362ca611b9f463bb5e2e8484088912f6bb1cada3b0522fa24bb",
+        "kcir1_9a689687221ef5c9ab7d3b0d857be337b9507dba5bc8c61da50ab8a6b51731f3"
+      ]
+    },
+    "refStore": {
+      "kcir1_db017ce639fa9362ca611b9f463bb5e2e8484088912f6bb1cada3b0522fa24bb": {
+        "witnessId": "w1_demo_a",
+        "class": "descent_failure",
+        "lawRef": "GATE-3.3"
+      },
+      "kcir1_9a689687221ef5c9ab7d3b0d857be337b9507dba5bc8c61da50ab8a6b51731f3": {
+        "witnessId": "w1_demo_b",
+        "class": "locality_failure",
+        "lawRef": "GATE-3.2"
+      }
+    }
+  }
+}

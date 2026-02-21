@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.squeak_site",
+  "vectorId": "adversarial/site_glue_non_contractible_reject",
+  "description": "Two inequivalent glue proposals reject with site_glue_non_contractible.",
+  "semanticScenarioId": "site_glue_non_contractible_01",
+  "artifacts": {
+    "mode": {
+      "normalizerId": "site.norm.v1",
+      "policyDigest": "policy.ci.v1"
+    },
+    "glueProposals": [
+      {
+        "bundle": {
+          "runFrame": "rf_001",
+          "result": "accepted",
+          "sectionRefs": ["s1", "s2"]
+        }
+      },
+      {
+        "bundle": {
+          "runFrame": "rf_001",
+          "result": "rejected",
+          "sectionRefs": ["s1", "s2"]
+        }
+      }
+    ]
+  }
+}

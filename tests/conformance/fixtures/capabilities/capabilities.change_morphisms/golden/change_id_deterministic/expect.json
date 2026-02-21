@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "stub",
+  "result": "accepted",
+  "assertions": [
+    "changeId stable across equivalent runs"
+  ]
+}

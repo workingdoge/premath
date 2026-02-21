@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "stub",
+  "result": "rejected",
+  "assertions": [
+    "deterministic reject for non-unique canonical normative source"
+  ]
+}

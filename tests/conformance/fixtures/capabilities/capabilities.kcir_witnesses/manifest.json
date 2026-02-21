@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.kcir_witnesses",
+  "vectors": [
+    "golden/kcir_witness_refs_resolve",
+    "adversarial/kcir_witness_requires_claim",
+    "adversarial/kcir_witness_tampered_ref_reject",
+    "invariance/same_semantics_opaque",
+    "invariance/same_semantics_kcir_linked"
+  ]
+}

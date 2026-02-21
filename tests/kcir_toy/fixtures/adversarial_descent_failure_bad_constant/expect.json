@@ -1,0 +1,17 @@
+{
+  "failures": [
+    {
+      "class": "descent_failure",
+      "context": {
+        "mask": 3
+      },
+      "lawRef": "GATE-3.3",
+      "message": "no global glue exists for compatible local data",
+      "tokenPath": null,
+      "witnessId": "w1_sgjilie1aln83eq8oh0gbmois0f6gtbsppfplk8j26vps7qmu2fg"
+    }
+  ],
+  "profile": "toy",
+  "result": "rejected",
+  "witnessSchema": 1
+}

@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.kcir_witnesses",
+  "vectorId": "invariance/same_semantics_kcir_linked",
+  "profile": "kcir_linked_witness",
+  "semanticScenarioId": "kcir_invariance_01",
+  "description": "KCIR-linked witness run paired with opaque baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure"],
+      "semantic": {
+        "op": "sum",
+        "terms": ["q", "p", "p"]
+      }
+    },
+    "claimedCapabilities": ["capabilities.kcir_witnesses"],
+    "witnessBundle": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure"],
+      "refs": [
+        "kcir1_9fdf3d3fd646ae38e7e7cee3762b9eb58c9a7ca2f04f3fcde318f25747aa3d9e"
+      ]
+    },
+    "refStore": {
+      "kcir1_9fdf3d3fd646ae38e7e7cee3762b9eb58c9a7ca2f04f3fcde318f25747aa3d9e": {
+        "witnessId": "w1_demo_d",
+        "class": "descent_failure",
+        "lawRef": "GATE-3.3",
+        "tokenPath": "inv/1"
+      }
+    }
+  }
+}

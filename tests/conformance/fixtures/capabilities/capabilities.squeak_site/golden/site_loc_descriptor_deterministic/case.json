@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.squeak_site",
+  "vectorId": "golden/site_loc_descriptor_deterministic",
+  "description": "Equivalent location descriptors produce the same deterministic loc_id.",
+  "semanticScenarioId": "site_loc_descriptor_deterministic_01",
+  "artifacts": {
+    "leftDescriptor": {
+      "worldId": "world.dev",
+      "runtimeProfile": "local",
+      "capabilityVector": ["hk", "mise", "rust"],
+      "substrateBindingRef": "host://devbox"
+    },
+    "rightDescriptor": {
+      "runtimeProfile": "local",
+      "substrateBindingRef": "host://devbox",
+      "capabilityVector": ["rust", "hk", "mise"],
+      "worldId": "world.dev"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.kcir_witnesses",
+  "vectorId": "adversarial/kcir_witness_tampered_ref_reject",
+  "description": "Tampered or missing KCIR witness refs reject deterministically.",
+  "semanticScenarioId": "kcir_tampered_ref_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.kcir_witnesses"],
+    "witnessBundle": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure"],
+      "refs": [
+        "kcir1_7664c9b4414b3389ca3130e4b13e2253dd9800b0eec1e9ac6e6418a91afa8a08"
+      ]
+    },
+    "refStore": {
+      "kcir1_7664c9b4414b3389ca3130e4b13e2253dd9800b0eec1e9ac6e6418a91afa8a08": {
+        "witnessId": "w1_demo_c",
+        "class": "stability_failure",
+        "lawRef": "GATE-3.1",
+        "tokenPath": "mock/1"
+      }
+    },
+    "tamper": {
+      "kind": "payload_mismatch",
+      "note": "stored payload no longer hashes to declared ref"
+    }
+  }
+}

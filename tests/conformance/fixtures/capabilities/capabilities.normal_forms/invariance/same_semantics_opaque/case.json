@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.normal_forms",
+  "vectorId": "invariance/same_semantics_opaque",
+  "profile": "opaque_witness",
+  "semanticScenarioId": "nf_invariance_01",
+  "description": "Baseline profile run for invariance pairing.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "op": "sum",
+        "terms": ["u", "v", "u"]
+      }
+    },
+    "claimedCapabilities": []
+  }
+}

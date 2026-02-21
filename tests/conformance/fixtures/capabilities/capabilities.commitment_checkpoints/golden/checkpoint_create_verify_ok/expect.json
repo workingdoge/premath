@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "checkpoint creation succeeds",
+    "checkpoint verification succeeds"
+  ]
+}

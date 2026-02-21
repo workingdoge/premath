@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "all witness references resolve",
+    "reference verification succeeds"
+  ]
+}

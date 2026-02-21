@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.squeak_site",
+  "vectorId": "golden/site_overlap_agreement_accept",
+  "description": "Two location sections agreeing on overlap obligations are accepted.",
+  "semanticScenarioId": "site_overlap_agreement_01",
+  "artifacts": {
+    "leftSection": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "requiredChecks": ["hk-check", "conformance-run"],
+      "policyDigest": "policy.ci.v1",
+      "projectionDigest": "proj.delta.v1"
+    },
+    "rightSection": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "requiredChecks": ["conformance-run", "hk-check"],
+      "policyDigest": "policy.ci.v1",
+      "projectionDigest": "proj.delta.v1"
+    }
+  }
+}

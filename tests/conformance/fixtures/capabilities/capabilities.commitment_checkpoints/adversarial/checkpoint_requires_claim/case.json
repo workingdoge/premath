@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.commitment_checkpoints",
+  "vectorId": "adversarial/checkpoint_requires_claim",
+  "description": "Explicit checkpoint request rejects when capability is not claimed.",
+  "semanticScenarioId": "checkpoint_requires_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "checkpoint_enabled",
+      "claimedCapabilities": [],
+      "operation": "create_or_verify_checkpoint"
+    }
+  }
+}

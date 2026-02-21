@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "adversarial/instruction_unknown_unroutable_reject",
+  "description": "unknown(reason) without explicit policy route rejects deterministically.",
+  "semanticScenarioId": "instruction_unknown_policy_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "instruction": {
+      "intent": "Do a thing we do not classify yet.",
+      "scope": {
+        "kind": "repo",
+        "target": "premath"
+      },
+      "policyDigest": "policy.ci.v1",
+      "requestedChecks": ["hk-check"]
+    },
+    "policy": {
+      "allowUnknown": false
+    },
+    "classificationA": {
+      "state": "unknown",
+      "reason": "intent_not_mapped"
+    },
+    "classificationB": {
+      "state": "unknown",
+      "reason": "intent_not_mapped"
+    }
+  }
+}

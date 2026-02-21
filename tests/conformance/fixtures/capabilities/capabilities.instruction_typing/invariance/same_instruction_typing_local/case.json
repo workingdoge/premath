@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "invariance/same_instruction_typing_local",
+  "profile": "local",
+  "semanticScenarioId": "instruction_typing_invariance_01",
+  "description": "Local instruction-typing profile baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "instruction": "repo-check"
+      }
+    }
+  }
+}

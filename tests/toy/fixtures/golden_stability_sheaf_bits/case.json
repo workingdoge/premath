@@ -1,0 +1,22 @@
+{
+  "check": {
+    "a": {
+      "0": 1,
+      "1": 0,
+      "2": 1
+    },
+    "f": {
+      "src": 3,
+      "tgt": 7
+    },
+    "g": {
+      "src": 1,
+      "tgt": 3
+    },
+    "gammaMask": 7,
+    "kind": "stability",
+    "tokenPath": null
+  },
+  "schema": 1,
+  "world": "sheaf_bits"
+}

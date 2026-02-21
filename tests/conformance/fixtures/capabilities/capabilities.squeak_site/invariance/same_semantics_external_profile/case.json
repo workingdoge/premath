@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.squeak_site",
+  "vectorId": "invariance/same_semantics_external_profile",
+  "profile": "external_runner",
+  "semanticScenarioId": "site_invariance_01",
+  "description": "External runtime profile paired with local baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": ["descent_failure"],
+      "semantic": {
+        "op": "sum",
+        "terms": ["y", "x", "x"]
+      }
+    },
+    "claimedCapabilities": ["capabilities.squeak_site"],
+    "locationDescriptor": {
+      "worldId": "world.dev",
+      "runtimeProfile": "external_runner",
+      "capabilityVector": ["hk", "mise", "rust"],
+      "substrateBindingRef": "runner://terraform/local"
+    }
+  }
+}

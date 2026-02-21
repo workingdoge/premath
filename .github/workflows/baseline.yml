@@ -1,0 +1,29 @@
+name: baseline
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+jobs:
+  baseline:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup mise
+        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+        with:
+          version: 2026.2.17
+          install: false
+
+      - name: Trust and install pinned tools
+        run: |
+          mise trust
+          mise install
+
+      - name: Run baseline gate via executor shim
+        run: mise run ci-check
