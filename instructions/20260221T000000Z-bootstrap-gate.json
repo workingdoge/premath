@@ -5,6 +5,10 @@
     "kind": "repo",
     "target": "premath"
   },
+  "instructionType": "ci.gate.check",
+  "typingPolicy": {
+    "allowUnknown": false
+  },
   "policyDigest": "policy.ci.v1",
   "requestedChecks": [
     "hk-check"

@@ -18,6 +18,14 @@ Required fields:
 - `policyDigest` (string): policy binding identifier.
 - `requestedChecks` (string[]): gate checks to execute (for example `hk-check`).
 
+Optional doctrine-typing fields:
+
+- `instructionType` (string): explicit typed kind
+  (for example `ci.gate.check`, `ci.gate.pre_commit`, `ci.gate.pre_push`).
+- `typingPolicy` (object):
+  - `allowUnknown` (boolean, default `false`): if `false`, classification
+    `unknown(reason)` is rejected deterministically before check execution.
+
 Run an envelope:
 
 ```bash

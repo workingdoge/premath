@@ -66,6 +66,7 @@ the semantic contract.
 
 Repository profile note (v0): this repository currently uses camelCase fields
 in instruction JSON (`policyDigest`, `requestedChecks`).
+It may additionally carry `instructionType` and `typingPolicy.allowUnknown`.
 
 For deterministic binding, implementations SHOULD derive:
 

@@ -15,6 +15,13 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 
+SUPPORTED_INSTRUCTION_TYPES = {
+    "ci.gate.check",
+    "ci.gate.pre_commit",
+    "ci.gate.pre_push",
+}
+
+
 def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -70,6 +77,37 @@ def ensure_string_list(value: Any, label: str) -> List[str]:
     if len(set(out)) != len(out):
         raise ValueError(f"{label} must not contain duplicate check IDs")
     return out
+
+
+def parse_typing_policy(envelope: Dict[str, Any]) -> Dict[str, Any]:
+    raw_policy = envelope.get("typingPolicy", {})
+    if raw_policy is None:
+        raw_policy = {}
+    if not isinstance(raw_policy, dict):
+        raise ValueError("typingPolicy must be an object when provided")
+    allow_unknown = raw_policy.get("allowUnknown", False)
+    if not isinstance(allow_unknown, bool):
+        raise ValueError("typingPolicy.allowUnknown must be a boolean when provided")
+    return {"allowUnknown": allow_unknown}
+
+
+def classify_instruction(envelope: Dict[str, Any], requested_checks: List[str]) -> Dict[str, str]:
+    instruction_type = envelope.get("instructionType")
+    if instruction_type is not None:
+        instruction_type = ensure_string(instruction_type, "instructionType")
+        if instruction_type in SUPPORTED_INSTRUCTION_TYPES:
+            return {"state": "typed", "kind": instruction_type}
+        return {"state": "unknown", "reason": "unsupported_instruction_type"}
+
+    hk_prefixed = all(check_id.startswith("hk-") for check_id in requested_checks)
+    if hk_prefixed:
+        if requested_checks == ["hk-pre-commit"]:
+            return {"state": "typed", "kind": "ci.gate.pre_commit"}
+        if requested_checks == ["hk-pre-push"]:
+            return {"state": "typed", "kind": "ci.gate.pre_push"}
+        return {"state": "typed", "kind": "ci.gate.check"}
+
+    return {"state": "unknown", "reason": "unrecognized_requested_checks"}
 
 
 def load_instruction(path: Path) -> Dict[str, Any]:
@@ -129,6 +167,8 @@ def main() -> int:
         if scope in (None, ""):
             raise ValueError("scope must be non-empty")
         requested_checks = ensure_string_list(envelope.get("requestedChecks"), "requestedChecks")
+        typing_policy = parse_typing_policy(envelope)
+        instruction_classification = classify_instruction(envelope, requested_checks)
     except (ValueError, json.JSONDecodeError) as exc:
         print(f"[error] invalid instruction envelope: {exc}", file=sys.stderr)
         return 2
@@ -138,13 +178,31 @@ def main() -> int:
 
     started_at = datetime.now(timezone.utc)
     results: List[Dict[str, Any]] = []
-    for check_id in requested_checks:
-        print(f"[instruction] running check: {check_id}")
-        results.append(run_check(root, check_id))
+    failed: List[Dict[str, Any]] = []
+    failure_classes: List[str] = []
+    unknown_rejected = (
+        instruction_classification.get("state") == "unknown"
+        and not typing_policy.get("allowUnknown", False)
+    )
 
-    failed = [r for r in results if r["exitCode"] != 0]
-    verdict_class = "accepted" if not failed else "rejected"
-    failure_classes = [] if not failed else ["check_failed"]
+    if unknown_rejected:
+        verdict_class = "rejected"
+        failure_classes = ["instruction_unknown_unroutable"]
+        reason = instruction_classification.get("reason", "unknown")
+        print(
+            f"[instruction] classification rejected: unknown(reason={reason}) "
+            f"without allowUnknown policy",
+            file=sys.stderr,
+        )
+    else:
+        for check_id in requested_checks:
+            print(f"[instruction] running check: {check_id}")
+            results.append(run_check(root, check_id))
+        failed = [r for r in results if r["exitCode"] != 0]
+        verdict_class = "accepted" if not failed else "rejected"
+        if failed:
+            failure_classes = ["check_failed"]
+
     squeak_site_profile = os.environ.get(
         "PREMATH_SQUEAK_SITE_PROFILE",
         os.environ.get("PREMATH_EXECUTOR_PROFILE", "local"),
@@ -159,6 +217,8 @@ def main() -> int:
         "instructionId": instruction_id,
         "instructionRef": rel_instruction_ref,
         "instructionDigest": instruction_digest,
+        "instructionClassification": instruction_classification,
+        "typingPolicy": typing_policy,
         "intent": intent,
         "scope": scope,
         "policyDigest": policy_digest,
@@ -184,7 +244,7 @@ def main() -> int:
 
     print(f"[instruction] witness written: {out_path}")
 
-    if failed and not args.allow_failure:
+    if verdict_class == "rejected" and not args.allow_failure:
         return 1
     return 0
 

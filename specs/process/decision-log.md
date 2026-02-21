@@ -341,3 +341,25 @@ this behavior regression-resistant and profile-invariant.
 - Fixture/invariance stub checks now include this capability track.
 - Claim surfaces (`SPEC-INDEX`, `CAPABILITY-VECTORS`, `CONFORMANCE`) now
   include `capabilities.instruction_typing`.
+
+---
+
+## 2026-02-21 — Decision 0013: Wire instruction doctrine into runtime witness flow
+
+### Decision
+Extend `tools/ci/run_instruction.py` to enforce doctrine-level instruction
+classification at runtime:
+
+- classify each envelope as `typed(kind)` or `unknown(reason)`,
+- reject `unknown(reason)` when `typingPolicy.allowUnknown` is false,
+- emit `instructionClassification` and `typingPolicy` in CI witness artifacts.
+
+### Rationale
+Doctrine and conformance capability checks were in place, but the operational
+instruction runner did not yet surface classification in runtime artifacts.
+This closes the spec-to-operation loop.
+
+### Consequences
+- instruction witness records now carry explicit typing metadata.
+- unroutable unknown instructions fail deterministically before gate execution.
+- instruction envelope examples/documentation now include optional typing fields.

@@ -159,6 +159,8 @@ Implementations MAY expose instruction envelopes as first-class CI inputs:
 CIInstructionEnvelope {
   intent
   scope
+  instruction_type?   // optional explicit typed kind
+  typing_policy?      // optional unknown-routing policy
   policy_digest
   requested_checks
 }
@@ -170,6 +172,9 @@ canonical envelope payload).
 
 For fixed envelope content and fixed policy bindings, verdict class and
 required/executed check sets SHOULD be stable.
+
+Implementations exposing this flow SHOULD also emit instruction classification
+material (`typed(kind)` or `unknown(reason)`) in CI witness records.
 
 Doctrine typing/binding constraints for this flow are specified in
 `draft/LLM-INSTRUCTION-DOCTRINE`.

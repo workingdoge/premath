@@ -10,6 +10,8 @@ It separates:
 `tools/ci/run_instruction.sh` is the instruction-envelope entrypoint:
 
 - input: `instructions/<ts>-<id>.json`
+- classifies instruction as `typed(kind)` or `unknown(reason)` (doctrine-level)
+- rejects unroutable `unknown(reason)` unless `typingPolicy.allowUnknown=true`
 - executes requested gate checks through `run_gate.sh`
 - output: `artifacts/ciwitness/<ts>-<id>.json`
 
