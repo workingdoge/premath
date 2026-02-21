@@ -173,6 +173,7 @@ mise run hk-check
 mise run ci-wiring-check
 mise run ci-command-surface-check
 mise run ci-pipeline-check
+mise run ci-pipeline-test
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict
@@ -223,6 +224,7 @@ See `tools/ci/README.md` for runner protocol details.
 The current repo CI binding runs:
 
 - `mise run ci-pipeline-check`
+- `mise run ci-pipeline-test`
 - `python3 tools/ci/pipeline_required.py`
 
 Provider-specific required-check mappings are documented in

@@ -10,6 +10,8 @@
     "golden/provider_env_mapping_github_equiv",
     "adversarial/change_projection_requires_claim",
     "invariance/same_delta_local_profile",
-    "invariance/same_delta_external_profile"
+    "invariance/same_delta_external_profile",
+    "invariance/same_provider_wrapper_local_env",
+    "invariance/same_provider_wrapper_github_env"
   ]
 }

@@ -1123,6 +1123,58 @@ def evaluate_change_projection_invariance(case: Dict[str, Any]) -> VectorOutcome
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_change_projection_provider_wrapper_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    profile = ensure_string(case.get("profile"), "profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+
+    changed_paths = ensure_string_list(artifacts.get("changedPaths", []), "artifacts.changedPaths")
+    expected_required = canonical_check_set(
+        artifacts.get("expectedRequiredChecks", []), "artifacts.expectedRequiredChecks"
+    )
+    projection = project_required_checks(changed_paths)
+    actual_required = sorted(projection.required_checks)
+    if actual_required != expected_required:
+        return VectorOutcome("rejected", "rejected", ["change_projection_mismatch"])
+
+    expected_refs_raw = artifacts.get("expectedRefs")
+    if not isinstance(expected_refs_raw, dict):
+        raise ValueError("artifacts.expectedRefs must be an object")
+    expected_base_ref = expected_refs_raw.get("baseRef")
+    if expected_base_ref is not None and not isinstance(expected_base_ref, str):
+        raise ValueError("artifacts.expectedRefs.baseRef must be null or string")
+    expected_head_ref = ensure_string(expected_refs_raw.get("headRef"), "artifacts.expectedRefs.headRef")
+    expected_refs = (expected_base_ref, expected_head_ref)
+
+    if profile == "local":
+        local_env = ensure_string_mapping(artifacts.get("localEnv"), "artifacts.localEnv")
+        actual_refs = resolve_premath_ci_refs(local_env)
+    elif profile == "external":
+        claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+        if CAPABILITY_CHANGE_PROJECTION not in claimed:
+            return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+        github_env = ensure_string_mapping(artifacts.get("githubEnv"), "artifacts.githubEnv")
+        mapped_env = map_github_to_premath_env(github_env)
+        actual_refs = resolve_premath_ci_refs(mapped_env)
+    else:
+        raise ValueError("profile must be 'local' or 'external'")
+
+    if actual_refs != expected_refs:
+        return VectorOutcome("rejected", "rejected", ["provider_env_mapping_mismatch"])
+
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = ensure_string_list(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/docs_only_raw_runs_conformance_check",
@@ -1133,6 +1185,11 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_docs_and_code(case)
     if vector_id == "golden/provider_env_mapping_github_equiv":
         return evaluate_change_projection_provider_env_mapping(case)
+    if vector_id in {
+        "invariance/same_provider_wrapper_local_env",
+        "invariance/same_provider_wrapper_github_env",
+    }:
+        return evaluate_change_projection_provider_wrapper_invariance(case)
     if vector_id == "adversarial/change_projection_requires_claim":
         return evaluate_change_projection_requires_claim(case)
     if vector_id.startswith("invariance/"):

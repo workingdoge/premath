@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "provider-mapped refs resolve to expected semantic refs",
+    "kernel verdict matches paired profile",
+    "Gate failure classes match paired profile"
+  ]
+}

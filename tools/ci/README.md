@@ -52,6 +52,10 @@ steps.
 remain thin wrappers around provider-neutral pipeline entrypoints
 (`mise run ci-pipeline-check`).
 
+`tools/ci/test_pipeline_required.py` and `tools/ci/test_pipeline_instruction.py`
+are deterministic unit tests for provider-neutral pipeline summary/digest logic
+(`mise run ci-pipeline-test`).
+
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
 entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
 attested required gate chain, and emits summary/sha artifacts.
@@ -70,6 +74,7 @@ Workflow authoring contract:
   orchestration in `tools/ci/pipeline_*.py`.
 - validate with:
   - `mise run ci-pipeline-check`
+  - `mise run ci-pipeline-test`
   - `mise run ci-wiring-check`
 
 `tools/ci/check_instruction_envelope.py` validates instruction envelope
@@ -156,6 +161,7 @@ mise run ci-required
 mise run ci-wiring-check
 mise run ci-command-surface-check
 mise run ci-pipeline-check
+mise run ci-pipeline-test
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-required-attested

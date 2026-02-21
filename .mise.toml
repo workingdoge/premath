@@ -52,6 +52,7 @@ run = [
   "mise run doctrine-check",
   "mise run ci-command-surface-check",
   "mise run ci-pipeline-check",
+  "mise run ci-pipeline-test",
   "mise run ci-wiring-check",
   "mise run ci-instruction-check",
   "mise run ci-instruction-smoke",
@@ -84,6 +85,12 @@ run = "python3 tools/ci/check_ci_wiring.py"
 
 [tasks.ci-pipeline-check]
 run = "python3 tools/ci/check_pipeline_wiring.py"
+
+[tasks.ci-pipeline-test]
+run = [
+  "python3 tools/ci/test_pipeline_required.py",
+  "python3 tools/ci/test_pipeline_instruction.py",
+]
 
 [tasks.ci-pipeline-required]
 run = "python3 tools/ci/pipeline_required.py"
