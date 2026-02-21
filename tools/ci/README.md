@@ -10,6 +10,7 @@ For each executed check it requests a per-check gate envelope artifact under
 `ci.required.v1` via `gateWitnessRefs`.
 `run_gate.sh` prefers a native runner/task artifact when present; otherwise it
 emits a deterministic fallback envelope (`tools/ci/emit_gate_witness.py`).
+Each gate ref includes `source: native|fallback` provenance.
 
 `tools/ci/run_gate.sh` is the host-agnostic task executor shim used by both
 `ci-required` and fixed-task flows like `mise run ci-check`.
@@ -22,7 +23,12 @@ native-or-fallback gate envelope emission for that check.
 deterministic projection semantics.
 When `gateWitnessRefs` are present, verification also enforces linkage integrity
 (check ordering, artifact digest, and payload/result consistency).
+`--require-native-check <id>` can phase in native-only requirements for selected
+checks.
 By default it verifies `artifacts/ciwitness/latest-required.json`.
+
+`tools/ci/decide_required.py` emits deterministic merge/promotion decisions from
+verified witness semantics (`accept` or `reject`).
 
 It separates:
 
@@ -66,9 +72,13 @@ mise run ci-required
 
 mise run ci-verify-required
 mise run ci-required-verified
+mise run ci-decide-required
 
 # strict CI mode: compare witness changedPaths to detected delta
 GITHUB_BASE_REF=main mise run ci-verify-required-strict
+
+# strict CI mode + phase-in native-only requirement
+GITHUB_BASE_REF=main mise run ci-verify-required-strict-native
 ```
 
 Instruction envelope run:

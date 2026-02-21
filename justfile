@@ -73,6 +73,14 @@ ci-verify-required:
 ci-verify-required-strict:
     sh -lc 'python3 tools/ci/verify_required_witness.py --compare-delta --from-ref "origin/${GITHUB_BASE_REF:-main}" --to-ref HEAD'
 
+# Strict verify + require native witness source for selected checks (phase-in)
+ci-verify-required-strict-native:
+    sh -lc 'python3 tools/ci/verify_required_witness.py --compare-delta --from-ref "origin/${GITHUB_BASE_REF:-main}" --to-ref HEAD --require-native-check baseline'
+
+# Deterministic accept/reject decision from the verified required witness
+ci-decide-required:
+    sh -lc 'python3 tools/ci/decide_required.py --compare-delta --from-ref "origin/${GITHUB_BASE_REF:-main}" --to-ref HEAD'
+
 # Run required gate and enforce witness verification
 ci-required-verified:
     just ci-required

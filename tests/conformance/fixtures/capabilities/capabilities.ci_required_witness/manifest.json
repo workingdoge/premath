@@ -5,10 +5,13 @@
   "vectors": [
     "golden/witness_verifies_for_projected_delta",
     "golden/gate_witness_refs_integrity_accept",
+    "golden/native_required_source_accept",
     "golden/strict_delta_compare_match",
     "adversarial/witness_projection_digest_mismatch_reject",
     "adversarial/witness_verdict_inconsistent_reject",
     "adversarial/gate_witness_ref_digest_mismatch_reject",
+    "adversarial/gate_witness_ref_source_missing_reject",
+    "adversarial/native_required_fallback_reject",
     "adversarial/strict_delta_compare_mismatch_reject",
     "adversarial/ci_required_witness_requires_claim",
     "invariance/same_required_witness_local",

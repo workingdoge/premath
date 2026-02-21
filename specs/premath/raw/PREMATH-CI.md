@@ -146,6 +146,8 @@ CIWitness {
 `projection_digest` binds change-projection semantics.
 `policy_digest` binds requiredness/profile policy.
 `gate_witness_refs` MAY bind CI outcomes to kernel witness artifacts.
+When present, each `gate_witness_ref` SHOULD include provenance
+`source in {native, fallback}`.
 
 When an implementation exposes Tusk-local witness envelopes, `gate_witness_refs`
 SHOULD reference those envelope artifacts (for example GateWitnessEnvelope IDs
@@ -166,8 +168,13 @@ For projection-driven required gates (for example `ci.required` witness records)
 - when `gate_witness_refs` are present, verification MUST also reject on
   linkage mismatch:
   - check/ref ordering mismatch,
+  - missing or invalid provenance `source`,
   - referenced gate payload digest mismatch,
   - referenced gate payload verdict inconsistency with recorded check result.
+
+Implementations MAY define `native_required_checks` policy bindings.
+When configured, verification MUST reject if any listed check has
+`gate_witness_ref.source != native`.
 
 When CI is operating in strict delta-compare mode, verification MUST also
 compare witness `changed_paths` to the CI-evaluated delta for the active base/head
@@ -175,6 +182,10 @@ refs and reject on mismatch.
 
 Implementations SHOULD surface verified witness artifacts and digests as CI
 attestation outputs for audit.
+
+Implementations SHOULD expose one deterministic decision surface
+(`accept|reject`) derived from verified required witnesses, independent of CI
+vendor.
 
 ### 6.1 Instruction-envelope control loop (v0)
 

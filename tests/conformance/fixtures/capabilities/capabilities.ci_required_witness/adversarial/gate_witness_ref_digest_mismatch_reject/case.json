@@ -45,6 +45,7 @@
           "checkId": "build",
           "artifactRelPath": "gates/proj1_a650cc9dd752ba9cec31cecc5f872e19f588906e6cf557cb6aecb9da495285ce/01-build.json",
           "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+          "source": "native",
           "runId": "run1_ci_gate_build",
           "witnessKind": "gate",
           "result": "accepted"
@@ -53,6 +54,7 @@
           "checkId": "test",
           "artifactRelPath": "gates/proj1_a650cc9dd752ba9cec31cecc5f872e19f588906e6cf557cb6aecb9da495285ce/02-test.json",
           "sha256": "4f20db0f3fcaaeafe823d07b16439df3754d2e0f12f6565be7033e7929663acf",
+          "source": "native",
           "runId": "run1_ci_gate_test",
           "witnessKind": "gate",
           "result": "accepted"

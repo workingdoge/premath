@@ -160,8 +160,12 @@ projection semantics and rejects on:
 - verdict/failure-class mismatch with recorded results.
 - when `gate_witness_refs` are present:
   - check/ref ordering mismatch,
+  - missing or invalid provenance `source in {native,fallback}`,
   - referenced gate payload digest mismatch,
   - referenced gate payload verdict inconsistency with check result.
+
+If profile bindings declare `native_required_checks`, verification MUST reject
+when any listed check has `gate_witness_ref.source != native`.
 
 When strict delta-compare mode is enabled, verification MUST also compare
 witness `changed_paths` to the evaluated CI delta for active base/head refs and
@@ -169,6 +173,8 @@ reject on mismatch.
 
 Conforming CI implementations SHOULD publish verified witness artifacts and
 digest sidecars as attestation outputs.
+Conforming implementations SHOULD provide one deterministic decision function
+from verified witness semantics (`accept|reject`), independent of CI provider.
 
 ## 8. Relationship to Tusk and Squeak
 

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "assertions": [
+    "native-required checks reject fallback-sourced refs"
+  ]
+}

@@ -1112,11 +1112,16 @@ def evaluate_ci_required_witness_validity(case: Dict[str, Any]) -> VectorOutcome
         artifacts.get("gateWitnessPayloads"),
         "artifacts.gateWitnessPayloads",
     )
+    native_required_checks = ensure_string_list(
+        artifacts.get("nativeRequiredChecks", []),
+        "artifacts.nativeRequiredChecks",
+    )
 
     errors, _derived = verify_required_witness_payload(
         witness,
         changed_paths,
         gate_witness_payloads=gate_witness_payloads,
+        native_required_checks=native_required_checks,
     )
     if errors:
         return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
@@ -1157,11 +1162,16 @@ def evaluate_ci_required_witness_invariance(case: Dict[str, Any]) -> VectorOutco
         artifacts.get("gateWitnessPayloads"),
         "artifacts.gateWitnessPayloads",
     )
+    native_required_checks = ensure_string_list(
+        artifacts.get("nativeRequiredChecks", []),
+        "artifacts.nativeRequiredChecks",
+    )
 
     verify_errors, _derived = verify_required_witness_payload(
         witness,
         changed_paths,
         gate_witness_payloads=gate_witness_payloads,
+        native_required_checks=native_required_checks,
     )
     if verify_errors:
         return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
@@ -1197,11 +1207,16 @@ def evaluate_ci_required_witness_strict_delta(case: Dict[str, Any]) -> VectorOut
         artifacts.get("gateWitnessPayloads"),
         "artifacts.gateWitnessPayloads",
     )
+    native_required_checks = ensure_string_list(
+        artifacts.get("nativeRequiredChecks", []),
+        "artifacts.nativeRequiredChecks",
+    )
 
     verify_errors, _derived = verify_required_witness_payload(
         witness,
         changed_paths,
         gate_witness_payloads=gate_witness_payloads,
+        native_required_checks=native_required_checks,
     )
     if verify_errors:
         return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
@@ -1216,9 +1231,12 @@ def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) ->
     if vector_id in {
         "golden/witness_verifies_for_projected_delta",
         "golden/gate_witness_refs_integrity_accept",
+        "golden/native_required_source_accept",
         "adversarial/witness_projection_digest_mismatch_reject",
         "adversarial/witness_verdict_inconsistent_reject",
         "adversarial/gate_witness_ref_digest_mismatch_reject",
+        "adversarial/gate_witness_ref_source_missing_reject",
+        "adversarial/native_required_fallback_reject",
     }:
         return evaluate_ci_required_witness_validity(case)
     if vector_id == "adversarial/ci_required_witness_requires_claim":

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "assertions": [
+    "missing gateWitnessRefs source metadata is rejected"
+  ]
+}

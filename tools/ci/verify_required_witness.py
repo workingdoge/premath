@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any, Dict, List
@@ -50,6 +51,15 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also compare witness changedPaths to currently detected delta.",
     )
+    parser.add_argument(
+        "--require-native-check",
+        action="append",
+        default=None,
+        help=(
+            "Check ID that must have gateWitnessRefs.source=native. Repeatable. "
+            "Can also be set via PREMATH_CI_NATIVE_REQUIRED_CHECKS=csv."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -69,9 +79,29 @@ def _detect_changed_paths(root: Path, args: argparse.Namespace) -> List[str]:
     return detected.changed_paths
 
 
+def _native_required_checks(args: argparse.Namespace) -> List[str]:
+    checks: List[str] = []
+    if args.require_native_check:
+        checks.extend(item.strip() for item in args.require_native_check if isinstance(item, str))
+
+    env_csv = os.environ.get("PREMATH_CI_NATIVE_REQUIRED_CHECKS", "")
+    if env_csv:
+        checks.extend(part.strip() for part in env_csv.split(","))
+
+    out: List[str] = []
+    seen: set[str] = set()
+    for check_id in checks:
+        if not check_id or check_id in seen:
+            continue
+        seen.add(check_id)
+        out.append(check_id)
+    return out
+
+
 def main() -> int:
     args = parse_args()
     root = Path(__file__).resolve().parents[2]
+    native_required_checks = _native_required_checks(args)
 
     changed_paths: List[str] = []
 
@@ -111,6 +141,7 @@ def main() -> int:
         witness,
         witness_changed_paths,
         witness_root=witness_path.parent,
+        native_required_checks=native_required_checks,
     )
 
     if args.compare_delta:
@@ -132,7 +163,8 @@ def main() -> int:
 
     print(
         "[verify-required] OK "
-        f"(projection={derived['projectionDigest']}, checks={len(derived['requiredChecks'])})"
+        f"(projection={derived['projectionDigest']}, checks={len(derived['requiredChecks'])}, "
+        f"nativeRequired={len(native_required_checks)})"
     )
     print(f"[verify-required] witness: {witness_path}")
     return 0

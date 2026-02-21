@@ -12,6 +12,7 @@ Implemented in this repo:
 - local fast/full/staged gate triggers via `jj gate-fast|gate-check|gate-pre-commit`
 - CI gate path via `.github/workflows/baseline.yml` -> `mise run ci-required`
 - witness verification path via `.github/workflows/baseline.yml` -> `mise run ci-verify-required-strict`
+- decision gate path (local/CI) via `mise run ci-decide-required`
 - CI witness artifact publication path via `.github/workflows/baseline.yml`
   (`latest-required.json`, `.sha256`, `proj1_*.json`, summary digest row)
 - instruction-envelope gate path via
@@ -71,6 +72,10 @@ Current shape:
 - canonical witness verifier: `mise run ci-verify-required`
   (`tools/ci/verify_required_witness.py`)
   - strict CI mode: `mise run ci-verify-required-strict` (`--compare-delta`)
+  - phase-in native requirement:
+    `mise run ci-verify-required-strict-native` (`--require-native-check ...`)
+- canonical decision surface: `mise run ci-decide-required`
+  (`tools/ci/decide_required.py`) -> deterministic `accept|reject`
 - default profile: `PREMATH_SQUEAK_SITE_PROFILE=local`
   - optional external profile:
     `PREMATH_SQUEAK_SITE_PROFILE=external` + `PREMATH_SQUEAK_SITE_RUNNER=<path>`
@@ -132,6 +137,7 @@ CIWitness {
   failureClasses
   policyDigest
   gateWitnessRefs?   // optional list of refs to GateWitnessEnvelope artifacts
+                    // each ref carries source=native|fallback provenance
 }
 ```
 

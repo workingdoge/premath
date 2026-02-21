@@ -93,13 +93,14 @@ def _verify_gate_witness_refs(
     errors: List[str],
     witness_root: Optional[Path],
     gate_witness_payloads: Optional[Mapping[str, Dict[str, Any]]],
-) -> None:
+) -> Dict[str, str]:
+    source_by_check: Dict[str, str] = {}
     refs_raw = witness.get("gateWitnessRefs")
     if refs_raw is None:
-        return
+        return source_by_check
     if not isinstance(refs_raw, list):
         errors.append("gateWitnessRefs must be a list when present")
-        return
+        return source_by_check
 
     if len(refs_raw) != len(executed_checks):
         errors.append(
@@ -130,6 +131,15 @@ def _verify_gate_witness_refs(
             errors.append(f"gateWitnessRefs[{idx}] unknown checkId: {check_id!r}")
             continue
         expected_gate_result = "accepted" if int(result_row["exitCode"]) == 0 else "rejected"
+
+        source = ref.get("source")
+        if not isinstance(source, str) or source not in {"native", "fallback"}:
+            errors.append(
+                f"gateWitnessRefs[{idx}].source must be 'native' or 'fallback' "
+                f"(actual={source!r})"
+            )
+        else:
+            source_by_check[check_id] = source
 
         artifact_rel_path = ref.get("artifactRelPath")
         if not isinstance(artifact_rel_path, str) or not artifact_rel_path.strip():
@@ -214,6 +224,7 @@ def _verify_gate_witness_refs(
                     f"gateWitnessRefs[{idx}] runId mismatch "
                     f"(ref={ref_run_id!r}, payload={payload.get('runId')!r})"
                 )
+    return source_by_check
 
 
 def verify_required_witness_payload(
@@ -221,6 +232,7 @@ def verify_required_witness_payload(
     changed_paths: Sequence[str],
     witness_root: Optional[Path] = None,
     gate_witness_payloads: Optional[Mapping[str, Dict[str, Any]]] = None,
+    native_required_checks: Optional[Sequence[str]] = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """Verify a ci.required witness against the deterministic projection contract.
 
@@ -317,7 +329,7 @@ def verify_required_witness_payload(
             f"(expected={executed_checks}, actual={result_check_ids})"
         )
 
-    _verify_gate_witness_refs(
+    source_by_check = _verify_gate_witness_refs(
         witness=witness,
         executed_checks=executed_checks,
         results_by_check=results_by_check,
@@ -325,6 +337,25 @@ def verify_required_witness_payload(
         witness_root=witness_root,
         gate_witness_payloads=gate_witness_payloads,
     )
+
+    native_required = _string_list(
+        list(native_required_checks or []),
+        "nativeRequiredChecks",
+        errors,
+    )
+    for idx, check_id in enumerate(native_required):
+        if check_id not in executed_checks:
+            errors.append(
+                f"nativeRequiredChecks[{idx}] not executed "
+                f"(checkId={check_id!r}, executed={executed_checks})"
+            )
+            continue
+        source = source_by_check.get(check_id)
+        if source != "native":
+            errors.append(
+                f"nativeRequiredChecks[{idx}] requires native source "
+                f"(checkId={check_id!r}, source={source!r})"
+            )
 
     docs_only = witness.get("docsOnly")
     if docs_only is not projection.docs_only:
@@ -359,6 +390,7 @@ def verify_required_witness_payload(
         "projectionDigest": expected_digest,
         "requiredChecks": expected_required,
         "executedChecks": executed_checks,
+        "gateWitnessSourceByCheck": source_by_check,
         "docsOnly": projection.docs_only,
         "reasons": expected_reasons,
         "expectedVerdict": expected_verdict,

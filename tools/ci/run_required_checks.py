@@ -76,6 +76,18 @@ def _gate_artifact_path(
     return gate_dir / file_name
 
 
+def _gate_source_path(
+    out_dir: Path,
+    projection_digest: str,
+    check_id: str,
+    index: int,
+) -> Path:
+    gate_dir = out_dir / "gates" / projection_digest
+    gate_dir.mkdir(parents=True, exist_ok=True)
+    file_name = f"{index + 1:02d}-{sanitize_check_id(check_id)}.source"
+    return gate_dir / file_name
+
+
 def _load_json_object(path: Path) -> Optional[Dict[str, Any]]:
     try:
         with path.open("r", encoding="utf-8") as f:
@@ -87,16 +99,28 @@ def _load_json_object(path: Path) -> Optional[Dict[str, Any]]:
     return payload
 
 
+def _load_gate_source(path: Path) -> Optional[str]:
+    try:
+        raw = path.read_text(encoding="utf-8").strip().lower()
+    except OSError:
+        return None
+    if raw in {"native", "fallback"}:
+        return raw
+    return None
+
+
 def _gate_ref_from_payload(
     out_dir: Path,
     gate_path: Path,
     check_id: str,
     payload: Dict[str, Any],
+    source: str,
 ) -> Dict[str, Any]:
     ref: Dict[str, Any] = {
         "checkId": check_id,
         "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
         "sha256": stable_sha256(payload),
+        "source": source,
     }
     if "runId" in payload:
         ref["runId"] = payload.get("runId")
@@ -118,8 +142,10 @@ def run_check_with_witness(
     index: int,
 ) -> Dict[str, Any]:
     gate_path = _gate_artifact_path(out_dir, projection_digest, check_id, index)
+    source_path = _gate_source_path(out_dir, projection_digest, check_id, index)
     env = os.environ.copy()
     env["PREMATH_GATE_WITNESS_OUT"] = str(gate_path)
+    env["PREMATH_GATE_WITNESS_SOURCE_OUT"] = str(source_path)
     env["PREMATH_GATE_CHECK_ID"] = check_id
     env["PREMATH_GATE_PROJECTION_DIGEST"] = projection_digest
     env["PREMATH_GATE_POLICY_DIGEST"] = policy_digest
@@ -139,11 +165,19 @@ def run_check_with_witness(
     }
     payload = _load_json_object(gate_path)
     if payload is not None:
+        source = _load_gate_source(source_path)
+        if source is None:
+            source_candidate = payload.get("witnessSource")
+            if isinstance(source_candidate, str) and source_candidate in {"native", "fallback"}:
+                source = source_candidate
+        if source is None:
+            source = "native"
         row["nativeGateWitnessRef"] = _gate_ref_from_payload(
             out_dir=out_dir,
             gate_path=gate_path,
             check_id=check_id,
             payload=payload,
+            source=source,
         )
     return row
 
@@ -185,6 +219,7 @@ def emit_gate_witness(
         "checkId": check_id,
         "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
         "sha256": stable_sha256(envelope),
+        "source": "fallback",
         "runId": envelope["runId"],
         "witnessKind": envelope["witnessKind"],
         "result": envelope["result"],

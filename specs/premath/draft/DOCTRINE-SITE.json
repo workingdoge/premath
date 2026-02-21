@@ -234,6 +234,12 @@
       "requiresDeclaration": false
     },
     {
+      "id": "op/ci.decide_required",
+      "path": "tools/ci/decide_required.py",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "op/conformance.stub",
       "path": "tools/conformance/check_stub_invariance.py",
       "kind": "operation",
@@ -281,6 +287,7 @@
         "op/ci.run_gate",
         "op/ci.run_instruction",
         "op/ci.verify_required_witness",
+        "op/ci.decide_required",
         "op/conformance.stub",
         "op/conformance.capability",
         "op/conformance.doctrine"
@@ -457,6 +464,16 @@
       "id": "e.ci.op.verify_required_witness",
       "from": "raw/PREMATH-CI",
       "to": "op/ci.verify_required_witness",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.ci.op.decide_required",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.decide_required",
       "morphisms": [
         "dm.identity",
         "dm.presentation.projection",

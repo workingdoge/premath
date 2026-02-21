@@ -173,6 +173,8 @@ mise run hk-check
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict
+mise run ci-verify-required-strict-native
+mise run ci-decide-required
 mise run ci-required-verified
 mise run ci-check
 ```
@@ -190,10 +192,12 @@ with `.githooks`-based local hooks.
 - emits per-check gate envelopes under
   `artifacts/ciwitness/gates/<projection-digest>/`
 - includes deterministic `gateWitnessRefs` linkage in `ci.required.v1` witnesses
+- labels each gate ref with provenance source (`native` or `fallback`)
 - prefers native runner/task gate envelope artifacts when present, with
   deterministic fallback emission when unavailable
 - `mise run ci-verify-required` verifies witness determinism/binding
 - `mise run ci-required-verified` runs both execution and verification
+- `mise run ci-decide-required` emits deterministic `accept|reject` from verified witness
 
 - default: local execution (`PREMATH_SQUEAK_SITE_PROFILE=local`)
 - optional external runner: set

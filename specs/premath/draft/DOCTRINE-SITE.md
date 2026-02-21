@@ -91,7 +91,8 @@ surfaces bound to upstream declarations.
 Repository v0 note:
 
 - CI operation nodes currently include `tools/ci/run_gate.sh`,
-  `tools/ci/run_instruction.sh`, and `tools/ci/verify_required_witness.py`.
+  `tools/ci/run_instruction.sh`, `tools/ci/verify_required_witness.py`, and
+  `tools/ci/decide_required.py`.
 
 ## 5. Edge discipline
 

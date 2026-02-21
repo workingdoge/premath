@@ -36,6 +36,8 @@ Runner responsibilities:
 - optional native witness handoff:
   - when `PREMATH_GATE_WITNESS_OUT` is set, a runner/task may write a
     GateWitnessEnvelope JSON artifact at that path.
+  - when `PREMATH_GATE_WITNESS_SOURCE_OUT` is set, runner should write either
+    `native` or `fallback` to that path (v1 contract).
   - if omitted, `run_gate.sh` emits a deterministic fallback envelope.
 
 Example invocation:

@@ -2,9 +2,9 @@
   "schema": 1,
   "status": "executable",
   "capabilityId": "capabilities.ci_required_witness",
-  "vectorId": "golden/gate_witness_refs_integrity_accept",
-  "description": "Valid gateWitnessRefs linkage verifies against deterministic inline gate payloads.",
-  "semanticScenarioId": "ci_required_witness_gate_refs_01",
+  "vectorId": "golden/native_required_source_accept",
+  "description": "Native-required checks accept when all gateWitnessRefs are native.",
+  "semanticScenarioId": "ci_required_witness_native_required_accept_01",
   "artifacts": {
     "changedPaths": [
       "crates/premath-bd/src/lib.rs"
@@ -100,6 +100,10 @@
         "result": "accepted",
         "failures": []
       }
-    }
+    },
+    "nativeRequiredChecks": [
+      "build",
+      "test"
+    ]
   }
 }

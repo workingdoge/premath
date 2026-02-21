@@ -80,6 +80,12 @@ run = "python3 tools/ci/verify_required_witness.py"
 [tasks.ci-verify-required-strict]
 run = "sh -lc 'python3 tools/ci/verify_required_witness.py --compare-delta --from-ref \"origin/${GITHUB_BASE_REF:-main}\" --to-ref HEAD'"
 
+[tasks.ci-verify-required-strict-native]
+run = "sh -lc 'python3 tools/ci/verify_required_witness.py --compare-delta --from-ref \"origin/${GITHUB_BASE_REF:-main}\" --to-ref HEAD --require-native-check baseline'"
+
+[tasks.ci-decide-required]
+run = "sh -lc 'python3 tools/ci/decide_required.py --compare-delta --from-ref \"origin/${GITHUB_BASE_REF:-main}\" --to-ref HEAD'"
+
 [tasks.ci-required-verified]
 run = [
   "mise run ci-required",
