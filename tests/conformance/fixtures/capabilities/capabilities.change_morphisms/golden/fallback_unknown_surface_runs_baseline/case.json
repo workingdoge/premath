@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/fallback_unknown_surface_runs_baseline",
+  "description": "Unknown non-doc deltas fall back to baseline gate.",
+  "semanticScenarioId": "change_projection_fallback_01",
+  "artifacts": {
+    "changedPaths": [
+      "scripts/unknown_surface.sh"
+    ],
+    "expectedRequiredChecks": [
+      "baseline"
+    ]
+  }
+}

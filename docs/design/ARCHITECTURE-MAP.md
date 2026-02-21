@@ -88,5 +88,4 @@ Authoritative verification (`mise run ci-verify-required`) enforces:
 Instruction doctrine is executable via:
 - `capabilities.instruction_typing`
 - `capabilities.ci_witnesses`
-- `capabilities.change_projection`
-- `capabilities.ci_required_witness`
+- `capabilities.change_morphisms`

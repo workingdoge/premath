@@ -121,10 +121,12 @@ Profile choice MAY change artifact shape, transport fields, and auxiliary eviden
 
 If capability `capabilities.change_morphisms` is claimed, implementation MUST:
 
-9. implement canonical concern mapping and single-source authority rules from
-   `draft/CHANGE-MORPHISMS`,
-10. validate fibred commuting-square checks for declared change records, and
-11. enforce preservation-claim requirements (including kernel verdict/Gate class invariance claims).
+9. compute deterministic change projections from declared delta material to
+   required gate checks with stable projection digest identity,
+10. preserve projection/reference equivalence across provider wrapper mappings
+    (local and mapped external env forms), and
+11. enforce paired invariance requirements (including kernel verdict/Gate class
+    invariance claims) across local/external projection profiles.
 
 ### 3.5 Required behavior for SqueakSite capability
 
@@ -142,18 +144,22 @@ If capability `capabilities.ci_witnesses` is claimed, implementation MUST:
     (instruction digest/ref),
 16. reject deterministic witness checks when the same instruction yields
     mismatched verdict class or required/executed check sets, and
-17. preserve kernel verdict and Gate failure classes across paired local/external
-    instruction-profile invariance vectors.
+17. verify required-gate witness payloads deterministically against projection
+    bindings (including gate witness refs and native required-check bindings),
+18. verify strict-delta and decision-attestation witness chains deterministically
+    when those checks are requested, and
+19. preserve kernel verdict and Gate failure classes across paired local/external
+    CI witness-profile invariance vectors.
 
 ### 3.7 Required behavior for instruction typing capability
 
 If capability `capabilities.instruction_typing` is claimed, implementation MUST:
 
-18. classify instruction handling explicitly as `typed(kind)` or
+20. classify instruction handling explicitly as `typed(kind)` or
     `unknown(reason)`,
-19. reject `unknown(reason)` deterministically when no explicit policy route is
+21. reject `unknown(reason)` deterministically when no explicit policy route is
     permitted, and
-20. preserve kernel verdict and Gate failure classes across paired local/external
+22. preserve kernel verdict and Gate failure classes across paired local/external
     instruction-typing profile invariance vectors.
 
 ## 4. Vectors (informative guidance)

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_provider_wrapper_local_env",
+  "profile": "local",
+  "semanticScenarioId": "change_projection_provider_wrapper_invariance_01",
+  "description": "Local profile resolves provider-neutral refs directly and preserves required-check semantics.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "changedPaths": [
+      "crates/premath-kernel/src/lib.rs"
+    ],
+    "expectedRequiredChecks": [
+      "build",
+      "test",
+      "test-toy",
+      "test-kcir-toy"
+    ],
+    "localEnv": {
+      "PREMATH_CI_BASE_REF": "origin/main",
+      "PREMATH_CI_HEAD_REF": "7f1e0c6d5f2e39af4d2cbbe6dd9012c40c94d5a1"
+    },
+    "expectedRefs": {
+      "baseRef": "origin/main",
+      "headRef": "7f1e0c6d5f2e39af4d2cbbe6dd9012c40c94d5a1"
+    }
+  }
+}

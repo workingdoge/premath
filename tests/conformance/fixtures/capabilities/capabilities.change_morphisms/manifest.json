@@ -1,13 +1,17 @@
 {
   "schema": 1,
-  "status": "stub",
+  "status": "executable",
   "capabilityId": "capabilities.change_morphisms",
   "vectors": [
-    "golden/change_record_commuting_square",
-    "golden/change_id_deterministic",
-    "adversarial/non_commuting_square_reject",
-    "adversarial/duplicate_normative_source_reject",
-    "invariance/same_semantics_profile_a",
-    "invariance/same_semantics_profile_b"
+    "golden/docs_only_raw_runs_conformance_check",
+    "golden/kernel_touch_runs_build_test_and_toys",
+    "golden/conformance_touch_runs_conformance_and_toys",
+    "golden/fallback_unknown_surface_runs_baseline",
+    "golden/provider_env_mapping_github_equiv",
+    "adversarial/change_morphisms_requires_claim",
+    "invariance/same_delta_local_profile",
+    "invariance/same_delta_external_profile",
+    "invariance/same_provider_wrapper_local_env",
+    "invariance/same_provider_wrapper_github_env"
   ]
 }

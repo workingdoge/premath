@@ -159,7 +159,7 @@ This enforces the current invariant gate:
 - conformance capability invariance-stub validation,
 - doctrine-to-operation site coherence validation,
 - executable capability conformance vectors
-  (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.change_projection`, `capabilities.ci_required_witness`).
+  (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.change_morphisms`).
 
 Optional `hk` hook runner (configured in `hk.pkl`):
 

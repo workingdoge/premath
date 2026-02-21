@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_delta_external_profile",
+  "profile": "external",
+  "semanticScenarioId": "change_projection_invariance_01",
+  "description": "External projection profile paired with local baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "changedPaths": [
+      "crates/premath-bd/src/lib.rs"
+    ],
+    "expectedRequiredChecks": [
+      "build",
+      "test"
+    ],
+    "claimedCapabilities": [
+      "capabilities.change_morphisms"
+    ]
+  }
+}

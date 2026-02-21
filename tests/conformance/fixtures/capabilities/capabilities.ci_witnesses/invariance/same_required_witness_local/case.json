@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "invariance/same_required_witness_local",
+  "profile": "local",
+  "semanticScenarioId": "ci_required_witness_invariance_01",
+  "description": "Local witness verification profile baseline for invariance pair.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "changedPaths": [
+      "crates/premath-bd/src/lib.rs"
+    ],
+    "witness": {
+      "ciSchema": 1,
+      "witnessKind": "ci.required.v1",
+      "projectionPolicy": "ci-topos-v0",
+      "projectionDigest": "proj1_a650cc9dd752ba9cec31cecc5f872e19f588906e6cf557cb6aecb9da495285ce",
+      "policyDigest": "ci-topos-v0",
+      "changedPaths": [
+        "crates/premath-bd/src/lib.rs"
+      ],
+      "requiredChecks": [
+        "build",
+        "test"
+      ],
+      "executedChecks": [
+        "build",
+        "test"
+      ],
+      "results": [
+        {
+          "checkId": "build",
+          "status": "passed",
+          "exitCode": 0,
+          "durationMs": 17
+        },
+        {
+          "checkId": "test",
+          "status": "passed",
+          "exitCode": 0,
+          "durationMs": 31
+        }
+      ],
+      "verdictClass": "accepted",
+      "failureClasses": [],
+      "docsOnly": false,
+      "reasons": [
+        "rust_surface_changed"
+      ]
+    }
+  }
+}

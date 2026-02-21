@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "golden/decision_attestation_chain_accept",
+  "description": "Decision attestation chain is valid when witness/delta digests and projection semantics align.",
+  "semanticScenarioId": "ci_required_witness_decision_chain_01",
+  "artifacts": {
+    "changedPaths": [
+      "crates/premath-bd/src/lib.rs"
+    ],
+    "deltaSnapshot": {
+      "schema": 1,
+      "deltaKind": "ci.delta.v1",
+      "projectionPolicy": "ci-topos-v0",
+      "projectionDigest": "proj1_a650cc9dd752ba9cec31cecc5f872e19f588906e6cf557cb6aecb9da495285ce",
+      "requiredChecks": [
+        "build",
+        "test"
+      ],
+      "changedPaths": [
+        "crates/premath-bd/src/lib.rs"
+      ],
+      "deltaSource": "git_diff+workspace",
+      "fromRef": "origin/main",
+      "toRef": "HEAD"
+    },
+    "witness": {
+      "ciSchema": 1,
+      "witnessKind": "ci.required.v1",
+      "projectionPolicy": "ci-topos-v0",
+      "projectionDigest": "proj1_a650cc9dd752ba9cec31cecc5f872e19f588906e6cf557cb6aecb9da495285ce",
+      "policyDigest": "ci-topos-v0",
+      "changedPaths": [
+        "crates/premath-bd/src/lib.rs"
+      ],
+      "requiredChecks": [
+        "build",
+        "test"
+      ],
+      "executedChecks": [
+        "build",
+        "test"
+      ],
+      "results": [
+        {
+          "checkId": "build",
+          "status": "passed",
+          "exitCode": 0,
+          "durationMs": 17
+        },
+        {
+          "checkId": "test",
+          "status": "passed",
+          "exitCode": 0,
+          "durationMs": 31
+        }
+      ],
+      "verdictClass": "accepted",
+      "failureClasses": [],
+      "docsOnly": false,
+      "reasons": [
+        "rust_surface_changed"
+      ]
+    },
+    "decision": {
+      "schema": 1,
+      "decisionKind": "ci.required.decision.v1",
+      "decision": "accept",
+      "projectionDigest": "proj1_a650cc9dd752ba9cec31cecc5f872e19f588906e6cf557cb6aecb9da495285ce",
+      "requiredChecks": [
+        "build",
+        "test"
+      ],
+      "nativeRequiredChecks": [],
+      "reasonClass": "verified_accept",
+      "witnessSha256": "8d8e0849f419f39aed1f70ff00206f5a6503b19d75ca022142c5e31e08ed3482",
+      "deltaSha256": "8421eba3bb68f1534040329a08c5405f4c3e47c759d90cd8ed4772125ab3cc73",
+      "errors": []
+    }
+  }
+}

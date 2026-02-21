@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "adversarial/ci_witness_requires_claim",
+  "description": "Verifying ci.required witness mode requires claim.",
+  "semanticScenarioId": "ci_required_witness_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "ci_witness_verification",
+      "claimedCapabilities": []
+    }
+  }
+}

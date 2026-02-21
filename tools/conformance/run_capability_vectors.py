@@ -9,8 +9,7 @@ Current executable capability:
 - capabilities.squeak_site
 - capabilities.ci_witnesses
 - capabilities.instruction_typing
-- capabilities.change_projection
-- capabilities.ci_required_witness
+- capabilities.change_morphisms
 """
 
 from __future__ import annotations
@@ -36,8 +35,7 @@ CAPABILITY_COMMITMENT_CHECKPOINTS = "capabilities.commitment_checkpoints"
 CAPABILITY_SQUEAK_SITE = "capabilities.squeak_site"
 CAPABILITY_CI_WITNESSES = "capabilities.ci_witnesses"
 CAPABILITY_INSTRUCTION_TYPING = "capabilities.instruction_typing"
-CAPABILITY_CHANGE_PROJECTION = "capabilities.change_projection"
-CAPABILITY_CI_REQUIRED_WITNESS = "capabilities.ci_required_witness"
+CAPABILITY_CHANGE_MORPHISMS = "capabilities.change_morphisms"
 DEFAULT_EXECUTABLE_CAPABILITIES: Sequence[str] = (
     CAPABILITY_NORMAL_FORMS,
     CAPABILITY_KCIR_WITNESSES,
@@ -45,8 +43,7 @@ DEFAULT_EXECUTABLE_CAPABILITIES: Sequence[str] = (
     CAPABILITY_SQUEAK_SITE,
     CAPABILITY_CI_WITNESSES,
     CAPABILITY_INSTRUCTION_TYPING,
-    CAPABILITY_CHANGE_PROJECTION,
-    CAPABILITY_CI_REQUIRED_WITNESS,
+    CAPABILITY_CHANGE_MORPHISMS,
 )
 
 
@@ -1010,12 +1007,44 @@ def evaluate_ci_witness_invariance(case: Dict[str, Any]) -> VectorOutcome:
 
 
 def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
-    if vector_id == "golden/instruction_witness_deterministic":
-        return evaluate_ci_witness_deterministic(case)
-    if vector_id == "adversarial/instruction_witness_non_deterministic_reject":
+    if vector_id in {
+        "golden/instruction_witness_deterministic",
+        "adversarial/instruction_witness_non_deterministic_reject",
+    }:
         return evaluate_ci_witness_deterministic(case)
     if vector_id == "adversarial/instruction_witness_requires_claim":
         return evaluate_ci_witness_requires_claim(case)
+    if vector_id in {
+        "golden/witness_verifies_for_projected_delta",
+        "golden/gate_witness_refs_integrity_accept",
+        "golden/native_required_source_accept",
+        "adversarial/witness_projection_digest_mismatch_reject",
+        "adversarial/witness_verdict_inconsistent_reject",
+        "adversarial/gate_witness_ref_digest_mismatch_reject",
+        "adversarial/gate_witness_ref_source_missing_reject",
+        "adversarial/native_required_fallback_reject",
+    }:
+        return evaluate_ci_required_witness_validity(case)
+    if vector_id == "adversarial/ci_witness_requires_claim":
+        return evaluate_ci_required_witness_requires_claim(case)
+    if vector_id in {
+        "golden/strict_delta_compare_match",
+        "adversarial/strict_delta_compare_mismatch_reject",
+    }:
+        return evaluate_ci_required_witness_strict_delta(case)
+    if vector_id in {
+        "golden/decision_attestation_chain_accept",
+        "adversarial/decision_attestation_witness_sha_mismatch_reject",
+        "adversarial/decision_attestation_delta_sha_mismatch_reject",
+    }:
+        return evaluate_ci_required_witness_decision_attestation(case)
+    if vector_id == "golden/delta_snapshot_projection_decision_stable":
+        return evaluate_ci_required_witness_delta_snapshot(case)
+    if vector_id in {
+        "invariance/same_required_witness_local",
+        "invariance/same_required_witness_external",
+    }:
+        return evaluate_ci_required_witness_invariance(case)
     if vector_id.startswith("invariance/"):
         return evaluate_ci_witness_invariance(case)
     raise ValueError(f"unsupported ci_witnesses vector id: {vector_id}")
@@ -1084,7 +1113,7 @@ def evaluate_change_projection_requires_claim(case: Dict[str, Any]) -> VectorOut
     claimed = set(
         ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
     )
-    if mode == "change_projection" and CAPABILITY_CHANGE_PROJECTION not in claimed:
+    if mode == "change_morphisms" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
         return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
     return VectorOutcome("accepted", "accepted", [])
 
@@ -1117,7 +1146,7 @@ def evaluate_change_projection_invariance(case: Dict[str, Any]) -> VectorOutcome
 
     if profile != "local":
         claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
-        if CAPABILITY_CHANGE_PROJECTION not in claimed:
+        if CAPABILITY_CHANGE_MORPHISMS not in claimed:
             return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
 
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
@@ -1155,7 +1184,7 @@ def evaluate_change_projection_provider_wrapper_invariance(case: Dict[str, Any])
         actual_refs = resolve_premath_ci_refs(local_env)
     elif profile == "external":
         claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
-        if CAPABILITY_CHANGE_PROJECTION not in claimed:
+        if CAPABILITY_CHANGE_MORPHISMS not in claimed:
             return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
         github_env = ensure_string_mapping(artifacts.get("githubEnv"), "artifacts.githubEnv")
         mapped_env = map_github_to_premath_env(github_env)
@@ -1190,11 +1219,11 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         "invariance/same_provider_wrapper_github_env",
     }:
         return evaluate_change_projection_provider_wrapper_invariance(case)
-    if vector_id == "adversarial/change_projection_requires_claim":
+    if vector_id == "adversarial/change_morphisms_requires_claim":
         return evaluate_change_projection_requires_claim(case)
     if vector_id.startswith("invariance/"):
         return evaluate_change_projection_invariance(case)
-    raise ValueError(f"unsupported change_projection vector id: {vector_id}")
+    raise ValueError(f"unsupported change_morphisms vector id: {vector_id}")
 
 
 def run_change_projection(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
@@ -1242,7 +1271,7 @@ def evaluate_ci_required_witness_requires_claim(case: Dict[str, Any]) -> VectorO
     claimed = set(
         ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
     )
-    if mode == "ci_required_witness_verification" and CAPABILITY_CI_REQUIRED_WITNESS not in claimed:
+    if mode == "ci_witness_verification" and CAPABILITY_CI_WITNESSES not in claimed:
         return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
     return VectorOutcome("accepted", "accepted", [])
 
@@ -1287,7 +1316,7 @@ def evaluate_ci_required_witness_invariance(case: Dict[str, Any]) -> VectorOutco
 
     if profile != "local":
         claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
-        if CAPABILITY_CI_REQUIRED_WITNESS not in claimed:
+        if CAPABILITY_CI_WITNESSES not in claimed:
             return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
 
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
@@ -1443,42 +1472,6 @@ def evaluate_ci_required_witness_decision_attestation(case: Dict[str, Any]) -> V
     return VectorOutcome("accepted", "accepted", [])
 
 
-def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
-    if vector_id in {
-        "golden/witness_verifies_for_projected_delta",
-        "golden/gate_witness_refs_integrity_accept",
-        "golden/native_required_source_accept",
-        "adversarial/witness_projection_digest_mismatch_reject",
-        "adversarial/witness_verdict_inconsistent_reject",
-        "adversarial/gate_witness_ref_digest_mismatch_reject",
-        "adversarial/gate_witness_ref_source_missing_reject",
-        "adversarial/native_required_fallback_reject",
-    }:
-        return evaluate_ci_required_witness_validity(case)
-    if vector_id == "adversarial/ci_required_witness_requires_claim":
-        return evaluate_ci_required_witness_requires_claim(case)
-    if vector_id in {
-        "golden/strict_delta_compare_match",
-        "adversarial/strict_delta_compare_mismatch_reject",
-    }:
-        return evaluate_ci_required_witness_strict_delta(case)
-    if vector_id in {
-        "golden/decision_attestation_chain_accept",
-        "adversarial/decision_attestation_witness_sha_mismatch_reject",
-        "adversarial/decision_attestation_delta_sha_mismatch_reject",
-    }:
-        return evaluate_ci_required_witness_decision_attestation(case)
-    if vector_id == "golden/delta_snapshot_projection_decision_stable":
-        return evaluate_ci_required_witness_delta_snapshot(case)
-    if vector_id.startswith("invariance/"):
-        return evaluate_ci_required_witness_invariance(case)
-    raise ValueError(f"unsupported ci_required_witness vector id: {vector_id}")
-
-
-def run_ci_required_witness(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
-    return run_capability_vectors(capability_dir, evaluate_ci_required_witness_vector, errors)
-
-
 def parse_args() -> argparse.Namespace:
     default_fixtures = ROOT / "tests" / "conformance" / "fixtures" / "capabilities"
     parser = argparse.ArgumentParser(description="Run executable capability conformance vectors.")
@@ -1533,10 +1526,8 @@ def main() -> int:
             count, checked = run_ci_witnesses(capability_dir, errors)
         elif capability_id == CAPABILITY_INSTRUCTION_TYPING:
             count, checked = run_instruction_typing(capability_dir, errors)
-        elif capability_id == CAPABILITY_CHANGE_PROJECTION:
+        elif capability_id == CAPABILITY_CHANGE_MORPHISMS:
             count, checked = run_change_projection(capability_dir, errors)
-        elif capability_id == CAPABILITY_CI_REQUIRED_WITNESS:
-            count, checked = run_ci_required_witness(capability_dir, errors)
         else:
             errors.append(f"unsupported executable capability: {capability_id}")
             continue

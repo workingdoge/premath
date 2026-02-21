@@ -362,3 +362,36 @@ This closes the spec-to-operation loop.
 - instruction witness records now carry explicit typing metadata.
 - unroutable unknown instructions fail deterministically before gate execution.
 - instruction envelope examples/documentation now include optional typing fields.
+
+---
+
+## 2026-02-21 — Decision 0014: Collapse capability IDs to minimal canonical set
+
+### Decision
+Align executable capability IDs with the draft governance vocabulary by
+collapsing aliases:
+
+- `capabilities.change_projection` -> `capabilities.change_morphisms`
+- `capabilities.ci_required_witness` -> `capabilities.ci_witnesses`
+
+The executable conformance surface now uses:
+
+- `capabilities.normal_forms`
+- `capabilities.kcir_witnesses`
+- `capabilities.commitment_checkpoints`
+- `capabilities.squeak_site`
+- `capabilities.ci_witnesses`
+- `capabilities.instruction_typing`
+- `capabilities.change_morphisms`
+
+### Rationale
+Governance drift appeared when runtime/docs used capability IDs not present in
+`draft/CAPABILITY-VECTORS` and `draft/CONFORMANCE`. We prefer minimal encoding:
+one canonical identifier per capability claim unless expansion is explicitly
+promoted as new doctrine.
+
+### Consequences
+- `tools/conformance/run_capability_vectors.py` defaults are now canonical and
+  draft-aligned.
+- capability fixtures were merged/renamed to match canonical IDs.
+- docs and command-surface references now use the canonical capability names.

@@ -32,8 +32,7 @@ Runs executable capability vectors (current set):
 - `capabilities.squeak_site`
 - `capabilities.ci_witnesses`
 - `capabilities.instruction_typing`
-- `capabilities.change_projection`
-- `capabilities.ci_required_witness`
+- `capabilities.change_morphisms`
 
 Checks include:
 

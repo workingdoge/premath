@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/docs_only_raw_runs_conformance_check",
+  "description": "Docs-only delta touching raw specs projects conformance and doctrine checks.",
+  "semanticScenarioId": "change_projection_docs_raw_01",
+  "artifacts": {
+    "changedPaths": [
+      "docs/design/ARCHITECTURE-MAP.md",
+      "specs/premath/raw/CI-TOPOS.md"
+    ],
+    "expectedRequiredChecks": [
+      "conformance-check",
+      "doctrine-check"
+    ]
+  }
+}

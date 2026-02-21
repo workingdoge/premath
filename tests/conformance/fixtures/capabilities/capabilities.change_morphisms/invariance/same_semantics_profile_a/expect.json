@@ -1,9 +1,0 @@
-{
-  "schema": 1,
-  "status": "stub",
-  "result": "TODO",
-  "assertions": [
-    "kernel verdict matches paired profile",
-    "Gate failure classes match paired profile"
-  ]
-}

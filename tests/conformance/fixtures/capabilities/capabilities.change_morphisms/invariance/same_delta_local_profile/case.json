@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_delta_local_profile",
+  "profile": "local",
+  "semanticScenarioId": "change_projection_invariance_01",
+  "description": "Local projection profile baseline for invariance pairing.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "changedPaths": [
+      "crates/premath-bd/src/lib.rs"
+    ],
+    "expectedRequiredChecks": [
+      "build",
+      "test"
+    ]
+  }
+}

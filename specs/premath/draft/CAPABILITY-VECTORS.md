@@ -148,23 +148,29 @@ Required vectors when claimed:
 
 Meaning:
 
-- The implementation supports canonical concern mapping and fibred change records
-  as specified by `draft/CHANGE-MORPHISMS`.
-- Evolution changes are validated as commuting-square morphisms with explicit
-  preservation claims.
+- The implementation supports deterministic change projection morphisms
+  (`Delta -> requiredChecks`) with stable projection digest material.
+- Provider-wrapper environments (local and mapped external env) preserve the
+  same projection/references for the same semantic delta.
+- This capability expresses operational change-morphism discipline for gate
+  selection; it does not alter kernel admissibility semantics.
 
 Required vectors when NOT claimed:
 
-- adversarial: explicit requests for change-morphism certification reject deterministically.
+- adversarial: explicit requests for change-morphism projection checks reject
+  deterministically.
 
 Required vectors when claimed:
 
-- golden: accepted change record has unique concern authority and commuting-square check accepted.
-- golden: deterministic `changeId` for stable canonical record inputs.
-- adversarial: duplicate/multiple normative sources for one concern reject deterministically.
-- adversarial: non-commuting change record rejects deterministically.
+- golden: deterministic required-check projection for representative deltas
+  (docs-only, kernel-touch, conformance-touch, unknown-surface fallback).
+- golden: provider env mapping (direct vs mapped GitHub env) yields equivalent
+  projection/reference material.
+- adversarial: requesting change-morphism projection checks without claim rejects
+  deterministically.
 - invariance: paired profile outputs for the same semantic scenario preserve
-  kernel verdict and Gate failure classes.
+  kernel verdict and Gate failure classes (local/external and provider-wrapper
+  invariance).
 
 ### 2.8 `capabilities.squeak_site`
 
@@ -196,22 +202,31 @@ Meaning:
 
 - The implementation supports instruction-envelope CI witness artifacts in the
   higher-order CI loop (`raw/PREMATH-CI`).
-- This capability checks witness determinism over instruction identity and
-  required check sets; it does not alter kernel admissibility semantics.
+- This capability checks:
+  - deterministic instruction-witness binding, and
+  - deterministic required-gate witness verification/decision attestation over
+    projected checks.
+- It does not alter kernel admissibility semantics.
 
 Required vectors when NOT claimed:
 
-- adversarial: explicit requests for instruction-witness determinism checks
+- adversarial: explicit requests for CI witness determinism/verification checks
   reject deterministically.
 
 Required vectors when claimed:
 
 - golden: same instruction envelope yields stable verdict class and stable
   required/executed check sets.
+- golden: required-gate witness verification succeeds for matching projection,
+  gate witness refs, and native required-check bindings.
+- golden: strict-delta compare and decision-attestation chain are stable for
+  fixed inputs.
 - adversarial: mismatched verdict class or required/executed check sets for the
   same instruction envelope reject deterministically.
+- adversarial: required-gate witness digest/source/projection mismatches reject
+  deterministically.
 - invariance: local/external execution profiles preserve kernel verdict and Gate
-  failure classes for paired instruction scenarios.
+  failure classes for paired instruction and required-gate scenarios.
 
 ### 2.10 `capabilities.instruction_typing`
 

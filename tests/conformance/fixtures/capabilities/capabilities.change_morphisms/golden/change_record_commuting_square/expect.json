@@ -1,9 +1,0 @@
-{
-  "schema": 1,
-  "status": "stub",
-  "result": "accepted",
-  "assertions": [
-    "commutationCheck accepted",
-    "single canonical normativeRef for concern"
-  ]
-}

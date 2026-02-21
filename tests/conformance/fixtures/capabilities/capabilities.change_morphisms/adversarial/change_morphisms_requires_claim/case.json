@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/change_morphisms_requires_claim",
+  "description": "Using change_projection mode without capability claim is rejected.",
+  "semanticScenarioId": "change_projection_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "change_morphisms",
+      "claimedCapabilities": []
+    }
+  }
+}

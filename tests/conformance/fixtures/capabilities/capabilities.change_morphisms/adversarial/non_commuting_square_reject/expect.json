@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "stub",
-  "result": "rejected",
-  "assertions": [
-    "deterministic reject when commutation check fails"
-  ]
-}
