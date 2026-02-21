@@ -228,6 +228,12 @@
       "requiresDeclaration": false
     },
     {
+      "id": "op/ci.verify_required_witness",
+      "path": "tools/ci/verify_required_witness.py",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "op/conformance.stub",
       "path": "tools/conformance/check_stub_invariance.py",
       "kind": "operation",
@@ -274,6 +280,7 @@
         "raw/CI-TOPOS",
         "op/ci.run_gate",
         "op/ci.run_instruction",
+        "op/ci.verify_required_witness",
         "op/conformance.stub",
         "op/conformance.capability",
         "op/conformance.doctrine"
@@ -443,6 +450,16 @@
       "morphisms": [
         "dm.identity",
         "dm.profile.execution",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.ci.op.verify_required_witness",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.verify_required_witness",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
         "dm.commitment.attest"
       ]
     },

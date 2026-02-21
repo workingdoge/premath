@@ -151,6 +151,21 @@ CIWitness {
 `projection_digest` MUST bind change-projection semantics used to compute
 `G(Delta)`.
 
+For required projected-gate records (for example `ci.required` witnesses),
+implementations MUST provide deterministic verification that recomputes
+projection semantics and rejects on:
+
+- projection digest mismatch,
+- required/executed check-set mismatch,
+- verdict/failure-class mismatch with recorded results.
+
+When strict delta-compare mode is enabled, verification MUST also compare
+witness `changed_paths` to the evaluated CI delta for active base/head refs and
+reject on mismatch.
+
+Conforming CI implementations SHOULD publish verified witness artifacts and
+digest sidecars as attestation outputs.
+
 ## 8. Relationship to Tusk and Squeak
 
 CI checks may be executed via Tusk units and transport-verified via Squeak.

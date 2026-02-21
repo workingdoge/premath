@@ -32,3 +32,56 @@ jobs:
 
       - name: Verify required gate witness (strict delta compare)
         run: mise run ci-verify-required-strict
+
+      - name: Publish CI witness summary
+        if: always()
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          witness_path = Path("artifacts/ciwitness/latest-required.json")
+          digest_path = Path("artifacts/ciwitness/latest-required.sha256")
+
+          summary_lines = ["### CI Required Witness"]
+
+          if not witness_path.exists():
+              summary_lines.append("")
+              summary_lines.append("- witness: missing (`artifacts/ciwitness/latest-required.json`)")
+              summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+              raise SystemExit(0)
+
+          payload = json.loads(witness_path.read_text(encoding="utf-8"))
+          raw_digest = hashlib.sha256(witness_path.read_bytes()).hexdigest()
+          digest_path.write_text(raw_digest + "\n", encoding="utf-8")
+
+          projection = payload.get("projectionDigest", "(missing)")
+          verdict = payload.get("verdictClass", "(missing)")
+          checks = payload.get("requiredChecks", [])
+          checks_line = ", ".join(checks) if isinstance(checks, list) and checks else "(none)"
+
+          summary_lines.extend(
+              [
+                  "",
+                  f"- projection digest: `{projection}`",
+                  f"- witness verdict: `{verdict}`",
+                  f"- required checks: `{checks_line}`",
+                  f"- witness sha256: `{raw_digest}`",
+              ]
+          )
+          summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload CI witness artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-required-witness
+          path: |
+            artifacts/ciwitness/latest-required.json
+            artifacts/ciwitness/latest-required.sha256
+            artifacts/ciwitness/proj1_*.json
+          if-no-files-found: warn

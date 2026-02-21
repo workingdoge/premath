@@ -12,6 +12,8 @@ Implemented in this repo:
 - local fast/full/staged gate triggers via `jj gate-fast|gate-check|gate-pre-commit`
 - CI gate path via `.github/workflows/baseline.yml` -> `mise run ci-required`
 - witness verification path via `.github/workflows/baseline.yml` -> `mise run ci-verify-required-strict`
+- CI witness artifact publication path via `.github/workflows/baseline.yml`
+  (`latest-required.json`, `.sha256`, `proj1_*.json`, summary digest row)
 - instruction-envelope gate path via
   `sh tools/ci/run_instruction.sh instructions/<ts>-<id>.json`
   emitting `artifacts/ciwitness/<instruction-id>.json`

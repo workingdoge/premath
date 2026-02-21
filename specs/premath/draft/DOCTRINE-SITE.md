@@ -88,6 +88,11 @@ The site map MUST include at least:
 Operational nodes are not semantic authorities. They are execution/projection
 surfaces bound to upstream declarations.
 
+Repository v0 note:
+
+- CI operation nodes currently include `tools/ci/run_gate.sh`,
+  `tools/ci/run_instruction.sh`, and `tools/ci/verify_required_witness.py`.
+
 ## 5. Edge discipline
 
 Every edge in `draft/DOCTRINE-SITE.json` MUST:

@@ -151,6 +151,26 @@ When an implementation exposes Tusk-local witness envelopes, `gate_witness_refs`
 SHOULD reference those envelope artifacts (for example GateWitnessEnvelope IDs
 or content-addressed refs), instead of duplicating admissibility payloads.
 
+### 6.2 Required witness verification (strict CI mode)
+
+For projection-driven required gates (for example `ci.required` witness records):
+
+- implementations MUST provide deterministic witness verification that
+  recomputes projection semantics from the witness `changed_paths`,
+- verification MUST reject if any of the following diverge from recomputed
+  semantics:
+  - `projection_digest`
+  - `required_checks`
+  - `executed_checks`
+  - verdict/failure-class consistency with check results.
+
+When CI is operating in strict delta-compare mode, verification MUST also
+compare witness `changed_paths` to the CI-evaluated delta for the active base/head
+refs and reject on mismatch.
+
+Implementations SHOULD surface verified witness artifacts and digests as CI
+attestation outputs for audit.
+
 ### 6.1 Instruction-envelope control loop (v0)
 
 Implementations MAY expose instruction envelopes as first-class CI inputs:
