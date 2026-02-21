@@ -219,6 +219,9 @@ Provider-specific required-check mappings are documented in
 
 `ci-verify-required-strict` uses `--compare-delta` and compares witness
 `changedPaths` against the detected VCS delta.
+Provider-neutral CI refs:
+- `PREMATH_CI_BASE_REF` (optional)
+- `PREMATH_CI_HEAD_REF` (optional, default `HEAD`)
 
 CI also publishes:
 

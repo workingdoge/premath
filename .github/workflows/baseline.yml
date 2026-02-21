@@ -28,6 +28,9 @@ jobs:
           mise trust
           mise install
 
+      - name: Map GitHub provider refs to Premath CI refs
+        run: python3 tools/ci/providers/export_github_env.py >> "$GITHUB_ENV"
+
       - name: Run required gate from change projection
         run: mise run ci-required
 

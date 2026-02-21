@@ -74,6 +74,8 @@ Current shape:
 - canonical witness verifier: `mise run ci-verify-required`
   (`tools/ci/verify_required_witness.py`)
   - strict CI mode: `mise run ci-verify-required-strict` (`--compare-delta`)
+  - strict mode refs are provider-neutral:
+    `PREMATH_CI_BASE_REF`, `PREMATH_CI_HEAD_REF`
   - phase-in native requirement:
     `mise run ci-verify-required-strict-native` (`--require-native-check ...`)
 - canonical decision surface: `mise run ci-decide-required`

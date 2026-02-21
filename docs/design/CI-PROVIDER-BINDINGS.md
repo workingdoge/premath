@@ -19,6 +19,11 @@ Required evidence surfaces:
 - `artifacts/ciwitness/latest-required.json`
 - `artifacts/ciwitness/latest-decision.json`
 
+Required provider-neutral delta refs:
+
+- `PREMATH_CI_BASE_REF` (optional)
+- `PREMATH_CI_HEAD_REF` (optional, default `HEAD`)
+
 Any provider binding MUST treat this contract as authoritative and MUST NOT
 change admissibility semantics.
 
@@ -30,10 +35,12 @@ Binding:
 
 - workflow job name: `ci-required`
 - required status check in branch protection/rulesets: `ci-required`
+- adapter step:
+  `python3 tools/ci/providers/export_github_env.py >> "$GITHUB_ENV"`
 
 Strict-delta verification uses:
 
-- `GITHUB_BASE_REF` when available (fallback `main`) via
+- provider-neutral `PREMATH_CI_*` refs after adapter export via
   `mise run ci-verify-required-strict`
 
 ## Other Providers

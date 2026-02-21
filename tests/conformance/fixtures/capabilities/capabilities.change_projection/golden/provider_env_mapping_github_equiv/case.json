@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_projection",
+  "vectorId": "golden/provider_env_mapping_github_equiv",
+  "description": "Provider adapter mapping from GitHub env preserves CI ref semantics and projection digest.",
+  "semanticScenarioId": "change_projection_provider_map_01",
+  "artifacts": {
+    "changedPaths": [
+      "crates/premath-kernel/src/lib.rs"
+    ],
+    "expectedRequiredChecks": [
+      "build",
+      "test",
+      "test-toy",
+      "test-kcir-toy"
+    ],
+    "directEnv": {
+      "PREMATH_CI_BASE_REF": "origin/main",
+      "PREMATH_CI_HEAD_REF": "7f1e0c6d5f2e39af4d2cbbe6dd9012c40c94d5a1"
+    },
+    "githubEnv": {
+      "GITHUB_BASE_REF": "main",
+      "GITHUB_SHA": "7f1e0c6d5f2e39af4d2cbbe6dd9012c40c94d5a1"
+    }
+  }
+}

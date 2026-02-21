@@ -27,12 +27,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--from-ref",
         default=None,
-        help="Git ref used as delta base (default: auto-detect).",
+        help="Git ref used as delta base (default: PREMATH_CI_BASE_REF or auto-detect).",
     )
     parser.add_argument(
         "--to-ref",
-        default="HEAD",
-        help="Git ref used as delta head (default: HEAD).",
+        default=None,
+        help="Git ref used as delta head (default: PREMATH_CI_HEAD_REF or HEAD).",
     )
     parser.add_argument(
         "--out-dir",
@@ -88,7 +88,7 @@ def _native_required_checks(args: argparse.Namespace) -> List[str]:
     return out
 
 
-def _detect_changed_paths(root: Path, from_ref: str | None, to_ref: str) -> List[str]:
+def _detect_changed_paths(root: Path, from_ref: str | None, to_ref: str | None) -> List[str]:
     detected = detect_changed_paths(root, from_ref=from_ref, to_ref=to_ref)
     return detected.changed_paths
 

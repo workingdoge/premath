@@ -68,6 +68,27 @@ Canonical CI decision surface is `mise run ci-decide-required`.
 Provider-specific check naming/binding guidance lives in
 `docs/design/CI-PROVIDER-BINDINGS.md`.
 
+## Provider-Neutral CI Ref Contract
+
+Strict delta compare commands consume canonical refs from environment:
+
+- `PREMATH_CI_BASE_REF` (optional; if unset, auto-detected fallback order is used)
+- `PREMATH_CI_HEAD_REF` (optional; default `HEAD`)
+
+Examples:
+
+```bash
+PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD mise run ci-verify-required-strict
+PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD mise run ci-decide-required
+```
+
+GitHub adapter export:
+
+```bash
+python3 tools/ci/providers/export_github_env.py
+# emits PREMATH_CI_* assignments derived from GITHUB_* env
+```
+
 ## Example
 
 ```bash

@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
+from provider_env import resolve_premath_ci_refs
+
 PROJECTION_SCHEMA = 1
 PROJECTION_POLICY = "ci-topos-v0"
 
@@ -275,15 +277,13 @@ def _ref_exists(repo_root: Path, ref: str) -> bool:
 
 
 def detect_default_base_ref(repo_root: Path) -> Optional[str]:
-    env_base = os.environ.get("PREMATH_CI_BASE_REF")
+    env_base, _head_ref = resolve_premath_ci_refs(os.environ)
+    candidates: List[str] = []
     if env_base:
-        candidates = [f"origin/{env_base}", env_base]
-    else:
-        candidates = []
-
-    github_base = os.environ.get("GITHUB_BASE_REF")
-    if github_base:
-        candidates.extend([f"origin/{github_base}", github_base])
+        if env_base.startswith("origin/"):
+            candidates.extend([env_base, env_base[len("origin/"):]])
+        else:
+            candidates.extend([env_base, f"origin/{env_base}"])
 
     candidates.extend([
         "origin/main",
@@ -299,11 +299,17 @@ def detect_default_base_ref(repo_root: Path) -> Optional[str]:
     return None
 
 
+def detect_default_head_ref() -> str:
+    _base_ref, head_ref = resolve_premath_ci_refs(os.environ)
+    return head_ref
+
+
 def detect_changed_paths(
     repo_root: Path,
     from_ref: Optional[str] = None,
-    to_ref: str = "HEAD",
+    to_ref: Optional[str] = None,
 ) -> ChangeDetectionResult:
+    head_ref = to_ref or detect_default_head_ref()
     base_ref = from_ref or detect_default_base_ref(repo_root)
     paths: List[str] = []
     source = "none"
@@ -311,7 +317,7 @@ def detect_changed_paths(
     if base_ref is not None:
         output = _run_git(
             repo_root,
-            ["diff", "--name-only", "--diff-filter=ACMR", f"{base_ref}...{to_ref}"],
+            ["diff", "--name-only", "--diff-filter=ACMR", f"{base_ref}...{head_ref}"],
         )
         if output is not None:
             paths.extend(line for line in output.splitlines() if line.strip())
@@ -335,7 +341,7 @@ def detect_changed_paths(
         changed_paths=normalize_paths(paths),
         source=source,
         from_ref=base_ref,
-        to_ref=to_ref,
+        to_ref=head_ref,
     )
 
 

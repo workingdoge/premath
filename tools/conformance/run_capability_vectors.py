@@ -27,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "ci"))
 
 from change_projection import project_required_checks  # type: ignore  # noqa: E402
+from provider_env import map_github_to_premath_env, resolve_premath_ci_refs  # type: ignore  # noqa: E402
 from required_witness import verify_required_witness_payload  # type: ignore  # noqa: E402
 
 CAPABILITY_NORMAL_FORMS = "capabilities.normal_forms"
@@ -120,6 +121,19 @@ def ensure_string_list(value: Any, label: str) -> List[str]:
         if not isinstance(item, str):
             raise ValueError(f"{label}[{idx}] must be a string")
         out.append(item)
+    return out
+
+
+def ensure_string_mapping(value: Any, label: str) -> Dict[str, str]:
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+    out: Dict[str, str] = {}
+    for key, item in value.items():
+        if not isinstance(key, str) or not key:
+            raise ValueError(f"{label} keys must be non-empty strings")
+        if not isinstance(item, str):
+            raise ValueError(f"{label}[{key!r}] must be a string")
+        out[key] = item
     return out
 
 
@@ -1029,6 +1043,35 @@ def evaluate_change_projection_docs_and_code(case: Dict[str, Any]) -> VectorOutc
     return VectorOutcome("accepted", "accepted", [])
 
 
+def evaluate_change_projection_provider_env_mapping(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    changed_paths = ensure_string_list(artifacts.get("changedPaths", []), "artifacts.changedPaths")
+    expected_required = canonical_check_set(
+        artifacts.get("expectedRequiredChecks", []), "artifacts.expectedRequiredChecks"
+    )
+    direct_env = ensure_string_mapping(artifacts.get("directEnv"), "artifacts.directEnv")
+    github_env = ensure_string_mapping(artifacts.get("githubEnv"), "artifacts.githubEnv")
+
+    projection_direct = project_required_checks(changed_paths)
+    projection_mapped = project_required_checks(changed_paths)
+    actual_required = sorted(projection_direct.required_checks)
+    if actual_required != expected_required:
+        return VectorOutcome("rejected", "rejected", ["change_projection_mismatch"])
+    if projection_direct.projection_digest != projection_mapped.projection_digest:
+        return VectorOutcome("rejected", "rejected", ["change_projection_digest_mismatch"])
+
+    mapped_env = map_github_to_premath_env(github_env)
+    direct_refs = resolve_premath_ci_refs(direct_env)
+    mapped_refs = resolve_premath_ci_refs(mapped_env)
+    if direct_refs != mapped_refs:
+        return VectorOutcome("rejected", "rejected", ["provider_env_mapping_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def evaluate_change_projection_requires_claim(case: Dict[str, Any]) -> VectorOutcome:
     artifacts = case.get("artifacts")
     if not isinstance(artifacts, dict):
@@ -1088,6 +1131,8 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         "golden/fallback_unknown_surface_runs_baseline",
     }:
         return evaluate_change_projection_docs_and_code(case)
+    if vector_id == "golden/provider_env_mapping_github_equiv":
+        return evaluate_change_projection_provider_env_mapping(case)
     if vector_id == "adversarial/change_projection_requires_claim":
         return evaluate_change_projection_requires_claim(case)
     if vector_id.startswith("invariance/"):
