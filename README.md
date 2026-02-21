@@ -177,6 +177,7 @@ mise run ci-pipeline-test
 mise run ci-observation-test
 mise run ci-observation-build
 mise run ci-observation-query
+mise run ci-observation-check
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict
@@ -258,6 +259,8 @@ Observation surface (frontend/query projection):
   - `artifacts/observation/events.jsonl` (append-friendly projection feed).
 - `mise run ci-observation-query` returns judgment-oriented views
   (`latest`, `needs_attention`, `instruction`, `projection`).
+- `mise run ci-observation-check` enforces that observation output is a pure
+  projection of CI witness artifacts (no semantic drift).
 - This projection layer is where a Surreal-backed UI/read API should attach;
   semantic truth remains in CI witnesses and gate envelopes.
 

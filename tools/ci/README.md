@@ -67,6 +67,9 @@ It writes:
 
 `tools/ci/test_observation_surface.py` validates deterministic reducer/query
 behavior (`mise run ci-observation-test`).
+`tools/ci/check_observation_semantics.py` enforces projection invariance:
+observation output must match deterministic reducer output from CI witness
+artifacts (`mise run ci-observation-check`).
 
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
 entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
@@ -177,6 +180,7 @@ mise run ci-pipeline-test
 mise run ci-observation-test
 mise run ci-observation-build
 mise run ci-observation-query
+mise run ci-observation-check
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-required-attested
