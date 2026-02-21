@@ -48,6 +48,10 @@ This specification complements:
 - `draft/DOCTRINE-SITE` (doctrine-to-operation map),
 - `raw/PREMATH-CI` (CI control-loop execution contract).
 
+Design map reference (non-normative):
+
+- `../../../docs/design/ARCHITECTURE-MAP.md` (doctrine-to-operation path summary).
+
 ## 2. Core objects
 
 An instruction envelope is modeled as:
