@@ -5,12 +5,16 @@ by `mise run ci-required`.
 
 It computes deterministic change projection (`Delta -> requiredChecks`) and
 executes only those checks through `tools/ci/run_gate.sh`.
-For each executed check it also emits a per-check gate envelope artifact under
+For each executed check it requests a per-check gate envelope artifact under
 `artifacts/ciwitness/gates/<projection-digest>/` and links it from
 `ci.required.v1` via `gateWitnessRefs`.
+`run_gate.sh` prefers a native runner/task artifact when present; otherwise it
+emits a deterministic fallback envelope (`tools/ci/emit_gate_witness.py`).
 
 `tools/ci/run_gate.sh` is the host-agnostic task executor shim used by both
 `ci-required` and fixed-task flows like `mise run ci-check`.
+When `PREMATH_GATE_WITNESS_OUT` is set (by `ci-required`), it also handles
+native-or-fallback gate envelope emission for that check.
 
 `mise run ci-check` remains as legacy compatibility for fixed full-gate routing.
 

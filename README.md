@@ -190,6 +190,8 @@ with `.githooks`-based local hooks.
 - emits per-check gate envelopes under
   `artifacts/ciwitness/gates/<projection-digest>/`
 - includes deterministic `gateWitnessRefs` linkage in `ci.required.v1` witnesses
+- prefers native runner/task gate envelope artifacts when present, with
+  deterministic fallback emission when unavailable
 - `mise run ci-verify-required` verifies witness determinism/binding
 - `mise run ci-required-verified` runs both execution and verification
 

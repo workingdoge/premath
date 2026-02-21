@@ -11,7 +11,7 @@ import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from change_projection import (
     detect_changed_paths,
@@ -64,18 +64,88 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def run_check(root: Path, check_id: str) -> Dict[str, Any]:
+def _gate_artifact_path(
+    out_dir: Path,
+    projection_digest: str,
+    check_id: str,
+    index: int,
+) -> Path:
+    gate_dir = out_dir / "gates" / projection_digest
+    gate_dir.mkdir(parents=True, exist_ok=True)
+    file_name = f"{index + 1:02d}-{sanitize_check_id(check_id)}.json"
+    return gate_dir / file_name
+
+
+def _load_json_object(path: Path) -> Optional[Dict[str, Any]]:
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+    if not isinstance(payload, dict):
+        return None
+    return payload
+
+
+def _gate_ref_from_payload(
+    out_dir: Path,
+    gate_path: Path,
+    check_id: str,
+    payload: Dict[str, Any],
+) -> Dict[str, Any]:
+    ref: Dict[str, Any] = {
+        "checkId": check_id,
+        "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
+        "sha256": stable_sha256(payload),
+    }
+    if "runId" in payload:
+        ref["runId"] = payload.get("runId")
+    if "witnessKind" in payload:
+        ref["witnessKind"] = payload.get("witnessKind")
+    if "result" in payload:
+        ref["result"] = payload.get("result")
+    return ref
+
+
+def run_check_with_witness(
+    root: Path,
+    out_dir: Path,
+    check_id: str,
+    projection_digest: str,
+    policy_digest: str,
+    from_ref: str | None,
+    to_ref: str | None,
+    index: int,
+) -> Dict[str, Any]:
+    gate_path = _gate_artifact_path(out_dir, projection_digest, check_id, index)
+    env = os.environ.copy()
+    env["PREMATH_GATE_WITNESS_OUT"] = str(gate_path)
+    env["PREMATH_GATE_CHECK_ID"] = check_id
+    env["PREMATH_GATE_PROJECTION_DIGEST"] = projection_digest
+    env["PREMATH_GATE_POLICY_DIGEST"] = policy_digest
+    env["PREMATH_GATE_CTX_REF"] = from_ref or "ctx:unknown"
+    env["PREMATH_GATE_DATA_HEAD_REF"] = to_ref or "HEAD"
+
     cmd = ["sh", str(root / "tools" / "ci" / "run_gate.sh"), check_id]
     started = time.perf_counter()
-    completed = subprocess.run(cmd, cwd=root)
+    completed = subprocess.run(cmd, cwd=root, env=env)
     duration_ms = int((time.perf_counter() - started) * 1000)
     exit_code = int(completed.returncode)
-    return {
+    row: Dict[str, Any] = {
         "checkId": check_id,
         "status": "passed" if exit_code == 0 else "failed",
         "exitCode": exit_code,
         "durationMs": duration_ms,
     }
+    payload = _load_json_object(gate_path)
+    if payload is not None:
+        row["nativeGateWitnessRef"] = _gate_ref_from_payload(
+            out_dir=out_dir,
+            gate_path=gate_path,
+            check_id=check_id,
+            payload=payload,
+        )
+    return row
 
 
 def emit_gate_witness(
@@ -101,10 +171,12 @@ def emit_gate_witness(
         data_head_ref=data_head_ref,
     )
 
-    gate_dir = out_dir / "gates" / projection_digest
-    gate_dir.mkdir(parents=True, exist_ok=True)
-    file_name = f"{index + 1:02d}-{sanitize_check_id(check_id)}.json"
-    gate_path = gate_dir / file_name
+    gate_path = _gate_artifact_path(
+        out_dir=out_dir,
+        projection_digest=projection_digest,
+        check_id=check_id,
+        index=index,
+    )
     with gate_path.open("w", encoding="utf-8") as f:
         json.dump(envelope, f, indent=2, ensure_ascii=False)
         f.write("\n")
@@ -151,12 +223,28 @@ def main() -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
 
     results: List[Dict[str, Any]] = []
-    for check_id in required_checks:
+    for idx, check_id in enumerate(required_checks):
         print(f"[ci-required] running check: {check_id}")
-        results.append(run_check(root, check_id))
+        results.append(
+            run_check_with_witness(
+                root=root,
+                out_dir=out_dir,
+                check_id=check_id,
+                projection_digest=plan["projectionDigest"],
+                policy_digest=plan["projectionPolicy"],
+                from_ref=from_ref,
+                to_ref=to_ref,
+                index=idx,
+            )
+        )
 
     gate_witness_refs: List[Dict[str, Any]] = []
     for idx, check_row in enumerate(results):
+        native_ref = check_row.pop("nativeGateWitnessRef", None)
+        if isinstance(native_ref, dict):
+            gate_witness_refs.append(native_ref)
+            continue
+
         gate_witness_refs.append(
             emit_gate_witness(
                 out_dir=out_dir,

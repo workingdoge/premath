@@ -146,6 +146,7 @@ Current status in this repo:
 
 - `ci.required.v1` witnesses are emitted and strictly verified.
 - per-check gate envelope artifacts are emitted under
-  `artifacts/ciwitness/gates/<projection-digest>/`.
+  `artifacts/ciwitness/gates/<projection-digest>/` via runner-level native
+  handoff when available, with deterministic fallback emission.
 - `gateWitnessRefs` is populated deterministically and strict verification
   checks link integrity (check binding, payload digest, payload/result consistency).

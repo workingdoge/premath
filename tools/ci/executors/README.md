@@ -33,6 +33,10 @@ Runner responsibilities:
 - provision/select the target execution substrate (local VM, remote host, etc.),
 - run `mise run <task>` in the target workspace,
 - return a nonzero exit code when the gate fails.
+- optional native witness handoff:
+  - when `PREMATH_GATE_WITNESS_OUT` is set, a runner/task may write a
+    GateWitnessEnvelope JSON artifact at that path.
+  - if omitted, `run_gate.sh` emits a deterministic fallback envelope.
 
 Example invocation:
 
