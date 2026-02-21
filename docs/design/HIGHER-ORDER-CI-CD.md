@@ -29,7 +29,8 @@ Implemented in this repo:
 
 Not yet implemented:
 
-- promotion/acceptance decisions driven directly by verified CI witness bundles
+- repo-managed provider policy automation for required checks
+  (for example, automatically applying GitHub rulesets/branch protection)
 - hardened cross-host microvm runtime profile (current microvm runner is experimental/prototype)
 
 ## 1. Intent
@@ -84,6 +85,7 @@ Current shape:
     `PREMATH_EXECUTOR_PROFILE` + `PREMATH_EXECUTOR_RUNNER`
 - CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required`,
   `mise run ci-verify-required-strict`, and `mise run ci-decide-required`
+  - current GitHub required-check surface: workflow `baseline`, job `ci-required`
 - optional infra-provisioned gate: `mise run ci-check-tf`
   - default infra runner profile: `local`
   - experimental runtime profile: `darwin_microvm_vfkit` (microvm.nix + vfkit)

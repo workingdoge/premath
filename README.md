@@ -214,6 +214,9 @@ The CI workflow (`.github/workflows/baseline.yml`) runs:
 - `mise run ci-verify-required-strict`
 - `mise run ci-decide-required`
 
+For GitHub branch protection/rulesets, mark the `ci-required` check as required
+(workflow `baseline`, job `ci-required`).
+
 `ci-verify-required-strict` uses `--compare-delta` and compares witness
 `changedPaths` against the detected PR delta (`origin/${GITHUB_BASE_REF:-main}...HEAD`).
 

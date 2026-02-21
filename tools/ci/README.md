@@ -61,6 +61,13 @@ This keeps policy/admissibility stable while allowing host-specific provisioning
 (Darwin microVM, Linux VM host, remote worker, etc.) in runner scripts.
 See `tools/ci/executors/README.md` for runner responsibilities.
 
+## Required Check Mapping
+
+Canonical CI decision surface is `mise run ci-decide-required`.
+
+For GitHub branch protection/rulesets, require the status check named
+`ci-required` (workflow `.github/workflows/baseline.yml`, job `ci-required`).
+
 ## Example
 
 ```bash
