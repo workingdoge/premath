@@ -19,6 +19,8 @@ venv/
 artifacts/ciwitness/*.json
 artifacts/ciwitness/*.sha256
 artifacts/ciwitness/gates/
+artifacts/observation/*.json
+artifacts/observation/*.jsonl
 
 target/
 .jj/

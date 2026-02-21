@@ -56,6 +56,18 @@ remain thin wrappers around provider-neutral pipeline entrypoints
 are deterministic unit tests for provider-neutral pipeline summary/digest logic
 (`mise run ci-pipeline-test`).
 
+`tools/ci/observation_surface.py` builds and queries `Observation Surface v0`
+from CI witness artifacts (`mise run ci-observation-build`,
+`mise run ci-observation-query`).
+It writes:
+
+- `artifacts/observation/latest.json` (deterministic read model),
+- `artifacts/observation/events.jsonl` (projection/event feed suitable for
+  downstream query stores, including Surreal adapters).
+
+`tools/ci/test_observation_surface.py` validates deterministic reducer/query
+behavior (`mise run ci-observation-test`).
+
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
 entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
 attested required gate chain, and emits summary/sha artifacts.
@@ -162,6 +174,9 @@ mise run ci-wiring-check
 mise run ci-command-surface-check
 mise run ci-pipeline-check
 mise run ci-pipeline-test
+mise run ci-observation-test
+mise run ci-observation-build
+mise run ci-observation-query
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-required-attested

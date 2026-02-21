@@ -53,6 +53,7 @@ run = [
   "mise run ci-command-surface-check",
   "mise run ci-pipeline-check",
   "mise run ci-pipeline-test",
+  "mise run ci-observation-test",
   "mise run ci-wiring-check",
   "mise run ci-instruction-check",
   "mise run ci-instruction-smoke",
@@ -91,6 +92,15 @@ run = [
   "python3 tools/ci/test_pipeline_required.py",
   "python3 tools/ci/test_pipeline_instruction.py",
 ]
+
+[tasks.ci-observation-build]
+run = "python3 tools/ci/observation_surface.py build"
+
+[tasks.ci-observation-query]
+run = "python3 tools/ci/observation_surface.py query --mode latest"
+
+[tasks.ci-observation-test]
+run = "python3 tools/ci/test_observation_surface.py"
 
 [tasks.ci-pipeline-required]
 run = "python3 tools/ci/pipeline_required.py"

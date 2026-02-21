@@ -174,6 +174,9 @@ mise run ci-wiring-check
 mise run ci-command-surface-check
 mise run ci-pipeline-check
 mise run ci-pipeline-test
+mise run ci-observation-test
+mise run ci-observation-build
+mise run ci-observation-query
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict
@@ -247,6 +250,16 @@ CI also publishes:
 - `artifacts/ciwitness/latest-decision.sha256`,
 - projection-specific witness files (`artifacts/ciwitness/proj1_*.json`),
 - a workflow summary row with projection digest, verdict, decision, and digest values.
+
+Observation surface (frontend/query projection):
+
+- `mise run ci-observation-build` builds
+  - `artifacts/observation/latest.json` (deterministic read model),
+  - `artifacts/observation/events.jsonl` (append-friendly projection feed).
+- `mise run ci-observation-query` returns judgment-oriented views
+  (`latest`, `needs_attention`, `instruction`, `projection`).
+- This projection layer is where a Surreal-backed UI/read API should attach;
+  semantic truth remains in CI witnesses and gate envelopes.
 
 `mise run ci-check` is retained as a compatibility task for fixed full-gate
 execution via `hk-check`.
