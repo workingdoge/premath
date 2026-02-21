@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_projection",
+  "vectorId": "golden/kernel_touch_runs_build_test_and_toys",
+  "description": "Kernel crate delta projects build, tests, and toy suites.",
+  "semanticScenarioId": "change_projection_kernel_touch_01",
+  "artifacts": {
+    "changedPaths": [
+      "crates/premath-kernel/src/gate.rs"
+    ],
+    "expectedRequiredChecks": [
+      "build",
+      "test",
+      "test-toy",
+      "test-kcir-toy"
+    ]
+  }
+}

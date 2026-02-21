@@ -9,6 +9,7 @@ Current executable capability:
 - capabilities.squeak_site
 - capabilities.ci_witnesses
 - capabilities.instruction_typing
+- capabilities.change_projection
 """
 
 from __future__ import annotations
@@ -21,12 +22,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT / "tools" / "ci"))
+
+from change_projection import project_required_checks  # type: ignore  # noqa: E402
+
 CAPABILITY_NORMAL_FORMS = "capabilities.normal_forms"
 CAPABILITY_KCIR_WITNESSES = "capabilities.kcir_witnesses"
 CAPABILITY_COMMITMENT_CHECKPOINTS = "capabilities.commitment_checkpoints"
 CAPABILITY_SQUEAK_SITE = "capabilities.squeak_site"
 CAPABILITY_CI_WITNESSES = "capabilities.ci_witnesses"
 CAPABILITY_INSTRUCTION_TYPING = "capabilities.instruction_typing"
+CAPABILITY_CHANGE_PROJECTION = "capabilities.change_projection"
 DEFAULT_EXECUTABLE_CAPABILITIES: Sequence[str] = (
     CAPABILITY_NORMAL_FORMS,
     CAPABILITY_KCIR_WITNESSES,
@@ -34,6 +41,7 @@ DEFAULT_EXECUTABLE_CAPABILITIES: Sequence[str] = (
     CAPABILITY_SQUEAK_SITE,
     CAPABILITY_CI_WITNESSES,
     CAPABILITY_INSTRUCTION_TYPING,
+    CAPABILITY_CHANGE_PROJECTION,
 )
 
 
@@ -981,9 +989,96 @@ def run_ci_witnesses(capability_dir: Path, errors: List[str]) -> Tuple[int, int]
     return run_capability_vectors(capability_dir, evaluate_ci_witness_vector, errors)
 
 
+def evaluate_change_projection_docs_and_code(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    changed_paths = ensure_string_list(artifacts.get("changedPaths", []), "artifacts.changedPaths")
+    expected_required = canonical_check_set(
+        artifacts.get("expectedRequiredChecks", []), "artifacts.expectedRequiredChecks"
+    )
+
+    projection = project_required_checks(changed_paths)
+    actual_required = sorted(projection.required_checks)
+    if actual_required != expected_required:
+        return VectorOutcome("rejected", "rejected", ["change_projection_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_requires_claim(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "change_projection" and CAPABILITY_CHANGE_PROJECTION not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    profile = ensure_string(case.get("profile"), "profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+
+    changed_paths = ensure_string_list(artifacts.get("changedPaths", []), "artifacts.changedPaths")
+    expected_required = canonical_check_set(
+        artifacts.get("expectedRequiredChecks", []), "artifacts.expectedRequiredChecks"
+    )
+
+    projection = project_required_checks(changed_paths)
+    actual_required = sorted(projection.required_checks)
+    if actual_required != expected_required:
+        return VectorOutcome("rejected", "rejected", ["change_projection_mismatch"])
+
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = ensure_string_list(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+
+    if profile != "local":
+        claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+        if CAPABILITY_CHANGE_PROJECTION not in claimed:
+            return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
+def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
+    if vector_id in {
+        "golden/docs_only_raw_runs_conformance_check",
+        "golden/kernel_touch_runs_build_test_and_toys",
+        "golden/conformance_touch_runs_conformance_and_toys",
+        "golden/fallback_unknown_surface_runs_baseline",
+    }:
+        return evaluate_change_projection_docs_and_code(case)
+    if vector_id == "adversarial/change_projection_requires_claim":
+        return evaluate_change_projection_requires_claim(case)
+    if vector_id.startswith("invariance/"):
+        return evaluate_change_projection_invariance(case)
+    raise ValueError(f"unsupported change_projection vector id: {vector_id}")
+
+
+def run_change_projection(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
+    return run_capability_vectors(capability_dir, evaluate_change_projection_vector, errors)
+
+
 def parse_args() -> argparse.Namespace:
-    root = Path(__file__).resolve().parents[2]
-    default_fixtures = root / "tests" / "conformance" / "fixtures" / "capabilities"
+    default_fixtures = ROOT / "tests" / "conformance" / "fixtures" / "capabilities"
     parser = argparse.ArgumentParser(description="Run executable capability conformance vectors.")
     parser.add_argument(
         "--fixtures",
@@ -1036,6 +1131,8 @@ def main() -> int:
             count, checked = run_ci_witnesses(capability_dir, errors)
         elif capability_id == CAPABILITY_INSTRUCTION_TYPING:
             count, checked = run_instruction_typing(capability_dir, errors)
+        elif capability_id == CAPABILITY_CHANGE_PROJECTION:
+            count, checked = run_change_projection(capability_dir, errors)
         else:
             errors.append(f"unsupported executable capability: {capability_id}")
             continue

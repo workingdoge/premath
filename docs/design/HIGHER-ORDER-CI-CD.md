@@ -10,7 +10,7 @@ Spec counterpart: `specs/premath/raw/PREMATH-CI.md`.
 Implemented in this repo:
 
 - local fast/full/staged gate triggers via `jj gate-fast|gate-check|gate-pre-commit`
-- CI gate path via `.github/workflows/baseline.yml` -> `mise run ci-check`
+- CI gate path via `.github/workflows/baseline.yml` -> `mise run ci-required`
 - instruction-envelope gate path via
   `sh tools/ci/run_instruction.sh instructions/<ts>-<id>.json`
   emitting `artifacts/ciwitness/<instruction-id>.json`
@@ -60,15 +60,17 @@ This repository already has the right split:
 Current shape:
 
 - local fast loop: `jj gate-fast` (delegates to `hk fix` profile)
-- local full closure: `jj gate-check` (delegates to `hk check` -> `mise run baseline`)
+- local required closure: `jj gate-check` (delegates to `hk check` -> `mise run ci-required`)
 - optional staged-flow gate: `jj gate-pre-commit` (Git index semantics)
-- canonical gate entrypoint: `mise run ci-check` (`tools/ci/run_gate.sh`)
+- canonical projected gate entrypoint: `mise run ci-required` (`tools/ci/run_required_checks.py`)
+  - computes `Delta -> requiredChecks` deterministically before execution
+  - executes each required check through `tools/ci/run_gate.sh`
   - default profile: `PREMATH_SQUEAK_SITE_PROFILE=local`
   - optional external profile:
     `PREMATH_SQUEAK_SITE_PROFILE=external` + `PREMATH_SQUEAK_SITE_RUNNER=<path>`
   - legacy aliases still accepted:
     `PREMATH_EXECUTOR_PROFILE` + `PREMATH_EXECUTOR_RUNNER`
-- CI gate: `.github/workflows/baseline.yml` runs `mise run ci-check`
+- CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required`
 - optional infra-provisioned gate: `mise run ci-check-tf`
   - default infra runner profile: `local`
   - experimental runtime profile: `darwin_microvm_vfkit` (microvm.nix + vfkit)

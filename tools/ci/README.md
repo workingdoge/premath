@@ -1,6 +1,13 @@
 # CI SqueakSite Shim
 
-`tools/ci/run_gate.sh` is the host-agnostic gate entrypoint used by `mise run ci-check`.
+`tools/ci/run_required_checks.py` is the canonical closure gate entrypoint used
+by `mise run ci-required`.
+
+It computes deterministic change projection (`Delta -> requiredChecks`) and
+executes only those checks through `tools/ci/run_gate.sh`.
+
+`tools/ci/run_gate.sh` is the host-agnostic task executor shim used by both
+`ci-required` and fixed-task flows like `mise run ci-check`.
 
 It separates:
 
@@ -35,12 +42,12 @@ See `tools/ci/executors/README.md` for runner responsibilities.
 ## Example
 
 ```bash
-PREMATH_SQUEAK_SITE_PROFILE=local mise run ci-check
+PREMATH_SQUEAK_SITE_PROFILE=local mise run ci-required
 
 # external runner wrapper (user-provided)
 PREMATH_SQUEAK_SITE_PROFILE=external \
 PREMATH_SQUEAK_SITE_RUNNER=./tools/ci/executors/my_runner.sh \
-mise run ci-check
+mise run ci-required
 ```
 
 Instruction envelope run:
@@ -48,6 +55,13 @@ Instruction envelope run:
 ```bash
 INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
+```
+
+Inspect projection plan without executing checks:
+
+```bash
+python3 tools/ci/project_checks.py
+python3 tools/ci/project_checks.py --changed-file crates/premath-kernel/src/lib.rs
 ```
 
 ## Terraform/OpenTofu Shape

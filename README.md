@@ -155,7 +155,7 @@ This enforces the current invariant gate:
 - conformance capability invariance-stub validation,
 - doctrine-to-operation site coherence validation,
 - executable capability conformance vectors
-  (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`).
+  (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.change_projection`).
 
 Optional `hk` hook runner (configured in `hk.pkl`):
 
@@ -170,14 +170,19 @@ Manual runs:
 mise run hk-pre-commit
 mise run hk-pre-push
 mise run hk-check
+mise run ci-required
 mise run ci-check
 ```
 
-`hk` keeps fast hygiene checks in `pre-commit` and runs the full closure gate
-(`mise run baseline`) on `pre-push`/`check`. This is optional and can coexist
+`hk` keeps fast hygiene checks in `pre-commit` and runs the required projected
+closure gate (`mise run ci-required`) on `pre-push`/`check`. This is optional and can coexist
 with `.githooks`-based local hooks.
 
-`mise run ci-check` is the canonical SqueakSite gate entrypoint:
+`mise run ci-required` is the canonical SqueakSite gate entrypoint:
+
+- computes deterministic change projection (`Delta -> requiredChecks`)
+- executes only required checks through `tools/ci/run_gate.sh`
+- emits `artifacts/ciwitness/<projection-digest>.json`
 
 - default: local execution (`PREMATH_SQUEAK_SITE_PROFILE=local`)
 - optional external runner: set
@@ -189,7 +194,10 @@ with `.githooks`-based local hooks.
 See `tools/ci/README.md` for runner protocol details.
 
 The CI workflow (`.github/workflows/baseline.yml`) runs this gate through
-`mise run ci-check`.
+`mise run ci-required`.
+
+`mise run ci-check` is retained as a compatibility task for fixed full-gate
+execution via `hk-check`.
 
 Instruction-envelope flow:
 
@@ -247,7 +255,7 @@ mise run pf-gate-loop-stop
 Current `pitchfork.toml` daemons:
 
 - `docs-preview`: serves `docs/` on `http://127.0.0.1:43173`
-- `gate-check-loop`: optional local closure loop (`mise run ci-check`, then sleep 30m)
+- `gate-check-loop`: optional local closure loop (`mise run ci-required`, then sleep 30m)
 
 ### JJ Glue (control plane)
 
@@ -262,7 +270,7 @@ This installs repo-local aliases:
 ```bash
 jj gate-fast         # hk fix profile (all files, no staging)
 jj gate-fix          # hk fix profile (all files, no staging)
-jj gate-check        # full baseline closure gate
+jj gate-check        # required projected closure gate
 jj gate-pre-commit   # hk pre-commit profile (git-staged flow)
 ```
 

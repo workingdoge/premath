@@ -61,9 +61,13 @@ baseline:
     just doctrine-check
     just conformance-run
 
+# Required closure gate projected from current delta
+ci-required:
+    python3 tools/ci/run_required_checks.py
+
 # Recommended local gate before commit
 precommit:
-    just baseline
+    just ci-required
 
 # Clippy lint
 lint:
@@ -107,7 +111,7 @@ infra-down:
 
 # Run closure gate through Terraform/OpenTofu-resolved runner
 ci-check-tf:
-    sh tools/ci/run_gate_terraform.sh hk-check
+    sh tools/ci/run_gate_terraform.sh ci-required
 
 # Run one instruction envelope and emit a CI witness artifact
 ci-instruction INSTRUCTION:
@@ -115,8 +119,8 @@ ci-instruction INSTRUCTION:
 
 # Run closure gate through Terraform/OpenTofu with local runner profile
 ci-check-tf-local:
-    TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh hk-check
+    TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required
 
 # Run closure gate through Terraform/OpenTofu with experimental microvm profile
 ci-check-tf-microvm:
-    TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh hk-check
+    TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required

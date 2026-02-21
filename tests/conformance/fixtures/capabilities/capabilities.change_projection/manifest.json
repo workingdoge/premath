@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_projection",
+  "vectors": [
+    "golden/docs_only_raw_runs_conformance_check",
+    "golden/kernel_touch_runs_build_test_and_toys",
+    "golden/conformance_touch_runs_conformance_and_toys",
+    "golden/fallback_unknown_surface_runs_baseline",
+    "adversarial/change_projection_requires_claim",
+    "invariance/same_delta_local_profile",
+    "invariance/same_delta_external_profile"
+  ]
+}

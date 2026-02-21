@@ -13,6 +13,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup mise
         uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
@@ -25,5 +27,5 @@ jobs:
           mise trust
           mise install
 
-      - name: Run baseline gate via executor shim
-        run: mise run ci-check
+      - name: Run required gate from change projection
+        run: mise run ci-required

@@ -32,6 +32,7 @@ Runs executable capability vectors (current set):
 - `capabilities.squeak_site`
 - `capabilities.ci_witnesses`
 - `capabilities.instruction_typing`
+- `capabilities.change_projection`
 
 Checks include:
 
@@ -40,6 +41,7 @@ Checks include:
 - SqueakSite location descriptor/overlap/glue behavior,
 - instruction-envelope to CI witness determinism checks,
 - typed/unknown instruction classification determinism checks,
+- deterministic `Delta -> requiredChecks` projection behavior,
 - invariance pairing (`kernelVerdict` and Gate failure classes) across evidence profiles.
 
 Run:

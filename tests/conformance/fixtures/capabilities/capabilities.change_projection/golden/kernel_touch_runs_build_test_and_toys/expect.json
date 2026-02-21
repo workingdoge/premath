@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "kernel changes project build/test plus toy and KCIR toy suites"
+  ]
+}

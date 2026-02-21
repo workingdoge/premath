@@ -25,6 +25,8 @@ Scope: design-level, non-normative
 - `specs/premath/raw/CI-TOPOS.md`
 
 `Operational surfaces` (scripts/tasks):
+- `tools/ci/project_checks.py`
+- `tools/ci/run_required_checks.py`
 - `tools/ci/run_instruction.py`
 - `tools/ci/run_gate.sh`
 - `hk.pkl`, `.mise.toml`, `justfile`
@@ -36,7 +38,8 @@ DOCTRINE-INF
   -> DOCTRINE-SITE (nodes/covers/edges)
   -> LLM-INSTRUCTION-DOCTRINE
   -> PREMATH-CI / CI-TOPOS
-  -> tools/ci/run_instruction.py
+  -> tools/ci/project_checks.py
+  -> tools/ci/run_required_checks.py
   -> tools/ci/run_gate.sh
   -> hk/mise tasks
   -> CIWitness artifacts
@@ -70,6 +73,12 @@ Baseline gate (`mise run baseline`) enforces:
 - doctrine-site coherence (`tools/conformance/check_doctrine_site.py`),
 - executable capability vectors (`tools/conformance/run_capability_vectors.py`).
 
+Projected required gate (`mise run ci-required`) enforces:
+- deterministic `Delta -> requiredChecks` projection,
+- execution of projected checks only,
+- CI closure witness emission (`artifacts/ciwitness/proj1_*.json`).
+
 Instruction doctrine is executable via:
 - `capabilities.instruction_typing`
 - `capabilities.ci_witnesses`
+- `capabilities.change_projection`

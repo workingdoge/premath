@@ -12,6 +12,7 @@ Current status:
   - `capabilities.squeak_site` is executable.
   - `capabilities.ci_witnesses` is executable.
   - `capabilities.instruction_typing` is executable.
+  - `capabilities.change_projection` is executable.
   - other capability tracks are currently stub/informational.
 
 Validate fixture integrity and invariance pairing with:

@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-TASK="${1:-hk-check}"
+TASK="${1:-ci-required}"
 ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
 
 CHEESE_RUNNER="$(sh "$ROOT/tools/infra/terraform/up.sh")"

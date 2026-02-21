@@ -20,9 +20,9 @@ For fixed semantic inputs and fixed policy bindings:
 
 This is the load-bearing invariant for optional capabilities.
 
-## 3. Baseline gate (current)
+## 3. Gate entrypoints (current)
 
-Current baseline gate:
+Current full baseline gate:
 
 1. workspace build
 2. Rust tests
@@ -34,12 +34,20 @@ Local command:
 
 ```bash
 just baseline
-mise run ci-check
 ```
 
-`mise run ci-check` routes through `tools/ci/run_gate.sh` so executor substrate
-selection (`PREMATH_SQUEAK_SITE_PROFILE`, legacy `PREMATH_EXECUTOR_PROFILE`) is
-decoupled from gate semantics.
+Projected required gate (canonical CI entrypoint):
+
+```bash
+mise run ci-required
+```
+
+`mise run ci-required` computes deterministic change projection
+(`Delta -> requiredChecks`) and executes only projected checks.
+
+Underlying check execution still routes through `tools/ci/run_gate.sh`, so
+executor substrate selection (`PREMATH_SQUEAK_SITE_PROFILE`, legacy
+`PREMATH_EXECUTOR_PROFILE`) stays decoupled from gate semantics.
 
 Optional infra-provisioned path:
 
@@ -87,7 +95,8 @@ Suggested v0 projection:
 - capability/profile semantics changes:
   - run full baseline gate
 
-CI can run full baseline initially; projection can be introduced as cache/latency optimization later.
+Implemented in `tools/ci/change_projection.py` and executed via
+`tools/ci/run_required_checks.py`.
 
 ## 5. Variants and capability projection
 

@@ -8,5 +8,5 @@ ready_delay = 1
 auto = ["start", "stop"]
 
 [daemons.gate-check-loop]
-run = "sh -lc 'while true; do mise run ci-check; sleep 1800; done'"
+run = "sh -lc 'while true; do mise run ci-required; sleep 1800; done'"
 ready_delay = 1
