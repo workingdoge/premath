@@ -7,6 +7,17 @@ This directory contains non-normative documentation and implementation notes.
 - `design/ARCHITECTURE-MAP.md` — one-page doctrine-to-operation architecture map.
 - `design/GLOSSARY.md` — shared terminology used across design docs.
 - `foundations/` — explanatory background notes for kernel and SigPi concepts.
+- `observation/index.html` — lightweight local dashboard for Observation Surface v0.
 - `../specs/premath/draft/SPEC-INDEX.md` — normative spec entrypoint and claim/profile map.
 
 For process/governance, see `../specs/process/README.md`.
+
+Local dashboard quickstart:
+
+```bash
+mise run ci-observation-build
+mise run ci-observation-serve
+python3 -m http.server 43173 --directory docs
+```
+
+Then open `http://127.0.0.1:43173/observation/`.

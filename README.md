@@ -269,8 +269,21 @@ Observation surface (frontend/query projection):
   `GET /instruction?id=<instruction_id>`, `GET /projection?digest=<projection_digest>`).
 - `mise run ci-observation-check` enforces that observation output is a pure
   projection of CI witness artifacts (no semantic drift).
+- `docs/observation/index.html` is a lightweight human-facing dashboard view
+  over the same API.
 - This projection layer is where a Surreal-backed UI/read API should attach;
   semantic truth remains in CI witnesses and gate envelopes.
+
+Dashboard quickstart:
+
+```bash
+mise run ci-observation-build
+mise run ci-observation-serve
+python3 -m http.server 43173 --directory docs
+```
+
+Open `http://127.0.0.1:43173/observation/` (default API:
+`http://127.0.0.1:43174`).
 
 `mise run ci-check` is retained as a compatibility task for fixed full-gate
 execution via `hk-check`.

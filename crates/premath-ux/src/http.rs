@@ -317,7 +317,7 @@ fn write_json_response(stream: &mut TcpStream, response: HttpResponse) -> std::i
     let body = serde_json::to_vec_pretty(&response.body)?;
     let status_text = reason_phrase(response.status);
     let header = format!(
-        "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n",
+        "HTTP/1.1 {} {}\r\nContent-Type: application/json\r\nContent-Length: {}\r\nAccess-Control-Allow-Origin: *\r\nAccess-Control-Allow-Methods: GET\r\nConnection: close\r\n\r\n",
         response.status,
         status_text,
         body.len()

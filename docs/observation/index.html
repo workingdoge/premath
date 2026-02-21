@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Premath Observation Surface</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f5efe2;
+      --bg-2: #ece3d0;
+      --card: #fffdf8;
+      --ink: #1d242c;
+      --muted: #5a6673;
+      --line: #d4cab5;
+      --accent: #0f766e;
+      --accent-2: #a16207;
+      --ok: #15803d;
+      --warn: #b45309;
+      --bad: #b91c1c;
+      --shadow: 0 6px 20px rgba(17, 24, 39, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Space Grotesk", "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(1200px 560px at 8% -10%, #d8efe7 0%, transparent 55%),
+        radial-gradient(1000px 520px at 110% 12%, #f5debe 0%, transparent 50%),
+        linear-gradient(180deg, var(--bg), var(--bg-2));
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 20px 16px 28px;
+    }
+
+    .hero {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(160deg, #fffef9, #f8f3e8);
+      box-shadow: var(--shadow);
+      padding: 18px 18px 14px;
+      margin-bottom: 14px;
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 1.55rem;
+      letter-spacing: 0.01em;
+    }
+
+    .hero p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 8px;
+      margin-top: 14px;
+      align-items: center;
+    }
+
+    input, button, select {
+      font: inherit;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #fffcf5;
+      color: var(--ink);
+      padding: 9px 10px;
+    }
+
+    input:focus, button:focus, select:focus {
+      outline: 2px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      outline-offset: 1px;
+    }
+
+    button {
+      background: linear-gradient(180deg, #faf2de, #f0e3c7);
+      cursor: pointer;
+      border-color: #c7b68f;
+      font-weight: 600;
+    }
+
+    button.primary {
+      background: linear-gradient(180deg, #d2f3ed, #bee9e2);
+      border-color: #83c9c0;
+    }
+
+    .status {
+      margin-top: 10px;
+      font-size: 0.92rem;
+      color: var(--muted);
+      min-height: 1.2em;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      padding: 11px 12px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      font-size: 0.82rem;
+      margin-bottom: 3px;
+    }
+
+    .metric .value {
+      font-weight: 700;
+      line-height: 1.25;
+      word-break: break-word;
+    }
+
+    .value.ok { color: var(--ok); }
+    .value.warn { color: var(--warn); }
+    .value.bad { color: var(--bad); }
+
+    .panes {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
+
+    .pane {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      min-height: 220px;
+    }
+
+    .pane h2 {
+      margin: 0;
+      padding: 9px 10px;
+      font-size: 0.94rem;
+      background: #f6efdf;
+      border-bottom: 1px solid var(--line);
+      letter-spacing: 0.01em;
+    }
+
+    .pane .body {
+      padding: 10px;
+    }
+
+    .mini-controls {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .mono {
+      margin: 0;
+      padding: 9px;
+      border-radius: 8px;
+      border: 1px solid #ddd3be;
+      background: #faf6eb;
+      color: #273444;
+      font-family: "IBM Plex Mono", "Menlo", "Consolas", monospace;
+      font-size: 0.81rem;
+      line-height: 1.35;
+      max-height: 320px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .list {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 6px;
+      max-height: 320px;
+      overflow: auto;
+    }
+
+    .list li {
+      border: 1px solid #ddd3be;
+      border-radius: 8px;
+      background: #faf6eb;
+      padding: 7px 9px;
+      font-family: "IBM Plex Mono", "Menlo", "Consolas", monospace;
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+      .panes { grid-template-columns: 1fr; }
+      .controls { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <section class="hero">
+      <h1>Premath Observation Surface</h1>
+      <p>
+        Judgement view over attested CI witnesses.
+        Semantic source of truth stays in witness artifacts;
+        this dashboard reads projection endpoints only.
+      </p>
+
+      <div class="controls">
+        <input id="apiBase" type="text" placeholder="http://127.0.0.1:43174" />
+        <button id="refreshBtn" class="primary">Refresh</button>
+        <select id="autoEvery">
+          <option value="0">Auto off</option>
+          <option value="5">Auto 5s</option>
+          <option value="10">Auto 10s</option>
+          <option value="30">Auto 30s</option>
+        </select>
+        <button id="autoBtn">Apply Auto</button>
+      </div>
+      <div class="status" id="status"></div>
+    </section>
+
+    <section class="grid">
+      <article class="metric">
+        <div class="label">State</div>
+        <div class="value" id="mState">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Needs Attention</div>
+        <div class="value" id="mNeeds">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Top Failure</div>
+        <div class="value" id="mFailure">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Latest Projection</div>
+        <div class="value" id="mProjection">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Latest Instruction</div>
+        <div class="value" id="mInstruction">-</div>
+      </article>
+    </section>
+
+    <section class="panes">
+      <article class="pane">
+        <h2>Latest View</h2>
+        <div class="body">
+          <pre id="latestJson" class="mono"></pre>
+        </div>
+      </article>
+
+      <article class="pane">
+        <h2>Needs Attention View</h2>
+        <div class="body">
+          <pre id="needsJson" class="mono"></pre>
+        </div>
+      </article>
+
+      <article class="pane">
+        <h2>Projection Drilldown</h2>
+        <div class="body">
+          <div class="mini-controls">
+            <input id="projectionId" type="text" placeholder="proj1_..." />
+            <button id="loadProjection">Load</button>
+          </div>
+          <pre id="projectionJson" class="mono"></pre>
+        </div>
+      </article>
+
+      <article class="pane">
+        <h2>Instruction Drilldown</h2>
+        <div class="body">
+          <div class="mini-controls">
+            <input id="instructionId" type="text" placeholder="2026...-id" />
+            <button id="loadInstruction">Load</button>
+          </div>
+          <pre id="instructionJson" class="mono"></pre>
+        </div>
+      </article>
+
+      <article class="pane">
+        <h2>Changed Paths</h2>
+        <div class="body">
+          <ul id="pathsList" class="list"></ul>
+        </div>
+      </article>
+
+      <article class="pane">
+        <h2>Required Checks</h2>
+        <div class="body">
+          <ul id="checksList" class="list"></ul>
+        </div>
+      </article>
+    </section>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      timer: null,
+      base: localStorage.getItem("premath.observe.apiBase") || "http://127.0.0.1:43174"
+    };
+
+    function setStatus(msg, isError = false) {
+      const el = $("status");
+      el.textContent = msg;
+      el.style.color = isError ? "var(--bad)" : "var(--muted)";
+    }
+
+    function setMetric(id, value, klass = "") {
+      const el = $(id);
+      el.textContent = value ?? "-";
+      el.className = `value ${klass}`.trim();
+    }
+
+    function pretty(obj) {
+      return JSON.stringify(obj, null, 2);
+    }
+
+    async function fetchJson(path) {
+      const url = new URL(path, state.base).toString();
+      const resp = await fetch(url);
+      const body = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        throw new Error(body.error || `${resp.status} ${resp.statusText}`);
+      }
+      return body;
+    }
+
+    function renderList(el, items) {
+      el.innerHTML = "";
+      if (!Array.isArray(items) || items.length === 0) {
+        const li = document.createElement("li");
+        li.textContent = "(none)";
+        el.appendChild(li);
+        return;
+      }
+      for (const item of items) {
+        const li = document.createElement("li");
+        li.textContent = String(item);
+        el.appendChild(li);
+      }
+    }
+
+    function classForState(stateValue) {
+      if (stateValue === "accepted") return "ok";
+      if (stateValue === "running") return "warn";
+      if (stateValue === "rejected" || stateValue === "error") return "bad";
+      return "";
+    }
+
+    async function refreshAll() {
+      const started = Date.now();
+      try {
+        const latest = await fetchJson("/latest");
+        const needs = await fetchJson("/needs-attention");
+
+        $("latestJson").textContent = pretty(latest);
+        $("needsJson").textContent = pretty(needs);
+
+        setMetric("mState", latest.summary?.state || "-", classForState(latest.summary?.state));
+        setMetric("mNeeds", String(Boolean(needs.needsAttention)), needs.needsAttention ? "bad" : "ok");
+        setMetric("mFailure", needs.topFailureClass || "-");
+        setMetric("mProjection", needs.latestProjectionDigest || "-");
+        setMetric("mInstruction", needs.latestInstructionId || "-");
+
+        if (needs.latestProjectionDigest) {
+          $("projectionId").value = needs.latestProjectionDigest;
+        }
+        if (needs.latestInstructionId) {
+          $("instructionId").value = needs.latestInstructionId;
+        }
+
+        const changed = latest.latest?.delta?.changedPaths || [];
+        const required = latest.latest?.required?.requiredChecks || [];
+        renderList($("pathsList"), changed);
+        renderList($("checksList"), required);
+
+        const elapsed = Date.now() - started;
+        setStatus(`Loaded from ${state.base} in ${elapsed}ms`);
+      } catch (err) {
+        setStatus(`Load failed: ${err.message}`, true);
+      }
+    }
+
+    async function loadProjection() {
+      const id = $("projectionId").value.trim();
+      if (!id) return setStatus("Projection digest is required", true);
+      try {
+        const payload = await fetchJson(`/projection?digest=${encodeURIComponent(id)}`);
+        $("projectionJson").textContent = pretty(payload);
+        setStatus(`Loaded projection ${id}`);
+      } catch (err) {
+        setStatus(`Projection load failed: ${err.message}`, true);
+      }
+    }
+
+    async function loadInstruction() {
+      const id = $("instructionId").value.trim();
+      if (!id) return setStatus("Instruction id is required", true);
+      try {
+        const payload = await fetchJson(`/instruction?id=${encodeURIComponent(id)}`);
+        $("instructionJson").textContent = pretty(payload);
+        setStatus(`Loaded instruction ${id}`);
+      } catch (err) {
+        setStatus(`Instruction load failed: ${err.message}`, true);
+      }
+    }
+
+    function applyAuto() {
+      if (state.timer) {
+        clearInterval(state.timer);
+        state.timer = null;
+      }
+      const sec = Number($("autoEvery").value || "0");
+      if (sec > 0) {
+        state.timer = setInterval(refreshAll, sec * 1000);
+        setStatus(`Auto refresh enabled every ${sec}s`);
+      } else {
+        setStatus("Auto refresh disabled");
+      }
+    }
+
+    function bind() {
+      $("apiBase").value = state.base;
+
+      $("refreshBtn").addEventListener("click", () => {
+        state.base = $("apiBase").value.trim() || state.base;
+        localStorage.setItem("premath.observe.apiBase", state.base);
+        refreshAll();
+      });
+      $("autoBtn").addEventListener("click", applyAuto);
+      $("loadProjection").addEventListener("click", loadProjection);
+      $("loadInstruction").addEventListener("click", loadInstruction);
+    }
+
+    bind();
+    refreshAll();
+  </script>
+</body>
+</html>
