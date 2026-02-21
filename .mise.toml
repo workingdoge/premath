@@ -50,6 +50,7 @@ run = [
   "mise run test-kcir-toy",
   "mise run conformance-check",
   "mise run doctrine-check",
+  "mise run ci-wiring-check",
   "mise run conformance-run",
 ]
 
@@ -70,6 +71,9 @@ run = "hk run pre-push"
 
 [tasks.ci-project]
 run = "python3 tools/ci/project_checks.py"
+
+[tasks.ci-wiring-check]
+run = "python3 tools/ci/check_ci_wiring.py"
 
 [tasks.ci-required]
 run = "python3 tools/ci/run_required_checks.py"

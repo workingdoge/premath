@@ -170,6 +170,7 @@ Manual runs:
 mise run hk-pre-commit
 mise run hk-pre-push
 mise run hk-check
+mise run ci-wiring-check
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict
@@ -215,10 +216,8 @@ See `tools/ci/README.md` for runner protocol details.
 
 The current repo CI binding runs:
 
-- `mise run ci-required`
-- `mise run ci-verify-required-strict`
-- `mise run ci-decide-required`
-- `mise run ci-verify-decision`
+- `mise run ci-wiring-check`
+- `mise run ci-required-attested`
 
 Provider-specific required-check mappings are documented in
 `docs/design/CI-PROVIDER-BINDINGS.md`.
@@ -300,7 +299,7 @@ mise run pf-gate-loop-stop
 Current `pitchfork.toml` daemons:
 
 - `docs-preview`: serves `docs/` on `http://127.0.0.1:43173`
-- `gate-check-loop`: optional local closure loop (`mise run ci-required`, then sleep 30m)
+- `gate-check-loop`: optional local closure loop (`mise run ci-required-attested`, then sleep 30m)
 
 ### JJ Glue (control plane)
 
