@@ -24,6 +24,7 @@ Boundary:
 - `TUSK-WITNESSING.md`: Gate vs transport witnessing model and failure mappings.
 - `TUSK-SIGPI.md`: inter-world transport/composition boundary and contracts.
 - `GLOSSARY.md`: shared terms for architecture and implementation docs.
+- `ARCHITECTURE-MAP.md`: one-page doctrine-to-operation architecture map.
 - `CI-CLOSURE.md`: CI/pre-commit closure gate and change-projected entry minimization.
 - `HIGHER-ORDER-CI-CD.md`: DevOps/control-loop framing for CI/CD inside the coding environment.
 
