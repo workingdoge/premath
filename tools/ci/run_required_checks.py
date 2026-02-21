@@ -19,6 +19,11 @@ from change_projection import (
     project_required_checks,
     projection_plan_payload,
 )
+from gate_witness_envelope import (
+    make_gate_witness_envelope,
+    sanitize_check_id,
+    stable_sha256,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -73,6 +78,47 @@ def run_check(root: Path, check_id: str) -> Dict[str, Any]:
     }
 
 
+def emit_gate_witness(
+    out_dir: Path,
+    projection_digest: str,
+    policy_digest: str,
+    from_ref: str | None,
+    to_ref: str | None,
+    check_row: Dict[str, Any],
+    index: int,
+) -> Dict[str, Any]:
+    check_id = str(check_row["checkId"])
+    exit_code = int(check_row["exitCode"])
+    ctx_ref = from_ref or "ctx:unknown"
+    data_head_ref = to_ref or "HEAD"
+
+    envelope = make_gate_witness_envelope(
+        check_id=check_id,
+        exit_code=exit_code,
+        projection_digest=projection_digest,
+        policy_digest=policy_digest,
+        ctx_ref=ctx_ref,
+        data_head_ref=data_head_ref,
+    )
+
+    gate_dir = out_dir / "gates" / projection_digest
+    gate_dir.mkdir(parents=True, exist_ok=True)
+    file_name = f"{index + 1:02d}-{sanitize_check_id(check_id)}.json"
+    gate_path = gate_dir / file_name
+    with gate_path.open("w", encoding="utf-8") as f:
+        json.dump(envelope, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+    return {
+        "checkId": check_id,
+        "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
+        "sha256": stable_sha256(envelope),
+        "runId": envelope["runId"],
+        "witnessKind": envelope["witnessKind"],
+        "result": envelope["result"],
+    }
+
+
 def main() -> int:
     args = parse_args()
     root = Path(__file__).resolve().parents[2]
@@ -99,10 +145,29 @@ def main() -> int:
     required_checks = list(plan["requiredChecks"])
     started_at = datetime.now(timezone.utc)
 
+    out_dir = args.out_dir
+    if not out_dir.is_absolute():
+        out_dir = (root / out_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+
     results: List[Dict[str, Any]] = []
     for check_id in required_checks:
         print(f"[ci-required] running check: {check_id}")
         results.append(run_check(root, check_id))
+
+    gate_witness_refs: List[Dict[str, Any]] = []
+    for idx, check_row in enumerate(results):
+        gate_witness_refs.append(
+            emit_gate_witness(
+                out_dir=out_dir,
+                projection_digest=plan["projectionDigest"],
+                policy_digest=plan["projectionPolicy"],
+                from_ref=from_ref,
+                to_ref=to_ref,
+                check_row=check_row,
+                index=idx,
+            )
+        )
 
     failed = [row for row in results if row["exitCode"] != 0]
     verdict_class = "accepted" if not failed else "rejected"
@@ -118,6 +183,7 @@ def main() -> int:
         "requiredChecks": required_checks,
         "executedChecks": [row["checkId"] for row in results],
         "results": results,
+        "gateWitnessRefs": gate_witness_refs,
         "verdictClass": verdict_class,
         "failureClasses": failure_classes,
         "docsOnly": plan["docsOnly"],
@@ -135,10 +201,6 @@ def main() -> int:
         "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
     }
 
-    out_dir = args.out_dir
-    if not out_dir.is_absolute():
-        out_dir = (root / out_dir).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{plan['projectionDigest']}.json"
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(witness, f, indent=2, ensure_ascii=False)

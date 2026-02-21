@@ -145,10 +145,7 @@ Source-of-truth split:
 Current status in this repo:
 
 - `ci.required.v1` witnesses are emitted and strictly verified.
-- `gateWitnessRefs` is not populated yet because required checks currently
-  return command-level pass/fail without emitting per-check gate envelopes.
-
-Next extension:
-
-- when a check emits gate envelopes, attach deterministic `gateWitnessRefs`
-  keyed by `checkId`, and keep CI verification deterministic over that linkage.
+- per-check gate envelope artifacts are emitted under
+  `artifacts/ciwitness/gates/<projection-digest>/`.
+- `gateWitnessRefs` is populated deterministically and strict verification
+  checks link integrity (check binding, payload digest, payload/result consistency).

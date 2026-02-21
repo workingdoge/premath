@@ -5,6 +5,9 @@ by `mise run ci-required`.
 
 It computes deterministic change projection (`Delta -> requiredChecks`) and
 executes only those checks through `tools/ci/run_gate.sh`.
+For each executed check it also emits a per-check gate envelope artifact under
+`artifacts/ciwitness/gates/<projection-digest>/` and links it from
+`ci.required.v1` via `gateWitnessRefs`.
 
 `tools/ci/run_gate.sh` is the host-agnostic task executor shim used by both
 `ci-required` and fixed-task flows like `mise run ci-check`.
@@ -13,6 +16,8 @@ executes only those checks through `tools/ci/run_gate.sh`.
 
 `tools/ci/verify_required_witness.py` verifies `ci.required` artifacts against
 deterministic projection semantics.
+When `gateWitnessRefs` are present, verification also enforces linkage integrity
+(check ordering, artifact digest, and payload/result consistency).
 By default it verifies `artifacts/ciwitness/latest-required.json`.
 
 It separates:

@@ -163,6 +163,11 @@ For projection-driven required gates (for example `ci.required` witness records)
   - `required_checks`
   - `executed_checks`
   - verdict/failure-class consistency with check results.
+- when `gate_witness_refs` are present, verification MUST also reject on
+  linkage mismatch:
+  - check/ref ordering mismatch,
+  - referenced gate payload digest mismatch,
+  - referenced gate payload verdict inconsistency with recorded check result.
 
 When CI is operating in strict delta-compare mode, verification MUST also
 compare witness `changed_paths` to the CI-evaluated delta for the active base/head

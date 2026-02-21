@@ -187,6 +187,9 @@ with `.githooks`-based local hooks.
 - executes only required checks through `tools/ci/run_gate.sh`
 - emits `artifacts/ciwitness/<projection-digest>.json`
 - updates `artifacts/ciwitness/latest-required.json` for verification
+- emits per-check gate envelopes under
+  `artifacts/ciwitness/gates/<projection-digest>/`
+- includes deterministic `gateWitnessRefs` linkage in `ci.required.v1` witnesses
 - `mise run ci-verify-required` verifies witness determinism/binding
 - `mise run ci-required-verified` runs both execution and verification
 

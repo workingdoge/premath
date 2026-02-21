@@ -3,9 +3,16 @@
 
 from __future__ import annotations
 
-from typing import Any, Dict, List, Sequence, Tuple
+import json
+import re
+from pathlib import Path
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from change_projection import PROJECTION_POLICY, normalize_paths, project_required_checks
+from gate_witness_envelope import stable_sha256
+
+
+_HEX_64_RE = re.compile(r"^[0-9a-f]{64}$")
 
 
 def _string_list(value: Any, label: str, errors: List[str]) -> List[str]:
@@ -28,9 +35,192 @@ def _check_str_field(witness: Dict[str, Any], key: str, expected: str, errors: L
         errors.append(f"{key} mismatch (expected={expected!r}, actual={value!r})")
 
 
+def _normalize_rel_path(path: str) -> str:
+    normalized = path.strip().replace("\\", "/")
+    while normalized.startswith("./"):
+        normalized = normalized[2:]
+    return normalized
+
+
+def _load_gate_witness_payload(
+    artifact_rel_path: str,
+    errors: List[str],
+    witness_root: Optional[Path],
+    gate_witness_payloads: Optional[Mapping[str, Dict[str, Any]]],
+) -> Optional[Dict[str, Any]]:
+    if gate_witness_payloads is not None:
+        payload = gate_witness_payloads.get(artifact_rel_path)
+        if payload is None:
+            errors.append(f"gateWitnessRefs missing inline payload: {artifact_rel_path}")
+            return None
+        if not isinstance(payload, dict):
+            errors.append(f"gateWitness payload must be an object: {artifact_rel_path}")
+            return None
+        return payload
+
+    if witness_root is None:
+        return None
+
+    root = witness_root.resolve()
+    target = (root / artifact_rel_path).resolve()
+    try:
+        target.relative_to(root)
+    except ValueError:
+        errors.append(f"gateWitnessRefs path escapes witness root: {artifact_rel_path}")
+        return None
+
+    if not target.exists() or not target.is_file():
+        errors.append(f"gateWitnessRefs artifact not found: {artifact_rel_path}")
+        return None
+
+    try:
+        with target.open("r", encoding="utf-8") as f:
+            payload = json.load(f)
+    except json.JSONDecodeError as exc:
+        errors.append(f"gateWitness artifact is not valid json ({artifact_rel_path}): {exc}")
+        return None
+
+    if not isinstance(payload, dict):
+        errors.append(f"gateWitness artifact root must be object: {artifact_rel_path}")
+        return None
+    return payload
+
+
+def _verify_gate_witness_refs(
+    witness: Dict[str, Any],
+    executed_checks: Sequence[str],
+    results_by_check: Mapping[str, Dict[str, Any]],
+    errors: List[str],
+    witness_root: Optional[Path],
+    gate_witness_payloads: Optional[Mapping[str, Dict[str, Any]]],
+) -> None:
+    refs_raw = witness.get("gateWitnessRefs")
+    if refs_raw is None:
+        return
+    if not isinstance(refs_raw, list):
+        errors.append("gateWitnessRefs must be a list when present")
+        return
+
+    if len(refs_raw) != len(executed_checks):
+        errors.append(
+            "gateWitnessRefs length mismatch "
+            f"(expected={len(executed_checks)}, actual={len(refs_raw)})"
+        )
+
+    for idx, ref in enumerate(refs_raw):
+        if not isinstance(ref, dict):
+            errors.append(f"gateWitnessRefs[{idx}] must be an object")
+            continue
+
+        check_id = ref.get("checkId")
+        if not isinstance(check_id, str) or not check_id.strip():
+            errors.append(f"gateWitnessRefs[{idx}].checkId must be a non-empty string")
+            continue
+        check_id = check_id.strip()
+
+        expected_check_id = executed_checks[idx] if idx < len(executed_checks) else None
+        if expected_check_id is not None and check_id != expected_check_id:
+            errors.append(
+                f"gateWitnessRefs[{idx}].checkId mismatch "
+                f"(expected={expected_check_id!r}, actual={check_id!r})"
+            )
+
+        result_row = results_by_check.get(check_id)
+        if result_row is None:
+            errors.append(f"gateWitnessRefs[{idx}] unknown checkId: {check_id!r}")
+            continue
+        expected_gate_result = "accepted" if int(result_row["exitCode"]) == 0 else "rejected"
+
+        artifact_rel_path = ref.get("artifactRelPath")
+        if not isinstance(artifact_rel_path, str) or not artifact_rel_path.strip():
+            errors.append(f"gateWitnessRefs[{idx}].artifactRelPath must be a non-empty string")
+            continue
+        artifact_rel_path = _normalize_rel_path(artifact_rel_path)
+        if artifact_rel_path.startswith("/") or artifact_rel_path.startswith("../"):
+            errors.append(f"gateWitnessRefs[{idx}].artifactRelPath must be relative")
+            continue
+        if "/../" in artifact_rel_path or artifact_rel_path == "..":
+            errors.append(f"gateWitnessRefs[{idx}].artifactRelPath must not contain '..'")
+            continue
+
+        sha256 = ref.get("sha256")
+        if not isinstance(sha256, str) or not _HEX_64_RE.fullmatch(sha256):
+            errors.append(f"gateWitnessRefs[{idx}].sha256 must be 64 lowercase hex chars")
+            continue
+
+        ref_witness_kind = ref.get("witnessKind")
+        if ref_witness_kind is not None and ref_witness_kind != "gate":
+            errors.append(
+                f"gateWitnessRefs[{idx}].witnessKind mismatch "
+                f"(expected='gate', actual={ref_witness_kind!r})"
+            )
+
+        ref_result = ref.get("result")
+        if ref_result is not None and ref_result != expected_gate_result:
+            errors.append(
+                f"gateWitnessRefs[{idx}].result mismatch "
+                f"(expected={expected_gate_result!r}, actual={ref_result!r})"
+            )
+
+        payload = _load_gate_witness_payload(
+            artifact_rel_path=artifact_rel_path,
+            errors=errors,
+            witness_root=witness_root,
+            gate_witness_payloads=gate_witness_payloads,
+        )
+        if payload is None:
+            continue
+
+        payload_digest = stable_sha256(payload)
+        if payload_digest != sha256:
+            errors.append(
+                f"gateWitnessRefs[{idx}] digest mismatch "
+                f"(expected={sha256}, actual={payload_digest})"
+            )
+
+        payload_kind = payload.get("witnessKind")
+        if payload_kind != "gate":
+            errors.append(
+                f"gateWitnessRefs[{idx}] payload witnessKind mismatch "
+                f"(expected='gate', actual={payload_kind!r})"
+            )
+
+        payload_result = payload.get("result")
+        if payload_result != expected_gate_result:
+            errors.append(
+                f"gateWitnessRefs[{idx}] payload result mismatch "
+                f"(expected={expected_gate_result!r}, actual={payload_result!r})"
+            )
+
+        payload_failures = payload.get("failures")
+        if not isinstance(payload_failures, list):
+            errors.append(f"gateWitnessRefs[{idx}] payload failures must be a list")
+        else:
+            if payload_result == "accepted" and payload_failures:
+                errors.append(
+                    f"gateWitnessRefs[{idx}] accepted payload must have empty failures list"
+                )
+            if payload_result == "rejected" and not payload_failures:
+                errors.append(
+                    f"gateWitnessRefs[{idx}] rejected payload must include failures"
+                )
+
+        ref_run_id = ref.get("runId")
+        if ref_run_id is not None:
+            if not isinstance(ref_run_id, str) or not ref_run_id.strip():
+                errors.append(f"gateWitnessRefs[{idx}].runId must be a non-empty string")
+            elif payload.get("runId") != ref_run_id:
+                errors.append(
+                    f"gateWitnessRefs[{idx}] runId mismatch "
+                    f"(ref={ref_run_id!r}, payload={payload.get('runId')!r})"
+                )
+
+
 def verify_required_witness_payload(
     witness: Dict[str, Any],
     changed_paths: Sequence[str],
+    witness_root: Optional[Path] = None,
+    gate_witness_payloads: Optional[Mapping[str, Dict[str, Any]]] = None,
 ) -> Tuple[List[str], Dict[str, Any]]:
     """Verify a ci.required witness against the deterministic projection contract.
 
@@ -85,6 +275,7 @@ def verify_required_witness_payload(
         results_raw = []
 
     result_check_ids: List[str] = []
+    results_by_check: Dict[str, Dict[str, Any]] = {}
     failed_count = 0
     for idx, row in enumerate(results_raw):
         if not isinstance(row, dict):
@@ -98,7 +289,11 @@ def verify_required_witness_payload(
         if not isinstance(check_id, str) or not check_id:
             errors.append(f"results[{idx}].checkId must be a non-empty string")
             continue
+        if check_id in results_by_check:
+            errors.append(f"results[{idx}].checkId must be unique (duplicate={check_id!r})")
+            continue
         result_check_ids.append(check_id)
+        results_by_check[check_id] = row
 
         if status not in {"passed", "failed"}:
             errors.append(f"results[{idx}].status must be 'passed' or 'failed'")
@@ -121,6 +316,15 @@ def verify_required_witness_payload(
             "results checkId sequence mismatch "
             f"(expected={executed_checks}, actual={result_check_ids})"
         )
+
+    _verify_gate_witness_refs(
+        witness=witness,
+        executed_checks=executed_checks,
+        results_by_check=results_by_check,
+        errors=errors,
+        witness_root=witness_root,
+        gate_witness_payloads=gate_witness_payloads,
+    )
 
     docs_only = witness.get("docsOnly")
     if docs_only is not projection.docs_only:
@@ -154,6 +358,7 @@ def verify_required_witness_payload(
         "changedPaths": normalized_paths,
         "projectionDigest": expected_digest,
         "requiredChecks": expected_required,
+        "executedChecks": executed_checks,
         "docsOnly": projection.docs_only,
         "reasons": expected_reasons,
         "expectedVerdict": expected_verdict,

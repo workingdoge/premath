@@ -107,7 +107,11 @@ def main() -> int:
         print("[verify-required] invalid witness: changedPaths must be a list", file=sys.stderr)
         return 1
 
-    errors, derived = verify_required_witness_payload(witness, witness_changed_paths)
+    errors, derived = verify_required_witness_payload(
+        witness,
+        witness_changed_paths,
+        witness_root=witness_path.parent,
+    )
 
     if args.compare_delta:
         if not changed_paths:

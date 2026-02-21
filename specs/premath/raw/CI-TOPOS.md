@@ -158,6 +158,10 @@ projection semantics and rejects on:
 - projection digest mismatch,
 - required/executed check-set mismatch,
 - verdict/failure-class mismatch with recorded results.
+- when `gate_witness_refs` are present:
+  - check/ref ordering mismatch,
+  - referenced gate payload digest mismatch,
+  - referenced gate payload verdict inconsistency with check result.
 
 When strict delta-compare mode is enabled, verification MUST also compare
 witness `changed_paths` to the evaluated CI delta for active base/head refs and

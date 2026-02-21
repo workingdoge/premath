@@ -123,6 +123,24 @@ def ensure_string_list(value: Any, label: str) -> List[str]:
     return out
 
 
+def ensure_gate_witness_payloads(
+    value: Any,
+    label: str,
+) -> Optional[Dict[str, Dict[str, Any]]]:
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError(f"{label} must be an object")
+    out: Dict[str, Dict[str, Any]] = {}
+    for key, payload in value.items():
+        if not isinstance(key, str) or not key:
+            raise ValueError(f"{label} keys must be non-empty strings")
+        if not isinstance(payload, dict):
+            raise ValueError(f"{label}[{key!r}] must be an object")
+        out[key] = payload
+    return out
+
+
 def evaluate_nf_binding_stable(case: Dict[str, Any]) -> VectorOutcome:
     artifacts = case.get("artifacts")
     if not isinstance(artifacts, dict):
@@ -1090,8 +1108,16 @@ def evaluate_ci_required_witness_validity(case: Dict[str, Any]) -> VectorOutcome
     witness = artifacts.get("witness")
     if not isinstance(witness, dict):
         raise ValueError("artifacts.witness must be an object")
+    gate_witness_payloads = ensure_gate_witness_payloads(
+        artifacts.get("gateWitnessPayloads"),
+        "artifacts.gateWitnessPayloads",
+    )
 
-    errors, _derived = verify_required_witness_payload(witness, changed_paths)
+    errors, _derived = verify_required_witness_payload(
+        witness,
+        changed_paths,
+        gate_witness_payloads=gate_witness_payloads,
+    )
     if errors:
         return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
     return VectorOutcome("accepted", "accepted", [])
@@ -1127,8 +1153,16 @@ def evaluate_ci_required_witness_invariance(case: Dict[str, Any]) -> VectorOutco
     witness = artifacts.get("witness")
     if not isinstance(witness, dict):
         raise ValueError("artifacts.witness must be an object")
+    gate_witness_payloads = ensure_gate_witness_payloads(
+        artifacts.get("gateWitnessPayloads"),
+        "artifacts.gateWitnessPayloads",
+    )
 
-    verify_errors, _derived = verify_required_witness_payload(witness, changed_paths)
+    verify_errors, _derived = verify_required_witness_payload(
+        witness,
+        changed_paths,
+        gate_witness_payloads=gate_witness_payloads,
+    )
     if verify_errors:
         return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
 
@@ -1159,8 +1193,16 @@ def evaluate_ci_required_witness_strict_delta(case: Dict[str, Any]) -> VectorOut
     witness = artifacts.get("witness")
     if not isinstance(witness, dict):
         raise ValueError("artifacts.witness must be an object")
+    gate_witness_payloads = ensure_gate_witness_payloads(
+        artifacts.get("gateWitnessPayloads"),
+        "artifacts.gateWitnessPayloads",
+    )
 
-    verify_errors, _derived = verify_required_witness_payload(witness, changed_paths)
+    verify_errors, _derived = verify_required_witness_payload(
+        witness,
+        changed_paths,
+        gate_witness_payloads=gate_witness_payloads,
+    )
     if verify_errors:
         return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
 
@@ -1173,8 +1215,10 @@ def evaluate_ci_required_witness_strict_delta(case: Dict[str, Any]) -> VectorOut
 def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/witness_verifies_for_projected_delta",
+        "golden/gate_witness_refs_integrity_accept",
         "adversarial/witness_projection_digest_mismatch_reject",
         "adversarial/witness_verdict_inconsistent_reject",
+        "adversarial/gate_witness_ref_digest_mismatch_reject",
     }:
         return evaluate_ci_required_witness_validity(case)
     if vector_id == "adversarial/ci_required_witness_requires_claim":
