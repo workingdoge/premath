@@ -65,9 +65,18 @@ baseline:
 ci-required:
     python3 tools/ci/run_required_checks.py
 
+# Verify required-gate witness against deterministic projection contract
+ci-verify-required:
+    python3 tools/ci/verify_required_witness.py
+
+# Run required gate and enforce witness verification
+ci-required-verified:
+    just ci-required
+    just ci-verify-required
+
 # Recommended local gate before commit
 precommit:
-    just ci-required
+    just ci-required-verified
 
 # Clippy lint
 lint:
@@ -111,7 +120,7 @@ infra-down:
 
 # Run closure gate through Terraform/OpenTofu-resolved runner
 ci-check-tf:
-    sh tools/ci/run_gate_terraform.sh ci-required
+    sh tools/ci/run_gate_terraform.sh ci-required-verified
 
 # Run one instruction envelope and emit a CI witness artifact
 ci-instruction INSTRUCTION:
@@ -119,8 +128,8 @@ ci-instruction INSTRUCTION:
 
 # Run closure gate through Terraform/OpenTofu with local runner profile
 ci-check-tf-local:
-    TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required
+    TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required-verified
 
 # Run closure gate through Terraform/OpenTofu with experimental microvm profile
 ci-check-tf-microvm:
-    TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required
+    TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required-verified

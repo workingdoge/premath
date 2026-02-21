@@ -18,4 +18,5 @@ Execution status:
 - `capabilities.ci_witnesses`: executable via `tools/conformance/run_capability_vectors.py`
 - `capabilities.instruction_typing`: executable via `tools/conformance/run_capability_vectors.py`
 - `capabilities.change_projection`: executable via `tools/conformance/run_capability_vectors.py`
+- `capabilities.ci_required_witness`: executable via `tools/conformance/run_capability_vectors.py`
 - other capability folders: stub/informational until upgraded with executable payloads

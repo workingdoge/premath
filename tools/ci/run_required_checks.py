@@ -143,6 +143,10 @@ def main() -> int:
     with out_path.open("w", encoding="utf-8") as f:
         json.dump(witness, f, indent=2, ensure_ascii=False)
         f.write("\n")
+    latest_path = out_dir / "latest-required.json"
+    with latest_path.open("w", encoding="utf-8") as f:
+        json.dump(witness, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
     if required_checks:
         print(
@@ -153,6 +157,7 @@ def main() -> int:
     else:
         print(f"[ci-required] summary: no required checks (projection={plan['projectionDigest']})")
     print(f"[ci-required] witness written: {out_path}")
+    print(f"[ci-required] latest witness: {latest_path}")
 
     if verdict_class == "rejected" and not args.allow_failure:
         return 1

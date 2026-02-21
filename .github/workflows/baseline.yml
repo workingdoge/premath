@@ -29,3 +29,6 @@ jobs:
 
       - name: Run required gate from change projection
         run: mise run ci-required
+
+      - name: Verify required gate witness
+        run: mise run ci-verify-required

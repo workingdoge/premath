@@ -33,6 +33,7 @@ Runs executable capability vectors (current set):
 - `capabilities.ci_witnesses`
 - `capabilities.instruction_typing`
 - `capabilities.change_projection`
+- `capabilities.ci_required_witness`
 
 Checks include:
 
@@ -42,6 +43,7 @@ Checks include:
 - instruction-envelope to CI witness determinism checks,
 - typed/unknown instruction classification determinism checks,
 - deterministic `Delta -> requiredChecks` projection behavior,
+- deterministic `ci.required` witness verification behavior,
 - invariance pairing (`kernelVerdict` and Gate failure classes) across evidence profiles.
 
 Run:

@@ -27,6 +27,7 @@ Scope: design-level, non-normative
 `Operational surfaces` (scripts/tasks):
 - `tools/ci/project_checks.py`
 - `tools/ci/run_required_checks.py`
+- `tools/ci/verify_required_witness.py`
 - `tools/ci/run_instruction.py`
 - `tools/ci/run_gate.sh`
 - `hk.pkl`, `.mise.toml`, `justfile`
@@ -40,6 +41,7 @@ DOCTRINE-INF
   -> PREMATH-CI / CI-TOPOS
   -> tools/ci/project_checks.py
   -> tools/ci/run_required_checks.py
+  -> tools/ci/verify_required_witness.py
   -> tools/ci/run_gate.sh
   -> hk/mise tasks
   -> CIWitness artifacts
@@ -78,7 +80,13 @@ Projected required gate (`mise run ci-required`) enforces:
 - execution of projected checks only,
 - CI closure witness emission (`artifacts/ciwitness/proj1_*.json`).
 
+Authoritative verification (`mise run ci-verify-required`) enforces:
+- projection/witness digest consistency,
+- required/executed check-set consistency,
+- verdict/failure-class consistency with check results.
+
 Instruction doctrine is executable via:
 - `capabilities.instruction_typing`
 - `capabilities.ci_witnesses`
 - `capabilities.change_projection`
+- `capabilities.ci_required_witness`

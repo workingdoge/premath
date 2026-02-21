@@ -155,7 +155,7 @@ This enforces the current invariant gate:
 - conformance capability invariance-stub validation,
 - doctrine-to-operation site coherence validation,
 - executable capability conformance vectors
-  (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.change_projection`).
+  (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.change_projection`, `capabilities.ci_required_witness`).
 
 Optional `hk` hook runner (configured in `hk.pkl`):
 
@@ -171,11 +171,13 @@ mise run hk-pre-commit
 mise run hk-pre-push
 mise run hk-check
 mise run ci-required
+mise run ci-verify-required
+mise run ci-required-verified
 mise run ci-check
 ```
 
 `hk` keeps fast hygiene checks in `pre-commit` and runs the required projected
-closure gate (`mise run ci-required`) on `pre-push`/`check`. This is optional and can coexist
+closure gate (`mise run ci-required-verified`) on `pre-push`/`check`. This is optional and can coexist
 with `.githooks`-based local hooks.
 
 `mise run ci-required` is the canonical SqueakSite gate entrypoint:
@@ -183,6 +185,9 @@ with `.githooks`-based local hooks.
 - computes deterministic change projection (`Delta -> requiredChecks`)
 - executes only required checks through `tools/ci/run_gate.sh`
 - emits `artifacts/ciwitness/<projection-digest>.json`
+- updates `artifacts/ciwitness/latest-required.json` for verification
+- `mise run ci-verify-required` verifies witness determinism/binding
+- `mise run ci-required-verified` runs both execution and verification
 
 - default: local execution (`PREMATH_SQUEAK_SITE_PROFILE=local`)
 - optional external runner: set
@@ -193,8 +198,10 @@ with `.githooks`-based local hooks.
 
 See `tools/ci/README.md` for runner protocol details.
 
-The CI workflow (`.github/workflows/baseline.yml`) runs this gate through
-`mise run ci-required`.
+The CI workflow (`.github/workflows/baseline.yml`) runs:
+
+- `mise run ci-required`
+- `mise run ci-verify-required`
 
 `mise run ci-check` is retained as a compatibility task for fixed full-gate
 execution via `hk-check`.

@@ -9,6 +9,12 @@ executes only those checks through `tools/ci/run_gate.sh`.
 `tools/ci/run_gate.sh` is the host-agnostic task executor shim used by both
 `ci-required` and fixed-task flows like `mise run ci-check`.
 
+`mise run ci-check` remains as legacy compatibility for fixed full-gate routing.
+
+`tools/ci/verify_required_witness.py` verifies `ci.required` artifacts against
+deterministic projection semantics.
+By default it verifies `artifacts/ciwitness/latest-required.json`.
+
 It separates:
 
 - **semantic gate surface**: `hk` profiles/tasks (`hk-check`, `hk-pre-commit`, ...)
@@ -48,6 +54,9 @@ PREMATH_SQUEAK_SITE_PROFILE=local mise run ci-required
 PREMATH_SQUEAK_SITE_PROFILE=external \
 PREMATH_SQUEAK_SITE_RUNNER=./tools/ci/executors/my_runner.sh \
 mise run ci-required
+
+mise run ci-verify-required
+mise run ci-required-verified
 ```
 
 Instruction envelope run:

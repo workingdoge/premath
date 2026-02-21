@@ -74,6 +74,15 @@ run = "python3 tools/ci/project_checks.py"
 [tasks.ci-required]
 run = "python3 tools/ci/run_required_checks.py"
 
+[tasks.ci-verify-required]
+run = "python3 tools/ci/verify_required_witness.py"
+
+[tasks.ci-required-verified]
+run = [
+  "mise run ci-required",
+  "mise run ci-verify-required",
+]
+
 [tasks.ci-check]
 run = "sh tools/ci/run_gate.sh hk-check"
 
@@ -93,16 +102,16 @@ run = "sh tools/infra/terraform/up.sh"
 run = "sh tools/infra/terraform/down.sh"
 
 [tasks.ci-check-tf]
-run = "sh tools/ci/run_gate_terraform.sh ci-required"
+run = "sh tools/ci/run_gate_terraform.sh ci-required-verified"
 
 [tasks.ci-pre-commit-tf]
 run = "sh tools/ci/run_gate_terraform.sh hk-pre-commit"
 
 [tasks.ci-check-tf-local]
-run = "TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required"
+run = "TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required-verified"
 
 [tasks.ci-check-tf-microvm]
-run = "TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required"
+run = "TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required-verified"
 
 [tasks.jj-alias-install]
 run = "sh tools/jj/install_aliases.sh"

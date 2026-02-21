@@ -12,3 +12,4 @@ fi
 echo "[pre-commit] just not found; running fallback gate"
 
 python3 tools/ci/run_required_checks.py
+python3 tools/ci/verify_required_witness.py

@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_required_witness",
+  "vectors": [
+    "golden/witness_verifies_for_projected_delta",
+    "adversarial/witness_projection_digest_mismatch_reject",
+    "adversarial/witness_verdict_inconsistent_reject",
+    "adversarial/ci_required_witness_requires_claim",
+    "invariance/same_required_witness_local",
+    "invariance/same_required_witness_external"
+  ]
+}
