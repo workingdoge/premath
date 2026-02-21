@@ -268,18 +268,19 @@ def main() -> int:
     results: List[Dict[str, Any]] = []
     for idx, check_id in enumerate(required_checks):
         print(f"[ci-required] running check: {check_id}")
-        results.append(
-            run_check_with_witness(
-                root=root,
-                out_dir=out_dir,
-                check_id=check_id,
-                projection_digest=plan["projectionDigest"],
-                policy_digest=plan["projectionPolicy"],
-                from_ref=from_ref,
-                to_ref=to_ref,
-                index=idx,
-            )
+        row = run_check_with_witness(
+            root=root,
+            out_dir=out_dir,
+            check_id=check_id,
+            projection_digest=plan["projectionDigest"],
+            policy_digest=plan["projectionPolicy"],
+            from_ref=from_ref,
+            to_ref=to_ref,
+            index=idx,
         )
+        status_label = "PASSED" if row["exitCode"] == 0 else "FAILED"
+        print(f"[ci-required] check {check_id}: {status_label} ({row['durationMs']}ms)")
+        results.append(row)
 
     gate_witness_refs: List[Dict[str, Any]] = []
     for idx, check_row in enumerate(results):
@@ -342,11 +343,15 @@ def main() -> int:
         f.write("\n")
 
     if required_checks:
+        passed_count = len(required_checks) - len(failed)
         print(
             "[ci-required] summary: "
-            f"checks={len(required_checks)} failed={len(failed)} "
+            f"checks={len(required_checks)} passed={passed_count} failed={len(failed)} "
             f"projection={plan['projectionDigest']}"
         )
+        if failed:
+            for row in failed:
+                print(f"[ci-required]   FAILED: {row['checkId']}")
     else:
         print(f"[ci-required] summary: no required checks (projection={plan['projectionDigest']})")
     print(f"[ci-required] witness written: {out_path}")
