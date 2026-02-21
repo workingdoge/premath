@@ -40,6 +40,9 @@ jobs:
       - name: Decide required gate acceptance
         run: mise run ci-decide-required
 
+      - name: Verify decision attestation chain
+        run: mise run ci-verify-decision
+
       - name: Publish CI witness summary
         if: always()
         run: |
@@ -108,6 +111,8 @@ jobs:
                   [
                       f"- decision: `{decision.get('decision', '(missing)')}`",
                       f"- decision reason: `{decision.get('reasonClass', '(missing)')}`",
+                      f"- decision witness sha256: `{decision.get('witnessSha256', '(missing)')}`",
+                      f"- decision delta sha256: `{decision.get('deltaSha256', '(missing)')}`",
                       f"- decision sha256: `{decision_digest}`",
                   ]
               )

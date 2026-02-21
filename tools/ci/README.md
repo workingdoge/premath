@@ -34,6 +34,12 @@ By default it verifies `artifacts/ciwitness/latest-required.json`.
 verified witness semantics (`accept` or `reject`).
 `mise run ci-decide-required` writes `artifacts/ciwitness/latest-decision.json`.
 
+`tools/ci/verify_decision.py` verifies the decision attestation chain:
+
+- decision references the current witness and delta snapshot,
+- decision hash bindings (`witnessSha256`, `deltaSha256`) match artifact bytes,
+- projection/required-check semantics align across decision, witness, and snapshot.
+
 It separates:
 
 - **semantic gate surface**: `hk` profiles/tasks (`hk-check`, `hk-pre-commit`, ...)
@@ -111,6 +117,7 @@ mise run ci-required
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-decide-required
+mise run ci-verify-decision
 
 # strict mode: compare witness changedPaths to detected delta
 mise run ci-verify-required-strict

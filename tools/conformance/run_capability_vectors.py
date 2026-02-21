@@ -1330,6 +1330,62 @@ def evaluate_ci_required_witness_delta_snapshot(case: Dict[str, Any]) -> VectorO
     return VectorOutcome("accepted", "accepted", [])
 
 
+def evaluate_ci_required_witness_decision_attestation(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    changed_paths = ensure_string_list(artifacts.get("changedPaths", []), "artifacts.changedPaths")
+    witness = artifacts.get("witness")
+    delta_snapshot = artifacts.get("deltaSnapshot")
+    decision = artifacts.get("decision")
+    if not isinstance(witness, dict):
+        raise ValueError("artifacts.witness must be an object")
+    if not isinstance(delta_snapshot, dict):
+        raise ValueError("artifacts.deltaSnapshot must be an object")
+    if not isinstance(decision, dict):
+        raise ValueError("artifacts.decision must be an object")
+
+    verify_errors, _derived = verify_required_witness_payload(witness, changed_paths)
+    if verify_errors:
+        return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
+
+    projection = project_required_checks(changed_paths)
+    expected_checks = projection.required_checks
+    decision_checks = canonical_check_set(decision.get("requiredChecks", []), "artifacts.decision.requiredChecks")
+
+    if witness.get("projectionDigest") != projection.projection_digest:
+        return VectorOutcome("rejected", "rejected", ["decision_projection_mismatch"])
+    if delta_snapshot.get("projectionDigest") != projection.projection_digest:
+        return VectorOutcome("rejected", "rejected", ["decision_projection_mismatch"])
+    if decision.get("projectionDigest") != projection.projection_digest:
+        return VectorOutcome("rejected", "rejected", ["decision_projection_mismatch"])
+    if decision_checks != expected_checks:
+        return VectorOutcome("rejected", "rejected", ["decision_required_checks_mismatch"])
+
+    if decision.get("decisionKind") != "ci.required.decision.v1":
+        return VectorOutcome("rejected", "rejected", ["decision_kind_mismatch"])
+
+    witness_sha = stable_hash(witness)
+    delta_sha = stable_hash(delta_snapshot)
+    if decision.get("witnessSha256") != witness_sha:
+        return VectorOutcome("rejected", "rejected", ["decision_witness_sha_mismatch"])
+    if decision.get("deltaSha256") != delta_sha:
+        return VectorOutcome("rejected", "rejected", ["decision_delta_sha_mismatch"])
+
+    decision_value = ensure_string(decision.get("decision"), "artifacts.decision.decision")
+    if decision_value != "accept":
+        return VectorOutcome("rejected", "rejected", ["decision_not_accept"])
+    if decision.get("reasonClass") != "verified_accept":
+        return VectorOutcome("rejected", "rejected", ["decision_reason_mismatch"])
+
+    errors = decision.get("errors")
+    if not isinstance(errors, list) or errors:
+        return VectorOutcome("rejected", "rejected", ["decision_errors_non_empty"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/witness_verifies_for_projected_delta",
@@ -1349,6 +1405,12 @@ def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) ->
         "adversarial/strict_delta_compare_mismatch_reject",
     }:
         return evaluate_ci_required_witness_strict_delta(case)
+    if vector_id in {
+        "golden/decision_attestation_chain_accept",
+        "adversarial/decision_attestation_witness_sha_mismatch_reject",
+        "adversarial/decision_attestation_delta_sha_mismatch_reject",
+    }:
+        return evaluate_ci_required_witness_decision_attestation(case)
     if vector_id == "golden/delta_snapshot_projection_decision_stable":
         return evaluate_ci_required_witness_delta_snapshot(case)
     if vector_id.startswith("invariance/"):

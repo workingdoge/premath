@@ -86,6 +86,9 @@ run = "python3 tools/ci/verify_required_witness.py --compare-delta --require-nat
 [tasks.ci-decide-required]
 run = "python3 tools/ci/decide_required.py --compare-delta --out artifacts/ciwitness/latest-decision.json"
 
+[tasks.ci-verify-decision]
+run = "python3 tools/ci/verify_decision.py"
+
 [tasks.ci-required-verified]
 run = [
   "mise run ci-required",

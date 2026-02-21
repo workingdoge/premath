@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import sys
@@ -82,6 +83,10 @@ def _load_json(path: Path) -> Dict[str, Any]:
     return data
 
 
+def _sha256_file(path: Path) -> str:
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
 def _native_required_checks(args: argparse.Namespace) -> List[str]:
     checks: List[str] = []
     if args.require_native_check:
@@ -148,9 +153,16 @@ def main() -> int:
         out_dir = (root / out_dir).resolve()
 
     changed_paths: List[str] = []
+    delta_snapshot_path: Path | None = None
     if args.compare_delta:
         try:
-            changed_paths = _resolve_compare_paths(root, out_dir, args)
+            snapshot_candidate = _resolve_delta_snapshot_path(root, args, out_dir)
+            if snapshot_candidate.exists() and snapshot_candidate.is_file():
+                snapshot = load_delta_snapshot(snapshot_candidate)
+                changed_paths = normalize_paths(read_changed_paths(snapshot))
+                delta_snapshot_path = snapshot_candidate
+            else:
+                changed_paths = _resolve_compare_paths(root, out_dir, args)
         except ValueError as exc:
             decision = {
                 "schema": 1,
@@ -226,11 +238,19 @@ def main() -> int:
             f"(actual={witness_verdict!r})"
         )
 
+    witness_sha = _sha256_file(witness_path)
+    delta_sha: str | None = None
+    if delta_snapshot_path is not None:
+        delta_sha = _sha256_file(delta_snapshot_path)
+
     decision = {
         "schema": 1,
         "decisionKind": "ci.required.decision.v1",
         "decision": "accept" if not errors else "reject",
         "witnessPath": str(witness_path),
+        "witnessSha256": witness_sha,
+        "deltaSnapshotPath": str(delta_snapshot_path) if delta_snapshot_path is not None else None,
+        "deltaSha256": delta_sha,
         "projectionDigest": derived.get("projectionDigest"),
         "requiredChecks": derived.get("requiredChecks"),
         "nativeRequiredChecks": native_required_checks,

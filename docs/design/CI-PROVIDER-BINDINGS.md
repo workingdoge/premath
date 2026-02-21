@@ -13,6 +13,7 @@ Required semantic surfaces:
 - `mise run ci-required`
 - `mise run ci-verify-required-strict`
 - `mise run ci-decide-required`
+- `mise run ci-verify-decision`
 
 Required evidence surfaces:
 
