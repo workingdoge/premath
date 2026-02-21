@@ -48,7 +48,10 @@ mise run ci-required
 `mise run ci-verify-required` verifies emitted `ci.required` witness artifacts
 against deterministic projection semantics.
 
-`mise run ci-required-verified` runs both and is the authoritative local gate.
+`mise run ci-required-verified` runs execution + witness verification.
+
+`mise run ci-required-attested` is the authoritative local/CI chain
+(execution + strict verification + decision + decision verification).
 
 Underlying check execution still routes through `tools/ci/run_gate.sh`, so
 executor substrate selection (`PREMATH_SQUEAK_SITE_PROFILE`, legacy

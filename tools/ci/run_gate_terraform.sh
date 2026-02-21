@@ -1,7 +1,7 @@
 #!/usr/bin/env sh
 set -eu
 
-TASK="${1:-ci-required-verified}"
+TASK="${1:-ci-required-attested}"
 ROOT="$(CDPATH= cd -- "$(dirname "$0")/../.." && pwd)"
 
 CHEESE_RUNNER="$(sh "$ROOT/tools/infra/terraform/up.sh")"

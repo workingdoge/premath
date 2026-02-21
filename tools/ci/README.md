@@ -116,6 +116,7 @@ mise run ci-required
 
 mise run ci-verify-required
 mise run ci-required-verified
+mise run ci-required-attested
 mise run ci-decide-required
 mise run ci-verify-decision
 

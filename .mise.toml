@@ -95,6 +95,14 @@ run = [
   "mise run ci-verify-required",
 ]
 
+[tasks.ci-required-attested]
+run = [
+  "mise run ci-required",
+  "mise run ci-verify-required-strict",
+  "mise run ci-decide-required",
+  "mise run ci-verify-decision",
+]
+
 [tasks.ci-check]
 run = "sh tools/ci/run_gate.sh hk-check"
 
@@ -114,16 +122,16 @@ run = "sh tools/infra/terraform/up.sh"
 run = "sh tools/infra/terraform/down.sh"
 
 [tasks.ci-check-tf]
-run = "sh tools/ci/run_gate_terraform.sh ci-required-verified"
+run = "sh tools/ci/run_gate_terraform.sh ci-required-attested"
 
 [tasks.ci-pre-commit-tf]
 run = "sh tools/ci/run_gate_terraform.sh hk-pre-commit"
 
 [tasks.ci-check-tf-local]
-run = "TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required-verified"
+run = "TF_VAR_cheese_profile=local sh tools/ci/run_gate_terraform.sh ci-required-attested"
 
 [tasks.ci-check-tf-microvm]
-run = "TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required-verified"
+run = "TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform.sh ci-required-attested"
 
 [tasks.jj-alias-install]
 run = "sh tools/jj/install_aliases.sh"
