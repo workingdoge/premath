@@ -81,6 +81,10 @@ ci-verify-required-strict-native:
 ci-decide-required:
     python3 tools/ci/decide_required.py --compare-delta --out artifacts/ciwitness/latest-decision.json
 
+# Verify decision attestation chain (delta snapshot + witness + decision)
+ci-verify-decision:
+    python3 tools/ci/verify_decision.py
+
 # Run required gate and enforce witness verification
 ci-required-verified:
     just ci-required

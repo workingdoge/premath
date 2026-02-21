@@ -175,6 +175,7 @@ mise run ci-verify-required
 mise run ci-verify-required-strict
 mise run ci-verify-required-strict-native
 mise run ci-decide-required
+mise run ci-verify-decision
 mise run ci-required-verified
 mise run ci-check
 ```
@@ -214,6 +215,7 @@ The current repo CI binding runs:
 - `mise run ci-required`
 - `mise run ci-verify-required-strict`
 - `mise run ci-decide-required`
+- `mise run ci-verify-decision`
 
 Provider-specific required-check mappings are documented in
 `docs/design/CI-PROVIDER-BINDINGS.md`.

@@ -13,6 +13,7 @@ Implemented in this repo:
 - CI gate path via `.github/workflows/baseline.yml` -> `mise run ci-required`
 - witness verification path via `.github/workflows/baseline.yml` -> `mise run ci-verify-required-strict`
 - decision gate path (local/CI) via `mise run ci-decide-required`
+- decision attestation verification path via `mise run ci-verify-decision`
 - CI witness artifact publication path via `.github/workflows/baseline.yml`
   (`latest-required.json`, `latest-decision.json`, digest sidecars,
   `proj1_*.json`, summary digest row)
@@ -81,13 +82,16 @@ Current shape:
     `mise run ci-verify-required-strict-native` (`--require-native-check ...`)
 - canonical decision surface: `mise run ci-decide-required`
   (`tools/ci/decide_required.py`) -> deterministic `accept|reject`
+- canonical decision-attestation verifier: `mise run ci-verify-decision`
+  (`tools/ci/verify_decision.py`)
 - default profile: `PREMATH_SQUEAK_SITE_PROFILE=local`
   - optional external profile:
     `PREMATH_SQUEAK_SITE_PROFILE=external` + `PREMATH_SQUEAK_SITE_RUNNER=<path>`
   - legacy aliases still accepted:
     `PREMATH_EXECUTOR_PROFILE` + `PREMATH_EXECUTOR_RUNNER`
 - CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required`,
-  `mise run ci-verify-required-strict`, and `mise run ci-decide-required`
+  `mise run ci-verify-required-strict`, `mise run ci-decide-required`,
+  and `mise run ci-verify-decision`
   - provider binding details are documented in `CI-PROVIDER-BINDINGS.md`
 - optional infra-provisioned gate: `mise run ci-check-tf`
   - default infra runner profile: `local`
