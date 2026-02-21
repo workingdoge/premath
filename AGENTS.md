@@ -14,8 +14,8 @@
 
 - Preferred developer entrypoint: `nix develop`.
 - One-shot commands:
-  - `nix develop -c just baseline`
-  - `nix develop -c just precommit`
+  - `nix develop -c mise run baseline`
+  - `nix develop -c mise run precommit`
   - `nix build .#default` (build CLI package)
   - `nix run .#default -- --help` (run CLI app)
 - If not using Nix, install Rust + Python 3 and run the equivalent `cargo`/`python3` commands directly.
@@ -30,11 +30,11 @@
 
 - `cargo build --workspace` — build all crates.
 - `cargo test --workspace` — run Rust tests.
-- `just baseline` — full local closure gate (`py-setup` + fmt + clippy + build/tests + toy + KCIR toy + conformance checks + doctrine-site check).
-- `mise run baseline` — equivalent baseline gate for non-Nix or mixed workflows (includes `rust-setup` for `rustfmt`/`clippy` components).
+- `mise run baseline` — full local closure gate (`py-setup` + fmt + clippy + build/tests + toy + KCIR toy + conformance checks + doctrine-site check; includes `rust-setup` for `rustfmt`/`clippy` components).
 - `mise run hk-install` — install optional `hk`-managed git hooks using `hk.pkl`.
 - `mise run hk-pre-commit` / `mise run hk-pre-push` — run hk hook profiles manually.
 - `mise run hk-check` / `mise run hk-fix` — run hk baseline check or fast local fixes (`hk-fix` runs on all files with no auto-stage).
+- `mise run ci-command-surface-check` — enforce `mise`-only command-surface references (reject legacy task-runner command/file surfaces).
 - `mise run ci-check` — canonical gate entrypoint through `tools/ci/run_gate.sh` (SqueakSite profile switch: `PREMATH_SQUEAK_SITE_PROFILE=local|external`; legacy `PREMATH_EXECUTOR_PROFILE` still accepted).
 - `mise run ci-instruction` — run one instruction envelope (`INSTRUCTION=instructions/<ts>-<id>.json`) and emit `artifacts/ciwitness/<instruction-id>.json`.
 - `sh tools/ci/run_instruction.sh instructions/<ts>-<id>.json` — run an instruction envelope and emit `artifacts/ciwitness/<instruction-id>.json`.
@@ -45,9 +45,9 @@
 - `mise run jj-alias-install` — install repo-local JJ aliases (`jj gate-fast|gate-fix|gate-check|gate-pre-commit`) that delegate to hk/mise gates.
 - `mise run pf-start` / `mise run pf-status` / `mise run pf-stop` — optional pitchfork orchestration for local daemons in `pitchfork.toml`.
 - `mise run pf-gate-loop-start` / `mise run pf-gate-loop-stop` — optional background `ci-check` loop via pitchfork (`ci-check` every 30m).
-- `just conformance-run` — run executable capability vectors (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`).
-- `just doctrine-check` — validate doctrine declarations and doctrine-to-operation site reachability (`specs/premath/draft/DOCTRINE-SITE.json`).
-- `just precommit` — same as baseline.
+- `mise run conformance-run` — run executable capability vectors (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`).
+- `mise run doctrine-check` — validate doctrine declarations and doctrine-to-operation site reachability (`specs/premath/draft/DOCTRINE-SITE.json`).
+- `mise run precommit` — same as baseline.
 - `python3 tools/conformance/check_stub_invariance.py` — validate capability fixture stubs/invariance pairs.
 - `cargo run --package premath-cli -- <args>` — run CLI commands locally.
 - `cargo run --package premath-cli -- mock-gate --json` — emit a mock Gate witness envelope.
@@ -62,7 +62,7 @@
 
 ## Testing Guidelines
 
-- Treat `just baseline` as the minimum local merge gate.
+- Treat `mise run baseline` as the minimum local merge gate.
 - If using `hk`, keep `pre-push`/`check` mapped to the same baseline closure gate.
 - For spec/conformance fixture edits, run `python3 tools/conformance/check_stub_invariance.py`.
 - For executable capability vectors, run `python3 tools/conformance/run_capability_vectors.py`.

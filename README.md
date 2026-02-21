@@ -130,13 +130,13 @@ Premath semantics and KCIR-style representation should stay decoupled:
 Run the local baseline closure gate before commit:
 
 ```bash
-just baseline
+mise run baseline
 ```
 
 Recommended pre-commit gate (includes format check):
 
 ```bash
-just precommit
+mise run precommit
 ```
 
 Optional repo-managed git hook:
@@ -171,6 +171,7 @@ mise run hk-pre-commit
 mise run hk-pre-push
 mise run hk-check
 mise run ci-wiring-check
+mise run ci-command-surface-check
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict

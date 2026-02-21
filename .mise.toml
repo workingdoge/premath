@@ -50,6 +50,7 @@ run = [
   "mise run test-kcir-toy",
   "mise run conformance-check",
   "mise run doctrine-check",
+  "mise run ci-command-surface-check",
   "mise run ci-wiring-check",
   "mise run ci-instruction-check",
   "mise run ci-instruction-smoke",
@@ -73,6 +74,9 @@ run = "hk run pre-push"
 
 [tasks.ci-project]
 run = "python3 tools/ci/project_checks.py"
+
+[tasks.ci-command-surface-check]
+run = "python3 tools/ci/check_command_surface.py"
 
 [tasks.ci-wiring-check]
 run = "python3 tools/ci/check_ci_wiring.py"
@@ -108,6 +112,9 @@ run = [
   "mise run ci-decide-required",
   "mise run ci-verify-decision",
 ]
+
+[tasks.precommit]
+run = "mise run ci-required-attested"
 
 [tasks.ci-check]
 run = "sh tools/ci/run_gate.sh hk-check"

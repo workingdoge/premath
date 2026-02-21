@@ -33,7 +33,7 @@ Current full baseline gate:
 Local command:
 
 ```bash
-just baseline
+mise run baseline
 ```
 
 Projected required gate (canonical CI entrypoint):
@@ -78,7 +78,7 @@ This executes requested checks through the same gate surface and emits
 Recommended pre-commit gate:
 
 ```bash
-just precommit
+mise run precommit
 ```
 
 Optional hook install:

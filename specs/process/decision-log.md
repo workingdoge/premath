@@ -270,7 +270,6 @@ Add a draft, machine-checkable doctrine-to-operation site contract:
 and enforce it with:
 
 - `tools/conformance/check_doctrine_site.py`
-- `just doctrine-check`
 - `mise run doctrine-check`
 
 Baseline gates now include doctrine-site validation.

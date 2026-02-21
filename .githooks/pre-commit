@@ -4,12 +4,14 @@ set -eu
 repo_root="$(git rev-parse --show-toplevel)"
 cd "$repo_root"
 
-if command -v just >/dev/null 2>&1; then
-  just precommit
+if command -v mise >/dev/null 2>&1; then
+  mise run precommit
   exit 0
 fi
 
-echo "[pre-commit] just not found; running fallback gate"
+echo "[pre-commit] mise not found; running fallback gate"
 
 python3 tools/ci/run_required_checks.py
-python3 tools/ci/verify_required_witness.py
+python3 tools/ci/verify_required_witness.py --compare-delta
+python3 tools/ci/decide_required.py --compare-delta --out artifacts/ciwitness/latest-decision.json
+python3 tools/ci/verify_decision.py
