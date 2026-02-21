@@ -5,6 +5,9 @@ by `mise run ci-required`.
 
 It computes deterministic change projection (`Delta -> requiredChecks`) and
 executes only those checks through `tools/ci/run_gate.sh`.
+It writes `artifacts/ciwitness/latest-delta.json` as a single-source delta
+snapshot for strict compare phases (`ci-verify-required-strict`,
+`ci-decide-required`).
 For each executed check it requests a per-check gate envelope artifact under
 `artifacts/ciwitness/gates/<projection-digest>/` and links it from
 `ci.required.v1` via `gateWitnessRefs`.
@@ -74,6 +77,12 @@ Strict delta compare commands consume canonical refs from environment:
 
 - `PREMATH_CI_BASE_REF` (optional; if unset, auto-detected fallback order is used)
 - `PREMATH_CI_HEAD_REF` (optional; default `HEAD`)
+
+Strict compare changed-path source order:
+
+1. explicit `--changed-file` (verify only),
+2. `latest-delta.json` snapshot,
+3. fallback re-detection from refs.
 
 Examples:
 

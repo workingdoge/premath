@@ -52,6 +52,8 @@ jobs:
           summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
           witness_path = Path("artifacts/ciwitness/latest-required.json")
           digest_path = Path("artifacts/ciwitness/latest-required.sha256")
+          delta_path = Path("artifacts/ciwitness/latest-delta.json")
+          delta_digest_path = Path("artifacts/ciwitness/latest-delta.sha256")
           decision_path = Path("artifacts/ciwitness/latest-decision.json")
           decision_digest_path = Path("artifacts/ciwitness/latest-decision.sha256")
 
@@ -80,6 +82,22 @@ jobs:
                   ]
               )
 
+          if not delta_path.exists():
+              summary_lines.append("- delta snapshot: missing (`artifacts/ciwitness/latest-delta.json`)")
+          else:
+              delta = json.loads(delta_path.read_text(encoding="utf-8"))
+              delta_digest = hashlib.sha256(delta_path.read_bytes()).hexdigest()
+              delta_digest_path.write_text(delta_digest + "\n", encoding="utf-8")
+              delta_count = delta.get("changedPaths", [])
+              delta_size = len(delta_count) if isinstance(delta_count, list) else "(invalid)"
+              summary_lines.extend(
+                  [
+                      f"- delta source: `{delta.get('deltaSource', '(missing)')}`",
+                      f"- delta changed paths: `{delta_size}`",
+                      f"- delta sha256: `{delta_digest}`",
+                  ]
+              )
+
           if not decision_path.exists():
               summary_lines.append("- decision: missing (`artifacts/ciwitness/latest-decision.json`)")
           else:
@@ -105,6 +123,8 @@ jobs:
           path: |
             artifacts/ciwitness/latest-required.json
             artifacts/ciwitness/latest-required.sha256
+            artifacts/ciwitness/latest-delta.json
+            artifacts/ciwitness/latest-delta.sha256
             artifacts/ciwitness/latest-decision.json
             artifacts/ciwitness/latest-decision.sha256
             artifacts/ciwitness/proj1_*.json

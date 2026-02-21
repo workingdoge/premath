@@ -17,6 +17,7 @@ Required semantic surfaces:
 Required evidence surfaces:
 
 - `artifacts/ciwitness/latest-required.json`
+- `artifacts/ciwitness/latest-delta.json`
 - `artifacts/ciwitness/latest-decision.json`
 
 Required provider-neutral delta refs:

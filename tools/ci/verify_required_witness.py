@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from change_projection import detect_changed_paths, normalize_paths, project_required_checks
+from delta_snapshot import (
+    default_delta_snapshot_path,
+    load_delta_snapshot,
+    read_changed_paths,
+)
 from required_witness import verify_required_witness_payload
 
 
@@ -47,6 +52,12 @@ def parse_args() -> argparse.Namespace:
         help=f"Witness directory (default: {root / 'artifacts' / 'ciwitness'})",
     )
     parser.add_argument(
+        "--delta-snapshot",
+        type=Path,
+        default=None,
+        help="Path to delta snapshot JSON. Default: <out-dir>/latest-delta.json when present.",
+    )
+    parser.add_argument(
         "--compare-delta",
         action="store_true",
         help="Also compare witness changedPaths to currently detected delta.",
@@ -79,6 +90,28 @@ def _detect_changed_paths(root: Path, args: argparse.Namespace) -> List[str]:
     return detected.changed_paths
 
 
+def _resolve_delta_snapshot_path(root: Path, args: argparse.Namespace, out_dir: Path) -> Path:
+    if args.delta_snapshot is not None:
+        path = args.delta_snapshot
+        if not path.is_absolute():
+            path = (root / path).resolve()
+        return path
+    return default_delta_snapshot_path(out_dir)
+
+
+def _resolve_compare_paths(root: Path, out_dir: Path, args: argparse.Namespace) -> List[str]:
+    if args.changed_file:
+        return normalize_paths(args.changed_file)
+
+    snapshot_path = _resolve_delta_snapshot_path(root, args, out_dir)
+    if snapshot_path.exists() and snapshot_path.is_file():
+        snapshot = load_delta_snapshot(snapshot_path)
+        return normalize_paths(read_changed_paths(snapshot))
+
+    detected = detect_changed_paths(root, from_ref=args.from_ref, to_ref=args.to_ref)
+    return detected.changed_paths
+
+
 def _native_required_checks(args: argparse.Namespace) -> List[str]:
     checks: List[str] = []
     if args.require_native_check:
@@ -102,6 +135,9 @@ def main() -> int:
     args = parse_args()
     root = Path(__file__).resolve().parents[2]
     native_required_checks = _native_required_checks(args)
+    out_dir = args.out_dir
+    if not out_dir.is_absolute():
+        out_dir = (root / out_dir).resolve()
 
     changed_paths: List[str] = []
 
@@ -111,9 +147,6 @@ def main() -> int:
         if not witness_path.is_absolute():
             witness_path = (root / witness_path).resolve()
     else:
-        out_dir = args.out_dir
-        if not out_dir.is_absolute():
-            out_dir = (root / out_dir).resolve()
         latest_path = out_dir / "latest-required.json"
         if latest_path.exists() and latest_path.is_file():
             witness_path = latest_path
@@ -146,7 +179,11 @@ def main() -> int:
 
     if args.compare_delta:
         if not changed_paths:
-            changed_paths = _detect_changed_paths(root, args)
+            try:
+                changed_paths = _resolve_compare_paths(root, out_dir, args)
+            except ValueError as exc:
+                print(f"[verify-required] invalid delta snapshot: {exc}", file=sys.stderr)
+                return 2
         expected_paths = normalize_paths(changed_paths)
         actual_paths = normalize_paths(witness_changed_paths)
         if expected_paths != actual_paths:

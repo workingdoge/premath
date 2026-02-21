@@ -19,6 +19,11 @@ from change_projection import (
     project_required_checks,
     projection_plan_payload,
 )
+from delta_snapshot import (
+    default_delta_snapshot_path,
+    make_delta_snapshot_payload,
+    write_delta_snapshot,
+)
 from gate_witness_envelope import (
     make_gate_witness_envelope,
     sanitize_check_id,
@@ -256,6 +261,9 @@ def main() -> int:
     if not out_dir.is_absolute():
         out_dir = (root / out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
+    delta_snapshot_path = default_delta_snapshot_path(out_dir)
+    delta_snapshot_payload = make_delta_snapshot_payload(plan)
+    write_delta_snapshot(delta_snapshot_path, delta_snapshot_payload)
 
     results: List[Dict[str, Any]] = []
     for idx, check_id in enumerate(required_checks):
@@ -343,6 +351,7 @@ def main() -> int:
         print(f"[ci-required] summary: no required checks (projection={plan['projectionDigest']})")
     print(f"[ci-required] witness written: {out_path}")
     print(f"[ci-required] latest witness: {latest_path}")
+    print(f"[ci-required] latest delta: {delta_snapshot_path}")
 
     if verdict_class == "rejected" and not args.allow_failure:
         return 1

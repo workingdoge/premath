@@ -1272,6 +1272,64 @@ def evaluate_ci_required_witness_strict_delta(case: Dict[str, Any]) -> VectorOut
     return VectorOutcome("accepted", "accepted", [])
 
 
+def evaluate_ci_required_witness_delta_snapshot(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    changed_paths = ensure_string_list(artifacts.get("changedPaths", []), "artifacts.changedPaths")
+    delta_snapshot = artifacts.get("deltaSnapshot")
+    if not isinstance(delta_snapshot, dict):
+        raise ValueError("artifacts.deltaSnapshot must be an object")
+    snapshot_paths = ensure_string_list(
+        delta_snapshot.get("changedPaths", []), "artifacts.deltaSnapshot.changedPaths"
+    )
+
+    witness = artifacts.get("witness")
+    if not isinstance(witness, dict):
+        raise ValueError("artifacts.witness must be an object")
+    verify_errors, _derived = verify_required_witness_payload(
+        witness,
+        changed_paths,
+    )
+    if verify_errors:
+        return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
+
+    projection = project_required_checks(snapshot_paths)
+    witness_projection = ensure_string(witness.get("projectionDigest"), "artifacts.witness.projectionDigest")
+    if projection.projection_digest != witness_projection:
+        return VectorOutcome("rejected", "rejected", ["delta_snapshot_projection_mismatch"])
+
+    if sorted(set(snapshot_paths)) != sorted(set(changed_paths)):
+        return VectorOutcome("rejected", "rejected", ["delta_snapshot_paths_mismatch"])
+
+    decision_snapshot = artifacts.get("decisionFromSnapshot")
+    decision_detect = artifacts.get("decisionFromDetect")
+    if not isinstance(decision_snapshot, dict) or not isinstance(decision_detect, dict):
+        raise ValueError("artifacts.decisionFromSnapshot and artifacts.decisionFromDetect must be objects")
+
+    def _decision_shape(decision: Dict[str, Any], label: str) -> Dict[str, Any]:
+        return {
+            "decision": ensure_string(decision.get("decision"), f"{label}.decision"),
+            "projectionDigest": ensure_string(decision.get("projectionDigest"), f"{label}.projectionDigest"),
+            "reasonClass": ensure_string(decision.get("reasonClass"), f"{label}.reasonClass"),
+            "requiredChecks": canonical_check_set(
+                decision.get("requiredChecks", []), f"{label}.requiredChecks"
+            ),
+        }
+
+    snapshot_shape = _decision_shape(decision_snapshot, "artifacts.decisionFromSnapshot")
+    detect_shape = _decision_shape(decision_detect, "artifacts.decisionFromDetect")
+    if snapshot_shape != detect_shape:
+        return VectorOutcome("rejected", "rejected", ["decision_non_deterministic"])
+    if snapshot_shape["projectionDigest"] != projection.projection_digest:
+        return VectorOutcome("rejected", "rejected", ["decision_projection_mismatch"])
+    if snapshot_shape["decision"] != "accept":
+        return VectorOutcome("rejected", "rejected", ["decision_not_accept"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/witness_verifies_for_projected_delta",
@@ -1291,6 +1349,8 @@ def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) ->
         "adversarial/strict_delta_compare_mismatch_reject",
     }:
         return evaluate_ci_required_witness_strict_delta(case)
+    if vector_id == "golden/delta_snapshot_projection_decision_stable":
+        return evaluate_ci_required_witness_delta_snapshot(case)
     if vector_id.startswith("invariance/"):
         return evaluate_ci_required_witness_invariance(case)
     raise ValueError(f"unsupported ci_required_witness vector id: {vector_id}")

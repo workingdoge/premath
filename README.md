@@ -189,6 +189,7 @@ with `.githooks`-based local hooks.
 - executes only required checks through `tools/ci/run_gate.sh`
 - emits `artifacts/ciwitness/<projection-digest>.json`
 - updates `artifacts/ciwitness/latest-required.json` for verification
+- writes `artifacts/ciwitness/latest-delta.json` as single-source strict-compare input
 - emits per-check gate envelopes under
   `artifacts/ciwitness/gates/<projection-digest>/`
 - includes deterministic `gateWitnessRefs` linkage in `ci.required.v1` witnesses
@@ -218,7 +219,8 @@ Provider-specific required-check mappings are documented in
 `docs/design/CI-PROVIDER-BINDINGS.md`.
 
 `ci-verify-required-strict` uses `--compare-delta` and compares witness
-`changedPaths` against the detected VCS delta.
+`changedPaths` against `artifacts/ciwitness/latest-delta.json` when present
+(fallback: detected VCS delta).
 Provider-neutral CI refs:
 - `PREMATH_CI_BASE_REF` (optional)
 - `PREMATH_CI_HEAD_REF` (optional, default `HEAD`)
@@ -227,6 +229,8 @@ CI also publishes:
 
 - `artifacts/ciwitness/latest-required.json`,
 - `artifacts/ciwitness/latest-required.sha256`,
+- `artifacts/ciwitness/latest-delta.json`,
+- `artifacts/ciwitness/latest-delta.sha256`,
 - `artifacts/ciwitness/latest-decision.json`,
 - `artifacts/ciwitness/latest-decision.sha256`,
 - projection-specific witness files (`artifacts/ciwitness/proj1_*.json`),

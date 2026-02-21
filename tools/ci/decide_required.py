@@ -11,6 +11,11 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from change_projection import detect_changed_paths, normalize_paths, project_required_checks
+from delta_snapshot import (
+    default_delta_snapshot_path,
+    load_delta_snapshot,
+    read_changed_paths,
+)
 from required_witness import verify_required_witness_payload
 
 
@@ -39,6 +44,12 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=root / "artifacts" / "ciwitness",
         help=f"Witness directory (default: {root / 'artifacts' / 'ciwitness'})",
+    )
+    parser.add_argument(
+        "--delta-snapshot",
+        type=Path,
+        default=None,
+        help="Path to delta snapshot JSON. Default: <out-dir>/latest-delta.json when present.",
     )
     parser.add_argument(
         "--compare-delta",
@@ -93,6 +104,24 @@ def _detect_changed_paths(root: Path, from_ref: str | None, to_ref: str | None) 
     return detected.changed_paths
 
 
+def _resolve_delta_snapshot_path(root: Path, args: argparse.Namespace, out_dir: Path) -> Path:
+    if args.delta_snapshot is not None:
+        path = args.delta_snapshot
+        if not path.is_absolute():
+            path = (root / path).resolve()
+        return path
+    return default_delta_snapshot_path(out_dir)
+
+
+def _resolve_compare_paths(root: Path, out_dir: Path, args: argparse.Namespace) -> List[str]:
+    snapshot_path = _resolve_delta_snapshot_path(root, args, out_dir)
+    if snapshot_path.exists() and snapshot_path.is_file():
+        snapshot = load_delta_snapshot(snapshot_path)
+        return normalize_paths(read_changed_paths(snapshot))
+
+    return _detect_changed_paths(root, from_ref=args.from_ref, to_ref=args.to_ref)
+
+
 def _resolve_witness_path(root: Path, args: argparse.Namespace, changed_paths: List[str]) -> Path:
     if args.witness is not None:
         witness_path = args.witness
@@ -114,10 +143,24 @@ def _resolve_witness_path(root: Path, args: argparse.Namespace, changed_paths: L
 def main() -> int:
     args = parse_args()
     root = Path(__file__).resolve().parents[2]
+    out_dir = args.out_dir
+    if not out_dir.is_absolute():
+        out_dir = (root / out_dir).resolve()
 
     changed_paths: List[str] = []
     if args.compare_delta:
-        changed_paths = _detect_changed_paths(root, from_ref=args.from_ref, to_ref=args.to_ref)
+        try:
+            changed_paths = _resolve_compare_paths(root, out_dir, args)
+        except ValueError as exc:
+            decision = {
+                "schema": 1,
+                "decisionKind": "ci.required.decision.v1",
+                "decision": "reject",
+                "reasonClass": "invalid_delta_snapshot",
+                "errors": [str(exc)],
+            }
+            print(json.dumps(decision, indent=2, ensure_ascii=False))
+            return 2
 
     witness_path = _resolve_witness_path(root, args, changed_paths)
     if not witness_path.exists() or not witness_path.is_file():

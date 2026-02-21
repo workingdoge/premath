@@ -70,6 +70,7 @@ Current shape:
 - optional staged-flow gate: `jj gate-pre-commit` (Git index semantics)
 - canonical projected gate entrypoint: `mise run ci-required` (`tools/ci/run_required_checks.py`)
   - computes `Delta -> requiredChecks` deterministically before execution
+  - emits single-source strict-compare snapshot: `artifacts/ciwitness/latest-delta.json`
   - executes each required check through `tools/ci/run_gate.sh`
 - canonical witness verifier: `mise run ci-verify-required`
   (`tools/ci/verify_required_witness.py`)
