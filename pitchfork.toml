@@ -7,6 +7,10 @@ dir = "docs"
 ready_delay = 1
 auto = ["start", "stop"]
 
+[daemons.observation-api]
+run = "sh -lc 'mise run ci-observation-build && mise run ci-observation-serve'"
+ready_delay = 2
+
 [daemons.gate-check-loop]
 run = "sh -lc 'while true; do mise run ci-required-attested; sleep 1800; done'"
 ready_delay = 1

@@ -193,7 +193,7 @@ run = "TF_VAR_cheese_profile=darwin_microvm_vfkit sh tools/ci/run_gate_terraform
 run = "sh tools/jj/install_aliases.sh"
 
 [tasks.pf-start]
-run = "pitchfork start docs-preview"
+run = "pitchfork start docs-preview observation-api"
 
 [tasks.pf-stop]
 run = "sh -lc 'if pitchfork supervisor status >/dev/null 2>&1; then pitchfork stop --all; else echo \"pitchfork supervisor not running\"; fi'"

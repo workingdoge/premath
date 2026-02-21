@@ -285,6 +285,14 @@ python3 -m http.server 43173 --directory docs
 Open `http://127.0.0.1:43173/observation/` (default API:
 `http://127.0.0.1:43174`).
 
+One-command orchestration alternative:
+
+```bash
+mise run pf-start
+```
+
+This starts both `docs-preview` and `observation-api`.
+
 `mise run ci-check` is retained as a compatibility task for fixed full-gate
 execution via `hk-check`.
 
@@ -351,6 +359,8 @@ mise run pf-gate-loop-stop
 Current `pitchfork.toml` daemons:
 
 - `docs-preview`: serves `docs/` on `http://127.0.0.1:43173`
+- `observation-api`: runs the Observation Surface HTTP API on
+  `http://127.0.0.1:43174` (with a deterministic pre-build step)
 - `gate-check-loop`: optional local closure loop (`mise run ci-required-attested`, then sleep 30m)
 
 ### JJ Glue (control plane)

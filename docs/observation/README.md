@@ -20,3 +20,11 @@ Open `http://127.0.0.1:43173/observation/`.
 
 Default API base in the page is `http://127.0.0.1:43174` and can be changed in
 the UI.
+
+One-command orchestration:
+
+```bash
+mise run pf-start
+```
+
+`pf-start` starts both `docs-preview` and `observation-api`.

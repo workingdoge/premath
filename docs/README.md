@@ -21,3 +21,9 @@ python3 -m http.server 43173 --directory docs
 ```
 
 Then open `http://127.0.0.1:43173/observation/`.
+
+Or start both docs preview + observation API together:
+
+```bash
+mise run pf-start
+```
