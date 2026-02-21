@@ -97,6 +97,20 @@ fn main() {
 
         Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
 
+        Commands::McpServe {
+            issues,
+            surface,
+            repo_root,
+            server_name,
+            server_version,
+        } => commands::mcp_serve::run(commands::mcp_serve::Args {
+            issues,
+            surface,
+            repo_root,
+            server_name,
+            server_version,
+        }),
+
         Commands::Issue { command } => commands::issue::run(command),
 
         Commands::Dep { command } => commands::dep::run(command),

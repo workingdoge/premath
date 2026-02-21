@@ -182,6 +182,7 @@ mise run ci-observation-test
 mise run ci-observation-build
 mise run ci-observation-query
 mise run ci-observation-serve
+mise run mcp-serve
 mise run ci-observation-check
 mise run ci-required
 mise run ci-verify-required
@@ -399,6 +400,13 @@ surface.
     `premath-surreal` observation index adapter).
 - `premath observe-serve --surface artifacts/observation/latest.json --bind 127.0.0.1:43174`
   - serves the same query contract over HTTP for frontend consumption.
+- `premath mcp-serve --issues .beads/issues.jsonl --surface artifacts/observation/latest.json --repo-root .`
+  - serves MCP tools over stdio for agent integration.
+  - data-plane tools: `issue_ready`, `issue_list`, `issue_add`, `issue_update`,
+    `dep_add`, `observe_latest`, `observe_needs_attention`,
+    `observe_instruction`, `observe_projection`.
+  - doctrine-gated tools: `instruction_check`, `instruction_run`
+    (runs `tools/ci/pipeline_instruction.py` and emits CI witness artifacts).
 - `premath issue add "Title" --issues .beads/issues.jsonl --json`
   - appends a new issue entry into JSONL-backed memory.
 - `premath issue list --issues .beads/issues.jsonl --json`
@@ -409,3 +417,44 @@ surface.
   - updates mutable issue fields and persists JSONL.
 - `premath dep add <issue-id> <depends-on-id> --type blocks --issues .beads/issues.jsonl --json`
   - adds a typed dependency edge between existing issues.
+
+### MCP Client Config Snippets
+
+Use absolute paths in client configs so the server starts deterministically.
+
+Claude Desktop (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "premath": {
+      "command": "sh",
+      "args": [
+        "-lc",
+        "cd <ABS_REPO_ROOT> && mise run mcp-serve"
+      ]
+    }
+  }
+}
+```
+
+Codex (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.premath]
+command = "sh"
+args = [
+  "-lc",
+  "cd <ABS_REPO_ROOT> && mise run mcp-serve"
+]
+startup_timeout_sec = 180
+```
+
+After updating client config:
+
+```bash
+mise install
+mise run mcp-serve
+```
+
+Then restart the MCP client so it re-reads configuration.

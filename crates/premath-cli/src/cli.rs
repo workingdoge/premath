@@ -193,6 +193,29 @@ pub enum Commands {
         bind: String,
     },
 
+    /// Serve Premath MCP tools over stdio
+    McpServe {
+        /// Issues JSONL path used by issue/dep tools
+        #[arg(long, default_value = ".beads/issues.jsonl")]
+        issues: String,
+
+        /// Observation surface JSON path used by observe tools
+        #[arg(long, default_value = "artifacts/observation/latest.json")]
+        surface: String,
+
+        /// Repository root for doctrine instruction pipeline tools
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// MCP server name
+        #[arg(long, default_value = "premath-mcp")]
+        server_name: String,
+
+        /// MCP server version
+        #[arg(long, default_value = "0.1.0")]
+        server_version: String,
+    },
+
     /// Manage issues in premath-bd JSONL memory
     Issue {
         #[command(subcommand)]
