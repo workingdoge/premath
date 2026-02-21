@@ -8,24 +8,31 @@ import re
 from pathlib import Path
 
 
-REQUIRED_COMMAND = "mise run ci-required-attested"
-REQUIRED_PATTERN = re.compile(r"^\s*run:\s*mise run ci-required-attested\s*$", re.MULTILINE)
+REQUIRED_COMMAND = "python3 tools/ci/pipeline_required.py"
+REQUIRED_PATTERN = re.compile(
+    r"^\s*run:\s*python3 tools/ci/pipeline_required.py\s*$",
+    re.MULTILINE,
+)
 FORBIDDEN_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
     (
-        "split-step required gate command",
+        "legacy split-step required gate command",
         re.compile(r"^\s*run:\s*mise run ci-required\s*$", re.MULTILINE),
     ),
     (
-        "split-step strict verification command",
+        "legacy split-step strict verification command",
         re.compile(r"^\s*run:\s*mise run ci-verify-required-strict\s*$", re.MULTILINE),
     ),
     (
-        "split-step decision command",
+        "legacy split-step decision command",
         re.compile(r"^\s*run:\s*mise run ci-decide-required\s*$", re.MULTILINE),
     ),
     (
-        "split-step decision verification command",
+        "legacy split-step decision verification command",
         re.compile(r"^\s*run:\s*mise run ci-verify-decision\s*$", re.MULTILINE),
+    ),
+    (
+        "legacy attested task workflow command",
+        re.compile(r"^\s*run:\s*mise run ci-required-attested\s*$", re.MULTILINE),
     ),
 )
 

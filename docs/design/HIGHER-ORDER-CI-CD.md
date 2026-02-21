@@ -10,16 +10,14 @@ Spec counterpart: `specs/premath/raw/PREMATH-CI.md`.
 Implemented in this repo:
 
 - local fast/full/staged gate triggers via `jj gate-fast|gate-check|gate-pre-commit`
-- CI gate path via `.github/workflows/baseline.yml` -> `mise run ci-required`
-- witness verification path via `.github/workflows/baseline.yml` -> `mise run ci-verify-required-strict`
-- decision gate path (local/CI) via `mise run ci-decide-required`
-- decision attestation verification path via `mise run ci-verify-decision`
+- CI gate path via `.github/workflows/baseline.yml` ->
+  `python3 tools/ci/pipeline_required.py`
 - CI witness artifact publication path via `.github/workflows/baseline.yml`
   (`latest-required.json`, `latest-decision.json`, digest sidecars,
   `proj1_*.json`, summary digest row)
-- instruction-envelope gate path via
-  `sh tools/ci/run_instruction.sh instructions/<ts>-<id>.json`
-  emitting `artifacts/ciwitness/<instruction-id>.json`
+- instruction-envelope gate path via `.github/workflows/instruction.yml` ->
+  `python3 tools/ci/pipeline_instruction.py --instruction "$INSTRUCTION_PATH"`
+  (local equivalent: `mise run ci-pipeline-instruction`)
 - optional local orchestration via `pitchfork.toml` + `mise run pf-*` tasks
 - optional infra provisioning scaffold via `mise run infra-up|infra-down|ci-check-tf`
 - doctrine-to-operation site map and checker:
@@ -89,9 +87,9 @@ Current shape:
     `PREMATH_SQUEAK_SITE_PROFILE=external` + `PREMATH_SQUEAK_SITE_RUNNER=<path>`
   - legacy aliases still accepted:
     `PREMATH_EXECUTOR_PROFILE` + `PREMATH_EXECUTOR_RUNNER`
-- CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required`,
-  `mise run ci-verify-required-strict`, `mise run ci-decide-required`,
-  and `mise run ci-verify-decision`
+- CI gate: `.github/workflows/baseline.yml` runs
+  `python3 tools/ci/pipeline_required.py`
+  (the script maps provider refs, runs the attested chain, and emits summary/digests)
   - provider binding details are documented in `CI-PROVIDER-BINDINGS.md`
 - optional infra-provisioned gate: `mise run ci-check-tf`
   - default infra runner profile: `local`

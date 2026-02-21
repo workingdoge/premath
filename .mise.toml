@@ -51,6 +51,7 @@ run = [
   "mise run conformance-check",
   "mise run doctrine-check",
   "mise run ci-command-surface-check",
+  "mise run ci-pipeline-check",
   "mise run ci-wiring-check",
   "mise run ci-instruction-check",
   "mise run ci-instruction-smoke",
@@ -80,6 +81,15 @@ run = "python3 tools/ci/check_command_surface.py"
 
 [tasks.ci-wiring-check]
 run = "python3 tools/ci/check_ci_wiring.py"
+
+[tasks.ci-pipeline-check]
+run = "python3 tools/ci/check_pipeline_wiring.py"
+
+[tasks.ci-pipeline-required]
+run = "python3 tools/ci/pipeline_required.py"
+
+[tasks.ci-pipeline-instruction]
+run = "python3 tools/ci/pipeline_instruction.py --instruction ${INSTRUCTION:?set INSTRUCTION=instructions/<ts>-<id>.json}"
 
 [tasks.ci-required]
 run = "python3 tools/ci/run_required_checks.py"

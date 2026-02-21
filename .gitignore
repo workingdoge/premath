@@ -17,6 +17,7 @@ venv/
 *.tfstate.*
 *.tfplan
 artifacts/ciwitness/*.json
+artifacts/ciwitness/*.sha256
 artifacts/ciwitness/gates/
 
 target/

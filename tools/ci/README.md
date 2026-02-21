@@ -48,6 +48,30 @@ steps.
 `mise`-only and rejects legacy task-runner command/file references
 (`mise run ci-command-surface-check`).
 
+`tools/ci/check_pipeline_wiring.py` validates provider-specific workflow files
+remain thin wrappers around provider-neutral pipeline entrypoints
+(`mise run ci-pipeline-check`).
+
+`tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
+entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
+attested required gate chain, and emits summary/sha artifacts.
+
+`tools/ci/pipeline_instruction.py` is the provider-neutral instruction pipeline
+entrypoint (`mise run ci-pipeline-instruction`): validates envelope shape, runs
+instruction execution, and emits summary/sha artifacts.
+
+Workflow authoring contract:
+
+- `.github/workflows/baseline.yml` must call
+  `python3 tools/ci/pipeline_required.py`.
+- `.github/workflows/instruction.yml` must call
+  `python3 tools/ci/pipeline_instruction.py --instruction "$INSTRUCTION_PATH"`.
+- workflow files should not inline attestation/summary logic; keep pipeline
+  orchestration in `tools/ci/pipeline_*.py`.
+- validate with:
+  - `mise run ci-pipeline-check`
+  - `mise run ci-wiring-check`
+
 `tools/ci/check_instruction_envelope.py` validates instruction envelope
 schema/shape before execution (`mise run ci-instruction-check`).
 
@@ -87,6 +111,7 @@ See `tools/ci/executors/README.md` for runner responsibilities.
 ## Required Check Mapping
 
 Canonical CI decision surface is `mise run ci-required-attested`.
+Provider-neutral workflow entrypoint is `python3 tools/ci/pipeline_required.py`.
 
 Provider-specific check naming/binding guidance lives in
 `docs/design/CI-PROVIDER-BINDINGS.md`.
@@ -130,9 +155,11 @@ mise run ci-required
 
 mise run ci-wiring-check
 mise run ci-command-surface-check
+mise run ci-pipeline-check
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-required-attested
+mise run ci-pipeline-required
 mise run ci-decide-required
 mise run ci-verify-decision
 
@@ -147,6 +174,7 @@ Instruction envelope run:
 
 ```bash
 mise run ci-instruction-check
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
 INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
 mise run ci-instruction-smoke

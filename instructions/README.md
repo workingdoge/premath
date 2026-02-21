@@ -30,11 +30,18 @@ Run an envelope:
 
 ```bash
 mise run ci-instruction-check
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
 mise run ci-instruction-smoke
 ```
 
 This writes a witness artifact to `artifacts/ciwitness/<instruction-id>.json`.
+
+Provider workflow rule:
+
+- CI workflows should invoke the provider-neutral wrapper
+  `python3 tools/ci/pipeline_instruction.py --instruction "$INSTRUCTION_PATH"`
+  and keep envelope orchestration out of inline YAML scripts.
 
 Golden smoke fixture:
 

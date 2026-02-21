@@ -172,6 +172,7 @@ mise run hk-pre-push
 mise run hk-check
 mise run ci-wiring-check
 mise run ci-command-surface-check
+mise run ci-pipeline-check
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict
@@ -180,9 +181,11 @@ mise run ci-decide-required
 mise run ci-verify-decision
 mise run ci-required-verified
 mise run ci-required-attested
+mise run ci-pipeline-required
 mise run ci-check
 mise run ci-instruction-check
 mise run ci-instruction-smoke
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
 ```
 
 `hk` keeps fast hygiene checks in `pre-commit` and runs the required projected
@@ -219,8 +222,8 @@ See `tools/ci/README.md` for runner protocol details.
 
 The current repo CI binding runs:
 
-- `mise run ci-wiring-check`
-- `mise run ci-required-attested`
+- `mise run ci-pipeline-check`
+- `python3 tools/ci/pipeline_required.py`
 
 Provider-specific required-check mappings are documented in
 `docs/design/CI-PROVIDER-BINDINGS.md`.
@@ -250,6 +253,7 @@ Instruction-envelope flow:
 
 ```bash
 mise run ci-instruction-check
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
 INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
 mise run ci-instruction-smoke

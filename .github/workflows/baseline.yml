@@ -28,91 +28,11 @@ jobs:
           mise trust
           mise install
 
-      - name: Check CI workflow wiring invariants
-        run: mise run ci-wiring-check
+      - name: Check provider-neutral pipeline wiring
+        run: mise run ci-pipeline-check
 
-      - name: Map GitHub provider refs to Premath CI refs
-        run: python3 tools/ci/providers/export_github_env.py >> "$GITHUB_ENV"
-
-      - name: Run authoritative attested required gate
-        run: mise run ci-required-attested
-
-      - name: Publish CI witness summary
-        if: always()
-        run: |
-          python3 - <<'PY'
-          import hashlib
-          import json
-          import os
-          from pathlib import Path
-
-          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
-          witness_path = Path("artifacts/ciwitness/latest-required.json")
-          digest_path = Path("artifacts/ciwitness/latest-required.sha256")
-          delta_path = Path("artifacts/ciwitness/latest-delta.json")
-          delta_digest_path = Path("artifacts/ciwitness/latest-delta.sha256")
-          decision_path = Path("artifacts/ciwitness/latest-decision.json")
-          decision_digest_path = Path("artifacts/ciwitness/latest-decision.sha256")
-
-          summary_lines = ["### CI Required Attestation"]
-
-          if not witness_path.exists():
-              summary_lines.append("")
-              summary_lines.append("- witness: missing (`artifacts/ciwitness/latest-required.json`)")
-          else:
-              payload = json.loads(witness_path.read_text(encoding="utf-8"))
-              raw_digest = hashlib.sha256(witness_path.read_bytes()).hexdigest()
-              digest_path.write_text(raw_digest + "\n", encoding="utf-8")
-
-              projection = payload.get("projectionDigest", "(missing)")
-              verdict = payload.get("verdictClass", "(missing)")
-              checks = payload.get("requiredChecks", [])
-              checks_line = ", ".join(checks) if isinstance(checks, list) and checks else "(none)"
-
-              summary_lines.extend(
-                  [
-                      "",
-                      f"- projection digest: `{projection}`",
-                      f"- witness verdict: `{verdict}`",
-                      f"- required checks: `{checks_line}`",
-                      f"- witness sha256: `{raw_digest}`",
-                  ]
-              )
-
-          if not delta_path.exists():
-              summary_lines.append("- delta snapshot: missing (`artifacts/ciwitness/latest-delta.json`)")
-          else:
-              delta = json.loads(delta_path.read_text(encoding="utf-8"))
-              delta_digest = hashlib.sha256(delta_path.read_bytes()).hexdigest()
-              delta_digest_path.write_text(delta_digest + "\n", encoding="utf-8")
-              delta_count = delta.get("changedPaths", [])
-              delta_size = len(delta_count) if isinstance(delta_count, list) else "(invalid)"
-              summary_lines.extend(
-                  [
-                      f"- delta source: `{delta.get('deltaSource', '(missing)')}`",
-                      f"- delta changed paths: `{delta_size}`",
-                      f"- delta sha256: `{delta_digest}`",
-                  ]
-              )
-
-          if not decision_path.exists():
-              summary_lines.append("- decision: missing (`artifacts/ciwitness/latest-decision.json`)")
-          else:
-              decision = json.loads(decision_path.read_text(encoding="utf-8"))
-              decision_digest = hashlib.sha256(decision_path.read_bytes()).hexdigest()
-              decision_digest_path.write_text(decision_digest + "\n", encoding="utf-8")
-              summary_lines.extend(
-                  [
-                      f"- decision: `{decision.get('decision', '(missing)')}`",
-                      f"- decision reason: `{decision.get('reasonClass', '(missing)')}`",
-                      f"- decision witness sha256: `{decision.get('witnessSha256', '(missing)')}`",
-                      f"- decision delta sha256: `{decision.get('deltaSha256', '(missing)')}`",
-                      f"- decision sha256: `{decision_digest}`",
-                  ]
-              )
-
-          summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
-          PY
+      - name: Run provider-neutral required pipeline
+        run: python3 tools/ci/pipeline_required.py
 
       - name: Upload CI witness artifacts
         if: always()
