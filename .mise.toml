@@ -103,6 +103,9 @@ run = "python3 tools/ci/observation_surface.py query --mode latest"
 [tasks.ci-observation-test]
 run = "python3 tools/ci/test_observation_surface.py"
 
+[tasks.ci-observation-serve]
+run = "cargo run --package premath-cli -- observe-serve --surface artifacts/observation/latest.json --bind 127.0.0.1:43174"
+
 [tasks.ci-observation-check]
 run = [
   "mise run ci-observation-build",

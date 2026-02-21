@@ -94,5 +94,7 @@ fn main() {
             projection_digest,
             json,
         }),
+
+        Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
     }
 }

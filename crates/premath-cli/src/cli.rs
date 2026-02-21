@@ -181,6 +181,17 @@ pub enum Commands {
         #[arg(long)]
         json: bool,
     },
+
+    /// Serve Observation Surface v0 as a tiny HTTP read API
+    ObserveServe {
+        /// Observation surface JSON path
+        #[arg(long, default_value = "artifacts/observation/latest.json")]
+        surface: String,
+
+        /// Bind address (host:port)
+        #[arg(long, default_value = "127.0.0.1:43174")]
+        bind: String,
+    },
 }
 
 #[derive(Clone, Debug, ValueEnum)]

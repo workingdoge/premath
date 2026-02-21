@@ -9,3 +9,4 @@ description = "UX composition layer over observation/query adapters"
 premath-surreal = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+thiserror = { workspace = true }

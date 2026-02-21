@@ -4,12 +4,16 @@
 //! backends. Backends (for example `premath-surreal`) remain adapters; this
 //! crate owns the interaction shape used by frontends.
 
+pub mod http;
+
 use premath_surreal::{
     DecisionSummary, DeltaSummary, InstructionSummary, LatestObservation, ObservationError,
     ObservationIndex, ObservationSummary, ProjectionView, RequiredSummary,
 };
 use serde::Serialize;
+use serde_json::Value;
 use std::path::Path;
+use thiserror::Error;
 
 pub trait ObservationBackend {
     fn summary(&self) -> ObservationSummary;
@@ -78,6 +82,24 @@ pub struct NeedsAttentionView {
     pub latest_instruction_id: Option<String>,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ObserveQuery {
+    Latest,
+    NeedsAttention,
+    Instruction { instruction_id: String },
+    Projection { projection_digest: String },
+}
+
+#[derive(Debug, Error, Clone, PartialEq, Eq)]
+pub enum ObserveQueryError {
+    #[error("instruction not found: {0}")]
+    InstructionNotFound(String),
+    #[error("projection not found: {0}")]
+    ProjectionNotFound(String),
+    #[error("serialization error: {0}")]
+    Serialization(String),
+}
+
 #[derive(Debug, Clone)]
 pub struct UxService<B: ObservationBackend> {
     backend: B,
@@ -116,6 +138,29 @@ impl<B: ObservationBackend> UxService<B> {
 
     pub fn projection(&self, projection_digest: &str) -> Option<ProjectionView> {
         self.backend.projection(projection_digest)
+    }
+
+    pub fn query_json(&self, query: ObserveQuery) -> Result<Value, ObserveQueryError> {
+        match query {
+            ObserveQuery::Latest => serde_json::to_value(self.latest())
+                .map_err(|e| ObserveQueryError::Serialization(e.to_string())),
+            ObserveQuery::NeedsAttention => serde_json::to_value(self.needs_attention())
+                .map_err(|e| ObserveQueryError::Serialization(e.to_string())),
+            ObserveQuery::Instruction { instruction_id } => {
+                let row = self.instruction(&instruction_id).ok_or_else(|| {
+                    ObserveQueryError::InstructionNotFound(instruction_id.clone())
+                })?;
+                serde_json::to_value(row)
+                    .map_err(|e| ObserveQueryError::Serialization(e.to_string()))
+            }
+            ObserveQuery::Projection { projection_digest } => {
+                let row = self.projection(&projection_digest).ok_or_else(|| {
+                    ObserveQueryError::ProjectionNotFound(projection_digest.clone())
+                })?;
+                serde_json::to_value(row)
+                    .map_err(|e| ObserveQueryError::Serialization(e.to_string()))
+            }
+        }
     }
 }
 
@@ -210,5 +255,25 @@ mod tests {
         let latest = service.latest();
         let serialized = serde_json::to_value(latest).expect("serialization should succeed");
         assert_eq!(serialized["summary"]["state"], "accepted");
+    }
+
+    #[test]
+    fn query_json_reports_missing_rows() {
+        let service = UxService::new(MockBackend);
+        let err = service
+            .query_json(ObserveQuery::Instruction {
+                instruction_id: "missing".to_string(),
+            })
+            .expect_err("missing instruction should error");
+        assert!(matches!(err, ObserveQueryError::InstructionNotFound(_)));
+    }
+
+    #[test]
+    fn query_json_latest_roundtrip() {
+        let service = UxService::new(MockBackend);
+        let value = service
+            .query_json(ObserveQuery::Latest)
+            .expect("latest query should serialize");
+        assert_eq!(value["summary"]["state"], "accepted");
     }
 }

@@ -181,6 +181,7 @@ mise run ci-pipeline-test
 mise run ci-observation-test
 mise run ci-observation-build
 mise run ci-observation-query
+mise run ci-observation-serve
 mise run ci-observation-check
 mise run ci-required
 mise run ci-verify-required
@@ -263,6 +264,9 @@ Observation surface (frontend/query projection):
   - `artifacts/observation/events.jsonl` (append-friendly projection feed).
 - `mise run ci-observation-query` returns judgment-oriented views
   (`latest`, `needs_attention`, `instruction`, `projection`).
+- `mise run ci-observation-serve` starts a tiny UX HTTP read API over the same
+  semantics (`GET /latest`, `GET /needs-attention`,
+  `GET /instruction?id=<instruction_id>`, `GET /projection?digest=<projection_digest>`).
 - `mise run ci-observation-check` enforces that observation output is a pure
   projection of CI witness artifacts (no semantic drift).
 - This projection layer is where a Surreal-backed UI/read API should attach;
@@ -370,3 +374,5 @@ surface.
 - `premath observe --surface artifacts/observation/latest.json --mode latest --json`
   - queries Observation Surface v0 through `premath-ux` (backed by
     `premath-surreal` observation index adapter).
+- `premath observe-serve --surface artifacts/observation/latest.json --bind 127.0.0.1:43174`
+  - serves the same query contract over HTTP for frontend consumption.

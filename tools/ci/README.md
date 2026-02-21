@@ -71,6 +71,14 @@ behavior (`mise run ci-observation-test`).
 observation output must match deterministic reducer output from CI witness
 artifacts (`mise run ci-observation-check`).
 
+`premath observe-serve` (from `premath-cli`) exposes the same observation query
+contract as a tiny HTTP read API for frontend clients:
+
+- `GET /latest`
+- `GET /needs-attention`
+- `GET /instruction?id=<instruction_id>`
+- `GET /projection?digest=<projection_digest>`
+
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
 entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
 attested required gate chain, and emits summary/sha artifacts.
@@ -180,6 +188,7 @@ mise run ci-pipeline-test
 mise run ci-observation-test
 mise run ci-observation-build
 mise run ci-observation-query
+mise run ci-observation-serve
 mise run ci-observation-check
 mise run ci-verify-required
 mise run ci-required-verified

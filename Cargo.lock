@@ -560,6 +560,7 @@ dependencies = [
  "premath-surreal",
  "serde",
  "serde_json",
+ "thiserror",
 ]
 
 [[package]]
