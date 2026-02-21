@@ -44,6 +44,7 @@ Checks include:
 - typed/unknown instruction classification determinism checks,
 - deterministic `Delta -> requiredChecks` projection behavior,
 - deterministic `ci.required` witness verification behavior,
+- strict delta-compare witness verification behavior,
 - invariance pairing (`kernelVerdict` and Gate failure classes) across evidence profiles.
 
 Run:

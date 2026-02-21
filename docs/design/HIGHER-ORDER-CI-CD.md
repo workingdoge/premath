@@ -11,7 +11,7 @@ Implemented in this repo:
 
 - local fast/full/staged gate triggers via `jj gate-fast|gate-check|gate-pre-commit`
 - CI gate path via `.github/workflows/baseline.yml` -> `mise run ci-required`
-- witness verification path via `.github/workflows/baseline.yml` -> `mise run ci-verify-required`
+- witness verification path via `.github/workflows/baseline.yml` -> `mise run ci-verify-required-strict`
 - instruction-envelope gate path via
   `sh tools/ci/run_instruction.sh instructions/<ts>-<id>.json`
   emitting `artifacts/ciwitness/<instruction-id>.json`
@@ -68,12 +68,13 @@ Current shape:
   - executes each required check through `tools/ci/run_gate.sh`
 - canonical witness verifier: `mise run ci-verify-required`
   (`tools/ci/verify_required_witness.py`)
+  - strict CI mode: `mise run ci-verify-required-strict` (`--compare-delta`)
 - default profile: `PREMATH_SQUEAK_SITE_PROFILE=local`
   - optional external profile:
     `PREMATH_SQUEAK_SITE_PROFILE=external` + `PREMATH_SQUEAK_SITE_RUNNER=<path>`
   - legacy aliases still accepted:
     `PREMATH_EXECUTOR_PROFILE` + `PREMATH_EXECUTOR_RUNNER`
-- CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required` and `mise run ci-verify-required`
+- CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required` and `mise run ci-verify-required-strict`
 - optional infra-provisioned gate: `mise run ci-check-tf`
   - default infra runner profile: `local`
   - experimental runtime profile: `darwin_microvm_vfkit` (microvm.nix + vfkit)

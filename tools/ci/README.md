@@ -57,6 +57,9 @@ mise run ci-required
 
 mise run ci-verify-required
 mise run ci-required-verified
+
+# strict CI mode: compare witness changedPaths to detected delta
+GITHUB_BASE_REF=main mise run ci-verify-required-strict
 ```
 
 Instruction envelope run:

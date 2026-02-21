@@ -1147,6 +1147,29 @@ def evaluate_ci_required_witness_invariance(case: Dict[str, Any]) -> VectorOutco
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_ci_required_witness_strict_delta(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    changed_paths = ensure_string_list(artifacts.get("changedPaths", []), "artifacts.changedPaths")
+    detected_paths = ensure_string_list(
+        artifacts.get("detectedChangedPaths", []), "artifacts.detectedChangedPaths"
+    )
+    witness = artifacts.get("witness")
+    if not isinstance(witness, dict):
+        raise ValueError("artifacts.witness must be an object")
+
+    verify_errors, _derived = verify_required_witness_payload(witness, changed_paths)
+    if verify_errors:
+        return VectorOutcome("rejected", "rejected", ["ci_required_witness_invalid"])
+
+    witness_paths = ensure_string_list(witness.get("changedPaths", []), "artifacts.witness.changedPaths")
+    if sorted(set(witness_paths)) != sorted(set(detected_paths)):
+        return VectorOutcome("rejected", "rejected", ["delta_comparison_mismatch"])
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/witness_verifies_for_projected_delta",
@@ -1156,6 +1179,11 @@ def evaluate_ci_required_witness_vector(vector_id: str, case: Dict[str, Any]) ->
         return evaluate_ci_required_witness_validity(case)
     if vector_id == "adversarial/ci_required_witness_requires_claim":
         return evaluate_ci_required_witness_requires_claim(case)
+    if vector_id in {
+        "golden/strict_delta_compare_match",
+        "adversarial/strict_delta_compare_mismatch_reject",
+    }:
+        return evaluate_ci_required_witness_strict_delta(case)
     if vector_id.startswith("invariance/"):
         return evaluate_ci_required_witness_invariance(case)
     raise ValueError(f"unsupported ci_required_witness vector id: {vector_id}")

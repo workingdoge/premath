@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "strict delta compare accepts when detected and witness changed paths match"
+  ]
+}

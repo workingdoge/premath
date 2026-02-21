@@ -69,6 +69,10 @@ ci-required:
 ci-verify-required:
     python3 tools/ci/verify_required_witness.py
 
+# Verify required-gate witness and compare against detected delta (strict CI mode)
+ci-verify-required-strict:
+    sh -lc 'python3 tools/ci/verify_required_witness.py --compare-delta --from-ref "origin/${GITHUB_BASE_REF:-main}" --to-ref HEAD'
+
 # Run required gate and enforce witness verification
 ci-required-verified:
     just ci-required

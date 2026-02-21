@@ -172,6 +172,7 @@ mise run hk-pre-push
 mise run hk-check
 mise run ci-required
 mise run ci-verify-required
+mise run ci-verify-required-strict
 mise run ci-required-verified
 mise run ci-check
 ```
@@ -201,7 +202,10 @@ See `tools/ci/README.md` for runner protocol details.
 The CI workflow (`.github/workflows/baseline.yml`) runs:
 
 - `mise run ci-required`
-- `mise run ci-verify-required`
+- `mise run ci-verify-required-strict`
+
+`ci-verify-required-strict` uses `--compare-delta` and compares witness
+`changedPaths` against the detected PR delta (`origin/${GITHUB_BASE_REF:-main}...HEAD`).
 
 `mise run ci-check` is retained as a compatibility task for fixed full-gate
 execution via `hk-check`.
