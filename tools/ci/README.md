@@ -29,6 +29,7 @@ By default it verifies `artifacts/ciwitness/latest-required.json`.
 
 `tools/ci/decide_required.py` emits deterministic merge/promotion decisions from
 verified witness semantics (`accept` or `reject`).
+`mise run ci-decide-required` writes `artifacts/ciwitness/latest-decision.json`.
 
 It separates:
 

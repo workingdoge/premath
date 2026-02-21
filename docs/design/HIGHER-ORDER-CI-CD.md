@@ -14,7 +14,8 @@ Implemented in this repo:
 - witness verification path via `.github/workflows/baseline.yml` -> `mise run ci-verify-required-strict`
 - decision gate path (local/CI) via `mise run ci-decide-required`
 - CI witness artifact publication path via `.github/workflows/baseline.yml`
-  (`latest-required.json`, `.sha256`, `proj1_*.json`, summary digest row)
+  (`latest-required.json`, `latest-decision.json`, digest sidecars,
+  `proj1_*.json`, summary digest row)
 - instruction-envelope gate path via
   `sh tools/ci/run_instruction.sh instructions/<ts>-<id>.json`
   emitting `artifacts/ciwitness/<instruction-id>.json`
@@ -81,7 +82,8 @@ Current shape:
     `PREMATH_SQUEAK_SITE_PROFILE=external` + `PREMATH_SQUEAK_SITE_RUNNER=<path>`
   - legacy aliases still accepted:
     `PREMATH_EXECUTOR_PROFILE` + `PREMATH_EXECUTOR_RUNNER`
-- CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required` and `mise run ci-verify-required-strict`
+- CI gate: `.github/workflows/baseline.yml` runs `mise run ci-required`,
+  `mise run ci-verify-required-strict`, and `mise run ci-decide-required`
 - optional infra-provisioned gate: `mise run ci-check-tf`
   - default infra runner profile: `local`
   - experimental runtime profile: `darwin_microvm_vfkit` (microvm.nix + vfkit)

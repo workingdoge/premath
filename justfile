@@ -79,7 +79,7 @@ ci-verify-required-strict-native:
 
 # Deterministic accept/reject decision from the verified required witness
 ci-decide-required:
-    sh -lc 'python3 tools/ci/decide_required.py --compare-delta --from-ref "origin/${GITHUB_BASE_REF:-main}" --to-ref HEAD'
+    sh -lc 'python3 tools/ci/decide_required.py --compare-delta --from-ref "origin/${GITHUB_BASE_REF:-main}" --to-ref HEAD --out artifacts/ciwitness/latest-decision.json'
 
 # Run required gate and enforce witness verification
 ci-required-verified:

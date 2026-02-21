@@ -33,6 +33,9 @@ jobs:
       - name: Verify required gate witness (strict delta compare)
         run: mise run ci-verify-required-strict
 
+      - name: Decide required gate acceptance
+        run: mise run ci-decide-required
+
       - name: Publish CI witness summary
         if: always()
         run: |
@@ -45,33 +48,48 @@ jobs:
           summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
           witness_path = Path("artifacts/ciwitness/latest-required.json")
           digest_path = Path("artifacts/ciwitness/latest-required.sha256")
+          decision_path = Path("artifacts/ciwitness/latest-decision.json")
+          decision_digest_path = Path("artifacts/ciwitness/latest-decision.sha256")
 
-          summary_lines = ["### CI Required Witness"]
+          summary_lines = ["### CI Required Attestation"]
 
           if not witness_path.exists():
               summary_lines.append("")
               summary_lines.append("- witness: missing (`artifacts/ciwitness/latest-required.json`)")
-              summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
-              raise SystemExit(0)
+          else:
+              payload = json.loads(witness_path.read_text(encoding="utf-8"))
+              raw_digest = hashlib.sha256(witness_path.read_bytes()).hexdigest()
+              digest_path.write_text(raw_digest + "\n", encoding="utf-8")
 
-          payload = json.loads(witness_path.read_text(encoding="utf-8"))
-          raw_digest = hashlib.sha256(witness_path.read_bytes()).hexdigest()
-          digest_path.write_text(raw_digest + "\n", encoding="utf-8")
+              projection = payload.get("projectionDigest", "(missing)")
+              verdict = payload.get("verdictClass", "(missing)")
+              checks = payload.get("requiredChecks", [])
+              checks_line = ", ".join(checks) if isinstance(checks, list) and checks else "(none)"
 
-          projection = payload.get("projectionDigest", "(missing)")
-          verdict = payload.get("verdictClass", "(missing)")
-          checks = payload.get("requiredChecks", [])
-          checks_line = ", ".join(checks) if isinstance(checks, list) and checks else "(none)"
+              summary_lines.extend(
+                  [
+                      "",
+                      f"- projection digest: `{projection}`",
+                      f"- witness verdict: `{verdict}`",
+                      f"- required checks: `{checks_line}`",
+                      f"- witness sha256: `{raw_digest}`",
+                  ]
+              )
 
-          summary_lines.extend(
-              [
-                  "",
-                  f"- projection digest: `{projection}`",
-                  f"- witness verdict: `{verdict}`",
-                  f"- required checks: `{checks_line}`",
-                  f"- witness sha256: `{raw_digest}`",
-              ]
-          )
+          if not decision_path.exists():
+              summary_lines.append("- decision: missing (`artifacts/ciwitness/latest-decision.json`)")
+          else:
+              decision = json.loads(decision_path.read_text(encoding="utf-8"))
+              decision_digest = hashlib.sha256(decision_path.read_bytes()).hexdigest()
+              decision_digest_path.write_text(decision_digest + "\n", encoding="utf-8")
+              summary_lines.extend(
+                  [
+                      f"- decision: `{decision.get('decision', '(missing)')}`",
+                      f"- decision reason: `{decision.get('reasonClass', '(missing)')}`",
+                      f"- decision sha256: `{decision_digest}`",
+                  ]
+              )
+
           summary_path.write_text("\n".join(summary_lines) + "\n", encoding="utf-8")
           PY
 
@@ -83,5 +101,7 @@ jobs:
           path: |
             artifacts/ciwitness/latest-required.json
             artifacts/ciwitness/latest-required.sha256
+            artifacts/ciwitness/latest-decision.json
+            artifacts/ciwitness/latest-decision.sha256
             artifacts/ciwitness/proj1_*.json
           if-no-files-found: warn

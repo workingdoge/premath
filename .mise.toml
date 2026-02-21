@@ -84,7 +84,7 @@ run = "sh -lc 'python3 tools/ci/verify_required_witness.py --compare-delta --fro
 run = "sh -lc 'python3 tools/ci/verify_required_witness.py --compare-delta --from-ref \"origin/${GITHUB_BASE_REF:-main}\" --to-ref HEAD --require-native-check baseline'"
 
 [tasks.ci-decide-required]
-run = "sh -lc 'python3 tools/ci/decide_required.py --compare-delta --from-ref \"origin/${GITHUB_BASE_REF:-main}\" --to-ref HEAD'"
+run = "sh -lc 'python3 tools/ci/decide_required.py --compare-delta --from-ref \"origin/${GITHUB_BASE_REF:-main}\" --to-ref HEAD --out artifacts/ciwitness/latest-decision.json'"
 
 [tasks.ci-required-verified]
 run = [

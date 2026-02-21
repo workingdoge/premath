@@ -212,6 +212,7 @@ The CI workflow (`.github/workflows/baseline.yml`) runs:
 
 - `mise run ci-required`
 - `mise run ci-verify-required-strict`
+- `mise run ci-decide-required`
 
 `ci-verify-required-strict` uses `--compare-delta` and compares witness
 `changedPaths` against the detected PR delta (`origin/${GITHUB_BASE_REF:-main}...HEAD`).
@@ -220,8 +221,10 @@ CI also publishes:
 
 - `artifacts/ciwitness/latest-required.json`,
 - `artifacts/ciwitness/latest-required.sha256`,
+- `artifacts/ciwitness/latest-decision.json`,
+- `artifacts/ciwitness/latest-decision.sha256`,
 - projection-specific witness files (`artifacts/ciwitness/proj1_*.json`),
-- a workflow summary row with projection digest, verdict, check set, and witness sha256.
+- a workflow summary row with projection digest, verdict, decision, and digest values.
 
 `mise run ci-check` is retained as a compatibility task for fixed full-gate
 execution via `hk-check`.
