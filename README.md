@@ -386,7 +386,7 @@ surface.
 ## Tusk Runtime Sketch (CLI)
 
 `premath-cli` now includes runtime-facing commands for `premath-tusk` and
-`premath-ux`:
+`premath-ux`, plus Beads-style issue-memory operations:
 
 - `premath mock-gate --json`
   - emits a deterministic Gate witness envelope from synthetic failures.
@@ -399,3 +399,13 @@ surface.
     `premath-surreal` observation index adapter).
 - `premath observe-serve --surface artifacts/observation/latest.json --bind 127.0.0.1:43174`
   - serves the same query contract over HTTP for frontend consumption.
+- `premath issue add "Title" --issues .beads/issues.jsonl --json`
+  - appends a new issue entry into JSONL-backed memory.
+- `premath issue list --issues .beads/issues.jsonl --json`
+  - lists issues with optional status/assignee filters.
+- `premath issue ready --issues .beads/issues.jsonl --json`
+  - returns open issues with no unresolved blocking dependencies.
+- `premath issue update <issue-id> --status in_progress --issues .beads/issues.jsonl --json`
+  - updates mutable issue fields and persists JSONL.
+- `premath dep add <issue-id> <depends-on-id> --type blocks --issues .beads/issues.jsonl --json`
+  - adds a typed dependency edge between existing issues.

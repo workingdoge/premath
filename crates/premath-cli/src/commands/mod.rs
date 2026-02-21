@@ -1,5 +1,7 @@
 pub mod check;
+pub mod dep;
 pub mod init;
+pub mod issue;
 pub mod mock_gate;
 pub mod observe;
 pub mod observe_serve;

@@ -96,5 +96,9 @@ fn main() {
         }),
 
         Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
+
+        Commands::Issue { command } => commands::issue::run(command),
+
+        Commands::Dep { command } => commands::dep::run(command),
     }
 }

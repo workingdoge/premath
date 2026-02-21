@@ -192,6 +192,18 @@ pub enum Commands {
         #[arg(long, default_value = "127.0.0.1:43174")]
         bind: String,
     },
+
+    /// Manage issues in premath-bd JSONL memory
+    Issue {
+        #[command(subcommand)]
+        command: IssueCommands,
+    },
+
+    /// Manage dependencies between issues
+    Dep {
+        #[command(subcommand)]
+        command: DepCommands,
+    },
 }
 
 #[derive(Clone, Debug, ValueEnum)]
@@ -220,4 +232,173 @@ pub enum ObserveModeArg {
     Instruction,
     #[value(name = "projection")]
     Projection,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum IssueCommands {
+    /// Add a new issue
+    Add {
+        /// Issue title
+        title: String,
+
+        /// Optional explicit issue ID
+        #[arg(long)]
+        id: Option<String>,
+
+        /// Issue description
+        #[arg(long, default_value = "")]
+        description: String,
+
+        /// Issue status
+        #[arg(long, default_value = "open")]
+        status: String,
+
+        /// Priority (0..4)
+        #[arg(long, default_value_t = 2)]
+        priority: i32,
+
+        /// Issue type
+        #[arg(long = "type", default_value = "task")]
+        issue_type: String,
+
+        /// Optional assignee
+        #[arg(long, default_value = "")]
+        assignee: String,
+
+        /// Optional owner
+        #[arg(long, default_value = "")]
+        owner: String,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".beads/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// List issues with optional filters
+    List {
+        /// Filter by status
+        #[arg(long)]
+        status: Option<String>,
+
+        /// Filter by assignee
+        #[arg(long)]
+        assignee: Option<String>,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".beads/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Show ready open work (unblocked issues)
+    Ready {
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".beads/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Update an existing issue
+    Update {
+        /// Issue ID
+        id: String,
+
+        /// New title
+        #[arg(long)]
+        title: Option<String>,
+
+        /// New description
+        #[arg(long)]
+        description: Option<String>,
+
+        /// New notes
+        #[arg(long)]
+        notes: Option<String>,
+
+        /// New status
+        #[arg(long)]
+        status: Option<String>,
+
+        /// New priority
+        #[arg(long)]
+        priority: Option<i32>,
+
+        /// New assignee
+        #[arg(long)]
+        assignee: Option<String>,
+
+        /// New owner
+        #[arg(long)]
+        owner: Option<String>,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".beads/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum DepCommands {
+    /// Add a dependency edge
+    Add {
+        /// Source issue ID
+        issue_id: String,
+
+        /// Target dependency issue ID
+        depends_on_id: String,
+
+        /// Dependency type
+        #[arg(long = "type", default_value = "blocks")]
+        dep_type: DepTypeArg,
+
+        /// Optional created_by annotation
+        #[arg(long, default_value = "")]
+        created_by: String,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".beads/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum DepTypeArg {
+    #[value(name = "blocks")]
+    Blocks,
+    #[value(name = "parent-child")]
+    ParentChild,
+    #[value(name = "conditional-blocks")]
+    ConditionalBlocks,
+    #[value(name = "related")]
+    Related,
+    #[value(name = "discovered-from")]
+    DiscoveredFrom,
+    #[value(name = "relates-to")]
+    RelatesTo,
+    #[value(name = "duplicates")]
+    Duplicates,
+    #[value(name = "supersedes")]
+    Supersedes,
+    #[value(name = "waits-for")]
+    WaitsFor,
+    #[value(name = "replies-to")]
+    RepliesTo,
 }

@@ -335,3 +335,97 @@ fn observe_instruction_json_smoke() {
     );
     assert_eq!(payload["verdictClass"], "accepted");
 }
+
+#[test]
+fn issue_add_dep_ready_json_smoke() {
+    let tmp = TempDirGuard::new("issue-add-ready");
+    let issues = tmp.path().join("issues.jsonl");
+
+    let out_add_root = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Root issue"),
+        OsString::from("--id"),
+        OsString::from("bd-root"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_root);
+
+    let out_add_child = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Child issue"),
+        OsString::from("--id"),
+        OsString::from("bd-child"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_child);
+
+    let out_dep = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep);
+
+    let out_ready = run_premath([
+        OsString::from("issue"),
+        OsString::from("ready"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_ready);
+    let payload = parse_json_stdout(&out_ready);
+    assert_eq!(payload["count"], 1);
+    assert_eq!(payload["items"][0]["id"], "bd-root");
+}
+
+#[test]
+fn issue_update_and_list_json_smoke() {
+    let tmp = TempDirGuard::new("issue-update-list");
+    let issues = tmp.path().join("issues.jsonl");
+    write_sample_issues(&issues);
+
+    let out_update = run_premath([
+        OsString::from("issue"),
+        OsString::from("update"),
+        OsString::from("bd-a"),
+        OsString::from("--status"),
+        OsString::from("in_progress"),
+        OsString::from("--assignee"),
+        OsString::from("agent"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_update);
+    let updated = parse_json_stdout(&out_update);
+    assert_eq!(updated["issue"]["id"], "bd-a");
+    assert_eq!(updated["issue"]["status"], "in_progress");
+    assert_eq!(updated["issue"]["assignee"], "agent");
+
+    let out_list = run_premath([
+        OsString::from("issue"),
+        OsString::from("list"),
+        OsString::from("--status"),
+        OsString::from("in_progress"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_list);
+    let listed = parse_json_stdout(&out_list);
+    assert_eq!(listed["count"], 1);
+    assert_eq!(listed["items"][0]["id"], "bd-a");
+}

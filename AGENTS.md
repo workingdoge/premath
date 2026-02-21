@@ -64,6 +64,11 @@
 - `cargo run --package premath-cli -- tusk-eval --identity <run_identity.json> --descent-pack <descent_pack.json> --json` — evaluate a Tusk descent pack and emit envelope + glue result.
 - `cargo run --package premath-cli -- observe --mode latest --json` — query Observation Surface v0 through the UX composition layer.
 - `cargo run --package premath-cli -- observe-serve --bind 127.0.0.1:43174` — serve Observation Surface v0 through the UX HTTP API.
+- `cargo run --package premath-cli -- issue add \"Title\" --issues .beads/issues.jsonl --json` — add an issue to JSONL-backed memory.
+- `cargo run --package premath-cli -- issue list --issues .beads/issues.jsonl --json` — list issues with optional filters.
+- `cargo run --package premath-cli -- issue ready --issues .beads/issues.jsonl --json` — return unblocked open issues.
+- `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .beads/issues.jsonl --json` — update issue fields.
+- `cargo run --package premath-cli -- dep add <issue-id> <depends-on-id> --type blocks --issues .beads/issues.jsonl --json` — add a dependency edge.
 
 ## CI Workflow Instructions
 

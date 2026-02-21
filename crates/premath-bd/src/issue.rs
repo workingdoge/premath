@@ -89,6 +89,52 @@ fn default_timestamp() -> DateTime<Utc> {
 }
 
 impl Issue {
+    /// Construct a minimal issue with deterministic defaults.
+    pub fn new(id: impl Into<String>, title: impl Into<String>) -> Self {
+        let now = Utc::now();
+        Self {
+            id: id.into(),
+            title: title.into(),
+            description: String::new(),
+            design: String::new(),
+            acceptance_criteria: String::new(),
+            notes: String::new(),
+            status: default_status(),
+            priority: default_priority(),
+            issue_type: default_issue_type(),
+            assignee: String::new(),
+            owner: String::new(),
+            created_at: now,
+            updated_at: now,
+            closed_at: None,
+            ephemeral: false,
+            mol_type: String::new(),
+            labels: Vec::new(),
+            dependencies: Vec::new(),
+            metadata: None,
+        }
+    }
+
+    /// Apply status transition side effects and update timestamps.
+    ///
+    /// Closed status sets `closed_at` if missing. Non-closed statuses clear it.
+    pub fn set_status(&mut self, status: impl Into<String>) {
+        self.status = status.into();
+        self.updated_at = Utc::now();
+        if self.status == "closed" {
+            if self.closed_at.is_none() {
+                self.closed_at = Some(Utc::now());
+            }
+        } else {
+            self.closed_at = None;
+        }
+    }
+
+    /// Bump updated timestamp without changing semantic content fields.
+    pub fn touch_updated_at(&mut self) {
+        self.updated_at = Utc::now();
+    }
+
     /// Compute the content hash of substantive fields.
     ///
     /// Excludes: id, timestamps, assignee, owner, metadata.
