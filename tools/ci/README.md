@@ -65,8 +65,8 @@ See `tools/ci/executors/README.md` for runner responsibilities.
 
 Canonical CI decision surface is `mise run ci-decide-required`.
 
-For GitHub branch protection/rulesets, require the status check named
-`ci-required` (workflow `.github/workflows/baseline.yml`, job `ci-required`).
+Provider-specific check naming/binding guidance lives in
+`docs/design/CI-PROVIDER-BINDINGS.md`.
 
 ## Example
 
@@ -82,11 +82,11 @@ mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-decide-required
 
-# strict CI mode: compare witness changedPaths to detected delta
-GITHUB_BASE_REF=main mise run ci-verify-required-strict
+# strict mode: compare witness changedPaths to detected delta
+mise run ci-verify-required-strict
 
-# strict CI mode + phase-in native-only requirement
-GITHUB_BASE_REF=main mise run ci-verify-required-strict-native
+# strict mode + phase-in native-only requirement
+mise run ci-verify-required-strict-native
 ```
 
 Instruction envelope run:

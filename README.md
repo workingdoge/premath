@@ -208,17 +208,17 @@ with `.githooks`-based local hooks.
 
 See `tools/ci/README.md` for runner protocol details.
 
-The CI workflow (`.github/workflows/baseline.yml`) runs:
+The current repo CI binding runs:
 
 - `mise run ci-required`
 - `mise run ci-verify-required-strict`
 - `mise run ci-decide-required`
 
-For GitHub branch protection/rulesets, mark the `ci-required` check as required
-(workflow `baseline`, job `ci-required`).
+Provider-specific required-check mappings are documented in
+`docs/design/CI-PROVIDER-BINDINGS.md`.
 
 `ci-verify-required-strict` uses `--compare-delta` and compares witness
-`changedPaths` against the detected PR delta (`origin/${GITHUB_BASE_REF:-main}...HEAD`).
+`changedPaths` against the detected VCS delta.
 
 CI also publishes:
 

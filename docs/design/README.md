@@ -27,6 +27,7 @@ Boundary:
 - `ARCHITECTURE-MAP.md`: one-page doctrine-to-operation architecture map.
 - `CI-CLOSURE.md`: CI/pre-commit closure gate and change-projected entry minimization.
 - `HIGHER-ORDER-CI-CD.md`: DevOps/control-loop framing for CI/CD inside the coding environment.
+- `CI-PROVIDER-BINDINGS.md`: provider-specific required-check bindings to the canonical CI gate contract.
 
 ## Relationship To Specs
 
