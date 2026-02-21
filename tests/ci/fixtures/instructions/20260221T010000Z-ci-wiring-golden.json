@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "intent": "Smoke-check deterministic instruction witness output.",
+  "scope": {
+    "kind": "repo",
+    "target": "premath"
+  },
+  "instructionType": "ci.gate.check",
+  "typingPolicy": {
+    "allowUnknown": false
+  },
+  "policyDigest": "policy.ci.instruction-smoke.v1",
+  "requestedChecks": [
+    "ci-wiring-check"
+  ]
+}

@@ -1,0 +1,106 @@
+name: instruction
+
+on:
+  workflow_dispatch:
+    inputs:
+      instruction_path:
+        description: "Instruction envelope path"
+        required: true
+        default: "instructions/20260221T000000Z-bootstrap-gate.json"
+        type: string
+      allow_failure:
+        description: "Allow instruction check failure but still emit witness"
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  instruction:
+    name: ci-instruction
+    runs-on: ubuntu-latest
+    env:
+      INSTRUCTION_PATH: ${{ inputs.instruction_path }}
+      ALLOW_FAILURE: ${{ inputs.allow_failure }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup mise
+        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
+        with:
+          version: 2026.2.17
+          install: false
+
+      - name: Trust and install pinned tools
+        run: |
+          mise trust
+          mise install
+
+      - name: Validate instruction envelope
+        run: INSTRUCTION="$INSTRUCTION_PATH" mise run ci-instruction-check
+
+      - name: Resolve instruction artifact path
+        id: resolve
+        run: |
+          instruction_file="$(basename "$INSTRUCTION_PATH")"
+          instruction_id="${instruction_file%.json}"
+          echo "instruction_id=$instruction_id" >> "$GITHUB_OUTPUT"
+          echo "instruction_file=$instruction_file" >> "$GITHUB_OUTPUT"
+
+      - name: Run instruction envelope
+        run: |
+          if [ "$ALLOW_FAILURE" = "true" ]; then
+            sh tools/ci/run_instruction.sh "$INSTRUCTION_PATH" --allow-failure
+          else
+            sh tools/ci/run_instruction.sh "$INSTRUCTION_PATH"
+          fi
+
+      - name: Publish instruction witness summary
+        if: always()
+        env:
+          INSTRUCTION_ID: ${{ steps.resolve.outputs.instruction_id }}
+        run: |
+          python3 - <<'PY'
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          summary_path = Path(os.environ["GITHUB_STEP_SUMMARY"])
+          instruction_id = os.environ["INSTRUCTION_ID"]
+          witness_path = Path("artifacts/ciwitness") / f"{instruction_id}.json"
+          witness_sha_path = Path("artifacts/ciwitness") / f"{instruction_id}.sha256"
+
+          lines = ["### CI Instruction Witness"]
+          if not witness_path.exists():
+              lines.append("")
+              lines.append(f"- witness: missing (`{witness_path}`)")
+          else:
+              payload = json.loads(witness_path.read_text(encoding="utf-8"))
+              digest = hashlib.sha256(witness_path.read_bytes()).hexdigest()
+              witness_sha_path.write_text(digest + "\n", encoding="utf-8")
+              lines.extend(
+                  [
+                      "",
+                      f"- instruction id: `{payload.get('instructionId', '(missing)')}`",
+                      f"- instruction digest: `{payload.get('instructionDigest', '(missing)')}`",
+                      f"- verdict: `{payload.get('verdictClass', '(missing)')}`",
+                      f"- required checks: `{', '.join(payload.get('requiredChecks', [])) if isinstance(payload.get('requiredChecks'), list) else '(invalid)'}`",
+                      f"- executed checks: `{', '.join(payload.get('executedChecks', [])) if isinstance(payload.get('executedChecks'), list) else '(invalid)'}`",
+                      f"- witness sha256: `{digest}`",
+                  ]
+              )
+          summary_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          PY
+
+      - name: Upload instruction witness artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-instruction-witness
+          path: |
+            artifacts/ciwitness/${{ steps.resolve.outputs.instruction_id }}.json
+            artifacts/ciwitness/${{ steps.resolve.outputs.instruction_id }}.sha256
+          if-no-files-found: warn

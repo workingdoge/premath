@@ -44,6 +44,12 @@ verified witness semantics (`accept` or `reject`).
 canonical attested gate chain entrypoint and does not split the required gate
 steps.
 
+`tools/ci/check_instruction_envelope.py` validates instruction envelope
+schema/shape before execution (`mise run ci-instruction-check`).
+
+`tools/ci/test_instruction_smoke.py` runs a deterministic instruction witness
+smoke check against a golden fixture (`mise run ci-instruction-smoke`).
+
 It separates:
 
 - **semantic gate surface**: `hk` profiles/tasks (`hk-check`, `hk-pre-commit`, ...)
@@ -135,9 +141,17 @@ mise run ci-verify-required-strict-native
 Instruction envelope run:
 
 ```bash
+mise run ci-instruction-check
 INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
+mise run ci-instruction-smoke
 ```
+
+GitHub manual dispatch workflow:
+
+- `.github/workflows/instruction.yml`
+- inputs: `instruction_path` and `allow_failure`
+- validates envelope schema/shape, runs instruction, uploads witness artifact
 
 Inspect projection plan without executing checks:
 

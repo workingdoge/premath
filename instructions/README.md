@@ -29,7 +29,13 @@ Optional doctrine-typing fields:
 Run an envelope:
 
 ```bash
+mise run ci-instruction-check
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
+mise run ci-instruction-smoke
 ```
 
 This writes a witness artifact to `artifacts/ciwitness/<instruction-id>.json`.
+
+Golden smoke fixture:
+
+- `tests/ci/fixtures/instructions/20260221T010000Z-ci-wiring-golden.json`
