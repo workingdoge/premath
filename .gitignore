@@ -17,6 +17,7 @@ venv/
 *.tfstate.*
 *.tfplan
 artifacts/ciwitness/*.json
+artifacts/ciwitness/gates/
 
 target/
 .jj/
