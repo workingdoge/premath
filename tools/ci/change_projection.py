@@ -22,6 +22,7 @@ CHECK_TEST = "test"
 CHECK_TEST_TOY = "test-toy"
 CHECK_TEST_KCIR_TOY = "test-kcir-toy"
 CHECK_CONFORMANCE = "conformance-check"
+CHECK_CONFORMANCE_RUN = "conformance-run"
 CHECK_DOCTRINE = "doctrine-check"
 
 CHECK_ORDER: Sequence[str] = (
@@ -31,6 +32,7 @@ CHECK_ORDER: Sequence[str] = (
     CHECK_TEST_TOY,
     CHECK_TEST_KCIR_TOY,
     CHECK_CONFORMANCE,
+    CHECK_CONFORMANCE_RUN,
     CHECK_DOCTRINE,
 )
 
@@ -217,6 +219,7 @@ def project_required_checks(changed_paths: Sequence[str]) -> ProjectionResult:
     if conformance_touched:
         reasons.add("conformance_surface_changed")
         checks.add(CHECK_CONFORMANCE)
+        checks.add(CHECK_CONFORMANCE_RUN)
         checks.add(CHECK_TEST_TOY)
         checks.add(CHECK_TEST_KCIR_TOY)
 

@@ -74,6 +74,8 @@ The v0 baseline check set is:
 3. semantic toy vectors
 4. KCIR toy vectors
 5. conformance stub invariance
+6. doctrine-site coverage checks
+7. executable conformance fixture suites (interop-core, gate, capabilities)
 
 Canonical local command:
 
@@ -95,7 +97,7 @@ A v0 projection SHOULD include:
   - run build and Rust tests
   - include toy and KCIR toy vectors when `crates/premath-kernel` is touched
 - conformance fixture/schema/tooling changes:
-  - run conformance checker and both toy vector suites
+  - run conformance checker, executable conformance suites, and both toy vector suites
 - profile/capability semantics changes:
   - run full baseline
 

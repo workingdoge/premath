@@ -8,5 +8,5 @@ Suggested layout (from `draft/CONFORMANCE.md`):
 
 Capability fixtures include both:
 
-- executable vectors (currently `capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, and `capabilities.instruction_typing`),
+- executable vectors (currently `capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.adjoints_sites`, and `capabilities.change_morphisms`),
 - stub/informational vectors for capabilities not yet wired to executable checks.

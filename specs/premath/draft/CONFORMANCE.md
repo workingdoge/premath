@@ -198,6 +198,10 @@ A repository SHOULD organize vectors as:
 
 This repository's merge-gated conformance surface executes:
 
+- `python3 tools/conformance/run_fixture_suites.py`
+
+The fixture-suite runner executes the three executable suites:
+
 - `python3 tools/conformance/run_interop_core_vectors.py`
 - `python3 tools/conformance/run_gate_vectors.py`
 - `python3 tools/conformance/run_capability_vectors.py`

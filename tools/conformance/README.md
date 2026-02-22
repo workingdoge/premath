@@ -2,6 +2,36 @@
 
 This directory contains lightweight conformance validation helpers.
 
+## `run_fixture_suites.py`
+
+Runs the executable conformance fixture suites through one command surface:
+
+- `interop-core` (`run_interop_core_vectors.py`)
+- `gate` (`run_gate_vectors.py`)
+- `capabilities` (`run_capability_vectors.py`)
+
+The runner computes a deterministic KCIR-style cache binding per suite using:
+
+- `schemeId = kcir.cache.fixture-suite.v1`
+- `domain = conformance.<suite>`
+- `paramsHash` over runner parameters/command/python version
+- `digest` over hashed suite input files
+
+Cache artifacts live under `.premath/cache/conformance/` and are keyed by
+`kcir1_<digest>`.
+
+Run:
+
+```bash
+python3 tools/conformance/run_fixture_suites.py
+```
+
+Disable cache for one run:
+
+```bash
+PREMATH_CONFORMANCE_CACHE=0 python3 tools/conformance/run_fixture_suites.py --no-cache
+```
+
 ## `check_stub_invariance.py`
 
 Validates capability fixture stubs in:

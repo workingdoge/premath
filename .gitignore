@@ -24,5 +24,7 @@ artifacts/ciwitness/gates/
 artifacts/observation/*.json
 artifacts/observation/*.jsonl
 
+.premath/cache/
+
 target/
 .jj/
