@@ -32,6 +32,10 @@
       "description": "Ensure base/fibre transport fixtures satisfy identity, composition, and naturality equalities under deterministic canonicalization."
     },
     {
+      "id": "span_square_commutation",
+      "description": "Ensure pipeline/base-change span-square witnesses are typed, digest-stable, and commute under accepted squares."
+    },
+    {
       "id": "coverage_base_change",
       "description": "Ensure admissible covers remain stable under base-change pullbacks over context refinements."
     },

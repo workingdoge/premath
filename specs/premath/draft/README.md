@@ -29,6 +29,8 @@ Start here:
 - `PREMATH-KERNEL.md` — semantic kernel contract.
 - `UNIFICATION-DOCTRINE.md` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries.
+- `SPAN-SQUARE-CHECKING.md` — typed span/square witness contract for
+  pipeline/base-change commutation checks.
 - `SPEC-TRACEABILITY.md` — spec-to-check/vector coverage matrix with explicit
   gap targets.
 

@@ -65,6 +65,7 @@ const REQUIRED_OBLIGATION_IDS: &[&str] = &[
     "operation_reachability",
     "overlay_traceability",
     "transport_functoriality",
+    "span_square_commutation",
     "coverage_base_change",
     "coverage_transitivity",
     "glue_or_witness_contractibility",
@@ -417,6 +418,7 @@ fn execute_obligation(
         "operation_reachability" => check_operation_reachability(repo_root, contract),
         "overlay_traceability" => check_overlay_traceability(repo_root, contract),
         "transport_functoriality" => check_transport_functoriality(repo_root, contract),
+        "span_square_commutation" => check_span_square_commutation(repo_root, contract),
         "coverage_base_change" => check_coverage_base_change(repo_root, contract),
         "coverage_transitivity" => check_coverage_transitivity(repo_root, contract),
         "glue_or_witness_contractibility" => {
@@ -1026,6 +1028,18 @@ fn check_coverage_base_change(
         contract,
         "coverage_base_change",
         evaluate_site_case_coverage_base_change,
+    )
+}
+
+fn check_span_square_commutation(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "span_square_commutation",
+        evaluate_site_case_span_square_commutation,
     )
 }
 
@@ -1882,6 +1896,166 @@ fn evaluate_site_case_cwf_comprehension_eta(
     })
 }
 
+fn evaluate_site_case_span_square_commutation(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let span_square = require_object_field(artifacts, "spanSquare", case_path)?;
+    let spans = span_square
+        .get("spans")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.spanSquare.spans must be an array",
+                display_path(case_path)
+            ))
+        })?;
+    let squares = span_square
+        .get("squares")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.spanSquare.squares must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let mut failures = Vec::new();
+    if spans.is_empty() || squares.is_empty() {
+        failures.push("coherence.span_square_commutation.violation".to_string());
+    }
+
+    let mut span_digests: BTreeMap<String, String> = BTreeMap::new();
+    let mut span_rows = Vec::new();
+    for (index, span) in spans.iter().enumerate() {
+        let span_obj = span.as_object().ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.spanSquare.spans[{index}] must be an object",
+                display_path(case_path)
+            ))
+        })?;
+        let span_id = require_non_empty_string_field(span_obj, "id", case_path)?;
+        let span_kind = require_non_empty_string_field(span_obj, "kind", case_path)?;
+        let left = require_value_field(span_obj, "left", case_path)?;
+        let apex = require_value_field(span_obj, "apex", case_path)?;
+        let right = require_value_field(span_obj, "right", case_path)?;
+        let span_digest = semantic_digest(&json!({
+            "kind": span_kind,
+            "left": left,
+            "apex": apex,
+            "right": right,
+        }));
+        if span_digests
+            .insert(span_id.clone(), span_digest.clone())
+            .is_some()
+        {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        }
+        span_rows.push(json!({
+            "id": span_id,
+            "kind": span_kind,
+            "digest": span_digest,
+        }));
+    }
+
+    let mut square_ids = BTreeSet::new();
+    let mut square_rows = Vec::new();
+    for (index, square) in squares.iter().enumerate() {
+        let square_obj = square.as_object().ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.spanSquare.squares[{index}] must be an object",
+                display_path(case_path)
+            ))
+        })?;
+        let square_id = require_non_empty_string_field(square_obj, "id", case_path)?;
+        if !square_ids.insert(square_id.clone()) {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        }
+        let top = require_non_empty_string_field(square_obj, "top", case_path)?;
+        let bottom = require_non_empty_string_field(square_obj, "bottom", case_path)?;
+        let left = require_non_empty_string_field(square_obj, "left", case_path)?;
+        let right = require_non_empty_string_field(square_obj, "right", case_path)?;
+        let result = require_non_empty_string_field(square_obj, "result", case_path)?;
+        let square_failure_classes = dedupe_sorted(require_string_array_field(
+            square_obj,
+            "failureClasses",
+            case_path,
+            "artifacts.spanSquare.squares[]",
+        )?);
+        let digest = require_non_empty_string_field(square_obj, "digest", case_path)?;
+        let expected_digest = square_witness_digest(
+            top.as_str(),
+            bottom.as_str(),
+            left.as_str(),
+            right.as_str(),
+            result.as_str(),
+            &square_failure_classes,
+        );
+        if digest != expected_digest {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        }
+
+        let top_digest = span_digests.get(&top).cloned();
+        let bottom_digest = span_digests.get(&bottom).cloned();
+        let left_digest = span_digests.get(&left).cloned();
+        let right_digest = span_digests.get(&right).cloned();
+        if top_digest.is_none()
+            || bottom_digest.is_none()
+            || left_digest.is_none()
+            || right_digest.is_none()
+        {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        }
+        if result != "accepted" && result != "rejected" {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        } else if result == "accepted" {
+            if !square_failure_classes.is_empty()
+                || top_digest.as_deref().unwrap_or_default()
+                    != bottom_digest.as_deref().unwrap_or_default()
+            {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+            }
+        } else if square_failure_classes.is_empty() {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        }
+
+        square_rows.push(json!({
+            "id": square_id,
+            "result": result,
+            "top": {"id": top, "digest": top_digest},
+            "bottom": {"id": bottom, "digest": bottom_digest},
+            "left": {"id": left, "digest": left_digest},
+            "right": {"id": right, "digest": right_digest},
+            "failureClasses": square_failure_classes,
+            "providedDigest": digest,
+            "expectedDigest": expected_digest,
+        }));
+    }
+
+    Ok(SiteEvaluation {
+        result: if failures.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failures),
+        details: json!({
+            "shape": {
+                "spanCount": spans.len(),
+                "squareCount": squares.len(),
+            },
+            "spans": span_rows,
+            "squares": square_rows,
+        }),
+    })
+}
+
 #[derive(Debug)]
 struct TransportEvaluation {
     result: String,
@@ -2017,6 +2191,28 @@ fn semantic_digest(value: &Value) -> String {
     let mut hasher = Sha256::new();
     hasher.update(canonical.as_bytes());
     format!("sem1_{:x}", hasher.finalize())
+}
+
+fn square_witness_digest(
+    top: &str,
+    bottom: &str,
+    left: &str,
+    right: &str,
+    result: &str,
+    failure_classes: &[String],
+) -> String {
+    let core = json!({
+        "top": top,
+        "bottom": bottom,
+        "left": left,
+        "right": right,
+        "result": result,
+        "failureClasses": failure_classes,
+    });
+    let canonical = serde_json::to_string(&core).expect("square witness digest serialization");
+    let mut hasher = Sha256::new();
+    hasher.update(canonical.as_bytes());
+    format!("sqw1_{:x}", hasher.finalize())
 }
 
 fn require_object_field<'a>(
@@ -2668,6 +2864,68 @@ mod tests {
             evaluated
                 .failure_classes
                 .contains(&"coherence.cwf_comprehension_eta.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_span_square_commutation_detects_violation() {
+        let failure_classes: Vec<String> = Vec::new();
+        let case = json!({
+            "spanSquare": {
+                "spans": [
+                    {
+                        "id": "top",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"run": "a"},
+                        "right": {"out": "x"}
+                    },
+                    {
+                        "id": "bottom",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"run": "b"},
+                        "right": {"out": "y"}
+                    },
+                    {
+                        "id": "left",
+                        "kind": "base_change",
+                        "left": {"ctx": "Delta"},
+                        "apex": {"reindex": "in"},
+                        "right": {"ctx": "Gamma"}
+                    },
+                    {
+                        "id": "right",
+                        "kind": "base_change",
+                        "left": {"out": "x"},
+                        "apex": {"reindex": "out"},
+                        "right": {"out": "y"}
+                    }
+                ],
+                "squares": [
+                    {
+                        "id": "sq1",
+                        "top": "top",
+                        "bottom": "bottom",
+                        "left": "left",
+                        "right": "right",
+                        "result": "accepted",
+                        "failureClasses": failure_classes,
+                        "digest": square_witness_digest("top", "bottom", "left", "right", "accepted", &Vec::new())
+                    }
+                ]
+            }
+        });
+        let evaluated = evaluate_site_case_span_square_commutation(
+            &case,
+            Path::new("site-case-span-square-commutation.json"),
+        )
+        .expect("span/square commutation case should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.span_square_commutation.violation".to_string())
         );
     }
 

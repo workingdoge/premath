@@ -169,6 +169,8 @@ explicitly claimed under §5.4 or §5.6.
   `capabilities.instruction_typing` is claimed).
 - `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries and deterministic projections.
+- `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
+  pipeline/base-change commutation in coherence checker surfaces.
 - `raw/CTX-SITE` — informational site base (`Ctx`) + coverage (`J`) model for
   context/refinement decomposition.
 - `raw/SHEAF-STACK` — informational presheaf/sheaf/stack rendering of

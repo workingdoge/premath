@@ -124,6 +124,8 @@ This doctrine constrains how existing specs compose:
 - `draft/LLM-INSTRUCTION-DOCTRINE` and `draft/LLM-PROPOSAL-CHECKING`
   (checking-mode authority split),
 - `draft/PREMATH-COHERENCE` (cross-surface parity obligations),
+- `draft/SPAN-SQUARE-CHECKING` (typed span/square witness layer for
+  pipeline/base-change commutation),
 - `draft/CHANGE-MORPHISMS` (deterministic change projections),
 - `draft/KCIR-CORE`, `draft/NF`, `draft/NORMALIZER` (interop identity surfaces).
 

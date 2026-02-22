@@ -70,13 +70,14 @@ A conforming checker MUST support at least the following obligation IDs:
 4. `operation_reachability`
 5. `overlay_traceability`
 6. `transport_functoriality`
-7. `coverage_base_change`
-8. `coverage_transitivity`
-9. `glue_or_witness_contractibility`
-10. `cwf_substitution_identity`
-11. `cwf_substitution_composition`
-12. `cwf_comprehension_beta`
-13. `cwf_comprehension_eta`
+7. `span_square_commutation`
+8. `coverage_base_change`
+9. `coverage_transitivity`
+10. `glue_or_witness_contractibility`
+11. `cwf_substitution_identity`
+12. `cwf_substitution_composition`
+13. `cwf_comprehension_beta`
+14. `cwf_comprehension_eta`
 
 Unknown obligation IDs in the contract MUST reject deterministically.
 Missing required obligation IDs MUST reject deterministically.
@@ -150,17 +151,31 @@ transport laws:
 - composition preservation,
 - naturality square equality.
 
-### 4.7 `coverage_base_change`
+### 4.7 `span_square_commutation`
+
+MUST reject when span/square fixtures fail typed commutation constraints for the
+pipeline/base-change witness layer:
+
+- each square edge references declared spans,
+- square witness digest is deterministic and matches its canonical fields,
+- accepted squares have empty failure classes and commuting top/bottom span
+  semantics,
+- rejected squares carry non-empty failure classes.
+
+This obligation keeps pipeline + base-change witness squares inside the same
+deterministic coherence contract surface (no side-channel planner authority).
+
+### 4.8 `coverage_base_change`
 
 MUST reject when admissible cover pullback fixtures violate base-change
 stability under refinement maps.
 
-### 4.8 `coverage_transitivity`
+### 4.9 `coverage_transitivity`
 
 MUST reject when composed-cover fixtures violate transitivity of covers under
 refinement-of-cover composition.
 
-### 4.9 `glue_or_witness_contractibility`
+### 4.10 `glue_or_witness_contractibility`
 
 MUST reject when descent fixtures fail deterministic glue-or-obstruction shape:
 
@@ -169,7 +184,7 @@ MUST reject when descent fixtures fail deterministic glue-or-obstruction shape:
 - declared glue/obstruction evidence is structurally invalid for the fixture
   contract.
 
-### 4.10 `cwf_substitution_identity`
+### 4.11 `cwf_substitution_identity`
 
 MUST reject when strict substitution identity equalities fail on fixture
 rows:
@@ -180,7 +195,7 @@ rows:
 This obligation is a strict (definitional) presentation boundary for
 substitution identity in the CwF operational lane.
 
-### 4.11 `cwf_substitution_composition`
+### 4.12 `cwf_substitution_composition`
 
 MUST reject when strict substitution composition equalities fail on fixture
 rows:
@@ -191,13 +206,13 @@ rows:
 This obligation is a strict (definitional) presentation boundary for
 substitution composition in the CwF operational lane.
 
-### 4.12 `cwf_comprehension_beta`
+### 4.13 `cwf_comprehension_beta`
 
 MUST reject when strict comprehension beta equalities fail on fixture rows:
 
 - `q[⟨id, a⟩] = a`.
 
-### 4.13 `cwf_comprehension_eta`
+### 4.14 `cwf_comprehension_eta`
 
 MUST reject when strict comprehension eta equalities fail on fixture rows:
 

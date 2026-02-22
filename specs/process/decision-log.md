@@ -2141,3 +2141,29 @@ could be skipped by stale conformance cache hits.
 - coherence-contract cache refs now invalidate on workspace dependency/feature
   changes.
 - cache validity remains aligned with executable checker runtime composition.
+
+---
+
+## 2026-02-22 — Decision 0075: Introduce span/square commutation obligation and draft spec
+
+### Decision
+Add a first-class coherence obligation for typed span/square commutation:
+
+- new required obligation id: `span_square_commutation`,
+- new draft spec: `draft/SPAN-SQUARE-CHECKING`,
+- new coherence-site vectors:
+  - `golden/span_square_commutation_accept`
+  - `adversarial/span_square_commutation_reject`.
+
+Implement checker hook in `premath-coherence` via site-obligation evaluator
+`evaluate_site_case_span_square_commutation`.
+
+### Rationale
+Pipeline/base-change witness squares were previously implicit across checker and
+CI surfaces. Adding a minimal span/square typed layer makes this boundary
+explicit without introducing a parallel authority surface.
+
+### Consequences
+- span/square commutation is now merge-gated under `coherence-check`.
+- the new typed layer is integrated across spec index, unification doctrine,
+  traceability matrix, and executable fixtures.
