@@ -19,6 +19,7 @@ import argparse
 import hashlib
 import json
 import sys
+import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence, Tuple
@@ -27,10 +28,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "ci"))
 
 from change_projection import project_required_checks  # type: ignore  # noqa: E402
-from instruction_policy import (  # type: ignore  # noqa: E402
-    PolicyValidationError,
-    validate_requested_checks,
-)
+from instruction_check_client import InstructionCheckError, run_instruction_check  # type: ignore  # noqa: E402
 from proposal_check_client import (  # type: ignore  # noqa: E402
     ProposalCheckError,
     run_proposal_check,
@@ -877,29 +875,26 @@ def run_squeak_site(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
 
 
 def canonical_instruction_envelope(instruction: Dict[str, Any]) -> Dict[str, Any]:
-    intent = ensure_string(instruction.get("intent"), "artifacts.instruction.intent")
-    if "scope" not in instruction:
-        raise ValueError("artifacts.instruction.scope is required")
-    scope = instruction.get("scope")
-    if scope in (None, ""):
-        raise ValueError("artifacts.instruction.scope must be non-empty")
-    normalizer_id = ensure_string(instruction.get("normalizerId"), "artifacts.instruction.normalizerId")
-    policy_digest = ensure_string(instruction.get("policyDigest"), "artifacts.instruction.policyDigest")
-    requested_checks = ensure_string_list(
-        instruction.get("requestedChecks", []), "artifacts.instruction.requestedChecks"
-    )
-    if len(set(requested_checks)) != len(requested_checks):
-        raise ValueError("artifacts.instruction.requestedChecks must not contain duplicates")
-    try:
-        validate_requested_checks(policy_digest, requested_checks, normalizer_id=normalizer_id)
-    except PolicyValidationError as exc:
-        raise ValueError(f"{exc.failure_class}: {exc}") from exc
+    payload: Dict[str, Any] = dict(instruction)
+    payload.setdefault("schema", 1)
+    payload.setdefault("typingPolicy", {"allowUnknown": False})
+    payload.setdefault("capabilityClaims", [])
+    with tempfile.TemporaryDirectory(prefix="premath-capability-instruction-check-") as tmp:
+        instruction_path = Path(tmp) / "20260222T000000Z-capability-check.json"
+        instruction_path.write_text(
+            json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False),
+            encoding="utf-8",
+        )
+        try:
+            validated = run_instruction_check(ROOT, instruction_path)
+        except InstructionCheckError as exc:
+            raise ValueError(f"{exc.failure_class}: {exc.reason}") from exc
     return {
-        "intent": intent,
-        "scope": scope,
-        "normalizerId": normalizer_id,
-        "policyDigest": policy_digest,
-        "requestedChecks": requested_checks,
+        "intent": validated["intent"],
+        "scope": validated["scope"],
+        "normalizerId": validated["normalizerId"],
+        "policyDigest": validated["policyDigest"],
+        "requestedChecks": validated["requestedChecks"],
     }
 
 
