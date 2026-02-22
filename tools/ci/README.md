@@ -66,6 +66,19 @@ private/local-only surfaces (for example `.claude/`, `.serena/`,
 `.premath/cache/`) and required ignore entries
 (`mise run ci-hygiene-check`).
 
+`tools/ci/check_branch_policy.py` validates effective GitHub `main` branch
+rules against tracked process policy (`specs/process/GITHUB-BRANCH-POLICY.json`)
+with two modes:
+
+- fixture/offline deterministic mode (`mise run ci-branch-policy-check`),
+- live API mode (`mise run ci-branch-policy-check-live`) for server-side drift
+  detection.
+
+Live mode reads `GITHUB_TOKEN` (or an alternate token env via `--token-env`)
+and checks the effective rules API surface:
+`/repos/{owner}/{repo}/rules/branches/{branch}`.
+For this repo policy, bypass actors are fail-closed.
+
 `tools/ci/check_pipeline_wiring.py` validates provider-specific workflow files
 remain thin wrappers around provider-neutral pipeline entrypoints
 (`mise run ci-pipeline-check`).
@@ -118,6 +131,9 @@ Workflow authoring contract:
   `python3 tools/ci/pipeline_required.py`.
 - `.github/workflows/instruction.yml` must call
   `python3 tools/ci/pipeline_instruction.py --instruction "$INSTRUCTION_PATH"`.
+- `.github/workflows/branch-policy.yml` runs live branch/ruleset verification
+  against `specs/process/GITHUB-BRANCH-POLICY.json` and requires secret
+  `PREMATH_BRANCH_POLICY_TOKEN` for admin-read API access.
 - workflow files should not inline attestation/summary logic; keep pipeline
   orchestration in `tools/ci/pipeline_*.py`.
 - validate with:
@@ -224,6 +240,7 @@ mise run ci-required
 mise run ci-wiring-check
 mise run ci-command-surface-check
 mise run ci-hygiene-check
+mise run ci-branch-policy-check
 mise run ci-pipeline-check
 mise run ci-pipeline-test
 mise run ci-observation-test
@@ -234,6 +251,7 @@ mise run ci-observation-check
 mise run ci-verify-required
 mise run ci-required-verified
 mise run ci-required-attested
+mise run ci-branch-policy-check-live
 mise run ci-pipeline-required
 mise run ci-decide-required
 mise run ci-verify-decision

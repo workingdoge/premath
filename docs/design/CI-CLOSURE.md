@@ -42,6 +42,7 @@ Current full baseline gate (`mise run baseline`) includes:
 4. CI/control-plane closure
    - `ci-command-surface-check`
    - `ci-hygiene-check`
+   - `ci-branch-policy-check`
    - `ci-pipeline-check`
    - `ci-pipeline-test`
    - `ci-observation-test`

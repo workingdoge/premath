@@ -67,6 +67,7 @@ run = [
   "mise run doctrine-check",
   "mise run ci-command-surface-check",
   "mise run ci-hygiene-check",
+  "mise run ci-branch-policy-check",
   "mise run ci-pipeline-check",
   "mise run ci-pipeline-test",
   "mise run ci-observation-test",
@@ -101,6 +102,12 @@ run = "python3 tools/ci/check_command_surface.py"
 [tasks.ci-hygiene-check]
 run = "python3 tools/ci/check_repo_hygiene.py"
 
+[tasks.ci-branch-policy-check]
+run = "python3 tools/ci/check_branch_policy.py --rules-json tests/ci/fixtures/branch-policy/effective-main-rules-golden.json"
+
+[tasks.ci-branch-policy-check-live]
+run = "python3 tools/ci/check_branch_policy.py --fetch-live"
+
 [tasks.ci-wiring-check]
 run = "python3 tools/ci/check_ci_wiring.py"
 
@@ -119,6 +126,7 @@ run = [
   "python3 tools/ci/test_instruction_check_client.py",
   "python3 tools/ci/test_proposal_check_client.py",
   "python3 tools/ci/test_instruction_reject_witness.py",
+  "python3 tools/ci/test_branch_policy.py",
   "python3 tools/ci/test_repo_hygiene.py",
   "python3 tools/conformance/test_docs_coherence.py",
 ]

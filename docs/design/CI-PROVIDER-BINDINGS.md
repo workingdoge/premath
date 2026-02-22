@@ -37,6 +37,9 @@ Binding:
 
 - workflow job name: `ci-required`
 - required status check in branch protection/rulesets: `ci-required`
+- tracked server policy contract:
+  `specs/process/GITHUB-BRANCH-POLICY.json` (checked by
+  `tools/ci/check_branch_policy.py`)
 - adapter step:
   `python3 tools/ci/providers/export_github_env.py >> "$GITHUB_ENV"`
 

@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "policyKind": "premath.github.branch_policy.v1",
+  "policyId": "github.main.no-bypass.v1",
+  "repository": "workingdoge/premath",
+  "branch": "main",
+  "requiredRuleTypes": [
+    "pull_request",
+    "required_status_checks",
+    "non_fast_forward",
+    "deletion"
+  ],
+  "requiredStatusChecks": [
+    "ci-required"
+  ],
+  "strictStatusChecks": true,
+  "requirePullRequest": true,
+  "forbidBypassActors": true
+}

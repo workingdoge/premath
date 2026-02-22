@@ -6,7 +6,7 @@
 - Specs are lifecycle-scoped:
   - `specs/premath/draft/` for promoted contract specs
   - `specs/premath/raw/` for exploratory/informational specs
-  - `specs/process/` for governance (`coss.md`, `decision-log.md`)
+  - `specs/process/` for governance (`coss.md`, `decision-log.md`, `GITHUB-BRANCH-POLICY.json`)
 - Tests and vectors live in `crates/*/tests`, `tests/toy/`, `tests/kcir_toy/`, and `tests/conformance/`.
 - Tooling scripts live in `tools/` (`toy`, `kcir_toy`, `conformance`).
 
@@ -36,6 +36,8 @@
 - `mise run hk-check` / `mise run hk-fix` — run hk baseline check or fast local fixes (`hk-fix` runs on all files with no auto-stage).
 - `mise run ci-command-surface-check` — enforce `mise`-only command-surface references (reject legacy task-runner command/file surfaces).
 - `mise run ci-hygiene-check` — enforce repository hygiene guardrails for private/local-only surfaces and required ignore entries.
+- `mise run ci-branch-policy-check` — validate tracked GitHub `main` branch policy contract against deterministic effective-rules fixture.
+- `mise run ci-branch-policy-check-live` — validate tracked GitHub `main` branch policy contract against live server rules API (`GITHUB_TOKEN`/admin-read token required).
 - `mise run ci-pipeline-check` — validate provider workflow wrappers call canonical provider-neutral pipeline entrypoints.
 - `mise run ci-pipeline-test` — run deterministic unit tests for provider-neutral pipeline summary/digest emission.
 - `mise run ci-observation-test` — run deterministic reducer/query tests for `Observation Surface v0`.

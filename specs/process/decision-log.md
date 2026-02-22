@@ -1467,3 +1467,34 @@ hidden drift.
   authority input.
 - coherence scope checks now bind to kernel registry kind + obligation set via
   typed API export rather than parsing source text maps.
+
+---
+
+## 2026-02-22 — Decision 0051: Add machine branch-policy contract and live ruleset checker
+
+### Decision
+Introduce a tracked process policy artifact and checker for server-side GitHub
+enforcement on `main`:
+
+- policy artifact: `specs/process/GITHUB-BRANCH-POLICY.json`
+- checker: `tools/ci/check_branch_policy.py`
+  - fixture mode: `--rules-json ...` (deterministic local/CI parser check)
+  - live mode: `--fetch-live` against
+    `/repos/{owner}/{repo}/rules/branches/{branch}`
+- baseline task integration (fixture mode):
+  `mise run ci-branch-policy-check`
+- manual live governance workflow:
+  `.github/workflows/branch-policy.yml`
+
+### Rationale
+The repository observed remote push acceptance with bypass messaging despite
+local `ci-required-attested` success. This indicates branch/ruleset authority
+must be checked at the server surface, not inferred from local gate execution.
+
+### Consequences
+- branch-protection/ruleset shape now has a tracked policy contract in-repo.
+- parser/contract drift is covered by deterministic test + fixture surfaces.
+- live server checks are available as a first-class workflow with explicit
+  admin-read token requirement (`PREMATH_BRANCH_POLICY_TOKEN`).
+- governance hardening remains fail-closed on bypass actors under the tracked
+  policy.
