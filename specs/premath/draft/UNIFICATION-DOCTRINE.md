@@ -425,6 +425,30 @@ Implementations MUST reject fail closed on Stage 1 parity errors with at least:
 Equivalent implementation-local class names are permitted only when a
 deterministic mapping to these classes is documented and replay-stable.
 
+#### 10.6.3 Stage 1 deterministic rollback witness contract
+
+When Stage 1 rollback is claimed, implementations MUST define one deterministic
+rollback witness profile bound to:
+
+- source/target stages (`stage1 -> stage0`),
+- deterministic binding tuple (`normalizerId`, `policyDigest`),
+- authority digest refs for pre-rollback and rollback-target authority
+  checkpoints.
+
+Rollback trigger metadata MUST include at least all Stage 1 parity classes from
+§10.6.2 (`missing`, `mismatch`, `unbound`), so rollback admission remains
+deterministic and replayable.
+
+Implementations MUST reject fail closed on Stage 1 rollback witness errors with
+at least:
+
+- `unification.evidence_stage1.rollback.precondition`
+  (missing/invalid rollback preconditions),
+- `unification.evidence_stage1.rollback.identity_drift`
+  (rollback witness identity comparison indicates authority drift),
+- `unification.evidence_stage1.rollback.unbound`
+  (missing deterministic binding context for rollback witness comparison).
+
 ## 11. Cross-layer Obstruction Algebra (v0)
 
 Implementations MAY project failure classes into one typed obstruction algebra

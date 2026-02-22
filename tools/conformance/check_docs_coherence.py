@@ -63,6 +63,10 @@ UNIFICATION_STAGE1_PROFILE_MARKERS: Tuple[str, ...] = (
     "`unification.evidence_stage1.parity.missing`",
     "`unification.evidence_stage1.parity.mismatch`",
     "`unification.evidence_stage1.parity.unbound`",
+    "#### 10.6.3 Stage 1 deterministic rollback witness contract",
+    "`unification.evidence_stage1.rollback.precondition`",
+    "`unification.evidence_stage1.rollback.identity_drift`",
+    "`unification.evidence_stage1.rollback.unbound`",
 )
 SPEC_INDEX_UNIFIED_FACTORIZATION_RE = re.compile(
     r"Unified evidence factoring MUST route control-plane artifact families through\s+"
@@ -111,6 +115,16 @@ UNIFICATION_OBSTRUCTION_MARKERS: Tuple[str, ...] = (
 CAPABILITY_VECTORS_OBSTRUCTION_RE = re.compile(
     r"cross-layer obstruction rows roundtrip deterministically",
     re.IGNORECASE,
+)
+STAGE1_PARITY_CANONICAL_CLASSES: Tuple[str, str, str] = (
+    "unification.evidence_stage1.parity.missing",
+    "unification.evidence_stage1.parity.mismatch",
+    "unification.evidence_stage1.parity.unbound",
+)
+STAGE1_ROLLBACK_CANONICAL_CLASSES: Tuple[str, str, str] = (
+    "unification.evidence_stage1.rollback.precondition",
+    "unification.evidence_stage1.rollback.identity_drift",
+    "unification.evidence_stage1.rollback.unbound",
 )
 
 
@@ -242,6 +256,139 @@ def parse_control_plane_projection_checks(contract_path: Path) -> List[str]:
     if len(set(parsed)) != len(parsed):
         raise ValueError(f"{contract_path}: requiredGateProjection.checkOrder must not contain duplicates")
     return parsed
+
+
+def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[str, object]]:
+    payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{contract_path}: root must be an object")
+    if payload.get("schema") != 1:
+        raise ValueError(f"{contract_path}: schema must be 1")
+    if payload.get("contractKind") != "premath.control_plane.contract.v1":
+        raise ValueError(f"{contract_path}: contractKind mismatch")
+
+    stage1_parity = payload.get("evidenceStage1Parity")
+    if not isinstance(stage1_parity, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Parity must be an object")
+    profile_kind = stage1_parity.get("profileKind")
+    route = stage1_parity.get("authorityToTypedCoreRoute")
+    if not isinstance(profile_kind, str) or not profile_kind.strip():
+        raise ValueError(f"{contract_path}: evidenceStage1Parity.profileKind must be a non-empty string")
+    if not isinstance(route, str) or not route.strip():
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.authorityToTypedCoreRoute must be a non-empty string"
+        )
+    comparison_tuple = stage1_parity.get("comparisonTuple")
+    if not isinstance(comparison_tuple, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Parity.comparisonTuple must be an object")
+    for key in ("authorityDigestRef", "typedCoreDigestRef", "normalizerIdRef", "policyDigestRef"):
+        value = comparison_tuple.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage1Parity.comparisonTuple.{key} must be a non-empty string"
+            )
+    if comparison_tuple.get("normalizerIdRef") != "normalizerId":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.comparisonTuple.normalizerIdRef must be `normalizerId`"
+        )
+    if comparison_tuple.get("policyDigestRef") != "policyDigest":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.comparisonTuple.policyDigestRef must be `policyDigest`"
+        )
+    parity_classes = stage1_parity.get("failureClasses")
+    if not isinstance(parity_classes, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Parity.failureClasses must be an object")
+    parsed_parity_classes = (
+        parity_classes.get("missing"),
+        parity_classes.get("mismatch"),
+        parity_classes.get("unbound"),
+    )
+    if parsed_parity_classes != STAGE1_PARITY_CANONICAL_CLASSES:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.failureClasses must map to canonical Stage 1 parity classes"
+        )
+
+    stage1_rollback = payload.get("evidenceStage1Rollback")
+    if not isinstance(stage1_rollback, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback must be an object")
+    for key in ("profileKind", "witnessKind", "fromStage", "toStage"):
+        value = stage1_rollback.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{contract_path}: evidenceStage1Rollback.{key} must be a non-empty string")
+    if stage1_rollback.get("fromStage") != "stage1":
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.fromStage must be `stage1`")
+    if stage1_rollback.get("toStage") != "stage0":
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.toStage must be `stage0`")
+    trigger_failure_classes = stage1_rollback.get("triggerFailureClasses")
+    if not isinstance(trigger_failure_classes, list) or not trigger_failure_classes:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses must be a non-empty list"
+        )
+    parsed_trigger_classes: List[str] = []
+    for idx, item in enumerate(trigger_failure_classes):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses[{idx}] must be a non-empty string"
+            )
+        parsed_trigger_classes.append(item.strip())
+    if len(set(parsed_trigger_classes)) != len(parsed_trigger_classes):
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses must not contain duplicates"
+        )
+    missing_trigger_classes = sorted(set(STAGE1_PARITY_CANONICAL_CLASSES) - set(parsed_trigger_classes))
+    if missing_trigger_classes:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses missing canonical Stage 1 parity classes: {missing_trigger_classes}"
+        )
+
+    identity_refs = stage1_rollback.get("identityRefs")
+    if not isinstance(identity_refs, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.identityRefs must be an object")
+    for key in ("authorityDigestRef", "rollbackAuthorityDigestRef", "normalizerIdRef", "policyDigestRef"):
+        value = identity_refs.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage1Rollback.identityRefs.{key} must be a non-empty string"
+            )
+    if identity_refs.get("authorityDigestRef") == identity_refs.get("rollbackAuthorityDigestRef"):
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.identityRefs authority/rollback refs must differ"
+        )
+    if identity_refs.get("normalizerIdRef") != "normalizerId":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.identityRefs.normalizerIdRef must be `normalizerId`"
+        )
+    if identity_refs.get("policyDigestRef") != "policyDigest":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.identityRefs.policyDigestRef must be `policyDigest`"
+        )
+
+    rollback_classes = stage1_rollback.get("failureClasses")
+    if not isinstance(rollback_classes, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.failureClasses must be an object")
+    parsed_rollback_classes = (
+        rollback_classes.get("precondition"),
+        rollback_classes.get("identityDrift"),
+        rollback_classes.get("unbound"),
+    )
+    if parsed_rollback_classes != STAGE1_ROLLBACK_CANONICAL_CLASSES:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.failureClasses must map to canonical Stage 1 rollback classes"
+        )
+
+    return {
+        "parity": {
+            "profileKind": profile_kind.strip(),
+            "authorityToTypedCoreRoute": route.strip(),
+            "failureClasses": parsed_parity_classes,
+        },
+        "rollback": {
+            "profileKind": str(stage1_rollback.get("profileKind", "")).strip(),
+            "witnessKind": str(stage1_rollback.get("witnessKind", "")).strip(),
+            "triggerFailureClasses": parsed_trigger_classes,
+            "failureClasses": parsed_rollback_classes,
+        },
+    }
 
 
 def parse_spec_index_capability_doc_map(section_54: str) -> Dict[str, str]:
@@ -428,6 +575,7 @@ def main() -> int:
 
     projection_checks = parse_control_plane_projection_checks(control_plane_contract)
     projection_check_set = set(projection_checks)
+    parse_control_plane_stage1_contract(control_plane_contract)
 
     ci_projection_section = extract_section_between(
         ci_closure_text,

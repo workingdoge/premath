@@ -65,6 +65,109 @@ run = "echo ok"
             checks = check_docs_coherence.parse_control_plane_projection_checks(path)
             self.assertEqual(checks, ["baseline", "build"])
 
+    def test_parse_control_plane_stage1_contract(self) -> None:
+        payload = {
+            "schema": 1,
+            "contractKind": "premath.control_plane.contract.v1",
+            "requiredGateProjection": {
+                "projectionPolicy": "ci-topos-v0",
+                "checkOrder": ["baseline"],
+            },
+            "evidenceStage1Parity": {
+                "profileKind": "ev.stage1.core.v1",
+                "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+                "comparisonTuple": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "typedCoreDigestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "missing": "unification.evidence_stage1.parity.missing",
+                    "mismatch": "unification.evidence_stage1.parity.mismatch",
+                    "unbound": "unification.evidence_stage1.parity.unbound",
+                },
+            },
+            "evidenceStage1Rollback": {
+                "profileKind": "ev.stage1.rollback.v1",
+                "witnessKind": "ev.stage1.rollback.witness.v1",
+                "fromStage": "stage1",
+                "toStage": "stage0",
+                "triggerFailureClasses": [
+                    "unification.evidence_stage1.parity.missing",
+                    "unification.evidence_stage1.parity.mismatch",
+                    "unification.evidence_stage1.parity.unbound",
+                ],
+                "identityRefs": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "precondition": "unification.evidence_stage1.rollback.precondition",
+                    "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+                    "unbound": "unification.evidence_stage1.rollback.unbound",
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-stage1-") as tmp:
+            path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            stage1 = check_docs_coherence.parse_control_plane_stage1_contract(path)
+            self.assertEqual(stage1["parity"]["profileKind"], "ev.stage1.core.v1")
+            self.assertEqual(stage1["rollback"]["witnessKind"], "ev.stage1.rollback.witness.v1")
+
+    def test_parse_control_plane_stage1_contract_rejects_missing_trigger_class(self) -> None:
+        payload = {
+            "schema": 1,
+            "contractKind": "premath.control_plane.contract.v1",
+            "requiredGateProjection": {
+                "projectionPolicy": "ci-topos-v0",
+                "checkOrder": ["baseline"],
+            },
+            "evidenceStage1Parity": {
+                "profileKind": "ev.stage1.core.v1",
+                "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+                "comparisonTuple": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "typedCoreDigestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "missing": "unification.evidence_stage1.parity.missing",
+                    "mismatch": "unification.evidence_stage1.parity.mismatch",
+                    "unbound": "unification.evidence_stage1.parity.unbound",
+                },
+            },
+            "evidenceStage1Rollback": {
+                "profileKind": "ev.stage1.rollback.v1",
+                "witnessKind": "ev.stage1.rollback.witness.v1",
+                "fromStage": "stage1",
+                "toStage": "stage0",
+                "triggerFailureClasses": [
+                    "unification.evidence_stage1.parity.missing",
+                ],
+                "identityRefs": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "precondition": "unification.evidence_stage1.rollback.precondition",
+                    "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+                    "unbound": "unification.evidence_stage1.rollback.unbound",
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-stage1-invalid-") as tmp:
+            path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "triggerFailureClasses missing canonical"):
+                check_docs_coherence.parse_control_plane_stage1_contract(path)
+
     def test_parse_doctrine_check_commands(self) -> None:
         text = """
 [tasks.doctrine-check]
@@ -154,6 +257,10 @@ one canonical typed-core identity function over canonicalized profile bytes
 `unification.evidence_stage1.parity.missing`
 `unification.evidence_stage1.parity.mismatch`
 `unification.evidence_stage1.parity.unbound`
+#### 10.6.3 Stage 1 deterministic rollback witness contract
+`unification.evidence_stage1.rollback.precondition`
+`unification.evidence_stage1.rollback.identity_drift`
+`unification.evidence_stage1.rollback.unbound`
 """
         missing = check_docs_coherence.find_missing_markers(
             text, check_docs_coherence.UNIFICATION_STAGE1_PROFILE_MARKERS

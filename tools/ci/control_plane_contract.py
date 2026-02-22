@@ -29,6 +29,16 @@ _REQUIRED_SCHEMA_KIND_FAMILIES = (
 )
 _MAX_ALIAS_RUNWAY_MONTHS = 12
 _SCHEMA_LIFECYCLE_GOVERNANCE_MODES = ("rollover", "freeze")
+_STAGE1_PARITY_FAILURE_CLASSES = (
+    "unification.evidence_stage1.parity.missing",
+    "unification.evidence_stage1.parity.mismatch",
+    "unification.evidence_stage1.parity.unbound",
+)
+_STAGE1_ROLLBACK_FAILURE_CLASSES = (
+    "unification.evidence_stage1.rollback.precondition",
+    "unification.evidence_stage1.rollback.identity_drift",
+    "unification.evidence_stage1.rollback.unbound",
+)
 
 
 def _require_non_empty_string(value: Any, label: str) -> str:
@@ -285,6 +295,193 @@ def _resolve_kind_in_family(
     return canonical_kind
 
 
+def _validate_stage1_parity_contract(payload: Any) -> Dict[str, Any]:
+    stage1 = _require_object(payload, "evidenceStage1Parity")
+    profile_kind = _require_non_empty_string(
+        stage1.get("profileKind"),
+        "evidenceStage1Parity.profileKind",
+    )
+    authority_to_typed_core_route = _require_non_empty_string(
+        stage1.get("authorityToTypedCoreRoute"),
+        "evidenceStage1Parity.authorityToTypedCoreRoute",
+    )
+    comparison_tuple = _require_object(
+        stage1.get("comparisonTuple"),
+        "evidenceStage1Parity.comparisonTuple",
+    )
+    authority_digest_ref = _require_non_empty_string(
+        comparison_tuple.get("authorityDigestRef"),
+        "evidenceStage1Parity.comparisonTuple.authorityDigestRef",
+    )
+    typed_core_digest_ref = _require_non_empty_string(
+        comparison_tuple.get("typedCoreDigestRef"),
+        "evidenceStage1Parity.comparisonTuple.typedCoreDigestRef",
+    )
+    normalizer_id_ref = _require_non_empty_string(
+        comparison_tuple.get("normalizerIdRef"),
+        "evidenceStage1Parity.comparisonTuple.normalizerIdRef",
+    )
+    policy_digest_ref = _require_non_empty_string(
+        comparison_tuple.get("policyDigestRef"),
+        "evidenceStage1Parity.comparisonTuple.policyDigestRef",
+    )
+    if normalizer_id_ref != "normalizerId":
+        raise ValueError(
+            "evidenceStage1Parity.comparisonTuple.normalizerIdRef must be `normalizerId`"
+        )
+    if policy_digest_ref != "policyDigest":
+        raise ValueError(
+            "evidenceStage1Parity.comparisonTuple.policyDigestRef must be `policyDigest`"
+        )
+
+    failure_classes = _require_object(
+        stage1.get("failureClasses"),
+        "evidenceStage1Parity.failureClasses",
+    )
+    parsed_failure_classes = (
+        _require_non_empty_string(
+            failure_classes.get("missing"),
+            "evidenceStage1Parity.failureClasses.missing",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("mismatch"),
+            "evidenceStage1Parity.failureClasses.mismatch",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("unbound"),
+            "evidenceStage1Parity.failureClasses.unbound",
+        ),
+    )
+    if parsed_failure_classes != _STAGE1_PARITY_FAILURE_CLASSES:
+        raise ValueError(
+            "evidenceStage1Parity.failureClasses must map to canonical Stage 1 parity classes"
+        )
+
+    return {
+        "profileKind": profile_kind,
+        "authorityToTypedCoreRoute": authority_to_typed_core_route,
+        "comparisonTuple": {
+            "authorityDigestRef": authority_digest_ref,
+            "typedCoreDigestRef": typed_core_digest_ref,
+            "normalizerIdRef": normalizer_id_ref,
+            "policyDigestRef": policy_digest_ref,
+        },
+        "failureClasses": {
+            "missing": parsed_failure_classes[0],
+            "mismatch": parsed_failure_classes[1],
+            "unbound": parsed_failure_classes[2],
+        },
+    }
+
+
+def _validate_stage1_rollback_contract(payload: Any) -> Dict[str, Any]:
+    rollback = _require_object(payload, "evidenceStage1Rollback")
+    profile_kind = _require_non_empty_string(
+        rollback.get("profileKind"),
+        "evidenceStage1Rollback.profileKind",
+    )
+    witness_kind = _require_non_empty_string(
+        rollback.get("witnessKind"),
+        "evidenceStage1Rollback.witnessKind",
+    )
+    from_stage = _require_non_empty_string(
+        rollback.get("fromStage"),
+        "evidenceStage1Rollback.fromStage",
+    )
+    to_stage = _require_non_empty_string(
+        rollback.get("toStage"),
+        "evidenceStage1Rollback.toStage",
+    )
+    if from_stage != "stage1":
+        raise ValueError("evidenceStage1Rollback.fromStage must be `stage1`")
+    if to_stage != "stage0":
+        raise ValueError("evidenceStage1Rollback.toStage must be `stage0`")
+
+    trigger_failure_classes = _require_string_list(
+        rollback.get("triggerFailureClasses"),
+        "evidenceStage1Rollback.triggerFailureClasses",
+    )
+    if not set(_STAGE1_PARITY_FAILURE_CLASSES).issubset(set(trigger_failure_classes)):
+        raise ValueError(
+            "evidenceStage1Rollback.triggerFailureClasses must include canonical Stage 1 parity classes"
+        )
+
+    identity_refs = _require_object(
+        rollback.get("identityRefs"),
+        "evidenceStage1Rollback.identityRefs",
+    )
+    authority_digest_ref = _require_non_empty_string(
+        identity_refs.get("authorityDigestRef"),
+        "evidenceStage1Rollback.identityRefs.authorityDigestRef",
+    )
+    rollback_authority_digest_ref = _require_non_empty_string(
+        identity_refs.get("rollbackAuthorityDigestRef"),
+        "evidenceStage1Rollback.identityRefs.rollbackAuthorityDigestRef",
+    )
+    normalizer_id_ref = _require_non_empty_string(
+        identity_refs.get("normalizerIdRef"),
+        "evidenceStage1Rollback.identityRefs.normalizerIdRef",
+    )
+    policy_digest_ref = _require_non_empty_string(
+        identity_refs.get("policyDigestRef"),
+        "evidenceStage1Rollback.identityRefs.policyDigestRef",
+    )
+    if authority_digest_ref == rollback_authority_digest_ref:
+        raise ValueError(
+            "evidenceStage1Rollback.identityRefs authority/rollback refs must differ"
+        )
+    if normalizer_id_ref != "normalizerId":
+        raise ValueError(
+            "evidenceStage1Rollback.identityRefs.normalizerIdRef must be `normalizerId`"
+        )
+    if policy_digest_ref != "policyDigest":
+        raise ValueError(
+            "evidenceStage1Rollback.identityRefs.policyDigestRef must be `policyDigest`"
+        )
+
+    failure_classes = _require_object(
+        rollback.get("failureClasses"),
+        "evidenceStage1Rollback.failureClasses",
+    )
+    parsed_failure_classes = (
+        _require_non_empty_string(
+            failure_classes.get("precondition"),
+            "evidenceStage1Rollback.failureClasses.precondition",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("identityDrift"),
+            "evidenceStage1Rollback.failureClasses.identityDrift",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("unbound"),
+            "evidenceStage1Rollback.failureClasses.unbound",
+        ),
+    )
+    if parsed_failure_classes != _STAGE1_ROLLBACK_FAILURE_CLASSES:
+        raise ValueError(
+            "evidenceStage1Rollback.failureClasses must map to canonical Stage 1 rollback classes"
+        )
+
+    return {
+        "profileKind": profile_kind,
+        "witnessKind": witness_kind,
+        "fromStage": from_stage,
+        "toStage": to_stage,
+        "triggerFailureClasses": trigger_failure_classes,
+        "identityRefs": {
+            "authorityDigestRef": authority_digest_ref,
+            "rollbackAuthorityDigestRef": rollback_authority_digest_ref,
+            "normalizerIdRef": normalizer_id_ref,
+            "policyDigestRef": policy_digest_ref,
+        },
+        "failureClasses": {
+            "precondition": parsed_failure_classes[0],
+            "identityDrift": parsed_failure_classes[1],
+            "unbound": parsed_failure_classes[2],
+        },
+    }
+
+
 def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -534,6 +731,8 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         instruction_witness.get("policyDigestPrefix"),
         "instructionWitness.policyDigestPrefix",
     )
+    stage1_parity = _validate_stage1_parity_contract(root.get("evidenceStage1Parity"))
+    stage1_rollback = _validate_stage1_rollback_contract(root.get("evidenceStage1Rollback"))
 
     return {
         "schema": schema,
@@ -575,6 +774,8 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
             "policyKind": instruction_policy_kind,
             "policyDigestPrefix": instruction_policy_digest_prefix,
         },
+        "evidenceStage1Parity": stage1_parity,
+        "evidenceStage1Rollback": stage1_rollback,
     }
 
 
@@ -704,4 +905,25 @@ HARNESS_SESSION_PATH_DEFAULT: str = _CONTRACT.get("harnessRetry", {}).get(
 HARNESS_SESSION_ISSUE_FIELD: str = _CONTRACT.get("harnessRetry", {}).get(
     "sessionIssueField",
     "",
+)
+EVIDENCE_STAGE1_PARITY_PROFILE_KIND: str = _CONTRACT.get(
+    "evidenceStage1Parity", {}
+).get("profileKind", "")
+EVIDENCE_STAGE1_PARITY_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("evidenceStage1Parity", {})
+    .get("failureClasses", {})
+    .get(key, "")
+    for key in ("missing", "mismatch", "unbound")
+)
+EVIDENCE_STAGE1_ROLLBACK_PROFILE_KIND: str = _CONTRACT.get(
+    "evidenceStage1Rollback", {}
+).get("profileKind", "")
+EVIDENCE_STAGE1_ROLLBACK_WITNESS_KIND: str = _CONTRACT.get(
+    "evidenceStage1Rollback", {}
+).get("witnessKind", "")
+EVIDENCE_STAGE1_ROLLBACK_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("evidenceStage1Rollback", {})
+    .get("failureClasses", {})
+    .get(key, "")
+    for key in ("precondition", "identityDrift", "unbound")
 )

@@ -129,6 +129,43 @@ def _base_payload() -> dict:
             "policyKind": "ci.instruction.policy.v1",
             "policyDigestPrefix": "pol1_",
         },
+        "evidenceStage1Parity": {
+            "profileKind": "ev.stage1.core.v1",
+            "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+            "comparisonTuple": {
+                "authorityDigestRef": "authorityPayloadDigest",
+                "typedCoreDigestRef": "typedCoreProjectionDigest",
+                "normalizerIdRef": "normalizerId",
+                "policyDigestRef": "policyDigest",
+            },
+            "failureClasses": {
+                "missing": "unification.evidence_stage1.parity.missing",
+                "mismatch": "unification.evidence_stage1.parity.mismatch",
+                "unbound": "unification.evidence_stage1.parity.unbound",
+            },
+        },
+        "evidenceStage1Rollback": {
+            "profileKind": "ev.stage1.rollback.v1",
+            "witnessKind": "ev.stage1.rollback.witness.v1",
+            "fromStage": "stage1",
+            "toStage": "stage0",
+            "triggerFailureClasses": [
+                "unification.evidence_stage1.parity.missing",
+                "unification.evidence_stage1.parity.mismatch",
+                "unification.evidence_stage1.parity.unbound",
+            ],
+            "identityRefs": {
+                "authorityDigestRef": "authorityPayloadDigest",
+                "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+                "normalizerIdRef": "normalizerId",
+                "policyDigestRef": "policyDigest",
+            },
+            "failureClasses": {
+                "precondition": "unification.evidence_stage1.rollback.precondition",
+                "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+                "unbound": "unification.evidence_stage1.rollback.unbound",
+            },
+        },
         "harnessRetry": {
             "policyKind": "ci.harness.retry.policy.v1",
             "policyPath": "policies/control/harness-retry-policy-v1.json",
@@ -221,6 +258,14 @@ class ControlPlaneContractTests(unittest.TestCase):
             loaded["harnessRetry"]["sessionPathEnvKey"],
             "PREMATH_HARNESS_SESSION_PATH",
         )
+        self.assertEqual(
+            loaded["evidenceStage1Parity"]["profileKind"],
+            "ev.stage1.core.v1",
+        )
+        self.assertEqual(
+            loaded["evidenceStage1Rollback"]["witnessKind"],
+            "ev.stage1.rollback.witness.v1",
+        )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())
@@ -276,6 +321,29 @@ class ControlPlaneContractTests(unittest.TestCase):
             "issue_discover",
         ]
         with self.assertRaisesRegex(ValueError, "must not contain duplicates"):
+            self._load(payload)
+
+    def test_load_rejects_stage1_parity_class_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage1Parity"]["failureClasses"]["unbound"] = "ev.stage1.parity.unbound"
+        with self.assertRaisesRegex(ValueError, "canonical Stage 1 parity classes"):
+            self._load(payload)
+
+    def test_load_rejects_stage1_rollback_missing_trigger_class(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage1Rollback"]["triggerFailureClasses"] = [
+            "unification.evidence_stage1.parity.missing",
+            "unification.evidence_stage1.parity.mismatch",
+        ]
+        with self.assertRaisesRegex(ValueError, "include canonical Stage 1 parity classes"):
+            self._load(payload)
+
+    def test_load_rejects_stage1_rollback_identity_ref_aliasing(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage1Rollback"]["identityRefs"]["rollbackAuthorityDigestRef"] = (
+            "authorityPayloadDigest"
+        )
+        with self.assertRaisesRegex(ValueError, "authority/rollback refs must differ"):
             self._load(payload)
 
     def test_load_rejects_rollover_without_cadence(self) -> None:

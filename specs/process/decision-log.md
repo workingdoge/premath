@@ -3214,3 +3214,52 @@ first implementation step underspecified.
 - Implementations can assert/reject Stage 1 parity deterministically with one
   stable class surface.
 - Docs coherence checks now fail closed if Stage 1 profile/class clauses drift.
+
+---
+
+## 2026-02-22 — Decision 0108: Bind Stage 1 parity/rollback to executable vectors and deterministic rollback witness classes
+
+### Decision
+Complete Stage 1 execution slices by binding parity + rollback contracts into
+coherence-site vectors, checker details, and normative rollback class surfaces.
+
+Implemented scope:
+
+1. extend `draft/UNIFICATION-DOCTRINE` with
+   `§10.6.3 Stage 1 deterministic rollback witness contract`, including
+   canonical rollback classes:
+   - `unification.evidence_stage1.rollback.precondition`
+   - `unification.evidence_stage1.rollback.identity_drift`
+   - `unification.evidence_stage1.rollback.unbound`
+2. extend `draft/CONTROL-PLANE-CONTRACT.json` with:
+   - `evidenceStage1Parity` (typed-core parity metadata),
+   - `evidenceStage1Rollback` (rollback witness metadata).
+3. extend `premath-coherence` `gate_chain_parity` checks with fail-closed
+   Stage 1 rollback validation classes:
+   - `coherence.gate_chain_parity.stage1_rollback_invalid`
+   - `coherence.gate_chain_parity.stage1_rollback_precondition_missing`
+   - `coherence.gate_chain_parity.stage1_rollback_failure_class_mismatch`
+   - `coherence.gate_chain_parity.stage1_rollback_unbound`
+4. extend coherence-site `gate_chain_parity` vectors with Stage 1
+   accept/reject rows (`gate_chain_parity_stage1_*`) and route site evaluator
+   details through `stage1Parity` + `stage1Rollback`.
+5. extend docs/traceability + control-plane loader parity:
+   - docs coherence enforces Stage 1 parity/rollback marker language and
+     contract shape checks,
+   - traceability row for `UNIFICATION-DOCTRINE` now names Stage 1 vector
+     surface,
+   - `tools/ci/control_plane_contract.py` + drift-budget checks include Stage 1
+     parity/rollback typed fields.
+
+### Rationale
+Stage 1 parity classes existed normatively, but executable coverage and rollback
+class boundaries were still split across prose/checker-only surfaces. We need
+one deterministic contract path from doctrine text to vectors to checker output.
+
+### Consequences
+- Stage 1 parity and rollback paths are now machine-checkable end-to-end in
+  the same gate-chain parity pipeline.
+- Rollback metadata is no longer an implicit design note; it is typed contract
+  material with deterministic class mapping.
+- Coherence and drift-budget checks now fail closed on Stage 1 parity/rollback
+  contract drift.

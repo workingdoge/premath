@@ -70,7 +70,7 @@ Purpose:
 | `COHERENCE-CONTRACT.json` | `mise run coherence-check`; `coherence-check` CLI smoke test | covered | - |
 | `CAPABILITY-REGISTRY.json` | `python3 tools/conformance/check_docs_coherence.py`; `python3 tools/conformance/run_capability_vectors.py`; `mise run coherence-check` | covered | - |
 | `CONTROL-PLANE-CONTRACT.json` | `mise run coherence-check`; `mise run ci-pipeline-test`; `python3 tools/ci/test_run_required_checks.py` | covered | - |
-| `UNIFICATION-DOCTRINE.md` | `mise run docs-coherence-check`; `mise run coherence-check`; `python3 tools/conformance/run_capability_vectors.py --capability capabilities.ci_witnesses` (obstruction roundtrip vectors); decision-log traceability via `check_spec_traceability.py` | instrumented | - |
+| `UNIFICATION-DOCTRINE.md` | `mise run docs-coherence-check`; `mise run coherence-check` (`gate_chain_parity` Stage 1 parity + rollback contract checks); `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract` (`gate_chain_parity_stage1_*` vectors); `python3 tools/conformance/run_capability_vectors.py --capability capabilities.ci_witnesses` (obstruction roundtrip vectors); decision-log traceability via `check_spec_traceability.py` | instrumented | - |
 | `SPAN-SQUARE-CHECKING.md` | `mise run coherence-check` (`span_square_commutation` via site vectors, including composition-law vectors); `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract` | covered | - |
 | `SPEC-INDEX.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
 | `SPEC-TRACEABILITY.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |

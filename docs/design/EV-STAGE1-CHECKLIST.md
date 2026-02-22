@@ -41,21 +41,21 @@ Execute Stage 1 (`typed-core dual projection`) with:
 
 ## 3.2 Checker wiring
 
-- [ ] Add checker-parity obligation hook for Stage 1 dual projections.
-- [ ] Emit deterministic fail-closed class on missing/mismatch/unbound cases.
-- [ ] Keep semantic authority unchanged (checker verifies, does not authorize).
+- [x] Add checker-parity obligation hook for Stage 1 dual projections.
+- [x] Emit deterministic fail-closed class on missing/mismatch/unbound cases.
+- [x] Keep semantic authority unchanged (checker verifies, does not authorize).
 
 ## 3.3 Conformance and docs coherence
 
-- [ ] Add/update vectors for accepted/rejected Stage 1 parity paths.
-- [ ] Extend docs-coherence checks to require Stage 1 marker language.
-- [ ] Ensure traceability row maps Stage 1 clauses to executable checks.
+- [x] Add/update vectors for accepted/rejected Stage 1 parity paths.
+- [x] Extend docs-coherence checks to require Stage 1 marker language.
+- [x] Ensure traceability row maps Stage 1 clauses to executable checks.
 
 ## 3.4 Rollback readiness
 
-- [ ] Define rollback preconditions and postconditions.
-- [ ] Define deterministic rollback witness payload minimum fields.
-- [ ] Verify rollback path does not alter canonical authority identity.
+- [x] Define rollback preconditions and postconditions.
+- [x] Define deterministic rollback witness payload minimum fields.
+- [x] Verify rollback path does not alter canonical authority identity.
 
 ## 4. Validation Commands
 
@@ -74,3 +74,10 @@ Execute Stage 1 (`typed-core dual projection`) with:
    - add accepted/rejected Stage 1 vectors.
 4. Rollback slice:
    - add deterministic rollback witness + docs/spec glue.
+
+Execution note (2026-02-22):
+- Slices 1-4 are implemented in repository surfaces:
+  - `draft/UNIFICATION-DOCTRINE` §10.6.1/§10.6.2/§10.6.3,
+  - `draft/CONTROL-PLANE-CONTRACT` Stage 1 parity + rollback objects,
+  - `premath-coherence` `gate_chain_parity` fail-closed enforcement,
+  - coherence-site `gate_chain_parity_stage1_*` vectors.

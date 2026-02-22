@@ -188,5 +188,27 @@
       "mismatch": "unification.evidence_stage1.parity.mismatch",
       "unbound": "unification.evidence_stage1.parity.unbound"
     }
+  },
+  "evidenceStage1Rollback": {
+    "profileKind": "ev.stage1.rollback.v1",
+    "witnessKind": "ev.stage1.rollback.witness.v1",
+    "fromStage": "stage1",
+    "toStage": "stage0",
+    "triggerFailureClasses": [
+      "unification.evidence_stage1.parity.missing",
+      "unification.evidence_stage1.parity.mismatch",
+      "unification.evidence_stage1.parity.unbound"
+    ],
+    "identityRefs": {
+      "authorityDigestRef": "authorityPayloadDigest",
+      "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+      "normalizerIdRef": "normalizerId",
+      "policyDigestRef": "policyDigest"
+    },
+    "failureClasses": {
+      "precondition": "unification.evidence_stage1.rollback.precondition",
+      "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+      "unbound": "unification.evidence_stage1.rollback.unbound"
+    }
   }
 }

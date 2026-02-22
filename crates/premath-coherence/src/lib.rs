@@ -96,6 +96,19 @@ const GATE_CHAIN_STAGE1_PARITY_UNBOUND_FAILURE: &str =
 const STAGE1_PARITY_CLASS_MISSING: &str = "unification.evidence_stage1.parity.missing";
 const STAGE1_PARITY_CLASS_MISMATCH: &str = "unification.evidence_stage1.parity.mismatch";
 const STAGE1_PARITY_CLASS_UNBOUND: &str = "unification.evidence_stage1.parity.unbound";
+const GATE_CHAIN_STAGE1_ROLLBACK_INVALID_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_rollback_invalid";
+const GATE_CHAIN_STAGE1_ROLLBACK_PRECONDITION_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_rollback_precondition_missing";
+const GATE_CHAIN_STAGE1_ROLLBACK_MISMATCH_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_rollback_failure_class_mismatch";
+const GATE_CHAIN_STAGE1_ROLLBACK_UNBOUND_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_rollback_unbound";
+const STAGE1_ROLLBACK_CLASS_PRECONDITION: &str =
+    "unification.evidence_stage1.rollback.precondition";
+const STAGE1_ROLLBACK_CLASS_IDENTITY_DRIFT: &str =
+    "unification.evidence_stage1.rollback.identity_drift";
+const STAGE1_ROLLBACK_CLASS_UNBOUND: &str = "unification.evidence_stage1.rollback.unbound";
 const REQUIRED_SCHEMA_LIFECYCLE_FAMILIES: &[&str] = &[
     "controlPlaneContractKind",
     "requiredWitnessKind",
@@ -207,6 +220,8 @@ struct ControlPlaneProjectionContract {
     schema_lifecycle: Option<ControlPlaneSchemaLifecycle>,
     #[serde(default)]
     evidence_stage1_parity: Option<ControlPlaneStage1Parity>,
+    #[serde(default)]
+    evidence_stage1_rollback: Option<ControlPlaneStage1Rollback>,
     #[serde(default)]
     evidence_lanes: Option<ControlPlaneEvidenceLanes>,
     #[serde(default)]
@@ -336,6 +351,49 @@ struct ControlPlaneStage1ParityFailureClasses {
     missing: String,
     #[serde(default)]
     mismatch: String,
+    #[serde(default)]
+    unbound: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage1Rollback {
+    #[serde(default)]
+    profile_kind: String,
+    #[serde(default)]
+    witness_kind: String,
+    #[serde(default)]
+    from_stage: String,
+    #[serde(default)]
+    to_stage: String,
+    #[serde(default)]
+    trigger_failure_classes: Vec<String>,
+    #[serde(default)]
+    identity_refs: ControlPlaneStage1RollbackIdentityRefs,
+    #[serde(default)]
+    failure_classes: ControlPlaneStage1RollbackFailureClasses,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage1RollbackIdentityRefs {
+    #[serde(default)]
+    authority_digest_ref: String,
+    #[serde(default)]
+    rollback_authority_digest_ref: String,
+    #[serde(default)]
+    normalizer_id_ref: String,
+    #[serde(default)]
+    policy_digest_ref: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage1RollbackFailureClasses {
+    #[serde(default)]
+    precondition: String,
+    #[serde(default)]
+    identity_drift: String,
     #[serde(default)]
     unbound: String,
 }
@@ -1367,6 +1425,9 @@ fn check_gate_chain_parity(
     let stage1_parity_check = evaluate_control_plane_stage1_parity(&control_plane_contract);
     failures.extend(stage1_parity_check.failure_classes.clone());
 
+    let stage1_rollback_check = evaluate_control_plane_stage1_rollback(&control_plane_contract);
+    failures.extend(stage1_rollback_check.failure_classes.clone());
+
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     failures.extend(lane_registry_check.failure_classes.clone());
 
@@ -1404,6 +1465,7 @@ fn check_gate_chain_parity(
             "instructionPolicyDigestPrefix": control_plane_contract.instruction_witness.policy_digest_prefix,
             "schemaLifecycle": schema_lifecycle_check.details,
             "stage1Parity": stage1_parity_check.details,
+            "stage1Rollback": stage1_rollback_check.details,
             "laneRegistry": lane_registry_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
         }),
@@ -1514,6 +1576,167 @@ fn evaluate_control_plane_stage1_parity(
         failures.push(GATE_CHAIN_STAGE1_PARITY_MISMATCH_FAILURE.to_string());
         reasons.push(format!(
             "evidenceStage1Parity.failureClasses must map to canonical classes ({STAGE1_PARITY_CLASS_MISSING}, {STAGE1_PARITY_CLASS_MISMATCH}, {STAGE1_PARITY_CLASS_UNBOUND})"
+        ));
+    }
+
+    details["reasons"] = json!(dedupe_sorted(reasons));
+
+    ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details,
+    }
+}
+
+fn evaluate_control_plane_stage1_rollback(
+    control_plane_contract: &ControlPlaneProjectionContract,
+) -> ObligationCheck {
+    let required_trigger_failure_classes = json!([
+        STAGE1_PARITY_CLASS_MISSING,
+        STAGE1_PARITY_CLASS_MISMATCH,
+        STAGE1_PARITY_CLASS_UNBOUND,
+    ]);
+    let required_failure_classes = json!({
+        "precondition": STAGE1_ROLLBACK_CLASS_PRECONDITION,
+        "identityDrift": STAGE1_ROLLBACK_CLASS_IDENTITY_DRIFT,
+        "unbound": STAGE1_ROLLBACK_CLASS_UNBOUND,
+    });
+
+    let mut details = json!({
+        "present": control_plane_contract.evidence_stage1_rollback.is_some(),
+        "profileKind": null,
+        "witnessKind": null,
+        "fromStage": null,
+        "toStage": null,
+        "triggerFailureClasses": null,
+        "identityRefs": null,
+        "failureClasses": null,
+        "requiredTriggerFailureClasses": required_trigger_failure_classes,
+        "requiredFailureClasses": required_failure_classes,
+        "reasons": [],
+    });
+
+    let Some(stage1_rollback) = &control_plane_contract.evidence_stage1_rollback else {
+        return ObligationCheck {
+            failure_classes: Vec::new(),
+            details,
+        };
+    };
+
+    details["profileKind"] = json!(&stage1_rollback.profile_kind);
+    details["witnessKind"] = json!(&stage1_rollback.witness_kind);
+    details["fromStage"] = json!(&stage1_rollback.from_stage);
+    details["toStage"] = json!(&stage1_rollback.to_stage);
+    details["triggerFailureClasses"] = json!(&stage1_rollback.trigger_failure_classes);
+    details["identityRefs"] = json!(&stage1_rollback.identity_refs);
+    details["failureClasses"] = json!(&stage1_rollback.failure_classes);
+
+    let mut failures = Vec::new();
+    let mut reasons = Vec::new();
+
+    if stage1_rollback.profile_kind.trim().is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_INVALID_FAILURE.to_string());
+        reasons.push("evidenceStage1Rollback.profileKind must be non-empty".to_string());
+    }
+    if stage1_rollback.witness_kind.trim().is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_INVALID_FAILURE.to_string());
+        reasons.push("evidenceStage1Rollback.witnessKind must be non-empty".to_string());
+    }
+    if stage1_rollback.from_stage.trim() != "stage1" {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_INVALID_FAILURE.to_string());
+        reasons.push("evidenceStage1Rollback.fromStage must be `stage1`".to_string());
+    }
+    if stage1_rollback.to_stage.trim() != "stage0" {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_INVALID_FAILURE.to_string());
+        reasons.push("evidenceStage1Rollback.toStage must be `stage0`".to_string());
+    }
+
+    let trigger_classes = dedupe_sorted(stage1_rollback.trigger_failure_classes.clone());
+    if trigger_classes.is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_PRECONDITION_FAILURE.to_string());
+        reasons.push("evidenceStage1Rollback.triggerFailureClasses must be non-empty".to_string());
+    } else {
+        for required in [
+            STAGE1_PARITY_CLASS_MISSING,
+            STAGE1_PARITY_CLASS_MISMATCH,
+            STAGE1_PARITY_CLASS_UNBOUND,
+        ] {
+            if !trigger_classes.iter().any(|class_id| class_id == required) {
+                failures.push(GATE_CHAIN_STAGE1_ROLLBACK_PRECONDITION_FAILURE.to_string());
+                reasons.push(format!(
+                    "evidenceStage1Rollback.triggerFailureClasses must include `{required}`"
+                ));
+            }
+        }
+    }
+
+    let authority_ref = stage1_rollback.identity_refs.authority_digest_ref.trim();
+    let rollback_ref = stage1_rollback
+        .identity_refs
+        .rollback_authority_digest_ref
+        .trim();
+    if authority_ref.is_empty() || rollback_ref.is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_PRECONDITION_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage1Rollback.identityRefs authority/rollback refs must be non-empty"
+                .to_string(),
+        );
+    } else if authority_ref == rollback_ref {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_PRECONDITION_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage1Rollback.identityRefs authority/rollback refs must differ".to_string(),
+        );
+    }
+
+    let normalizer_ref = stage1_rollback.identity_refs.normalizer_id_ref.trim();
+    let policy_ref = stage1_rollback.identity_refs.policy_digest_ref.trim();
+    if normalizer_ref.is_empty() || policy_ref.is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_UNBOUND_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage1Rollback.identityRefs normalizer/policy refs must be non-empty"
+                .to_string(),
+        );
+    } else {
+        if normalizer_ref != "normalizerId" {
+            failures.push(GATE_CHAIN_STAGE1_ROLLBACK_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceStage1Rollback.identityRefs.normalizerIdRef must be `normalizerId` (got `{normalizer_ref}`)"
+            ));
+        }
+        if policy_ref != "policyDigest" {
+            failures.push(GATE_CHAIN_STAGE1_ROLLBACK_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceStage1Rollback.identityRefs.policyDigestRef must be `policyDigest` (got `{policy_ref}`)"
+            ));
+        }
+    }
+
+    let declared_failure_classes = [
+        stage1_rollback
+            .failure_classes
+            .precondition
+            .trim()
+            .to_string(),
+        stage1_rollback
+            .failure_classes
+            .identity_drift
+            .trim()
+            .to_string(),
+        stage1_rollback.failure_classes.unbound.trim().to_string(),
+    ];
+    let declared_failure_set: BTreeSet<String> = declared_failure_classes
+        .iter()
+        .filter(|class_id| !class_id.is_empty())
+        .cloned()
+        .collect();
+    if declared_failure_set.len() != 3
+        || stage1_rollback.failure_classes.precondition.trim() != STAGE1_ROLLBACK_CLASS_PRECONDITION
+        || stage1_rollback.failure_classes.identity_drift.trim()
+            != STAGE1_ROLLBACK_CLASS_IDENTITY_DRIFT
+        || stage1_rollback.failure_classes.unbound.trim() != STAGE1_ROLLBACK_CLASS_UNBOUND
+    {
+        failures.push(GATE_CHAIN_STAGE1_ROLLBACK_MISMATCH_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceStage1Rollback.failureClasses must map to canonical classes ({STAGE1_ROLLBACK_CLASS_PRECONDITION}, {STAGE1_ROLLBACK_CLASS_IDENTITY_DRIFT}, {STAGE1_ROLLBACK_CLASS_UNBOUND})"
         ));
     }
 
@@ -1714,16 +1937,25 @@ fn evaluate_site_case_gate_chain_parity(
         )));
     }
 
+    let stage1_parity_check = evaluate_control_plane_stage1_parity(&control_plane_contract);
+    let stage1_rollback_check = evaluate_control_plane_stage1_rollback(&control_plane_contract);
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
-    let result = if lane_registry_check.failure_classes.is_empty() {
+    let mut failures = Vec::new();
+    failures.extend(stage1_parity_check.failure_classes.clone());
+    failures.extend(stage1_rollback_check.failure_classes.clone());
+    failures.extend(lane_registry_check.failure_classes.clone());
+    let failures = dedupe_sorted(failures);
+    let result = if failures.is_empty() {
         "accepted"
     } else {
         "rejected"
     };
     Ok(SiteEvaluation {
         result: result.to_string(),
-        failure_classes: lane_registry_check.failure_classes,
+        failure_classes: failures,
         details: json!({
+            "stage1Parity": stage1_parity_check.details,
+            "stage1Rollback": stage1_rollback_check.details,
             "laneRegistry": lane_registry_check.details,
         }),
     })
@@ -4446,6 +4678,28 @@ Current deterministic projected check IDs include:
                     "unbound": "unification.evidence_stage1.parity.unbound"
                 }
             },
+            "evidenceStage1Rollback": {
+                "profileKind": "ev.stage1.rollback.v1",
+                "witnessKind": "ev.stage1.rollback.witness.v1",
+                "fromStage": "stage1",
+                "toStage": "stage0",
+                "triggerFailureClasses": [
+                    "unification.evidence_stage1.parity.missing",
+                    "unification.evidence_stage1.parity.mismatch",
+                    "unification.evidence_stage1.parity.unbound"
+                ],
+                "identityRefs": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest"
+                },
+                "failureClasses": {
+                    "precondition": "unification.evidence_stage1.rollback.precondition",
+                    "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+                    "unbound": "unification.evidence_stage1.rollback.unbound"
+                }
+            },
             "evidenceLanes": {
                 "semanticDoctrine": "semantic_doctrine",
                 "strictChecker": "strict_checker",
@@ -5121,6 +5375,83 @@ Current deterministic projected check IDs include:
             evaluated
                 .failure_classes
                 .contains(&GATE_CHAIN_STAGE1_PARITY_INVALID_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage1_rollback_missing_trigger_classes() {
+        let temp = TempDirGuard::new("gate-chain-stage1-rollback-missing-triggers");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage1Rollback"]["triggerFailureClasses"] =
+            json!(["unification.evidence_stage1.parity.missing"]);
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE1_ROLLBACK_PRECONDITION_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage1_rollback_unbound_binding_tuple() {
+        let temp = TempDirGuard::new("gate-chain-stage1-rollback-unbound-binding");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage1Rollback"]["identityRefs"]["policyDigestRef"] = json!("policy");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE1_ROLLBACK_UNBOUND_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage1_rollback_failure_class_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage1-rollback-class-mismatch");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage1Rollback"]["failureClasses"]["identityDrift"] =
+            json!("ev.rollback.identity");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE1_ROLLBACK_MISMATCH_FAILURE.to_string())
         );
     }
 

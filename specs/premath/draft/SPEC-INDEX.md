@@ -255,7 +255,9 @@ Lane ownership note:
 - Typed evidence-object migration MUST follow staged internalization gates in
   `draft/UNIFICATION-DOCTRINE` §10.6 (single authority artifact per stage with
   deterministic compatibility/rollback boundaries). Stage 1 typed-core parity
-  claims MUST use the fail-closed class boundary in §10.6.2.
+  claims MUST use the fail-closed class boundary in §10.6.2, and Stage 1
+  rollback claims MUST use the deterministic rollback witness boundary in
+  §10.6.3.
 
 ## 6. Suggested reading order
 

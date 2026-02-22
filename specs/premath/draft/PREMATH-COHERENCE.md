@@ -141,6 +141,12 @@ Minimum parity set includes:
   missing authority-to-typed-core route metadata, unbound deterministic binding
   tuple metadata (`normalizerId`, `policyDigest`), and mismatch between declared
   parity failure classes and canonical Stage 1 doctrine classes,
+- when optional `evidenceStage1Rollback` is present in
+  `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
+  missing deterministic rollback trigger class coverage, unbound rollback
+  binding metadata (`normalizerId`, `policyDigest`), and mismatch between
+  declared rollback failure classes and canonical Stage 1 rollback doctrine
+  classes,
 - when lane-registry fields are present in
   `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
   unknown/duplicate lane IDs, unbound lane artifact-kind mappings, lane

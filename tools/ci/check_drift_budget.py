@@ -335,6 +335,31 @@ def check_control_plane_lane_bindings(
     contract_harness_session_issue_field = str(
         contract_harness_retry.get("sessionIssueField", "")
     )
+    contract_stage1_parity = loaded_control_plane_contract.get("evidenceStage1Parity", {})
+    if not isinstance(contract_stage1_parity, dict):
+        contract_stage1_parity = {}
+    contract_stage1_parity_profile_kind = str(contract_stage1_parity.get("profileKind", ""))
+    contract_stage1_parity_classes_obj = contract_stage1_parity.get("failureClasses", {})
+    if not isinstance(contract_stage1_parity_classes_obj, dict):
+        contract_stage1_parity_classes_obj = {}
+    contract_stage1_parity_failure_classes = as_sorted_strings(
+        contract_stage1_parity_classes_obj.values()
+    )
+
+    contract_stage1_rollback = loaded_control_plane_contract.get("evidenceStage1Rollback", {})
+    if not isinstance(contract_stage1_rollback, dict):
+        contract_stage1_rollback = {}
+    contract_stage1_rollback_profile_kind = str(contract_stage1_rollback.get("profileKind", ""))
+    contract_stage1_rollback_witness_kind = str(contract_stage1_rollback.get("witnessKind", ""))
+    contract_stage1_rollback_trigger_failure_classes = as_sorted_strings(
+        contract_stage1_rollback.get("triggerFailureClasses", ())
+    )
+    contract_stage1_rollback_classes_obj = contract_stage1_rollback.get("failureClasses", {})
+    if not isinstance(contract_stage1_rollback_classes_obj, dict):
+        contract_stage1_rollback_classes_obj = {}
+    contract_stage1_rollback_failure_classes = as_sorted_strings(
+        contract_stage1_rollback_classes_obj.values()
+    )
 
     checker_expected_core = as_sorted_strings(
         lane_registry.get("expectedCheckerCoreOnlyObligations", ())
@@ -342,6 +367,34 @@ def check_control_plane_lane_bindings(
     checker_required_route = lane_registry.get("requiredCrossLaneWitnessRoute")
     checker_required_failures = as_sorted_strings(
         lane_registry.get("requiredLaneFailureClasses", ())
+    )
+    checker_stage1_parity = gate_chain_details.get("stage1Parity")
+    if not isinstance(checker_stage1_parity, dict):
+        checker_stage1_parity = {}
+        reasons.append("coherence witness missing gate_chain_parity stage1Parity details")
+    checker_stage1_parity_required_classes_obj = checker_stage1_parity.get(
+        "requiredFailureClasses", {}
+    )
+    if not isinstance(checker_stage1_parity_required_classes_obj, dict):
+        checker_stage1_parity_required_classes_obj = {}
+    checker_stage1_parity_required_classes = as_sorted_strings(
+        checker_stage1_parity_required_classes_obj.values()
+    )
+
+    checker_stage1_rollback = gate_chain_details.get("stage1Rollback")
+    if not isinstance(checker_stage1_rollback, dict):
+        checker_stage1_rollback = {}
+        reasons.append("coherence witness missing gate_chain_parity stage1Rollback details")
+    checker_stage1_rollback_required_trigger_classes = as_sorted_strings(
+        checker_stage1_rollback.get("requiredTriggerFailureClasses", ())
+    )
+    checker_stage1_rollback_required_classes_obj = checker_stage1_rollback.get(
+        "requiredFailureClasses", {}
+    )
+    if not isinstance(checker_stage1_rollback_required_classes_obj, dict):
+        checker_stage1_rollback_required_classes_obj = {}
+    checker_stage1_rollback_required_classes = as_sorted_strings(
+        checker_stage1_rollback_required_classes_obj.values()
     )
     checker_lane_values = lane_registry.get("evidenceLanes")
     if isinstance(checker_lane_values, dict) and checker_lane_values != contract_evidence_lanes:
@@ -362,6 +415,24 @@ def check_control_plane_lane_bindings(
     ):
         reasons.append(
             "CONTROL-PLANE-CONTRACT laneFailureClasses missing checker-required failure classes"
+        )
+    if checker_stage1_parity_required_classes and (
+        checker_stage1_parity_required_classes != contract_stage1_parity_failure_classes
+    ):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage1Parity.failureClasses differ from checker-required classes"
+        )
+    if checker_stage1_rollback_required_classes and (
+        checker_stage1_rollback_required_classes != contract_stage1_rollback_failure_classes
+    ):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage1Rollback.failureClasses differ from checker-required classes"
+        )
+    if checker_stage1_rollback_required_trigger_classes and not set(
+        checker_stage1_rollback_required_trigger_classes
+    ).issubset(set(contract_stage1_rollback_trigger_failure_classes)):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage1Rollback.triggerFailureClasses missing checker-required trigger classes"
         )
 
     loader_evidence_lanes = dict(getattr(control_plane_module, "EVIDENCE_LANES", {}))
@@ -415,6 +486,21 @@ def check_control_plane_lane_bindings(
     )
     loader_harness_session_issue_field = str(
         getattr(control_plane_module, "HARNESS_SESSION_ISSUE_FIELD", "")
+    )
+    loader_stage1_parity_profile_kind = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_PARITY_PROFILE_KIND", "")
+    )
+    loader_stage1_parity_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_PARITY_FAILURE_CLASSES", ())
+    )
+    loader_stage1_rollback_profile_kind = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_ROLLBACK_PROFILE_KIND", "")
+    )
+    loader_stage1_rollback_witness_kind = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_ROLLBACK_WITNESS_KIND", "")
+    )
+    loader_stage1_rollback_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_ROLLBACK_FAILURE_CLASSES", ())
     )
 
     if loader_evidence_lanes != contract_evidence_lanes:
@@ -488,6 +574,26 @@ def check_control_plane_lane_bindings(
         reasons.append(
             "control_plane_contract.py HARNESS_SESSION_ISSUE_FIELD drift from contract payload"
         )
+    if loader_stage1_parity_profile_kind != contract_stage1_parity_profile_kind:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_PARITY_PROFILE_KIND drift from contract payload"
+        )
+    if loader_stage1_parity_failure_classes != contract_stage1_parity_failure_classes:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_PARITY_FAILURE_CLASSES drift from contract payload"
+        )
+    if loader_stage1_rollback_profile_kind != contract_stage1_rollback_profile_kind:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_ROLLBACK_PROFILE_KIND drift from contract payload"
+        )
+    if loader_stage1_rollback_witness_kind != contract_stage1_rollback_witness_kind:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_ROLLBACK_WITNESS_KIND drift from contract payload"
+        )
+    if loader_stage1_rollback_failure_classes != contract_stage1_rollback_failure_classes:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_ROLLBACK_FAILURE_CLASSES drift from contract payload"
+        )
 
     details = {
         "reasons": reasons,
@@ -514,6 +620,14 @@ def check_control_plane_lane_bindings(
                 "sessionPathDefault": contract_harness_session_path_default,
                 "sessionIssueField": contract_harness_session_issue_field,
             },
+            "stage1": {
+                "parityProfileKind": contract_stage1_parity_profile_kind,
+                "parityFailureClasses": contract_stage1_parity_failure_classes,
+                "rollbackProfileKind": contract_stage1_rollback_profile_kind,
+                "rollbackWitnessKind": contract_stage1_rollback_witness_kind,
+                "rollbackTriggerFailureClasses": contract_stage1_rollback_trigger_failure_classes,
+                "rollbackFailureClasses": contract_stage1_rollback_failure_classes,
+            },
         },
         "checker": {
             "evidenceLanes": checker_lane_values,
@@ -521,6 +635,11 @@ def check_control_plane_lane_bindings(
             "expectedCheckerCoreOnlyObligations": checker_expected_core,
             "requiredCrossLaneWitnessRoute": checker_required_route,
             "requiredLaneFailureClasses": checker_required_failures,
+            "stage1": {
+                "parityRequiredFailureClasses": checker_stage1_parity_required_classes,
+                "rollbackRequiredTriggerFailureClasses": checker_stage1_rollback_required_trigger_classes,
+                "rollbackRequiredFailureClasses": checker_stage1_rollback_required_classes,
+            },
         },
         "loader": {
             "evidenceLanes": loader_evidence_lanes,
@@ -544,6 +663,13 @@ def check_control_plane_lane_bindings(
                 "sessionPathEnvKey": loader_harness_session_path_env_key,
                 "sessionPathDefault": loader_harness_session_path_default,
                 "sessionIssueField": loader_harness_session_issue_field,
+            },
+            "stage1": {
+                "parityProfileKind": loader_stage1_parity_profile_kind,
+                "parityFailureClasses": loader_stage1_parity_failure_classes,
+                "rollbackProfileKind": loader_stage1_rollback_profile_kind,
+                "rollbackWitnessKind": loader_stage1_rollback_witness_kind,
+                "rollbackFailureClasses": loader_stage1_rollback_failure_classes,
             },
         },
     }
