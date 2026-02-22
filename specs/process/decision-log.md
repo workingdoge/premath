@@ -3058,3 +3058,39 @@ resolution to reduce skipped escalations without adding parallel semantics.
   after env+session resolution fails.
 - Control-plane drift checks now fail closed if harness-session contract fields
   drift between spec payload and loader/checker surfaces.
+
+---
+
+## 2026-02-22 — Decision 0104: Adopt multi-lane work-memory contract
+
+### Decision
+Adopt one explicit work-memory lane split and write-discipline contract:
+
+1. issue graph lane: `.premath/issues.jsonl` (authoritative mutable work state),
+2. operations lane: `.premath/OPERATIONS.md` (operational conventions/evidence),
+3. doctrine/decision lane: `specs/*` + `specs/process/decision-log.md`
+   (boundary/lifecycle authority).
+
+Implementation documentation:
+
+- `docs/design/MEMORY-LANES-CONTRACT.md`
+
+Associated surface updates:
+
+- `docs/design/README.md` lane-map index,
+- `AGENTS.md` memory-lane discipline section,
+- `.premath/OPERATIONS.md` evidence table now carries `Issue` + `Decision`
+  columns for deterministic cross-lane references.
+
+### Rationale
+Issue rows alone are insufficient for long-run agent memory: we also need stable
+operational conventions/evidence and explicit doctrine decisions. Making the
+lane split explicit keeps memory expressive while preserving one authority
+boundary per concern.
+
+### Consequences
+- Agents/operators now have a canonical location for each class of memory write.
+- Cross-lane references become deterministic (`issue-id`, optional
+  `decision-id`) instead of ad-hoc note expansion.
+- Issue-note compaction work (`bd-129`) is now naturally scoped as lane hygiene
+  instead of implicit style preference.

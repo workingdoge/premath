@@ -137,6 +137,15 @@
 - For governance/ops rollouts, record command evidence and resulting URLs in `.premath/OPERATIONS.md` and in the relevant issue notes (`.premath/issues.jsonl`).
 - When protection settings are changed, expect pushes to fail until work goes through PR and required status checks (`ci-required`) report on the PR head.
 
+## Memory Lane Discipline
+
+- Keep work memory split across three lanes:
+  - issue graph lane: `.premath/issues.jsonl` (authoritative task/dependency state),
+  - operations lane: `.premath/OPERATIONS.md` (runbooks and rollout evidence),
+  - doctrine/decision lane: `specs/*` + `specs/process/decision-log.md` (boundary/lifecycle authority).
+- Keep issue notes compact and reference operations/spec artifacts instead of pasting large transcripts.
+- Use `docs/design/MEMORY-LANES-CONTRACT.md` as the canonical write-discipline reference.
+
 ## Coding Style & Naming Conventions
 
 - Rust style: `cargo fmt --all`; lint with `cargo clippy --workspace --all-targets -- -D warnings`.

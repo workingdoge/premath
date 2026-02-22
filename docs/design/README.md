@@ -43,6 +43,8 @@ Authority rule:
   coherence gate-chain enforcement.
 - `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move
   issue-graph invariants from CI wrappers into `premath-bd` core.
+- `MEMORY-LANES-CONTRACT.md`: canonical work-memory lane split (issues,
+  operations, doctrine/decision) and write-discipline rules.
 - `CONTROL-PLANE-THREAT-MODEL.md`: threat/hardening matrix for control-plane
   mutation, witness, and projection surfaces.
 - `HIGHER-ORDER-CI-CD.md`: control-loop framing inside coding environment.
