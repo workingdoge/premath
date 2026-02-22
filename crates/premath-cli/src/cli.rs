@@ -425,6 +425,12 @@ pub enum Commands {
         command: HarnessSessionCommands,
     },
 
+    /// Manage Tusk harness feature-ledger artifacts
+    HarnessFeature {
+        #[command(subcommand)]
+        command: HarnessFeatureCommands,
+    },
+
     /// Manage dependencies between issues
     Dep {
         #[command(subcommand)]
@@ -915,6 +921,10 @@ pub enum HarnessSessionCommands {
         #[arg(long, default_value = ".premath/harness_session.json")]
         path: String,
 
+        /// Harness feature-ledger artifact path used for deterministic next-step projection
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        feature_ledger: String,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -927,6 +937,97 @@ pub enum HarnessSessionStateArg {
     Active,
     #[value(name = "stopped")]
     Stopped,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum HarnessFeatureCommands {
+    /// Read one harness feature-ledger artifact
+    Read {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Upsert one feature row in a harness feature-ledger artifact
+    Write {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Feature identifier
+        #[arg(long)]
+        feature_id: String,
+
+        /// Feature status
+        #[arg(long)]
+        status: HarnessFeatureStatusArg,
+
+        /// Optional issue ID linked to this feature row
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Optional compact summary
+        #[arg(long)]
+        summary: Option<String>,
+
+        /// Optional session reference for boot continuity
+        #[arg(long)]
+        session_ref: Option<String>,
+
+        /// Instruction references (repeatable)
+        #[arg(long = "instruction-ref")]
+        instruction_refs: Vec<String>,
+
+        /// Verification references (repeatable)
+        #[arg(long = "verification-ref")]
+        verification_refs: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate ledger shape and deterministic closure status
+    Check {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Require complete closure (all features completed with verification refs)
+        #[arg(long)]
+        require_closure: bool,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Select deterministic next unfinished feature
+    Next {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum HarnessFeatureStatusArg {
+    #[value(name = "pending")]
+    Pending,
+    #[value(name = "in_progress")]
+    InProgress,
+    #[value(name = "blocked")]
+    Blocked,
+    #[value(name = "completed")]
+    Completed,
 }
 
 #[derive(Subcommand, Clone, Debug)]

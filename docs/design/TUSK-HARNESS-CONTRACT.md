@@ -105,6 +105,7 @@ Trajectory records are an operational lane, not semantic authority.
 | Harness clause | Current surface | Status |
 |---|---|---|
 | `boot` memory roots | `premath mcp-serve`, `.premath/issues.jsonl`, `artifacts/observation/latest.json` | partial |
+| `boot` deterministic next feature | `harness-feature` ledger (`next`/`check`) + `harness-session bootstrap` projection | present |
 | `step` mutation authority | `instruction-linked` mutation policy in MCP + instruction witness checks | present |
 | `step` deterministic verification | `ci-required-attested` (`run_required_checks` + verify/decide) | present |
 | `stop` lease + handoff | `harness-session` artifact + `issue_claim` / `issue_lease_renew` / `issue_lease_release` | partial |
@@ -113,16 +114,13 @@ Trajectory records are an operational lane, not semantic authority.
 
 ## 8. Gaps (remaining)
 
-1. No typed feature/progress ledger for strict one-feature session closure.
-2. No harness-specific trajectory row schema (step-level, witness-linked).
-3. No single documented retry-policy table bound to failure classes.
+1. No harness-specific trajectory row schema (step-level, witness-linked).
+2. No single documented retry-policy table bound to failure classes.
 
 ## 9. Implementation slice plan (no math generalization required)
 
-1. Add `HarnessFeatureLedger` schema + check command (machine-verifiable
-   progress state).
-2. Add step-trajectory append log + projection query (witness-ref linked).
-3. Add deterministic retry-policy table in control-plane docs + enforcement
+1. Add step-trajectory append log + projection query (witness-ref linked).
+2. Add deterministic retry-policy table in control-plane docs + enforcement
    hook in pipeline wrappers.
 
 Each slice should ship with:
@@ -136,6 +134,7 @@ Each slice should ship with:
 
 - Runtime shape: `docs/design/TUSK-ARCHITECTURE.md`
 - Harness handoff artifact: `docs/design/TUSK-HARNESS-SESSION.md`
+- Harness feature ledger: `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
 - Identity/refinement/witness details:
   - `docs/design/TUSK-IDENTITY.md`
   - `docs/design/TUSK-REFINEMENT.md`

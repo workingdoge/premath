@@ -22,6 +22,8 @@ Authority rule:
   durability boundaries, and trajectory/evidence mapping.
 - `TUSK-HARNESS-SESSION.md`: compact handoff artifact + bootstrap payload
   contract for fresh-context restartability.
+- `TUSK-HARNESS-FEATURE-LEDGER.md`: typed per-feature progress ledger, closure
+  checks, and deterministic next-feature selection.
 
 ### Squeak/SigPi transport + runtime placement (between worlds)
 

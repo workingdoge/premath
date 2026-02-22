@@ -5,7 +5,7 @@ mod commands;
 mod support;
 
 use clap::Parser;
-use cli::{Cli, Commands, HarnessSessionCommands, RefCommands};
+use cli::{Cli, Commands, HarnessFeatureCommands, HarnessSessionCommands, RefCommands};
 
 fn main() {
     let cli = Cli::parse();
@@ -248,8 +248,45 @@ fn main() {
                 issues,
                 json,
             }),
-            HarnessSessionCommands::Bootstrap { path, json } => {
-                commands::harness_session::run_bootstrap(path, json)
+            HarnessSessionCommands::Bootstrap {
+                path,
+                feature_ledger,
+                json,
+            } => commands::harness_session::run_bootstrap(path, feature_ledger, json),
+        },
+
+        Commands::HarnessFeature { command } => match command {
+            HarnessFeatureCommands::Read { path, json } => {
+                commands::harness_feature::run_read(path, json)
+            }
+            HarnessFeatureCommands::Write {
+                path,
+                feature_id,
+                status,
+                issue_id,
+                summary,
+                session_ref,
+                instruction_refs,
+                verification_refs,
+                json,
+            } => commands::harness_feature::run_write(commands::harness_feature::WriteArgs {
+                path,
+                feature_id,
+                status,
+                issue_id,
+                summary,
+                session_ref,
+                instruction_refs,
+                verification_refs,
+                json,
+            }),
+            HarnessFeatureCommands::Check {
+                path,
+                require_closure,
+                json,
+            } => commands::harness_feature::run_check(path, require_closure, json),
+            HarnessFeatureCommands::Next { path, json } => {
+                commands::harness_feature::run_next(path, json)
             }
         },
 

@@ -1985,3 +1985,201 @@ fn harness_session_write_read_bootstrap_json_smoke() {
     assert_eq!(bootstrap_attach["mode"], "attach");
     assert_eq!(bootstrap_attach["sessionId"], session_id);
 }
+
+#[test]
+fn harness_feature_ledger_incomplete_rejects_when_require_closure() {
+    let tmp = TempDirGuard::new("harness-feature-incomplete");
+    let ledger_path = tmp.path().join("feature-ledger.json");
+
+    let out_write = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.alpha"),
+        OsString::from("--status"),
+        OsString::from("pending"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write);
+
+    let out_check = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("check"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--require-closure"),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_check.status.success(),
+        "expected closure check rejection, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out_check.stdout),
+        String::from_utf8_lossy(&out_check.stderr)
+    );
+    let payload = parse_json_stdout(&out_check);
+    assert_eq!(payload["action"], "harness-feature.check");
+    assert_eq!(payload["result"], "rejected");
+    assert_eq!(payload["nextFeatureId"], "feature.alpha");
+    assert!(
+        payload["failureClasses"]
+            .as_array()
+            .expect("failureClasses should be an array")
+            .iter()
+            .any(|row| row.as_str() == Some("harness_feature_ledger.closure_incomplete"))
+    );
+}
+
+#[test]
+fn harness_feature_ledger_malformed_rejects() {
+    let tmp = TempDirGuard::new("harness-feature-malformed");
+    let ledger_path = tmp.path().join("feature-ledger.json");
+    fs::write(
+        &ledger_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema": 1,
+            "ledgerKind": "premath.harness.feature_ledger.v1",
+            "updatedAt": "2026-02-22T00:00:00Z",
+            "features": [{
+                "featureId": "feature.alpha",
+                "status": "completed",
+                "updatedAt": "2026-02-22T00:00:00Z",
+                "verificationRefs": []
+            }]
+        }))
+        .expect("malformed ledger should serialize"),
+    )
+    .expect("malformed ledger should write");
+
+    let out_check = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("check"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_check.status.success(),
+        "expected malformed ledger rejection, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out_check.stdout),
+        String::from_utf8_lossy(&out_check.stderr)
+    );
+    let payload = parse_json_stdout(&out_check);
+    assert_eq!(payload["result"], "rejected");
+    assert!(
+        payload["failureClasses"]
+            .as_array()
+            .expect("failureClasses should be an array")
+            .iter()
+            .any(|row| {
+                row.as_str() == Some("harness_feature_ledger.completed_missing_verification_ref")
+            })
+    );
+}
+
+#[test]
+fn harness_feature_ledger_complete_and_next_json_smoke() {
+    let tmp = TempDirGuard::new("harness-feature-complete");
+    let ledger_path = tmp.path().join("feature-ledger.json");
+
+    let out_write_pending = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.beta"),
+        OsString::from("--status"),
+        OsString::from("pending"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_pending);
+
+    let out_write_progress = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.alpha"),
+        OsString::from("--status"),
+        OsString::from("in_progress"),
+        OsString::from("--session-ref"),
+        OsString::from(".premath/harness_session.json"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_progress);
+
+    let out_next_open = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("next"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_next_open);
+    let next_open = parse_json_stdout(&out_next_open);
+    assert_eq!(next_open["action"], "harness-feature.next");
+    assert_eq!(next_open["exists"], true);
+    assert_eq!(next_open["nextFeatureId"], "feature.alpha");
+    assert_eq!(next_open["closureComplete"], false);
+
+    let out_complete_alpha = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.alpha"),
+        OsString::from("--status"),
+        OsString::from("completed"),
+        OsString::from("--verification-ref"),
+        OsString::from("artifacts/ciwitness/alpha.json"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_complete_alpha);
+
+    let out_complete_beta = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.beta"),
+        OsString::from("--status"),
+        OsString::from("completed"),
+        OsString::from("--verification-ref"),
+        OsString::from("artifacts/ciwitness/beta.json"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_complete_beta);
+
+    let out_check_closed = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("check"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--require-closure"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_check_closed);
+    let check_closed = parse_json_stdout(&out_check_closed);
+    assert_eq!(check_closed["result"], "accepted");
+    assert_eq!(check_closed["summary"]["closureComplete"], true);
+    assert_eq!(check_closed["summary"]["completedCount"], 2);
+    assert_eq!(check_closed["nextFeatureId"], Value::Null);
+
+    let out_next_closed = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("next"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_next_closed);
+    let next_closed = parse_json_stdout(&out_next_closed);
+    assert_eq!(next_closed["nextFeatureId"], Value::Null);
+    assert_eq!(next_closed["closureComplete"], true);
+    assert_eq!(next_closed["featureCount"], 2);
+}

@@ -53,6 +53,10 @@ Optional:
 - `mode`:
   - `resume` when session state is `stopped`
   - `attach` when session state is `active`
+- optional feature projection fields when feature ledger is available:
+  - `nextFeatureId`
+  - `featureClosureComplete`
+  - `featureCount`
 
 ## 5. Determinism Rules
 

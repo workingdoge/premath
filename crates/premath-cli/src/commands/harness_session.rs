@@ -1,4 +1,5 @@
 use crate::cli::HarnessSessionStateArg;
+use crate::commands::harness_feature;
 use chrono::{SecondsFormat, Utc};
 use premath_bd::{MemoryStore, store_snapshot_ref};
 use serde::{Deserialize, Serialize};
@@ -173,9 +174,22 @@ pub fn run_write(args: WriteArgs) {
     println!("  Path: {}", path_buf.display());
 }
 
-pub fn run_bootstrap(path: String, json_output: bool) {
+pub fn run_bootstrap(path: String, feature_ledger: String, json_output: bool) {
     let path_buf = PathBuf::from(path);
     let session = read_session_or_exit(&path_buf);
+    let feature_ledger_buf = PathBuf::from(feature_ledger);
+    let feature_projection = harness_feature::project_next_feature(&feature_ledger_buf)
+        .unwrap_or_else(|err| {
+            emit_error(format!(
+                "failed to project harness feature ledger {}: {err}",
+                feature_ledger_buf.display()
+            ))
+        });
+    let next_feature_id = feature_projection
+        .as_ref()
+        .and_then(|row| row.next_feature_id.clone());
+    let feature_closure_complete = feature_projection.as_ref().map(|row| row.closure_complete);
+    let feature_count = feature_projection.as_ref().map(|row| row.feature_count);
     let payload = json!({
         "action": "harness-session.bootstrap",
         "bootstrapKind": HARNESS_BOOTSTRAP_KIND,
@@ -189,6 +203,10 @@ pub fn run_bootstrap(path: String, json_output: bool) {
         "witnessRefs": session.witness_refs,
         "issuesPath": session.issues_path,
         "issuesSnapshotRef": session.issues_snapshot_ref,
+        "featureLedgerRef": feature_ledger_buf.display().to_string(),
+        "nextFeatureId": next_feature_id,
+        "featureClosureComplete": feature_closure_complete,
+        "featureCount": feature_count,
         "startedAt": session.started_at,
         "updatedAt": session.updated_at,
         "stoppedAt": session.stopped_at
@@ -214,6 +232,9 @@ pub fn run_bootstrap(path: String, json_output: bool) {
     }
     if let Some(next_step) = session.next_step {
         println!("  Next Step: {}", next_step);
+    }
+    if let Some(next_feature_id) = payload["nextFeatureId"].as_str() {
+        println!("  Next Feature: {}", next_feature_id);
     }
 }
 
