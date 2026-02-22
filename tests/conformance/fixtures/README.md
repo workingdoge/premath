@@ -7,11 +7,13 @@ Suggested layout (from `draft/CONFORMANCE.md`):
 - `witness-id/{golden,adversarial}`
 - `kernel-profile/{golden,adversarial}`
 - `doctrine-inf/{golden,adversarial}`
+- `coherence-transport/{golden,adversarial,invariance}`
 - `capabilities/<capability-id>/{golden,adversarial,invariance}`
 
 Executable suite entrypoints include:
 
 - `doctrine-inf`: `python3 tools/conformance/run_doctrine_inf_vectors.py`
+- `coherence-contract`: `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json`
 - cached multi-suite surface: `python3 tools/conformance/run_fixture_suites.py`
 
 Capability fixtures include both:

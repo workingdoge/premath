@@ -1254,3 +1254,36 @@ checker surface.
   proposal discharge semantics on the authoritative instruction path.
 - migration work for `bd-34` is now in-progress with one concrete cutover lane
   completed; remaining parity migration surfaces still need consolidation.
+
+---
+
+## 2026-02-22 — Decision 0044: Run coherence-contract checks through cached conformance fixture-suite surface
+
+### Decision
+Add `coherence-contract` as a first-class suite in
+`tools/conformance/run_fixture_suites.py`, executed by the authoritative
+command:
+
+- `premath coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json`
+
+and bind cache materialization to:
+
+- `draft/COHERENCE-CONTRACT.json`,
+- `tests/conformance/fixtures/coherence-transport`,
+- `crates/premath-coherence/src`,
+- CLI coherence command wrapper source.
+
+### Rationale
+`coherence-check` existed as a standalone baseline gate but not as part of the
+shared cached fixture-suite execution surface. This left a duplicate execution
+shape for conformance-style determinism and slowed repeated runs. Routing it
+through the same cache scheme reduces degrees of freedom while preserving one
+semantic authority path.
+
+### Consequences
+- coherence transport obligations are now executed on the same KCIR-style cache
+  substrate as other executable fixture suites.
+- repeated coherence-contract runs can short-circuit on deterministic cache
+  hits.
+- docs/fixture entrypoints now expose `coherence-contract` as a first-class
+  executable suite in the conformance surface.
