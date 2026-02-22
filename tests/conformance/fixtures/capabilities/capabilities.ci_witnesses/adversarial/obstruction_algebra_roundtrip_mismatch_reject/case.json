@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "adversarial/obstruction_algebra_roundtrip_mismatch_reject",
+  "description": "Obstruction roundtrip rejects when declared constructor mapping diverges from canonical cross-layer mapping.",
+  "semanticScenarioId": "ci_obstruction_algebra_roundtrip_adversarial_01",
+  "artifacts": {
+    "claimedCapabilities": [
+      "capabilities.ci_witnesses"
+    ],
+    "obstructionRoundtrip": {
+      "requiredFamilies": [
+        "semantic"
+      ],
+      "rows": [
+        {
+          "sourceClass": "stability_failure",
+          "expectedConstructor": {
+            "family": "semantic",
+            "tag": "locality"
+          },
+          "expectedCanonicalClass": "stability_failure"
+        }
+      ],
+      "issueProjection": {
+        "expectedTags": [
+          "obs.semantic.locality"
+        ]
+      }
+    }
+  }
+}

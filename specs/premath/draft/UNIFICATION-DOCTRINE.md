@@ -321,3 +321,73 @@ Minimum fail-closed classes:
 
 Equivalent implementation-local class names are permitted only when a
 deterministic mapping to these classes is documented and replay-stable.
+
+## 11. Cross-layer Obstruction Algebra (v0)
+
+Implementations MAY project failure classes into one typed obstruction algebra
+for cross-layer analysis. This algebra is secondary metadata; it MUST NOT
+replace source-layer failure-class authority.
+
+### 11.1 Constructor set
+
+Minimum constructor families:
+
+- `semantic(tag)` for Gate/BIDIR semantic failures,
+- `structural(tag)` for checker-structure/parity failures,
+- `lifecycle(tag)` for lifecycle/attestation/authority-chain failures,
+- `commutation(tag)` for typed cross-lane commutation failures.
+
+### 11.2 Deterministic projection pair
+
+Conforming projections MUST provide deterministic functions:
+
+- `project_obstruction(sourceFailureClass) -> constructor`
+- `canonical_obstruction_class(constructor) -> canonicalFailureClass`
+
+For fixed contract bytes + repository state + deterministic bindings, both
+functions MUST be replay-stable.
+
+### 11.3 Compatibility rule
+
+Existing failure vocabularies remain unchanged:
+
+- Gate/BIDIR classes remain source of semantic admissibility failure truth.
+- Coherence classes remain source of checker parity/shape failure truth.
+- CI/lifecycle classes remain source of control-plane lifecycle failure truth.
+
+The obstruction algebra MUST be vocabulary-preserving:
+
+- it MAY add typed constructor metadata,
+- it MUST NOT rename, suppress, or reinterpret source failure classes.
+
+### 11.4 Initial mapping table (minimum)
+
+| Source failure class | Constructor | Canonical class |
+| --- | --- | --- |
+| `stability_failure` | `semantic(stability)` | `stability_failure` |
+| `locality_failure` | `semantic(locality)` | `locality_failure` |
+| `descent_failure` | `semantic(descent)` | `descent_failure` |
+| `glue_non_contractible` | `semantic(contractibility)` | `glue_non_contractible` |
+| `adjoint_triple_coherence_failure` | `semantic(adjoint_triple)` | `adjoint_triple_coherence_failure` |
+| `coherence.cwf_substitution_identity.violation` | `structural(cwf_substitution_identity)` | `coherence.cwf_substitution_identity.violation` |
+| `coherence.cwf_substitution_composition.violation` | `structural(cwf_substitution_composition)` | `coherence.cwf_substitution_composition.violation` |
+| `coherence.span_square_commutation.violation` | `commutation(span_square_commutation)` | `coherence.span_square_commutation.violation` |
+| `decision_witness_sha_mismatch` | `lifecycle(decision_attestation)` | `decision_witness_sha_mismatch` |
+| `decision_delta_sha_mismatch` | `lifecycle(decision_delta_attestation)` | `decision_delta_sha_mismatch` |
+| `unification.evidence_factorization.missing` | `lifecycle(evidence_factorization_missing)` | `unification.evidence_factorization.missing` |
+| `unification.evidence_factorization.ambiguous` | `lifecycle(evidence_factorization_ambiguous)` | `unification.evidence_factorization.ambiguous` |
+| `unification.evidence_factorization.unbound` | `lifecycle(evidence_factorization_unbound)` | `unification.evidence_factorization.unbound` |
+
+Implementations MAY extend this table, but extensions MUST stay deterministic
+and MUST NOT change existing row mappings.
+
+### 11.5 Witness and issue-memory projection
+
+If an implementation emits obstruction constructors:
+
+- witness payloads SHOULD include constructor metadata next to source classes,
+- issue discovery flows SHOULD project deterministic tags
+  `obs.<family>.<tag>` for long-running memory/indexing.
+
+These projections are informative indexing aids and MUST NOT affect admissibility
+decisions.

@@ -55,6 +55,61 @@ ADJOINTS_SITES_REQUIRED_OBLIGATIONS = {
     "refinement_invariance",
 }
 REQUIRED_CROSS_LANE_ROUTE = "span_square_commutation"
+OBSTRUCTION_CLASS_TO_CONSTRUCTOR: Dict[str, Tuple[str, str, str]] = {
+    "stability_failure": ("semantic", "stability", "stability_failure"),
+    "locality_failure": ("semantic", "locality", "locality_failure"),
+    "descent_failure": ("semantic", "descent", "descent_failure"),
+    "glue_non_contractible": ("semantic", "contractibility", "glue_non_contractible"),
+    "adjoint_triple_coherence_failure": (
+        "semantic",
+        "adjoint_triple",
+        "adjoint_triple_coherence_failure",
+    ),
+    "coherence.cwf_substitution_identity.violation": (
+        "structural",
+        "cwf_substitution_identity",
+        "coherence.cwf_substitution_identity.violation",
+    ),
+    "coherence.cwf_substitution_composition.violation": (
+        "structural",
+        "cwf_substitution_composition",
+        "coherence.cwf_substitution_composition.violation",
+    ),
+    "coherence.span_square_commutation.violation": (
+        "commutation",
+        "span_square_commutation",
+        "coherence.span_square_commutation.violation",
+    ),
+    "decision_witness_sha_mismatch": (
+        "lifecycle",
+        "decision_attestation",
+        "decision_witness_sha_mismatch",
+    ),
+    "decision_delta_sha_mismatch": (
+        "lifecycle",
+        "decision_delta_attestation",
+        "decision_delta_sha_mismatch",
+    ),
+    "unification.evidence_factorization.missing": (
+        "lifecycle",
+        "evidence_factorization_missing",
+        "unification.evidence_factorization.missing",
+    ),
+    "unification.evidence_factorization.ambiguous": (
+        "lifecycle",
+        "evidence_factorization_ambiguous",
+        "unification.evidence_factorization.ambiguous",
+    ),
+    "unification.evidence_factorization.unbound": (
+        "lifecycle",
+        "evidence_factorization_unbound",
+        "unification.evidence_factorization.unbound",
+    ),
+}
+OBSTRUCTION_CONSTRUCTOR_TO_CANONICAL: Dict[Tuple[str, str], str] = {
+    (family, tag): canonical
+    for family, tag, canonical in OBSTRUCTION_CLASS_TO_CONSTRUCTOR.values()
+}
 
 
 @dataclass(frozen=True)
@@ -1659,6 +1714,110 @@ def evaluate_ci_boundary_authority_lineage(case: Dict[str, Any]) -> VectorOutcom
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_ci_obstruction_roundtrip(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_CI_WITNESSES not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    input_data = artifacts.get("input")
+    if input_data is not None and not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object when present")
+    kernel_verdict = "accepted"
+    gate_failure_classes: List[str] = []
+    if isinstance(input_data, dict):
+        kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+        if kernel_verdict not in {"accepted", "rejected"}:
+            raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+        gate_failure_classes = canonical_check_set(
+            input_data.get("gateFailureClasses", []),
+            "artifacts.input.gateFailureClasses",
+        )
+
+    roundtrip = artifacts.get("obstructionRoundtrip")
+    if not isinstance(roundtrip, dict):
+        raise ValueError("artifacts.obstructionRoundtrip must be an object")
+    rows = roundtrip.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("artifacts.obstructionRoundtrip.rows must be a non-empty list")
+
+    failures: List[str] = []
+    observed_families: List[str] = []
+    observed_issue_tags: List[str] = []
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"artifacts.obstructionRoundtrip.rows[{idx}] must be an object")
+        source_class = ensure_string(
+            row.get("sourceClass"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].sourceClass",
+        )
+        expected_constructor_raw = row.get("expectedConstructor")
+        if not isinstance(expected_constructor_raw, dict):
+            raise ValueError(
+                f"artifacts.obstructionRoundtrip.rows[{idx}].expectedConstructor must be an object"
+            )
+        expected_family = ensure_string(
+            expected_constructor_raw.get("family"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].expectedConstructor.family",
+        )
+        expected_tag = ensure_string(
+            expected_constructor_raw.get("tag"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].expectedConstructor.tag",
+        )
+        expected_canonical = ensure_string(
+            row.get("expectedCanonicalClass"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].expectedCanonicalClass",
+        )
+
+        mapped = OBSTRUCTION_CLASS_TO_CONSTRUCTOR.get(source_class)
+        if mapped is None:
+            failures.append("obstruction_roundtrip_unknown_class")
+            continue
+        mapped_family, mapped_tag, mapped_canonical = mapped
+        observed_families.append(mapped_family)
+        observed_issue_tags.append(f"obs.{mapped_family}.{mapped_tag}")
+
+        if (
+            expected_family != mapped_family
+            or expected_tag != mapped_tag
+            or expected_canonical != mapped_canonical
+        ):
+            failures.append("obstruction_roundtrip_mismatch")
+            continue
+
+        roundtrip_canonical = OBSTRUCTION_CONSTRUCTOR_TO_CANONICAL.get((expected_family, expected_tag))
+        if roundtrip_canonical != expected_canonical:
+            failures.append("obstruction_roundtrip_mismatch")
+
+    required_families = canonical_check_set(
+        roundtrip.get("requiredFamilies", []),
+        "artifacts.obstructionRoundtrip.requiredFamilies",
+    )
+    if required_families:
+        missing_families = sorted(set(required_families) - set(observed_families))
+        if missing_families:
+            failures.append("obstruction_roundtrip_mismatch")
+
+    issue_projection = roundtrip.get("issueProjection")
+    if issue_projection is not None:
+        if not isinstance(issue_projection, dict):
+            raise ValueError("artifacts.obstructionRoundtrip.issueProjection must be an object")
+        expected_tags = canonical_check_set(
+            issue_projection.get("expectedTags", []),
+            "artifacts.obstructionRoundtrip.issueProjection.expectedTags",
+        )
+        if expected_tags != canonical_check_set(observed_issue_tags, "observedIssueTags"):
+            failures.append("obstruction_roundtrip_mismatch")
+
+    failure_classes = sorted(set(failures))
+    if failure_classes:
+        return VectorOutcome("rejected", "rejected", failure_classes)
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/instruction_witness_deterministic",
@@ -1697,11 +1856,18 @@ def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOu
         return evaluate_ci_required_witness_delta_snapshot(case)
     if vector_id in {
         "golden/boundary_authority_lineage_accept",
+        "golden/obstruction_algebra_roundtrip_accept",
         "adversarial/boundary_authority_registry_mismatch_reject",
         "adversarial/boundary_authority_stale_generated_reject",
+        "adversarial/obstruction_algebra_roundtrip_mismatch_reject",
         "invariance/same_boundary_authority_local",
         "invariance/same_boundary_authority_external",
     }:
+        if vector_id in {
+            "golden/obstruction_algebra_roundtrip_accept",
+            "adversarial/obstruction_algebra_roundtrip_mismatch_reject",
+        }:
+            return evaluate_ci_obstruction_roundtrip(case)
         return evaluate_ci_boundary_authority_lineage(case)
     if vector_id in {
         "invariance/same_required_witness_local",

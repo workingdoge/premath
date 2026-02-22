@@ -2830,3 +2830,40 @@ no re-ownership of checker/semantic lanes.
   `stability/locality/descent_*/adjoint_*`.
 - `tools/conformance/check_docs_coherence.py` now enforces bridge markers in
   `ADJOINTS-AND-SITES`, `PREMATH-COHERENCE`, and `SPEC-INDEX`.
+
+---
+
+## 2026-02-22 — Decision 0098: Add cross-layer obstruction algebra and conformance roundtrip
+
+### Decision
+Adopt a typed cross-layer obstruction algebra as a secondary projection over
+existing failure classes, with deterministic roundtrip semantics.
+
+Implemented scope:
+
+1. `draft/UNIFICATION-DOCTRINE` now defines §11 (`Cross-layer Obstruction
+   Algebra`) with:
+   - constructor families (`semantic`, `structural`, `lifecycle`,
+     `commutation`),
+   - deterministic projection pair (`project_obstruction`,
+     `canonical_obstruction_class`),
+   - initial mapping table spanning Gate/BIDIR, coherence, lifecycle, and
+     unification factorization classes,
+   - issue-memory projection tag convention (`obs.<family>.<tag>`).
+2. `capabilities.ci_witnesses` now includes executable obstruction roundtrip
+   vectors (golden + adversarial).
+3. capability evaluator now checks deterministic constructor/class roundtrip and
+   deterministic issue-tag projection for fixed source classes.
+
+### Rationale
+Failure classes were already deterministic inside each lane, but cross-layer
+reasoning lacked one typed projection surface for analysis/discovery. Adding an
+algebraic projection keeps minimum encoding (source classes unchanged) while
+improving expressiveness for coherence/issue-memory workflows.
+
+### Consequences
+- Source failure-class authority remains unchanged; obstruction constructors are
+  additive metadata only.
+- Cross-layer roundtrip is now executable under `capabilities.ci_witnesses`.
+- docs coherence checks enforce presence of obstruction algebra clauses and
+  capability-vector coverage language.

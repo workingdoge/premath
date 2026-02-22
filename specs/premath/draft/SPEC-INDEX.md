@@ -171,7 +171,8 @@ explicitly claimed under §5.4 or §5.6.
   `capabilities.instruction_typing` is claimed).
 - `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries and deterministic projections
-  (including Unified Evidence Plane contract in §10).
+  (including Unified Evidence Plane contract in §10 and cross-layer obstruction
+  algebra in §11).
 - `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
   pipeline/base-change commutation plus composition-law (identity,
   associativity, h/v compatibility, interchange) surfaces in coherence checker

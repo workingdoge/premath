@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "obstruction_roundtrip_mismatch"
+  ],
+  "assertions": [
+    "constructor mismatch rejects deterministically without changing source failure vocabularies"
+  ]
+}

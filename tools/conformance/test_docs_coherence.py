@@ -181,6 +181,29 @@ bridge rules MUST NOT add new coherence
             check_docs_coherence.SPEC_INDEX_CWF_SIGPI_BRIDGE_RE.search(text)
         )
 
+    def test_unification_obstruction_markers_all_present(self) -> None:
+        text = """
+## 11. Cross-layer Obstruction Algebra (v0)
+`semantic(tag)`
+`structural(tag)`
+`lifecycle(tag)`
+`commutation(tag)`
+`project_obstruction(sourceFailureClass) -> constructor`
+`canonical_obstruction_class(constructor) -> canonicalFailureClass`
+commutation(span_square_commutation)
+`obs.<family>.<tag>`
+"""
+        missing = check_docs_coherence.find_missing_markers(
+            text, check_docs_coherence.UNIFICATION_OBSTRUCTION_MARKERS
+        )
+        self.assertEqual(missing, [])
+
+    def test_capability_vectors_obstruction_regex_matches(self) -> None:
+        text = "cross-layer obstruction rows roundtrip deterministically."
+        self.assertIsNotNone(
+            check_docs_coherence.CAPABILITY_VECTORS_OBSTRUCTION_RE.search(text)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

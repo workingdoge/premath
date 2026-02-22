@@ -79,6 +79,21 @@ SPEC_INDEX_CWF_SIGPI_BRIDGE_RE = re.compile(
     r"`profile/ADJOINTS-AND-SITES` §11",
     re.IGNORECASE,
 )
+UNIFICATION_OBSTRUCTION_MARKERS: Tuple[str, ...] = (
+    "## 11. Cross-layer Obstruction Algebra (v0)",
+    "`semantic(tag)`",
+    "`structural(tag)`",
+    "`lifecycle(tag)`",
+    "`commutation(tag)`",
+    "`project_obstruction(sourceFailureClass) -> constructor`",
+    "`canonical_obstruction_class(constructor) -> canonicalFailureClass`",
+    "commutation(span_square_commutation)",
+    "`obs.<family>.<tag>`",
+)
+CAPABILITY_VECTORS_OBSTRUCTION_RE = re.compile(
+    r"cross-layer obstruction rows roundtrip deterministically",
+    re.IGNORECASE,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -250,6 +265,7 @@ def main() -> int:
     unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
     span_square_checking = root / "specs" / "premath" / "draft" / "SPAN-SQUARE-CHECKING.md"
     pre_math_coherence = root / "specs" / "premath" / "draft" / "PREMATH-COHERENCE.md"
+    capability_vectors = root / "specs" / "premath" / "draft" / "CAPABILITY-VECTORS.md"
     adjoints_profile = root / "specs" / "premath" / "profile" / "ADJOINTS-AND-SITES.md"
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
@@ -274,6 +290,7 @@ def main() -> int:
     unification_text = load_text(unification_doctrine)
     span_square_text = load_text(span_square_checking)
     coherence_text = load_text(pre_math_coherence)
+    capability_vectors_text = load_text(capability_vectors)
     adjoints_text = load_text(adjoints_profile)
     section_54 = extract_heading_section(spec_index_text, "5.4")
     section_55 = extract_heading_section(spec_index_text, "5.5")
@@ -349,6 +366,16 @@ def main() -> int:
         errors.append(
             "SPEC-INDEX lane ownership note must include CwF<->sig\\Pi bridge "
             "normative reference"
+        )
+    missing_unification_obstruction_markers = find_missing_markers(
+        unification_text, UNIFICATION_OBSTRUCTION_MARKERS
+    )
+    for marker in missing_unification_obstruction_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing obstruction marker: {marker}")
+    if CAPABILITY_VECTORS_OBSTRUCTION_RE.search(capability_vectors_text) is None:
+        errors.append(
+            "CAPABILITY-VECTORS must include cross-layer obstruction roundtrip "
+            "coverage for capabilities.ci_witnesses"
         )
 
     mise_text = load_text(mise_toml)

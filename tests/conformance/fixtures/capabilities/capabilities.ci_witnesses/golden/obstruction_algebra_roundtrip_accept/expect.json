@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "typed obstruction constructors roundtrip to canonical classes deterministically",
+    "issue-discovery obstruction tags are stable for fixed source classes"
+  ]
+}
