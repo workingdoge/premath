@@ -227,6 +227,53 @@ fn write_required_projection_input(dir: &Path, changed_paths: Vec<&str>) -> Path
     input_path
 }
 
+fn write_required_delta_input(
+    dir: &Path,
+    repo_root: &Path,
+    from_ref: Option<&str>,
+    to_ref: Option<&str>,
+) -> PathBuf {
+    let mut input = serde_json::Map::new();
+    input.insert(
+        "repoRoot".to_string(),
+        Value::String(repo_root.to_string_lossy().to_string()),
+    );
+    if let Some(value) = from_ref {
+        input.insert("fromRef".to_string(), Value::String(value.to_string()));
+    }
+    if let Some(value) = to_ref {
+        input.insert("toRef".to_string(), Value::String(value.to_string()));
+    }
+    let input_path = dir.join("required-delta-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&Value::Object(input)).expect("delta input should serialize"),
+    )
+    .expect("required delta input should be written");
+    input_path
+}
+
+fn run_git<I, S>(repo_root: &Path, args: I)
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(args)
+        .output()
+        .expect("git command should execute");
+    if !output.status.success() {
+        panic!(
+            "git command failed with status {:?}\nstdout:\n{}\nstderr:\n{}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+    }
+}
+
 fn write_required_verify_input(dir: &Path, failed: bool) -> PathBuf {
     let runtime = write_required_runtime_input(dir, failed);
     let witness_output = run_premath([
@@ -585,6 +632,54 @@ fn required_projection_json_smoke() {
         serde_json::json!(["build", "test", "test-toy", "test-kcir-toy"])
     );
     assert_eq!(payload["docsOnly"], false);
+}
+
+#[test]
+fn required_delta_json_smoke() {
+    let tmp = TempDirGuard::new("required-delta-json");
+    let repo_root = tmp.path().join("repo");
+    fs::create_dir_all(&repo_root).expect("repo root should be created");
+
+    run_git(&repo_root, ["init", "--quiet"]);
+    let readme = repo_root.join("README.md");
+    fs::write(&readme, "first line\n").expect("initial readme should be written");
+    run_git(&repo_root, ["add", "README.md"]);
+    run_git(
+        &repo_root,
+        [
+            "-c",
+            "user.name=Premath Test",
+            "-c",
+            "user.email=premath@example.com",
+            "commit",
+            "-m",
+            "init",
+            "--quiet",
+        ],
+    );
+    fs::write(&readme, "first line\nsecond line\n").expect("readme should be updated");
+
+    let input = write_required_delta_input(tmp.path(), &repo_root, Some("HEAD"), Some("HEAD"));
+    let output = run_premath([
+        OsString::from("required-delta"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["deltaKind"], "ci.required.delta.v1");
+    assert_eq!(payload["fromRef"], "HEAD");
+    assert_eq!(payload["toRef"], "HEAD");
+    assert!(
+        payload["source"]
+            .as_str()
+            .expect("source should be a string")
+            .contains("workspace")
+    );
+    assert_eq!(payload["changedPaths"], serde_json::json!(["README.md"]));
 }
 
 #[test]

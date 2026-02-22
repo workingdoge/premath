@@ -11,8 +11,9 @@ by `mise run ci-required`.
 
 It computes deterministic change projection (`Delta -> requiredChecks`) and
 executes only those checks through `tools/ci/run_gate.sh`.
-Projection semantics are core-owned (`premath required-projection`);
-`tools/ci/change_projection.py` is a thin client + git-delta adapter.
+Projection + delta detection semantics are core-owned
+(`premath required-projection`, `premath required-delta`);
+`tools/ci/change_projection.py` is a thin adapter over those command surfaces.
 It writes `artifacts/ciwitness/latest-delta.json` as a single-source delta
 snapshot for strict compare phases (`ci-verify-required-strict`,
 `ci-decide-required`).

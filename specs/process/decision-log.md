@@ -1783,3 +1783,30 @@ parallel encodings and reduces drift risk across run/verify/decide paths.
 - `required_verify` and runtime projection now share one core implementation.
 - pipeline and CLI smoke surfaces now include required-projection client/command
   tests.
+
+---
+
+## 2026-02-22 — Decision 0061: Move git/workspace delta detection to core `premath required-delta`
+
+### Decision
+Make changed-path detection (`repoRoot + optional fromRef/toRef -> {changedPaths,
+source, fromRef, toRef}`) core-owned:
+
+- add `premath-cli required-delta --input <delta_input.json> --json`,
+- route `tools/ci/change_projection.py` delta detection through
+  `tools/ci/required_delta_client.py`,
+- keep Python wrappers as adapter-only orchestration surfaces.
+
+### Rationale
+`bd-34` targets one checker-owned semantic authority path for required-gate
+planning. After Decision 0060, Python still owned git/workspace delta detection
+rules; that left a second semantic boundary outside core command surfaces.
+Moving this path into `premath-cli` reduces drift risk and aligns run/verify/
+decide consumers on the same deterministic delta semantics.
+
+### Consequences
+- `change_projection.py` no longer embeds git ref fallback/source classification
+  logic.
+- required-gate pipeline tests now include `test_required_delta_client.py`.
+- CLI smoke coverage now includes `required-delta` against a temporary git repo
+  fixture.

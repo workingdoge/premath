@@ -155,6 +155,8 @@ fn main() {
             commands::required_projection::run(input, json)
         }
 
+        Commands::RequiredDelta { input, json } => commands::required_delta::run(input, json),
+
         Commands::RequiredWitnessVerify { input, json } => {
             commands::required_witness_verify::run(input, json)
         }
