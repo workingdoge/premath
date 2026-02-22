@@ -24,7 +24,7 @@ fn default_issue_event_schema() -> String {
 #[serde(tag = "action", rename_all = "snake_case")]
 pub enum IssueEventAction {
     UpsertIssue {
-        issue: Issue,
+        issue: Box<Issue>,
     },
     AddDependency {
         depends_on_id: String,
@@ -57,7 +57,9 @@ impl IssueEvent {
             issue_id,
             occurred_at: issue.updated_at,
             actor: String::new(),
-            action: IssueEventAction::UpsertIssue { issue },
+            action: IssueEventAction::UpsertIssue {
+                issue: Box::new(issue),
+            },
         }
     }
 
@@ -168,7 +170,7 @@ pub fn replay_events(events: &[IssueEvent]) -> Result<MemoryStore, EventError> {
                         payload_issue_id: issue.id.clone(),
                     });
                 }
-                store.upsert_issue(issue.clone());
+                store.upsert_issue((**issue).clone());
             }
 
             IssueEventAction::AddDependency {
