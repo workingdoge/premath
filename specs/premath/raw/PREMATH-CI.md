@@ -152,12 +152,18 @@ CIWitness {
   results
   projection_digest
   policy_digest
+  operational_failure_classes?
+  semantic_failure_classes?
+  failure_classes?
   gate_witness_refs?
 }
 ```
 
 `projection_digest` binds change-projection semantics.
 `policy_digest` binds requiredness/profile policy.
+When `operational_failure_classes` and `semantic_failure_classes` are present,
+`failure_classes` MUST be their deterministic set-union (for compatibility
+consumers that only ingest one surface).
 `gate_witness_refs` MAY bind CI outcomes to kernel witness artifacts.
 When present, each `gate_witness_ref` SHOULD include provenance
 `source in {native, fallback}`.
@@ -178,6 +184,11 @@ For projection-driven required gates (for example `ci.required` witness records)
   - `required_checks`
   - `executed_checks`
   - verdict/failure-class consistency with check results.
+  - if failure-lineage split fields are present:
+    - `operational_failure_classes` consistency with execution-surface outcomes,
+    - `semantic_failure_classes` consistency with linked gate witness payload
+      classes when available,
+    - `failure_classes` consistency with deterministic union of the two.
 - when `gate_witness_refs` are present, verification MUST also reject on
   linkage mismatch:
   - check/ref ordering mismatch,

@@ -20,6 +20,13 @@ For each executed check it requests a per-check gate envelope artifact under
 `run_gate.sh` prefers a native runner/task artifact when present; otherwise it
 emits a deterministic fallback envelope (`tools/ci/emit_gate_witness.py`).
 Each gate ref includes `source: native|fallback` provenance.
+`ci.required.v1` witness summaries expose deterministic failure-lineage split:
+
+- `operationalFailureClasses`: CI control-plane execution classes
+  (for example `check_failed`),
+- `semanticFailureClasses`: semantic classes derived from linked gate witness
+  payloads where available,
+- `failureClasses`: deterministic union of both surfaces (compatibility field).
 
 `tools/ci/run_gate.sh` is the host-agnostic task executor shim used by both
 `ci-required` and fixed-task flows like `mise run ci-check`.
@@ -143,6 +150,11 @@ It separates:
   - for proposal-carrying instructions, witness includes deterministic
     `proposalIngest.obligations[]` and normalized `proposalIngest.discharge`
     payloads; check execution proceeds only when discharge outcome is accepted.
+  - instruction witnesses expose the same lineage split:
+    - `operationalFailureClasses` for control-plane classes,
+    - `semanticFailureClasses` for proposal-discharge semantic classes when
+      present,
+    - `failureClasses` as deterministic union for compatibility.
   - envelope validation failures now emit a first-class reject witness
     (`verdictClass=rejected`, `rejectStage=pre_execution`, deterministic
     `failureClasses`) instead of only stderr/exit status.

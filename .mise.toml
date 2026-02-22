@@ -111,6 +111,7 @@ run = "python3 tools/ci/check_pipeline_wiring.py"
 run = [
   "python3 tools/ci/test_pipeline_required.py",
   "python3 tools/ci/test_run_required_checks.py",
+  "python3 tools/ci/test_required_witness_lineage.py",
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_policy.py",

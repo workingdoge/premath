@@ -1405,3 +1405,34 @@ execution and coherence checking.
 - this is the first `bd-63` slice; remaining scope includes migrating
   additional control-plane constants (witness class/binding keys and related
   roundtrip conformance vectors) onto the same contract artifact.
+
+---
+
+## 2026-02-22 — Decision 0049: Split CI witness failure lineage into operational vs semantic classes
+
+### Decision
+Adopt a typed failure-lineage split for CI witness summaries:
+
+- `operationalFailureClasses`: control-plane execution classes.
+- `semanticFailureClasses`: semantic lineage classes derived from Gate/proposal
+  surfaces when available.
+- `failureClasses`: deterministic set-union compatibility field.
+
+Apply this split to `ci.required` and `ci.instruction` witnesses, and enforce
+deterministic mapping in `verify_required_witness_payload` (used by both
+`ci-verify-required` and `ci-decide-required`).
+
+### Rationale
+The prior single `failureClasses` surface collapsed operational and semantic
+causes. That made CI decision surfaces less informative and weakened semantic
+lineage preservation across kernel/coherence/CI boundaries.
+
+### Consequences
+- `ci.required` now carries semantic classes threaded from linked gate witness
+  payloads (`gateWitnessRefs[].failureClasses`) while preserving operational
+  `check_failed` classification.
+- `ci.instruction` now separates pre-execution/control-plane failures from
+  proposal-discharge semantic failures, while preserving the union field for
+  compatibility.
+- verification/decision paths now reject lineage-shape mismatches instead of
+  accepting collapsed failure-class summaries when semantic lineage is present.

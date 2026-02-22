@@ -64,6 +64,11 @@ class InstructionRejectWitnessTests(unittest.TestCase):
             self.assertEqual(witness["witnessKind"], "ci.instruction.v1")
             self.assertEqual(witness["verdictClass"], "rejected")
             self.assertEqual(witness["rejectStage"], "pre_execution")
+            self.assertEqual(
+                witness["operationalFailureClasses"],
+                ["instruction_invalid_normalizer"],
+            )
+            self.assertEqual(witness["semanticFailureClasses"], [])
             self.assertEqual(witness["failureClasses"], ["instruction_invalid_normalizer"])
             self.assertEqual(witness["executedChecks"], [])
             self.assertEqual(
@@ -82,6 +87,11 @@ class InstructionRejectWitnessTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 2)
             witness = result["witness"]
             self.assertEqual(witness["rejectStage"], "pre_execution")
+            self.assertEqual(
+                witness["operationalFailureClasses"],
+                ["instruction_check_not_allowed"],
+            )
+            self.assertEqual(witness["semanticFailureClasses"], [])
             self.assertEqual(witness["failureClasses"], ["instruction_check_not_allowed"])
 
     def test_whitespace_normalizer_rejects_pre_execution(self) -> None:
@@ -95,6 +105,11 @@ class InstructionRejectWitnessTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 2)
             witness = result["witness"]
             self.assertEqual(witness["rejectStage"], "pre_execution")
+            self.assertEqual(
+                witness["operationalFailureClasses"],
+                ["instruction_invalid_normalizer"],
+            )
+            self.assertEqual(witness["semanticFailureClasses"], [])
             self.assertEqual(witness["failureClasses"], ["instruction_invalid_normalizer"])
 
     def test_proposal_binding_mismatch_emits_typed_failure_class(self) -> None:
@@ -117,6 +132,11 @@ class InstructionRejectWitnessTests(unittest.TestCase):
             self.assertEqual(proc.returncode, 2)
             witness = result["witness"]
             self.assertEqual(witness["rejectStage"], "pre_execution")
+            self.assertEqual(
+                witness["operationalFailureClasses"],
+                ["proposal_binding_mismatch"],
+            )
+            self.assertEqual(witness["semanticFailureClasses"], [])
             self.assertEqual(witness["failureClasses"], ["proposal_binding_mismatch"])
 
 

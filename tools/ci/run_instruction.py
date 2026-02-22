@@ -33,6 +33,10 @@ def stable_hash(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def sorted_unique_strings(values: List[str]) -> List[str]:
+    return sorted(set(item for item in values if isinstance(item, str) and item))
+
+
 def parse_args() -> argparse.Namespace:
     root = Path(__file__).resolve().parents[2]
     parser = argparse.ArgumentParser(
@@ -213,6 +217,8 @@ def write_pre_execution_reject_witness(
         "executedChecks": [],
         "results": [],
         "verdictClass": "rejected",
+        "operationalFailureClasses": [failure_class],
+        "semanticFailureClasses": [],
         "failureClasses": [failure_class],
         "rejectStage": "pre_execution",
         "rejectReason": reason,
@@ -324,7 +330,8 @@ def main() -> int:
 
     results: List[Dict[str, Any]] = []
     failed: List[Dict[str, Any]] = []
-    failure_classes: List[str] = []
+    operational_failure_classes: List[str] = []
+    semantic_failure_classes: List[str] = []
     unknown_rejected = (
         instruction_classification.get("state") == "unknown"
         and not typing_policy.get("allowUnknown", False)
@@ -335,7 +342,7 @@ def main() -> int:
     )
     if unknown_rejected:
         verdict_class = "rejected"
-        failure_classes = ["instruction_unknown_unroutable"]
+        operational_failure_classes = ["instruction_unknown_unroutable"]
         reason = instruction_classification.get("reason", "unknown")
         print(
             f"[instruction] classification rejected: unknown(reason={reason}) "
@@ -344,16 +351,16 @@ def main() -> int:
         )
     elif proposal_rejected:
         verdict_class = "rejected"
-        failure_classes = sorted(
-            set(
+        semantic_failure_classes = sorted_unique_strings(
+            [
                 item
                 for item in proposal_discharge.get("failureClasses", [])
                 if isinstance(item, str) and item
-            )
+            ]
         )
         print(
             "[instruction] proposal discharge rejected before execution "
-            f"(failureClasses={failure_classes})",
+            f"(failureClasses={semantic_failure_classes})",
             file=sys.stderr,
         )
     else:
@@ -363,7 +370,13 @@ def main() -> int:
         failed = [r for r in results if r["exitCode"] != 0]
         verdict_class = "accepted" if not failed else "rejected"
         if failed:
-            failure_classes = ["check_failed"]
+            operational_failure_classes = ["check_failed"]
+
+    operational_failure_classes = sorted_unique_strings(operational_failure_classes)
+    semantic_failure_classes = sorted_unique_strings(semantic_failure_classes)
+    failure_classes = sorted_unique_strings(
+        operational_failure_classes + semantic_failure_classes
+    )
 
     squeak_site_profile = os.environ.get(
         "PREMATH_SQUEAK_SITE_PROFILE",
@@ -390,6 +403,8 @@ def main() -> int:
         "executedChecks": executed_checks,
         "results": results,
         "verdictClass": verdict_class,
+        "operationalFailureClasses": operational_failure_classes,
+        "semanticFailureClasses": semantic_failure_classes,
         "failureClasses": failure_classes,
         "squeakSiteProfile": squeak_site_profile,
         "runStartedAt": started_at.isoformat(),

@@ -170,6 +170,12 @@ When witness records are emitted, they SHOULD include:
 - required/executed checks,
 - verdict class and failure classes.
 
+When instruction witnesses expose split failure-lineage fields, they SHOULD use:
+
+- `operational_failure_classes` for control-plane execution failures,
+- `semantic_failure_classes` for proposal/gate semantic lineage where available,
+- `failure_classes` as deterministic union for compatibility consumers.
+
 When proposal material is present, witnesses SHOULD additionally include:
 
 - deterministic proposal KCIR ref (`proposal_kcir_ref`) when KCIR-linked

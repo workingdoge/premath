@@ -76,6 +76,8 @@ def normalized_core(payload: Dict[str, Any]) -> Dict[str, Any]:
         "requiredChecks": payload.get("requiredChecks"),
         "executedChecks": payload.get("executedChecks"),
         "verdictClass": payload.get("verdictClass"),
+        "operationalFailureClasses": payload.get("operationalFailureClasses"),
+        "semanticFailureClasses": payload.get("semanticFailureClasses"),
         "failureClasses": payload.get("failureClasses"),
         "squeakSiteProfile": payload.get("squeakSiteProfile"),
         "results": normalize_results(payload.get("results")),

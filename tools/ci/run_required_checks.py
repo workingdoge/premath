@@ -122,11 +122,22 @@ def _gate_ref_from_payload(
     payload: Dict[str, Any],
     source: str,
 ) -> Dict[str, Any]:
+    failure_classes: List[str] = []
+    failures_raw = payload.get("failures")
+    if isinstance(failures_raw, list):
+        for failure in failures_raw:
+            if not isinstance(failure, dict):
+                continue
+            class_name = failure.get("class")
+            if isinstance(class_name, str) and class_name.strip():
+                failure_classes.append(class_name.strip())
+
     ref: Dict[str, Any] = {
         "checkId": check_id,
         "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
         "sha256": stable_sha256(payload),
         "source": source,
+        "failureClasses": sorted(set(failure_classes)),
     }
     if "runId" in payload:
         ref["runId"] = payload.get("runId")
@@ -231,6 +242,16 @@ def emit_gate_witness(
         json.dump(envelope, f, indent=2, ensure_ascii=False)
         f.write("\n")
 
+    failure_classes: List[str] = []
+    failures_raw = envelope.get("failures")
+    if isinstance(failures_raw, list):
+        for failure in failures_raw:
+            if not isinstance(failure, dict):
+                continue
+            class_name = failure.get("class")
+            if isinstance(class_name, str) and class_name.strip():
+                failure_classes.append(class_name.strip())
+
     return {
         "checkId": check_id,
         "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
@@ -239,6 +260,7 @@ def emit_gate_witness(
         "runId": envelope["runId"],
         "witnessKind": envelope["witnessKind"],
         "result": envelope["result"],
+        "failureClasses": sorted(set(failure_classes)),
     }
 
 
@@ -313,7 +335,17 @@ def main() -> int:
 
     failed = [row for row in results if row["exitCode"] != 0]
     verdict_class = "accepted" if not failed else "rejected"
-    failure_classes = ["check_failed"] if failed else []
+    operational_failure_classes = ["check_failed"] if failed else []
+    semantic_failure_classes: List[str] = []
+    for ref in gate_witness_refs:
+        classes_raw = ref.get("failureClasses")
+        if not isinstance(classes_raw, list):
+            continue
+        for class_name in classes_raw:
+            if isinstance(class_name, str) and class_name.strip():
+                semantic_failure_classes.append(class_name.strip())
+    semantic_failure_classes = sorted(set(semantic_failure_classes))
+    failure_classes = sorted(set(operational_failure_classes + semantic_failure_classes))
 
     finished_at = datetime.now(timezone.utc)
     witness = {
@@ -327,6 +359,8 @@ def main() -> int:
         "results": results,
         "gateWitnessRefs": gate_witness_refs,
         "verdictClass": verdict_class,
+        "operationalFailureClasses": operational_failure_classes,
+        "semanticFailureClasses": semantic_failure_classes,
         "failureClasses": failure_classes,
         "docsOnly": plan["docsOnly"],
         "reasons": plan["reasons"],

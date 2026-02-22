@@ -159,6 +159,9 @@ CIWitness {
   results
   projection_digest
   policy_digest
+  operational_failure_classes?
+  semantic_failure_classes?
+  failure_classes?
 }
 ```
 
@@ -172,6 +175,12 @@ projection semantics and rejects on:
 - projection digest mismatch,
 - required/executed check-set mismatch,
 - verdict/failure-class mismatch with recorded results.
+- when failure-lineage split fields are present:
+  - `operational_failure_classes` mismatch with execution outcomes,
+  - `semantic_failure_classes` mismatch with linked gate witness classes
+    (when available),
+  - `failure_classes` mismatch with deterministic union of operational+semantic
+    classes.
 - when `gate_witness_refs` are present:
   - check/ref ordering mismatch,
   - missing or invalid provenance `source in {native,fallback}`,

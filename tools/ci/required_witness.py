@@ -30,6 +30,17 @@ def _string_list(value: Any, label: str, errors: List[str]) -> List[str]:
     return out
 
 
+def _sorted_unique(values: Sequence[str]) -> List[str]:
+    return sorted(set(values))
+
+
+def _optional_string_list(value: Any, label: str, errors: List[str]) -> Optional[List[str]]:
+    if value is None:
+        return None
+    out = _string_list(value, label, errors)
+    return _sorted_unique(out)
+
+
 def _check_str_field(witness: Dict[str, Any], key: str, expected: str, errors: List[str]) -> None:
     value = witness.get(key)
     if value != expected:
@@ -94,14 +105,15 @@ def _verify_gate_witness_refs(
     errors: List[str],
     witness_root: Optional[Path],
     gate_witness_payloads: Optional[Mapping[str, Dict[str, Any]]],
-) -> Dict[str, str]:
+) -> Tuple[Dict[str, str], Dict[str, List[str]]]:
     source_by_check: Dict[str, str] = {}
+    semantic_by_check: Dict[str, List[str]] = {}
     refs_raw = witness.get("gateWitnessRefs")
     if refs_raw is None:
-        return source_by_check
+        return source_by_check, semantic_by_check
     if not isinstance(refs_raw, list):
         errors.append("gateWitnessRefs must be a list when present")
-        return source_by_check
+        return source_by_check, semantic_by_check
 
     if len(refs_raw) != len(executed_checks):
         errors.append(
@@ -172,6 +184,11 @@ def _verify_gate_witness_refs(
                 f"gateWitnessRefs[{idx}].result mismatch "
                 f"(expected={expected_gate_result!r}, actual={ref_result!r})"
             )
+        ref_failure_classes = _optional_string_list(
+            ref.get("failureClasses"),
+            f"gateWitnessRefs[{idx}].failureClasses",
+            errors,
+        )
 
         payload = _load_gate_witness_payload(
             artifact_rel_path=artifact_rel_path,
@@ -180,6 +197,8 @@ def _verify_gate_witness_refs(
             gate_witness_payloads=gate_witness_payloads,
         )
         if payload is None:
+            if ref_failure_classes is not None:
+                semantic_by_check[check_id] = ref_failure_classes
             continue
 
         payload_digest = stable_sha256(payload)
@@ -204,17 +223,38 @@ def _verify_gate_witness_refs(
             )
 
         payload_failures = payload.get("failures")
+        payload_failure_classes: List[str] = []
         if not isinstance(payload_failures, list):
             errors.append(f"gateWitnessRefs[{idx}] payload failures must be a list")
         else:
+            for failure_idx, failure in enumerate(payload_failures):
+                if not isinstance(failure, dict):
+                    errors.append(
+                        f"gateWitnessRefs[{idx}] payload failures[{failure_idx}] must be an object"
+                    )
+                    continue
+                class_name = failure.get("class")
+                if not isinstance(class_name, str) or not class_name.strip():
+                    errors.append(
+                        f"gateWitnessRefs[{idx}] payload failures[{failure_idx}].class must be a non-empty string"
+                    )
+                    continue
+                payload_failure_classes.append(class_name.strip())
+            payload_failure_classes = _sorted_unique(payload_failure_classes)
             if payload_result == "accepted" and payload_failures:
                 errors.append(
                     f"gateWitnessRefs[{idx}] accepted payload must have empty failures list"
                 )
-            if payload_result == "rejected" and not payload_failures:
+            if payload_result == "rejected" and not payload_failure_classes:
                 errors.append(
                     f"gateWitnessRefs[{idx}] rejected payload must include failures"
                 )
+        semantic_by_check[check_id] = payload_failure_classes
+        if ref_failure_classes is not None and ref_failure_classes != payload_failure_classes:
+            errors.append(
+                f"gateWitnessRefs[{idx}].failureClasses mismatch "
+                f"(expected={payload_failure_classes}, actual={ref_failure_classes})"
+            )
 
         ref_run_id = ref.get("runId")
         if ref_run_id is not None:
@@ -225,7 +265,7 @@ def _verify_gate_witness_refs(
                     f"gateWitnessRefs[{idx}] runId mismatch "
                     f"(ref={ref_run_id!r}, payload={payload.get('runId')!r})"
                 )
-    return source_by_check
+    return source_by_check, semantic_by_check
 
 
 def verify_required_witness_payload(
@@ -330,7 +370,7 @@ def verify_required_witness_payload(
             f"(expected={executed_checks}, actual={result_check_ids})"
         )
 
-    source_by_check = _verify_gate_witness_refs(
+    source_by_check, semantic_by_check = _verify_gate_witness_refs(
         witness=witness,
         executed_checks=executed_checks,
         results_by_check=results_by_check,
@@ -358,6 +398,14 @@ def verify_required_witness_payload(
                 f"(checkId={check_id!r}, source={source!r})"
             )
 
+    expected_semantic_failure_classes = _sorted_unique(
+        [
+            class_name
+            for classes in semantic_by_check.values()
+            for class_name in classes
+        ]
+    )
+
     docs_only = witness.get("docsOnly")
     if docs_only is not projection.docs_only:
         errors.append(
@@ -378,8 +426,48 @@ def verify_required_witness_payload(
             f"verdictClass mismatch (expected={expected_verdict!r}, actual={verdict_class!r})"
         )
 
-    failure_classes = _string_list(witness.get("failureClasses"), "failureClasses", errors)
-    expected_failure_classes = [] if failed_count == 0 else ["check_failed"]
+    operational_failure_classes = _optional_string_list(
+        witness.get("operationalFailureClasses"),
+        "operationalFailureClasses",
+        errors,
+    )
+    if operational_failure_classes is None:
+        # Backward-compatibility for legacy witnesses that only emitted failureClasses.
+        operational_failure_classes = _sorted_unique(
+            _string_list(witness.get("failureClasses"), "failureClasses", errors)
+        )
+
+    semantic_failure_classes = _optional_string_list(
+        witness.get("semanticFailureClasses"),
+        "semanticFailureClasses",
+        errors,
+    )
+    if semantic_failure_classes is None:
+        semantic_failure_classes = []
+        if expected_semantic_failure_classes:
+            errors.append(
+                "semanticFailureClasses missing while gate witness semantic lineage is available"
+            )
+
+    expected_operational_failure_classes = [] if failed_count == 0 else ["check_failed"]
+    if operational_failure_classes != expected_operational_failure_classes:
+        errors.append(
+            "operationalFailureClasses mismatch "
+            f"(expected={expected_operational_failure_classes}, actual={operational_failure_classes})"
+        )
+
+    if semantic_failure_classes != expected_semantic_failure_classes:
+        errors.append(
+            "semanticFailureClasses mismatch "
+            f"(expected={expected_semantic_failure_classes}, actual={semantic_failure_classes})"
+        )
+
+    failure_classes = _sorted_unique(
+        _string_list(witness.get("failureClasses"), "failureClasses", errors)
+    )
+    expected_failure_classes = _sorted_unique(
+        expected_operational_failure_classes + expected_semantic_failure_classes
+    )
     if sorted(failure_classes) != sorted(expected_failure_classes):
         errors.append(
             "failureClasses mismatch "
@@ -392,6 +480,7 @@ def verify_required_witness_payload(
         "requiredChecks": expected_required,
         "executedChecks": executed_checks,
         "gateWitnessSourceByCheck": source_by_check,
+        "gateSemanticFailureClassesByCheck": semantic_by_check,
         "docsOnly": projection.docs_only,
         "reasons": expected_reasons,
         "expectedVerdict": expected_verdict,
