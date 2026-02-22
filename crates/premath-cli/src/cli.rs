@@ -276,6 +276,12 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Reference binding profile operations (`project_ref` / `verify_ref`)
+    Ref {
+        #[command(subcommand)]
+        command: RefCommands,
+    },
+
     /// Manage issues in premath-bd JSONL memory
     Issue {
         #[command(subcommand)]
@@ -613,4 +619,65 @@ pub enum DepViewArg {
     Gtd,
     #[value(name = "groupoid")]
     Groupoid,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum RefCommands {
+    /// Compute a deterministic projected reference for `(domain, payload_bytes)`
+    Project {
+        /// Reference profile JSON path
+        #[arg(long, default_value = "policies/ref/sha256_detached_v1.json")]
+        profile: String,
+
+        /// Domain string
+        #[arg(long)]
+        domain: String,
+
+        /// Canonical payload bytes as hex
+        #[arg(long = "payload-hex")]
+        payload_hex: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Verify one provided reference against projection/evidence checks
+    Verify {
+        /// Reference profile JSON path
+        #[arg(long, default_value = "policies/ref/sha256_detached_v1.json")]
+        profile: String,
+
+        /// Domain string for payload projection
+        #[arg(long)]
+        domain: String,
+
+        /// Canonical payload bytes as hex
+        #[arg(long = "payload-hex")]
+        payload_hex: String,
+
+        /// Evidence bytes as hex (empty by default)
+        #[arg(long = "evidence-hex", default_value = "")]
+        evidence_hex: String,
+
+        /// Provided ref scheme ID
+        #[arg(long = "ref-scheme-id")]
+        ref_scheme_id: String,
+
+        /// Provided ref params hash
+        #[arg(long = "ref-params-hash")]
+        ref_params_hash: String,
+
+        /// Provided ref domain
+        #[arg(long = "ref-domain")]
+        ref_domain: String,
+
+        /// Provided ref digest
+        #[arg(long = "ref-digest")]
+        ref_digest: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }

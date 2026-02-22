@@ -10,5 +10,6 @@ pub mod obligation_registry;
 pub mod observe;
 pub mod observe_serve;
 pub mod proposal_check;
+pub mod ref_binding;
 pub mod tusk_eval;
 pub mod verify;

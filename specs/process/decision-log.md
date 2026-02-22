@@ -1572,3 +1572,36 @@ surfaces were introduced (`bd-57`, `bd-58`, `bd-59`, `bd-60`, `bd-63`).
 - capability/conformance docs now explicitly require boundary-authority lineage
   parity and stale generated doctrine-site rejection under
   `capabilities.ci_witnesses`.
+
+---
+
+## 2026-02-22 — Decision 0054: Bind Interop ref vectors to a real profile-backed verifier surface
+
+### Decision
+Adopt a first-class reference profile artifact and route Interop ref vectors
+through the canonical CLI verifier surface:
+
+- add `policies/ref/sha256_detached_v1.json` as profile kind
+  `premath.ref_profile.v1`,
+- add `premath ref project` and `premath ref verify` commands in
+  `premath-cli`,
+- execute `interop-core` ref projection/verification vectors by invoking those
+  CLI commands (not a Python-local digest shim),
+- pin fixture refs to the profile fields
+  (`schemeId=ref.sha256.detached.v1`,
+  `paramsHash=sha256.detached.params.v1`).
+
+### Rationale
+`bd-36` requires "at least one real backend profile + reference verifier
+implementation" for M1 coherence. The previous interop runner validated ref
+logic using a Python simulation; that validated behavior but left the canonical
+command surface unexercised. Binding vectors to the CLI closes that boundary and
+reduces duplicate encoding.
+
+### Consequences
+- `project_ref`/`verify_ref` now have one typed implementation path in
+  `premath-cli` with deterministic rejection classes.
+- interop ref vectors now test the same command surface users and CI consume.
+- CLI smoke coverage includes `ref project` and `ref verify` JSON surfaces.
+- M1 reference verifier milestone criteria are satisfied at command surface +
+  conformance levels.

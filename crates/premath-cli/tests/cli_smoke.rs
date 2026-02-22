@@ -455,6 +455,99 @@ fn observe_instruction_json_smoke() {
 }
 
 #[test]
+fn ref_project_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let profile = repo_root
+        .join("policies")
+        .join("ref")
+        .join("sha256_detached_v1.json");
+
+    let output = run_premath([
+        OsString::from("ref"),
+        OsString::from("project"),
+        OsString::from("--profile"),
+        profile.as_os_str().to_os_string(),
+        OsString::from("--domain"),
+        OsString::from("kcir.node"),
+        OsString::from("--payload-hex"),
+        OsString::from("deadbeef"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["profileId"], "ref.sha256.detached.v1");
+    assert_eq!(payload["ref"]["schemeId"], "ref.sha256.detached.v1");
+    assert_eq!(payload["ref"]["paramsHash"], "sha256.detached.params.v1");
+    assert_eq!(payload["ref"]["domain"], "kcir.node");
+    assert_eq!(
+        payload["ref"]["digest"],
+        "c461b57a070b9629fbfb7ebb028bc18855b01fad8f8ce5221eb2ddd95ca5fdda"
+    );
+}
+
+#[test]
+fn ref_verify_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let profile = repo_root
+        .join("policies")
+        .join("ref")
+        .join("sha256_detached_v1.json");
+
+    let output = run_premath([
+        OsString::from("ref"),
+        OsString::from("verify"),
+        OsString::from("--profile"),
+        profile.as_os_str().to_os_string(),
+        OsString::from("--domain"),
+        OsString::from("kcir.node"),
+        OsString::from("--payload-hex"),
+        OsString::from("deadbeef"),
+        OsString::from("--evidence-hex"),
+        OsString::from(""),
+        OsString::from("--ref-scheme-id"),
+        OsString::from("ref.sha256.detached.v1"),
+        OsString::from("--ref-params-hash"),
+        OsString::from("sha256.detached.params.v1"),
+        OsString::from("--ref-domain"),
+        OsString::from("kcir.node"),
+        OsString::from("--ref-digest"),
+        OsString::from("c461b57a070b9629fbfb7ebb028bc18855b01fad8f8ce5221eb2ddd95ca5fdda"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+    assert_eq!(
+        payload["projectedRef"]["schemeId"],
+        "ref.sha256.detached.v1"
+    );
+    assert_eq!(
+        payload["projectedRef"]["paramsHash"],
+        "sha256.detached.params.v1"
+    );
+    assert_eq!(payload["projectedRef"]["domain"], "kcir.node");
+    assert_eq!(
+        payload["projectedRef"]["digest"],
+        "c461b57a070b9629fbfb7ebb028bc18855b01fad8f8ce5221eb2ddd95ca5fdda"
+    );
+}
+
+#[test]
 fn issue_add_dep_ready_json_smoke() {
     let tmp = TempDirGuard::new("issue-add-ready");
     let issues = tmp.path().join("issues.jsonl");

@@ -180,6 +180,10 @@ Checks include:
 - registered wire-format parse behavior (`draft/WIRE-FORMATS`),
 - known error-code registry membership checks (`draft/ERROR-CODES`).
 
+Ref projection/verification vectors run through the canonical CLI command
+surface (`premath ref project` / `premath ref verify`) using profile artifact
+`policies/ref/sha256_detached_v1.json`; no Python-side digest shim is used.
+
 Run:
 
 ```bash

@@ -15,6 +15,8 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
+import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -52,6 +54,8 @@ KNOWN_ERROR_CODES = {
     "kcir_v2.mor_nf_noncanonical",
 }
 
+DEFAULT_REF_PROFILE_PATH = ROOT / "policies" / "ref" / "sha256_detached_v1.json"
+
 
 @dataclass(frozen=True)
 class VectorOutcome:
@@ -63,6 +67,41 @@ class VectorError(Exception):
     def __init__(self, code: str, message: str) -> None:
         super().__init__(message)
         self.code = code
+
+
+def resolve_premath_cli() -> List[str]:
+    premath_bin = ROOT / "target" / "debug" / "premath"
+    if premath_bin.exists() and os.access(premath_bin, os.X_OK):
+        return [str(premath_bin)]
+    return ["cargo", "run", "--package", "premath-cli", "--"]
+
+
+def run_premath_json(args: Sequence[str]) -> Dict[str, Any]:
+    cmd = [*resolve_premath_cli(), *args]
+    completed = subprocess.run(
+        cmd,
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if completed.returncode != 0:
+        raise ValueError(
+            "premath command failed: "
+            f"{' '.join(cmd)}\n"
+            f"stderr:\n{completed.stderr}\n"
+            f"stdout:\n{completed.stdout}"
+        )
+    try:
+        payload = json.loads(completed.stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            "premath command returned invalid JSON\n"
+            f"stdout:\n{completed.stdout}\n"
+            f"stderr:\n{completed.stderr}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ValueError("premath command JSON root must be an object")
+    return payload
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -280,22 +319,21 @@ def evaluate_ref_projection_and_verify(case: Dict[str, Any]) -> VectorOutcome:
     if not isinstance(artifacts, dict):
         raise ValueError("artifacts must be an object")
 
-    profile = artifacts.get("profile")
+    profile_path_raw = artifacts.get("profilePath")
     projection_input = artifacts.get("projectionInput")
     provided_ref = artifacts.get("providedRef")
-    if not isinstance(profile, dict):
-        raise ValueError("artifacts.profile must be an object")
+    if not isinstance(profile_path_raw, str) or not profile_path_raw.strip():
+        profile_path = DEFAULT_REF_PROFILE_PATH
+    else:
+        profile_path = Path(profile_path_raw.strip())
+        if not profile_path.is_absolute():
+            profile_path = ROOT / profile_path
+    if not profile_path.exists() or not profile_path.is_file():
+        raise ValueError(f"artifacts.profilePath file not found: {profile_path}")
     if not isinstance(projection_input, dict):
         raise ValueError("artifacts.projectionInput must be an object")
     if not isinstance(provided_ref, dict):
         raise ValueError("artifacts.providedRef must be an object")
-
-    active_scheme = ensure_string(profile.get("schemeId"), "artifacts.profile.schemeId")
-    active_params = ensure_string(profile.get("paramsHash"), "artifacts.profile.paramsHash")
-    supported_domains = set(
-        ensure_string_list(profile.get("supportedDomains", []), "artifacts.profile.supportedDomains")
-    )
-    accepts_evidence = ensure_bool(profile.get("acceptsEvidence"), "artifacts.profile.acceptsEvidence")
 
     domain = ensure_string(projection_input.get("domain"), "artifacts.projectionInput.domain")
     payload_hex = ensure_string(projection_input.get("payloadHex"), "artifacts.projectionInput.payloadHex")
@@ -310,32 +348,63 @@ def evaluate_ref_projection_and_verify(case: Dict[str, Any]) -> VectorOutcome:
     if not isinstance(evidence_value, str):
         raise ValueError("artifacts.evidenceHex must be a string")
     evidence_hex = evidence_value
-    evidence = parse_hex_bytes(evidence_hex, "artifacts.evidenceHex")
+    parse_hex_bytes(evidence_hex, "artifacts.evidenceHex")
 
-    if ref_scheme != active_scheme:
-        return VectorOutcome("rejected", ["kcir_v2.profile_mismatch"])
-    if ref_params != active_params:
-        return VectorOutcome("rejected", ["kcir_v2.params_hash_mismatch"])
-    if ref_domain not in supported_domains or domain not in supported_domains:
-        return VectorOutcome("rejected", ["kcir_v2.domain_mismatch"])
-    if ref_domain != domain:
-        return VectorOutcome("rejected", ["kcir_v2.domain_mismatch"])
-
-    projected = stable_sha256(
-        {
-            "schemeId": active_scheme,
-            "paramsHash": active_params,
-            "domain": domain,
-            "payloadHex": payload_hex,
-        }
+    project_payload = run_premath_json(
+        [
+            "ref",
+            "project",
+            "--profile",
+            str(profile_path),
+            "--domain",
+            domain,
+            "--payload-hex",
+            payload_hex,
+            "--json",
+        ]
     )
-    if ref_digest != projected:
+    projected_ref = project_payload.get("ref")
+    if not isinstance(projected_ref, dict):
+        raise ValueError("premath ref project output missing ref object")
+
+    verify_payload = run_premath_json(
+        [
+            "ref",
+            "verify",
+            "--profile",
+            str(profile_path),
+            "--domain",
+            domain,
+            "--payload-hex",
+            payload_hex,
+            "--evidence-hex",
+            evidence_hex,
+            "--ref-scheme-id",
+            ref_scheme,
+            "--ref-params-hash",
+            ref_params,
+            "--ref-domain",
+            ref_domain,
+            "--ref-digest",
+            ref_digest,
+            "--json",
+        ]
+    )
+    result = ensure_string(verify_payload.get("result"), "premath.ref.verify.result")
+    failure_classes = ensure_string_list(
+        verify_payload.get("failureClasses", []),
+        "premath.ref.verify.failureClasses",
+    )
+    verify_projected = verify_payload.get("projectedRef")
+    if verify_projected is not None and not isinstance(verify_projected, dict):
+        raise ValueError("premath ref verify projectedRef must be an object when present")
+    if isinstance(verify_projected, dict) and verify_projected != projected_ref:
         return VectorOutcome("rejected", ["kcir_v2.digest_mismatch"])
-
-    if not accepts_evidence and evidence:
-        return VectorOutcome("rejected", ["kcir_v2.evidence_invalid"])
-
-    return VectorOutcome("accepted", [])
+    if result == "accepted":
+        return VectorOutcome("accepted", [])
+    if result == "rejected":
+        return VectorOutcome("rejected", sorted(set(failure_classes)))
+    raise ValueError(f"premath ref verify result must be accepted/rejected (actual={result!r})")
 
 
 def evaluate_domain_table(case: Dict[str, Any]) -> VectorOutcome:

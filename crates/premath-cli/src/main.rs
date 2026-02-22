@@ -5,7 +5,7 @@ mod commands;
 mod support;
 
 use clap::Parser;
-use cli::{Cli, Commands};
+use cli::{Cli, Commands, RefCommands};
 
 fn main() {
     let cli = Cli::parse();
@@ -132,6 +132,36 @@ fn main() {
         } => commands::instruction_check::run(instruction, repo_root, json),
 
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
+
+        Commands::Ref { command } => match command {
+            RefCommands::Project {
+                profile,
+                domain,
+                payload_hex,
+                json,
+            } => commands::ref_binding::run_project(profile, domain, payload_hex, json),
+            RefCommands::Verify {
+                profile,
+                domain,
+                payload_hex,
+                evidence_hex,
+                ref_scheme_id,
+                ref_params_hash,
+                ref_domain,
+                ref_digest,
+                json,
+            } => commands::ref_binding::run_verify(commands::ref_binding::VerifyInput {
+                profile,
+                domain,
+                payload_hex,
+                evidence_hex,
+                ref_scheme_id,
+                ref_params_hash,
+                ref_domain,
+                ref_digest,
+                json_output: json,
+            }),
+        },
 
         Commands::Issue { command } => commands::issue::run(command),
 

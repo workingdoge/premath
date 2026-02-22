@@ -3,25 +3,16 @@
   "suiteId": "interop-core",
   "vectorId": "adversarial/ref_digest_mismatch_reject",
   "artifacts": {
-    "profile": {
-      "schemeId": "refsim.sha256.v1",
-      "paramsHash": "params-v1",
-      "supportedDomains": [
-        "kcir.node",
-        "kcir.obj_nf",
-        "kcir.mor_nf"
-      ],
-      "acceptsEvidence": false
-    },
+    "profilePath": "policies/ref/sha256_detached_v1.json",
     "projectionInput": {
       "domain": "kcir.node",
       "payloadHex": "deadbeef"
     },
     "providedRef": {
-      "schemeId": "refsim.sha256.v1",
-      "paramsHash": "params-v1",
+      "schemeId": "ref.sha256.detached.v1",
+      "paramsHash": "sha256.detached.params.v1",
       "domain": "kcir.node",
-      "digest": "745925eafa6f2677cf903bb0c95019642beb91bd8a2dd0d8809a7a4bee183dde"
+      "digest": "c461b57a070b9629fbfb7ebb028bc18855b01fad8f8ce5221eb2ddd95ca5fddb"
     },
     "evidenceHex": ""
   }
