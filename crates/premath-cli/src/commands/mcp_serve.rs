@@ -2157,9 +2157,9 @@ fn load_issue_graph_from_projection(
 
     let projection_is_stale = projection_needs_refresh(issues_path, &projection_path);
     let store = if projection_path.exists() && !projection_is_stale {
-        match load_store_from_projection(&projection_path) {
-            Ok(store) => store,
-            Err(_) => {
+        match load_store_from_projection(&projection_path, issues_path) {
+            Ok((store, source_path_matches_authority)) if source_path_matches_authority => store,
+            Ok(_) | Err(_) => {
                 let refreshed = load_store_existing(issues_path)?;
                 write_issue_query_projection(&projection_path, issues_path, &refreshed)?;
                 refreshed
@@ -2216,7 +2216,10 @@ fn file_modified(path: &Path) -> Option<SystemTime> {
     fs::metadata(path).ok()?.modified().ok()
 }
 
-fn load_store_from_projection(path: &Path) -> std::result::Result<MemoryStore, CallToolError> {
+fn load_store_from_projection(
+    path: &Path,
+    authority_issues_path: &Path,
+) -> std::result::Result<(MemoryStore, bool), CallToolError> {
     let bytes = fs::read(path)
         .map_err(|e| call_tool_error(format!("failed to read {}: {e}", path.display())))?;
     let payload = serde_json::from_slice::<IssueQueryProjection>(&bytes)
@@ -2237,12 +2240,38 @@ fn load_store_from_projection(path: &Path) -> std::result::Result<MemoryStore, C
             payload.kind
         )));
     }
-    MemoryStore::from_issues(payload.issues).map_err(|e| {
+    let source_path_matches_authority = projection_source_path_matches_authority(
+        &payload.source_issues_path,
+        authority_issues_path,
+    );
+    let store = MemoryStore::from_issues(payload.issues).map_err(|e| {
         call_tool_error(format!(
             "failed to hydrate projection {}: {e}",
             path.display()
         ))
-    })
+    })?;
+    Ok((store, source_path_matches_authority))
+}
+
+fn projection_source_path_matches_authority(
+    projection_source_path: &str,
+    authority_issues_path: &Path,
+) -> bool {
+    let source = PathBuf::from(projection_source_path);
+    if source == authority_issues_path {
+        return true;
+    }
+    normalize_projection_path(&source) == normalize_projection_path(authority_issues_path)
+}
+
+fn normalize_projection_path(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        return fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    }
+    let joined = std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(path);
+    fs::canonicalize(&joined).unwrap_or(joined)
 }
 
 fn write_issue_query_projection(
@@ -2937,6 +2966,67 @@ mod tests {
         let payload = parse_tool_json(ready);
         assert_eq!(payload["queryBackend"], "surreal");
         assert_eq!(payload["querySource"], "surreal-projection");
+    }
+
+    #[test]
+    fn surreal_issue_backend_refreshes_when_projection_source_path_mismatches() {
+        let root = temp_dir("surreal-projection-source-mismatch");
+        let issues = root.join("issues.jsonl");
+        let mut config = test_config(&root, &issues, &root.join("surface.json"));
+        config.issue_query_backend = IssueQueryBackend::Surreal;
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Root".to_string(),
+                id: Some("bd-root".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(1),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("root issue should add");
+
+        let projection_path = resolve_issue_query_projection_path(&config);
+        if let Some(parent) = projection_path.parent() {
+            fs::create_dir_all(parent).expect("projection parent should exist");
+        }
+        let stale_payload = IssueQueryProjection {
+            schema: ISSUE_QUERY_PROJECTION_SCHEMA,
+            kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
+            source_issues_path: root.join("other-issues.jsonl").display().to_string(),
+            source_snapshot_ref: None,
+            generated_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            issue_count: 0,
+            issues: Vec::new(),
+        };
+        fs::write(
+            &projection_path,
+            serde_json::to_vec_pretty(&stale_payload).expect("projection should serialize"),
+        )
+        .expect("stale projection should write");
+
+        let ready = call_issue_ready(&config, IssueReadyTool { issues_path: None })
+            .expect("ready query should succeed");
+        let payload = parse_tool_json(ready);
+        assert_eq!(payload["queryBackend"], "surreal");
+        assert_eq!(payload["querySource"], "surreal-projection");
+        assert_eq!(payload["count"], 1);
+        assert_eq!(payload["items"][0]["id"], "bd-root");
+
+        let refreshed_bytes = fs::read(&projection_path).expect("projection should be refreshed");
+        let refreshed: IssueQueryProjection =
+            serde_json::from_slice(&refreshed_bytes).expect("projection should parse");
+        assert_eq!(refreshed.source_issues_path, issues.display().to_string());
+        assert_eq!(refreshed.issue_count, 1);
     }
 
     #[test]
