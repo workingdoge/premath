@@ -160,7 +160,9 @@ explicitly claimed under §5.4 or §5.6.
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
   bindings) consumed by CI/coherence adapter surfaces; lifecycle semantics follow
-  `draft/UNIFICATION-DOCTRINE` §5.1.
+  `draft/UNIFICATION-DOCTRINE` §5.1 including governance-mode metadata
+  (`rollover|freeze`) and process contract in
+  `../../process/SCHEMA-LIFECYCLE-GOVERNANCE.md`.
 - `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability
   registry consumed by conformance/docs/coherence parity surfaces.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM

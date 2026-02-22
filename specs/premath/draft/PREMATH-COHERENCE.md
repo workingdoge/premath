@@ -133,7 +133,9 @@ Minimum parity set includes:
   session issue-field binding, issues-path env key),
 - control-plane schema lifecycle table is present and deterministic
   (`schemaLifecycle`): canonical kind families + alias windows +
-  fail-closed expiry semantics for contract/witness/projection kinds,
+  fail-closed expiry semantics for contract/witness/projection kinds +
+  governance mode metadata (`rollover|freeze`) with decision/accountability
+  bindings,
 - when lane-registry fields are present in
   `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
   unknown/duplicate lane IDs, unbound lane artifact-kind mappings, lane

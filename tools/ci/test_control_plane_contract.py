@@ -18,6 +18,12 @@ def _base_payload() -> dict:
         "contractId": "control-plane.default.v1",
         "schemaLifecycle": {
             "activeEpoch": "2026-02",
+            "governance": {
+                "mode": "rollover",
+                "decisionRef": "decision-0105",
+                "owner": "premath-core",
+                "rolloverCadenceMonths": 6,
+            },
             "kindFamilies": {
                 "controlPlaneContractKind": {
                     "canonicalKind": "premath.control_plane.contract.v1",
@@ -199,6 +205,14 @@ class ControlPlaneContractTests(unittest.TestCase):
             4,
         )
         self.assertEqual(
+            loaded["schemaLifecycle"]["governance"]["mode"],
+            "rollover",
+        )
+        self.assertEqual(
+            loaded["schemaLifecycle"]["governance"]["rolloverCadenceMonths"],
+            6,
+        )
+        self.assertEqual(
             loaded["harnessRetry"]["policyKind"],
             "ci.harness.retry.policy.v1",
         )
@@ -263,6 +277,40 @@ class ControlPlaneContractTests(unittest.TestCase):
         ]
         with self.assertRaisesRegex(ValueError, "must not contain duplicates"):
             self._load(payload)
+
+    def test_load_rejects_rollover_without_cadence(self) -> None:
+        payload = _base_payload()
+        payload["schemaLifecycle"]["governance"].pop("rolloverCadenceMonths", None)
+        with self.assertRaisesRegex(ValueError, "rolloverCadenceMonths"):
+            self._load(payload)
+
+    def test_load_rejects_freeze_with_aliases(self) -> None:
+        payload = _base_payload()
+        payload["schemaLifecycle"]["governance"] = {
+            "mode": "freeze",
+            "decisionRef": "decision-0105",
+            "owner": "premath-core",
+            "freezeReason": "release-freeze",
+        }
+        with self.assertRaisesRegex(ValueError, "mode=freeze requires no active compatibility aliases"):
+            self._load(payload)
+
+    def test_load_accepts_freeze_without_aliases(self) -> None:
+        payload = _base_payload()
+        payload["schemaLifecycle"]["governance"] = {
+            "mode": "freeze",
+            "decisionRef": "decision-0105",
+            "owner": "premath-core",
+            "freezeReason": "release-freeze",
+        }
+        for family in payload["schemaLifecycle"]["kindFamilies"].values():
+            family["compatibilityAliases"] = []
+        loaded = self._load(payload)
+        self.assertEqual(loaded["schemaLifecycle"]["governance"]["mode"], "freeze")
+        self.assertEqual(
+            loaded["schemaLifecycle"]["governance"]["freezeReason"],
+            "release-freeze",
+        )
 
 
 if __name__ == "__main__":

@@ -258,6 +258,8 @@ struct ControlPlaneInstructionWitness {
 struct ControlPlaneSchemaLifecycle {
     active_epoch: String,
     kind_families: BTreeMap<String, ControlPlaneSchemaKindFamily>,
+    #[serde(default)]
+    governance: Option<ControlPlaneSchemaLifecycleGovernance>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -274,6 +276,18 @@ struct ControlPlaneSchemaAlias {
     alias_kind: String,
     support_until_epoch: String,
     replacement_kind: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneSchemaLifecycleGovernance {
+    mode: String,
+    decision_ref: String,
+    owner: String,
+    #[serde(default)]
+    rollover_cadence_months: Option<u32>,
+    #[serde(default)]
+    freeze_reason: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -816,6 +830,15 @@ fn is_valid_epoch(value: &str) -> bool {
         )
 }
 
+fn epoch_to_month_index(value: &str) -> Option<i32> {
+    if !is_valid_epoch(value) {
+        return None;
+    }
+    let year: i32 = value.get(0..4)?.parse().ok()?;
+    let month: i32 = value.get(5..7)?.parse().ok()?;
+    Some(year * 12 + month)
+}
+
 fn resolve_schema_lifecycle_kind(
     schema_lifecycle: &ControlPlaneSchemaLifecycle,
     family_id: &str,
@@ -935,6 +958,171 @@ fn evaluate_control_plane_schema_lifecycle(
         failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
     }
 
+    let mut alias_support_epochs: BTreeSet<String> = BTreeSet::new();
+    for family in schema_lifecycle.kind_families.values() {
+        for alias in &family.compatibility_aliases {
+            let support_until_epoch = alias.support_until_epoch.trim();
+            if !support_until_epoch.is_empty() {
+                alias_support_epochs.insert(support_until_epoch.to_string());
+            }
+        }
+    }
+
+    let mut governance_details = json!({
+        "present": schema_lifecycle.governance.is_some(),
+        "mode": Value::Null,
+        "decisionRef": Value::Null,
+        "owner": Value::Null,
+        "rolloverCadenceMonths": Value::Null,
+        "freezeReason": Value::Null,
+        "aliasSupportEpochs": alias_support_epochs,
+        "rolloverEpoch": Value::Null,
+        "aliasRunwayMonths": Value::Null,
+    });
+    let Some(governance) = &schema_lifecycle.governance else {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+        reasons.push("schemaLifecycle.governance missing".to_string());
+        return ObligationCheck {
+            failure_classes: dedupe_sorted(failures),
+            details: json!({
+                "present": true,
+                "activeEpoch": schema_lifecycle.active_epoch,
+                "requiredKindFamilies": REQUIRED_SCHEMA_LIFECYCLE_FAMILIES,
+                "actualKindFamilies": actual_families,
+                "missingKindFamilies": missing_families,
+                "unknownKindFamilies": unknown_families,
+                "resolvedKinds": resolved,
+                "governance": governance_details,
+                "reasons": dedupe_sorted(reasons),
+            }),
+        };
+    };
+
+    let governance_mode = governance.mode.trim();
+    let governance_decision_ref = governance.decision_ref.trim();
+    let governance_owner = governance.owner.trim();
+    governance_details["mode"] = json!(governance_mode);
+    governance_details["decisionRef"] = json!(governance_decision_ref);
+    governance_details["owner"] = json!(governance_owner);
+    governance_details["rolloverCadenceMonths"] = json!(governance.rollover_cadence_months);
+    governance_details["freezeReason"] = json!(governance.freeze_reason.as_deref());
+
+    if governance_decision_ref.is_empty() {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+        reasons.push("schemaLifecycle.governance.decisionRef must be non-empty".to_string());
+    }
+    if governance_owner.is_empty() {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+        reasons.push("schemaLifecycle.governance.owner must be non-empty".to_string());
+    }
+    if governance_mode.is_empty() {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+        reasons.push("schemaLifecycle.governance.mode must be non-empty".to_string());
+    }
+
+    match governance_mode {
+        "rollover" => {
+            let cadence_months = match governance.rollover_cadence_months {
+                Some(value) => value,
+                None => {
+                    failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                    reasons.push(
+                        "schemaLifecycle.governance.rolloverCadenceMonths required when mode=rollover"
+                            .to_string(),
+                    );
+                    0
+                }
+            };
+            if cadence_months == 0 || cadence_months > 12 {
+                failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                reasons.push(
+                    "schemaLifecycle.governance.rolloverCadenceMonths must be within 1..12"
+                        .to_string(),
+                );
+            }
+            if let Some(freeze_reason) = governance.freeze_reason.as_deref() {
+                if !freeze_reason.trim().is_empty() {
+                    failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                    reasons.push(
+                        "schemaLifecycle.governance.freezeReason is only allowed when mode=freeze"
+                            .to_string(),
+                    );
+                }
+            }
+            if alias_support_epochs.is_empty() {
+                failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                reasons.push(
+                    "schemaLifecycle.governance.mode=rollover requires compatibility aliases"
+                        .to_string(),
+                );
+            } else if alias_support_epochs.len() != 1 {
+                failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                reasons.push(
+                    "schemaLifecycle.governance.mode=rollover requires one shared supportUntilEpoch"
+                        .to_string(),
+                );
+            } else if let Some(rollover_epoch) = alias_support_epochs.iter().next() {
+                governance_details["rolloverEpoch"] = json!(rollover_epoch);
+                match (
+                    epoch_to_month_index(active_epoch),
+                    epoch_to_month_index(rollover_epoch),
+                ) {
+                    (Some(active), Some(rollover)) => {
+                        let runway = rollover - active;
+                        governance_details["aliasRunwayMonths"] = json!(runway);
+                        if runway < 1 {
+                            failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                            reasons.push(
+                                "schemaLifecycle rollover runway must be positive".to_string(),
+                            );
+                        }
+                        if cadence_months > 0 && runway > cadence_months as i32 {
+                            failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                            reasons.push(format!(
+                                "schemaLifecycle rollover runway exceeds rolloverCadenceMonths ({runway} > {cadence_months})"
+                            ));
+                        }
+                    }
+                    _ => {
+                        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                        reasons.push(
+                            "schemaLifecycle rollover runway could not be evaluated".to_string(),
+                        );
+                    }
+                }
+            }
+        }
+        "freeze" => {
+            if governance.rollover_cadence_months.is_some() {
+                failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                reasons.push(
+                    "schemaLifecycle.governance.rolloverCadenceMonths is only allowed when mode=rollover"
+                        .to_string(),
+                );
+            }
+            let freeze_reason = governance.freeze_reason.as_deref().unwrap_or("").trim();
+            if freeze_reason.is_empty() {
+                failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                reasons.push(
+                    "schemaLifecycle.governance.freezeReason required when mode=freeze".to_string(),
+                );
+            }
+            if !alias_support_epochs.is_empty() {
+                failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                reasons.push(
+                    "schemaLifecycle.governance.mode=freeze requires no compatibility aliases"
+                        .to_string(),
+                );
+            }
+        }
+        _ => {
+            failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+            reasons.push(format!(
+                "schemaLifecycle.governance.mode unsupported `{governance_mode}` (expected `rollover` or `freeze`)"
+            ));
+        }
+    }
+
     if let Some(kind) = resolve_or_record_schema_kind(
         schema_lifecycle,
         "controlPlaneContractKind",
@@ -1014,6 +1202,7 @@ fn evaluate_control_plane_schema_lifecycle(
             "missingKindFamilies": missing_families,
             "unknownKindFamilies": unknown_families,
             "resolvedKinds": resolved,
+            "governance": governance_details,
             "reasons": dedupe_sorted(reasons),
         }),
     }
@@ -3981,6 +4170,12 @@ Current deterministic projected check IDs include:
             "contractKind": "premath.control_plane.contract.v1",
             "schemaLifecycle": {
                 "activeEpoch": "2026-02",
+                "governance": {
+                    "mode": "rollover",
+                    "decisionRef": "decision-0105",
+                    "owner": "premath-core",
+                    "rolloverCadenceMonths": 6
+                },
                 "kindFamilies": {
                     "controlPlaneContractKind": {
                         "canonicalKind": "premath.control_plane.contract.v1",
@@ -4481,6 +4676,67 @@ Current deterministic projected check IDs include:
                 .failure_classes
                 .contains(&GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string())
         );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_freeze_with_active_aliases() {
+        let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-with-aliases");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["schemaLifecycle"]["governance"] = json!({
+            "mode": "freeze",
+            "decisionRef": "decision-0105",
+            "owner": "premath-core",
+            "freezeReason": "release-freeze"
+        });
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_accepts_freeze_without_aliases() {
+        let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-no-aliases");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["schemaLifecycle"]["governance"] = json!({
+            "mode": "freeze",
+            "decisionRef": "decision-0105",
+            "owner": "premath-core",
+            "freezeReason": "release-freeze"
+        });
+        if let Some(kind_families) = payload["schemaLifecycle"]["kindFamilies"].as_object_mut() {
+            for family in kind_families.values_mut() {
+                family["compatibilityAliases"] = json!([]);
+            }
+        }
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
     }
 
     #[test]

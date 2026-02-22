@@ -36,6 +36,15 @@ class DriftBudgetChecksTests(unittest.TestCase):
                 "checkerCoreOnlyObligations": ("cwf_substitution_identity",),
                 "requiredCrossLaneWitnessRoute": "span_square_commutation",
             },
+            "schemaLifecycle": {
+                "governance": {
+                    "mode": "rollover",
+                    "decisionRef": "decision-0105",
+                    "owner": "premath-core",
+                    "rolloverCadenceMonths": 6,
+                    "freezeReason": None,
+                }
+            },
             "laneFailureClasses": ("lane_unknown", "lane_kind_unbound"),
             "harnessRetry": {
                 "policyKind": "ci.harness.retry.policy.v1",
@@ -59,6 +68,21 @@ class DriftBudgetChecksTests(unittest.TestCase):
             ],
             REQUIRED_CROSS_LANE_WITNESS_ROUTE="span_square_commutation",
             LANE_FAILURE_CLASSES=loaded_contract["laneFailureClasses"],
+            SCHEMA_LIFECYCLE_GOVERNANCE_MODE=loaded_contract["schemaLifecycle"][
+                "governance"
+            ]["mode"],
+            SCHEMA_LIFECYCLE_GOVERNANCE_DECISION_REF=loaded_contract[
+                "schemaLifecycle"
+            ]["governance"]["decisionRef"],
+            SCHEMA_LIFECYCLE_GOVERNANCE_OWNER=loaded_contract["schemaLifecycle"][
+                "governance"
+            ]["owner"],
+            SCHEMA_LIFECYCLE_ROLLOVER_CADENCE_MONTHS=loaded_contract[
+                "schemaLifecycle"
+            ]["governance"]["rolloverCadenceMonths"],
+            SCHEMA_LIFECYCLE_FREEZE_REASON=loaded_contract["schemaLifecycle"][
+                "governance"
+            ]["freezeReason"],
             HARNESS_RETRY_POLICY_KIND=loaded_contract["harnessRetry"]["policyKind"],
             HARNESS_RETRY_POLICY_PATH=loaded_contract["harnessRetry"]["policyPath"],
             HARNESS_ESCALATION_ACTIONS=loaded_contract["harnessRetry"][

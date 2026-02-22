@@ -299,6 +299,19 @@ def check_control_plane_lane_bindings(
     contract_lane_failure_classes = as_sorted_strings(
         loaded_control_plane_contract.get("laneFailureClasses", ())
     )
+    contract_schema_lifecycle = loaded_control_plane_contract.get("schemaLifecycle", {})
+    if not isinstance(contract_schema_lifecycle, dict):
+        contract_schema_lifecycle = {}
+    contract_schema_governance = contract_schema_lifecycle.get("governance", {})
+    if not isinstance(contract_schema_governance, dict):
+        contract_schema_governance = {}
+    contract_governance_mode = str(contract_schema_governance.get("mode", ""))
+    contract_governance_decision_ref = str(contract_schema_governance.get("decisionRef", ""))
+    contract_governance_owner = str(contract_schema_governance.get("owner", ""))
+    contract_rollover_cadence_months = contract_schema_governance.get(
+        "rolloverCadenceMonths"
+    )
+    contract_freeze_reason = contract_schema_governance.get("freezeReason")
     contract_harness_retry = loaded_control_plane_contract.get("harnessRetry", {})
     if not isinstance(contract_harness_retry, dict):
         contract_harness_retry = {}
@@ -364,6 +377,21 @@ def check_control_plane_lane_bindings(
     loader_lane_failure_classes = as_sorted_strings(
         getattr(control_plane_module, "LANE_FAILURE_CLASSES", ())
     )
+    loader_governance_mode = str(
+        getattr(control_plane_module, "SCHEMA_LIFECYCLE_GOVERNANCE_MODE", "")
+    )
+    loader_governance_decision_ref = str(
+        getattr(control_plane_module, "SCHEMA_LIFECYCLE_GOVERNANCE_DECISION_REF", "")
+    )
+    loader_governance_owner = str(
+        getattr(control_plane_module, "SCHEMA_LIFECYCLE_GOVERNANCE_OWNER", "")
+    )
+    loader_rollover_cadence_months = getattr(
+        control_plane_module, "SCHEMA_LIFECYCLE_ROLLOVER_CADENCE_MONTHS", None
+    )
+    loader_freeze_reason = getattr(
+        control_plane_module, "SCHEMA_LIFECYCLE_FREEZE_REASON", None
+    )
     loader_harness_policy_kind = str(
         getattr(control_plane_module, "HARNESS_RETRY_POLICY_KIND", "")
     )
@@ -404,6 +432,26 @@ def check_control_plane_lane_bindings(
     if loader_lane_failure_classes != contract_lane_failure_classes:
         reasons.append(
             "control_plane_contract.py LANE_FAILURE_CLASSES drift from contract payload"
+        )
+    if loader_governance_mode != contract_governance_mode:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_GOVERNANCE_MODE drift from contract payload"
+        )
+    if loader_governance_decision_ref != contract_governance_decision_ref:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_GOVERNANCE_DECISION_REF drift from contract payload"
+        )
+    if loader_governance_owner != contract_governance_owner:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_GOVERNANCE_OWNER drift from contract payload"
+        )
+    if loader_rollover_cadence_months != contract_rollover_cadence_months:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_ROLLOVER_CADENCE_MONTHS drift from contract payload"
+        )
+    if loader_freeze_reason != contract_freeze_reason:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_FREEZE_REASON drift from contract payload"
         )
     if loader_harness_policy_kind != contract_harness_policy_kind:
         reasons.append(
@@ -449,6 +497,13 @@ def check_control_plane_lane_bindings(
             "checkerCoreOnlyObligations": contract_checker_core,
             "requiredCrossLaneWitnessRoute": contract_required_route,
             "laneFailureClasses": contract_lane_failure_classes,
+            "schemaLifecycleGovernance": {
+                "mode": contract_governance_mode,
+                "decisionRef": contract_governance_decision_ref,
+                "owner": contract_governance_owner,
+                "rolloverCadenceMonths": contract_rollover_cadence_months,
+                "freezeReason": contract_freeze_reason,
+            },
             "harnessRetry": {
                 "policyKind": contract_harness_policy_kind,
                 "policyPath": contract_harness_policy_path,
@@ -473,6 +528,13 @@ def check_control_plane_lane_bindings(
             "checkerCoreOnlyObligations": loader_checker_core,
             "requiredCrossLaneWitnessRoute": loader_required_route,
             "laneFailureClasses": loader_lane_failure_classes,
+            "schemaLifecycleGovernance": {
+                "mode": loader_governance_mode,
+                "decisionRef": loader_governance_decision_ref,
+                "owner": loader_governance_owner,
+                "rolloverCadenceMonths": loader_rollover_cadence_months,
+                "freezeReason": loader_freeze_reason,
+            },
             "harnessRetry": {
                 "policyKind": loader_harness_policy_kind,
                 "policyPath": loader_harness_policy_path,

@@ -3094,3 +3094,45 @@ boundary per concern.
   `decision-id`) instead of ad-hoc note expansion.
 - Issue-note compaction work (`bd-129`) is now naturally scoped as lane hygiene
   instead of implicit style preference.
+
+---
+
+## 2026-02-22 — Decision 0105: Add schema lifecycle governance modes (`rollover|freeze`)
+
+### Decision
+Extend control-plane schema lifecycle semantics with explicit governance mode
+metadata and fail-closed validation.
+
+Implemented scope:
+
+1. add `schemaLifecycle.governance` in
+   `draft/CONTROL-PLANE-CONTRACT.json` with:
+   - `mode` (`rollover|freeze`)
+   - `decisionRef`
+   - `owner`
+   - `rolloverCadenceMonths` (rollover-only)
+   - `freezeReason` (freeze-only)
+2. enforce deterministic governance validation in
+   `tools/ci/control_plane_contract.py`:
+   - rollover requires aliases and cadence-bound runway,
+   - freeze requires no aliases and explicit freeze reason.
+3. enforce schema-lifecycle governance checking in
+   `crates/premath-coherence` gate-chain parity path.
+4. extend drift-budget parity checks for loader-exported governance fields.
+5. add process-level governance contract doc:
+   - `specs/process/SCHEMA-LIFECYCLE-GOVERNANCE.md`
+6. wire cross-references from lifecycle specs/design docs.
+
+### Rationale
+Lifecycle policy previously encoded epoch/runway mechanics but did not make
+governance state explicit. We need deterministic distinction between active
+rollover and explicit freeze states, plus accountable references for each
+transition.
+
+### Consequences
+- Lifecycle checks now fail closed on governance-state mismatches, not only on
+  alias expiry/format errors.
+- Rollover cadence and freeze exceptions are now machine-checkable and linked to
+  decision-log authority.
+- Lifecycle semantics are no longer CI-loader-only; coherence checker now
+  enforces the same governance state boundary.

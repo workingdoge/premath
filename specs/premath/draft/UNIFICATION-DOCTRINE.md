@@ -124,7 +124,18 @@ For each kind family:
 5. compatibility aliases participating in one lifecycle table MUST share one
    deterministic rollover epoch,
 6. rollover runway (`supportUntilEpoch - activeEpoch`) MUST be positive and
-   bounded (CI implementation profile: max 12 months).
+   bounded (CI implementation profile: max 12 months),
+7. lifecycle tables MUST declare governance mode metadata under
+   `schemaLifecycle.governance` with at least:
+   - `mode` (`rollover` or `freeze`),
+   - `decisionRef`,
+   - `owner`,
+8. when `mode=rollover`, `rolloverCadenceMonths` MUST be explicit and
+   compatibility aliases MUST remain within that cadence,
+9. when `mode=freeze`, compatibility aliases MUST be absent and `freezeReason`
+   MUST be explicit,
+10. governance transitions (`rollover <-> freeze`) MUST be decision-logged and
+    linked by `decisionRef`.
 
 When a breaking shape change is introduced:
 
@@ -134,6 +145,10 @@ When a breaking shape change is introduced:
 
 After `supportUntilEpoch`, checkers MUST reject the alias deterministically
 (fail closed) and report the canonical replacement kind.
+
+Process-level governance shape and operator flow are defined in:
+
+- `specs/process/SCHEMA-LIFECYCLE-GOVERNANCE.md`.
 
 ## 6. Conformance Expectations
 

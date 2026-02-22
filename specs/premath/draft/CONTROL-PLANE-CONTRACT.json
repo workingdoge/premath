@@ -4,6 +4,12 @@
   "contractId": "control-plane.default.v1",
   "schemaLifecycle": {
     "activeEpoch": "2026-02",
+    "governance": {
+      "mode": "rollover",
+      "decisionRef": "decision-0105",
+      "owner": "premath-core",
+      "rolloverCadenceMonths": 6
+    },
     "kindFamilies": {
       "controlPlaneContractKind": {
         "canonicalKind": "premath.control_plane.contract.v1",

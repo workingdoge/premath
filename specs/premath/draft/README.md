@@ -30,7 +30,8 @@ Additive control-plane overlays (only when needed):
   `premath coherence-check`.
 - `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
   by CI projection and coherence parity checks (including schema lifecycle
-  alias-window policy for contract/witness/projection kinds).
+  alias-window policy for contract/witness/projection kinds and governance-mode
+  metadata).
 - `CAPABILITY-REGISTRY.json` — shared typed executable-capability registry
   consumed by conformance/docs/coherence parity checks.
 - `UNIFICATION-DOCTRINE.md` — minimum-encoding/maximum-expressiveness
@@ -52,4 +53,6 @@ Related:
 - `../raw/` — experimental and informational specs not yet promoted.
 - `../profile/` — optional profile overlays (normative only when claimed).
 - `../../process/coss.md` — lifecycle/process policy.
+- `../../process/SCHEMA-LIFECYCLE-GOVERNANCE.md` — lifecycle rollover/freeze
+  governance contract.
 - `../../process/decision-log.md` — promotion and architectural decisions.

@@ -28,6 +28,7 @@ _REQUIRED_SCHEMA_KIND_FAMILIES = (
     "requiredDeltaKind",
 )
 _MAX_ALIAS_RUNWAY_MONTHS = 12
+_SCHEMA_LIFECYCLE_GOVERNANCE_MODES = ("rollover", "freeze")
 
 
 def _require_non_empty_string(value: Any, label: str) -> str:
@@ -64,6 +65,14 @@ def _require_epoch(value: Any, label: str) -> str:
     if _EPOCH_RE.fullmatch(epoch) is None:
         raise ValueError(f"{label} must use YYYY-MM with zero-padded month")
     return epoch
+
+
+def _require_positive_int(value: Any, label: str) -> int:
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise ValueError(f"{label} must be an integer")
+    if value < 1:
+        raise ValueError(f"{label} must be >= 1")
+    return value
 
 
 def _epoch_to_month_index(epoch: str) -> int:
@@ -121,6 +130,85 @@ def _validate_schema_lifecycle_epoch_discipline(
         "rolloverEpoch": rollover_epoch,
         "aliasRunwayMonths": runway_months,
         "maxAliasRunwayMonths": _MAX_ALIAS_RUNWAY_MONTHS,
+    }
+
+
+def _validate_schema_lifecycle_governance(
+    governance: Dict[str, Any],
+    *,
+    schema_epoch_discipline: Dict[str, Any],
+) -> Dict[str, Any]:
+    mode = _require_non_empty_string(governance.get("mode"), "schemaLifecycle.governance.mode")
+    if mode not in _SCHEMA_LIFECYCLE_GOVERNANCE_MODES:
+        raise ValueError(
+            "schemaLifecycle.governance.mode must be one of: "
+            + ", ".join(_SCHEMA_LIFECYCLE_GOVERNANCE_MODES)
+        )
+    decision_ref = _require_non_empty_string(
+        governance.get("decisionRef"),
+        "schemaLifecycle.governance.decisionRef",
+    )
+    owner = _require_non_empty_string(
+        governance.get("owner"),
+        "schemaLifecycle.governance.owner",
+    )
+
+    rollover_cadence_raw = governance.get("rolloverCadenceMonths")
+    freeze_reason_raw = governance.get("freezeReason")
+
+    rollover_epoch = schema_epoch_discipline.get("rolloverEpoch")
+    alias_runway_months = int(schema_epoch_discipline.get("aliasRunwayMonths", 0))
+
+    if mode == "rollover":
+        rollover_cadence_months = _require_positive_int(
+            rollover_cadence_raw,
+            "schemaLifecycle.governance.rolloverCadenceMonths",
+        )
+        if rollover_cadence_months > _MAX_ALIAS_RUNWAY_MONTHS:
+            raise ValueError(
+                "schemaLifecycle.governance.rolloverCadenceMonths must be <= "
+                f"{_MAX_ALIAS_RUNWAY_MONTHS}"
+            )
+        if rollover_epoch is None:
+            raise ValueError(
+                "schemaLifecycle.governance.mode=rollover requires at least one "
+                "compatibility alias with supportUntilEpoch"
+            )
+        if alias_runway_months > rollover_cadence_months:
+            raise ValueError(
+                "schemaLifecycle.governance.rolloverCadenceMonths must be >= alias runway "
+                f"(runway={alias_runway_months}, cadence={rollover_cadence_months})"
+            )
+        if freeze_reason_raw is not None:
+            raise ValueError(
+                "schemaLifecycle.governance.freezeReason is only allowed when mode=freeze"
+            )
+        return {
+            "mode": mode,
+            "decisionRef": decision_ref,
+            "owner": owner,
+            "rolloverCadenceMonths": rollover_cadence_months,
+            "freezeReason": None,
+        }
+
+    if rollover_cadence_raw is not None:
+        raise ValueError(
+            "schemaLifecycle.governance.rolloverCadenceMonths is only allowed when mode=rollover"
+        )
+    freeze_reason = _require_non_empty_string(
+        freeze_reason_raw,
+        "schemaLifecycle.governance.freezeReason",
+    )
+    if rollover_epoch is not None or alias_runway_months != 0:
+        raise ValueError(
+            "schemaLifecycle.governance.mode=freeze requires no active compatibility aliases"
+        )
+    return {
+        "mode": mode,
+        "decisionRef": decision_ref,
+        "owner": owner,
+        "rolloverCadenceMonths": None,
+        "freezeReason": freeze_reason,
     }
 
 
@@ -214,6 +302,10 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     active_epoch = _require_epoch(
         schema_lifecycle.get("activeEpoch"), "schemaLifecycle.activeEpoch"
     )
+    schema_lifecycle_governance_obj = _require_object(
+        schema_lifecycle.get("governance"),
+        "schemaLifecycle.governance",
+    )
     kind_families_raw = _require_object(
         schema_lifecycle.get("kindFamilies"), "schemaLifecycle.kindFamilies"
     )
@@ -233,6 +325,10 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         )
     schema_epoch_discipline = _validate_schema_lifecycle_epoch_discipline(
         active_epoch, kind_families
+    )
+    schema_lifecycle_governance = _validate_schema_lifecycle_governance(
+        schema_lifecycle_governance_obj,
+        schema_epoch_discipline=schema_epoch_discipline,
     )
 
     contract_kind_declared = _require_non_empty_string(root.get("contractKind"), "contractKind")
@@ -444,6 +540,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         "contractKind": contract_kind,
         "schemaLifecycle": {
             "activeEpoch": active_epoch,
+            "governance": schema_lifecycle_governance,
             "kindFamilies": kind_families,
             "epochDiscipline": schema_epoch_discipline,
         },
@@ -483,6 +580,21 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
 
 _CONTRACT = load_control_plane_contract()
 SCHEMA_LIFECYCLE_ACTIVE_EPOCH: str = _CONTRACT["schemaLifecycle"]["activeEpoch"]
+SCHEMA_LIFECYCLE_GOVERNANCE_MODE: str = _CONTRACT["schemaLifecycle"].get(
+    "governance", {}
+).get("mode", "")
+SCHEMA_LIFECYCLE_GOVERNANCE_DECISION_REF: str = _CONTRACT["schemaLifecycle"].get(
+    "governance", {}
+).get("decisionRef", "")
+SCHEMA_LIFECYCLE_GOVERNANCE_OWNER: str = _CONTRACT["schemaLifecycle"].get(
+    "governance", {}
+).get("owner", "")
+SCHEMA_LIFECYCLE_ROLLOVER_CADENCE_MONTHS: int | None = _CONTRACT[
+    "schemaLifecycle"
+].get("governance", {}).get("rolloverCadenceMonths")
+SCHEMA_LIFECYCLE_FREEZE_REASON: str | None = _CONTRACT["schemaLifecycle"].get(
+    "governance", {}
+).get("freezeReason")
 SCHEMA_LIFECYCLE_EPOCH_DISCIPLINE: Dict[str, Any] = dict(
     _CONTRACT["schemaLifecycle"].get("epochDiscipline", {})
 )
