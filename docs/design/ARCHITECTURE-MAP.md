@@ -20,6 +20,7 @@ Scope: design-level, non-normative
 - `specs/premath/raw/TUSK-CORE.md`
 - `specs/premath/raw/SQUEAK-CORE.md`
 - `specs/premath/raw/SQUEAK-SITE.md`
+- harness overlay (design): `docs/design/TUSK-HARNESS-CONTRACT.md`
 
 `CI/Control` (one layer, two roles):
 - `specs/premath/raw/PREMATH-CI.md`

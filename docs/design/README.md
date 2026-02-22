@@ -18,6 +18,8 @@ Authority rule:
 - `TUSK-REFINEMENT.md`: refinement taxonomy and activation rules.
 - `TUSK-IDENTITY.md`: run identity and deterministic bindings.
 - `TUSK-WITNESSING.md`: Gate vs transport witnessing split.
+- `TUSK-HARNESS-CONTRACT.md`: long-running harness hooks (`boot/step/stop`),
+  durability boundaries, and trajectory/evidence mapping.
 
 ### Squeak/SigPi transport + runtime placement (between worlds)
 

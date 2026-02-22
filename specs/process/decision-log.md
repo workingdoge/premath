@@ -2867,3 +2867,44 @@ improving expressiveness for coherence/issue-memory workflows.
 - Cross-layer roundtrip is now executable under `capabilities.ci_witnesses`.
 - docs coherence checks enforce presence of obstruction algebra clauses and
   capability-vector coverage language.
+
+---
+
+## 2026-02-22 — Decision 0099: Define Tusk harness contract as runtime-control overlay
+
+### Decision
+Adopt a concise harness contract for long-running agents as a Tusk runtime
+control overlay (design layer), without adding a new semantic authority path.
+
+Implemented scope:
+
+1. add `docs/design/TUSK-HARNESS-CONTRACT.md` defining:
+   - hook model: `boot` / `step` / `stop`,
+   - durability boundaries (fresh-context restartability, compaction/offload,
+     explicit sub-agent boundaries),
+   - deterministic verification/retry boundary,
+   - trajectory/evidence capture contract;
+2. map harness clauses to existing surfaces:
+   - `mcp-serve` (instruction-linked mutation path),
+   - instruction pipeline + witness verification/decision,
+   - Observation Surface v0 projection/query,
+   - issue/event memory substrates;
+3. record explicit current gaps and a 2-4 slice implementation plan
+   (handoff artifact, feature ledger, trajectory rows, retry-policy table);
+4. cross-link harness overlay from `docs/design/README.md`,
+   `docs/design/TUSK-ARCHITECTURE.md`, and `docs/design/ARCHITECTURE-MAP.md`.
+
+### Rationale
+The unification closure track needs a concrete long-run execution contract for
+agents, but semantic authority must remain in kernel/checker/discharge
+surfaces. A Tusk harness overlay gives operational structure with minimum
+encoding and avoids duplicating admissibility semantics in CI or planner layers.
+
+### Consequences
+- Harness behavior is now explicit and composable with existing runtime/control
+  surfaces.
+- No change to semantic authority boundaries:
+  model outputs remain proposals; checker/discharge/witness artifacts remain
+  authoritative.
+- Follow-on implementation can proceed as bounded slices without forcing full
+  mathematical generalization up front.
