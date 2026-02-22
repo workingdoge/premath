@@ -190,7 +190,8 @@ Raw capability-spec lifecycle policy:
 
 Current tracked promotion queue:
 
-- `raw/SQUEAK-SITE` — tracked by issue `bd-44`.
+- `raw/SQUEAK-SITE` — tracked by issue `bd-44` (raw-retain path recorded in
+  Decision 0040; promote only when criteria are met).
 - `raw/TUSK-CORE` — tracked by issue `bd-45`.
 
 ### 5.6 Normative for profile overlays (only if claimed)

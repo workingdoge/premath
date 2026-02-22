@@ -214,6 +214,7 @@ Required vectors when claimed:
 - golden: equivalent location descriptors yield deterministic `loc_id` material.
 - golden: overlap agreement checks accept when required checks and bindings align.
 - adversarial: overlap mismatches reject deterministically (`site_overlap_mismatch`).
+- adversarial: missing glue proposals reject deterministically (`site_glue_missing`).
 - adversarial: non-contractible glue proposals reject deterministically
   (`site_glue_non_contractible`).
 - invariance: local and external runtime profiles preserve kernel verdict and

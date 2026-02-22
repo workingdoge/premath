@@ -6,6 +6,7 @@
     "golden/site_loc_descriptor_deterministic",
     "golden/site_overlap_agreement_accept",
     "adversarial/site_overlap_mismatch_reject",
+    "adversarial/site_glue_missing_reject",
     "adversarial/site_glue_non_contractible_reject",
     "adversarial/site_requires_claim",
     "invariance/same_semantics_local_profile",

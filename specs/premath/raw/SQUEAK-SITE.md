@@ -178,7 +178,31 @@ For fixed `RunFrame` and fixed policy bindings:
 - representation/profile changes MAY change evidence shape but not Gate class,
 - retry/replay across locations MUST remain deterministic and auditable.
 
-## 10. Cheese contract (runtime unit term)
+## 10. Conformance mapping (`capabilities.squeak_site`)
+
+When `capabilities.squeak_site` is claimed, conformance vectors under
+`tests/conformance/fixtures/capabilities/capabilities.squeak_site/` map site
+boundaries to deterministic outcomes:
+
+- location descriptor determinism (§3): `golden/site_loc_descriptor_deterministic`.
+- overlap agreement (§6): `golden/site_overlap_agreement_accept`.
+- overlap mismatch reject (§6): `adversarial/site_overlap_mismatch_reject`
+  -> `site_overlap_mismatch`.
+- glue missing reject (§7): `adversarial/site_glue_missing_reject`
+  -> `site_glue_missing`.
+- glue non-contractible reject (§7):
+  `adversarial/site_glue_non_contractible_reject`
+  -> `site_glue_non_contractible`.
+- capability-gated request rejection (§8):
+  `adversarial/site_requires_claim` -> `capability_not_claimed`.
+- profile invariance (§9):
+  `invariance/same_semantics_local_profile`,
+  `invariance/same_semantics_external_profile`.
+
+These vectors are executable through `mise run conformance-run` and are
+deterministically evaluated by `tools/conformance/run_capability_vectors.py`.
+
+## 11. Cheese contract (runtime unit term)
 
 This specification uses `Cheese` as the Squeak runtime unit term.
 
@@ -192,7 +216,7 @@ run_on_cheese(cheese, task_ref, env_ref) -> ExecutionResult
 `CheeseDescriptor` SHOULD include `loc_id` material and substrate binding
 attribution.
 
-## 11. v0 profile guidance
+## 12. v0 profile guidance
 
 A reasonable v0 profile set is:
 
@@ -203,7 +227,7 @@ A reasonable v0 profile set is:
 Experimental profiles MUST remain non-required until site invariance vectors
 prove stable outcomes under declared bindings.
 
-## 12. Security and robustness
+## 13. Security and robustness
 
 Implementations MUST treat all runtime bindings and transported payloads as
 untrusted.
@@ -214,7 +238,7 @@ Implementations SHOULD:
 - retain location/transport lineage logs,
 - fail closed when required checks cannot be executed at a location.
 
-## 13. Doctrine Preservation Declaration (v0)
+## 14. Doctrine Preservation Declaration (v0)
 
 Reference: `draft/DOCTRINE-INF`.
 

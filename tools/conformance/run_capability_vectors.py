@@ -865,6 +865,8 @@ def evaluate_squeak_site_vector(vector_id: str, case: Dict[str, Any]) -> VectorO
         return evaluate_site_overlap_agreement(case)
     if vector_id == "adversarial/site_overlap_mismatch_reject":
         return evaluate_site_overlap_agreement(case)
+    if vector_id == "adversarial/site_glue_missing_reject":
+        return evaluate_site_glue_non_contractible(case)
     if vector_id == "adversarial/site_glue_non_contractible_reject":
         return evaluate_site_glue_non_contractible(case)
     if vector_id == "adversarial/site_requires_claim":

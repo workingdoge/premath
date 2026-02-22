@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.squeak_site",
+  "vectorId": "adversarial/site_glue_missing_reject",
+  "description": "Missing glue proposals reject with site_glue_missing.",
+  "semanticScenarioId": "site_glue_missing_01",
+  "artifacts": {
+    "mode": {
+      "normalizerId": "site.norm.v1",
+      "policyDigest": "policy.ci.v1"
+    },
+    "glueProposals": []
+  }
+}

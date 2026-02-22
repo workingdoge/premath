@@ -1139,3 +1139,30 @@ keeps one authority boundary while preserving safe operational cutover.
 - migration work for `bd-27`/`bd-34` now has explicit phase and parity targets.
 - future cutovers can be judged by deterministic witness parity rather than
   narrative equivalence.
+
+---
+
+## 2026-02-22 — Decision 0040: Keep SQUEAK-SITE lifecycle-raw with explicit law/vector mapping
+
+### Decision
+Retain `raw/SQUEAK-SITE` in raw lifecycle state (do not promote to draft yet),
+while tightening capability-scoped law coverage:
+
+- add explicit adversarial vector for `site_glue_missing`,
+- publish explicit law-boundary -> vector mapping inside `raw/SQUEAK-SITE`,
+- keep `capabilities.squeak_site` normative scope bound to claimed clauses and
+  executable vectors.
+
+### Rationale
+Squeak runtime-location contracts are still an active operational design surface
+across local/external runner profiles. Promotion now would freeze a surface that
+is still being normalized. We can preserve determinism and safety by tightening
+vector-mapped capability boundaries while keeping the full spec lifecycle-raw.
+
+### Consequences
+- all currently declared site-class reject outcomes are now explicitly mapped to
+  executable vectors (`site_overlap_mismatch`, `site_glue_missing`,
+  `site_glue_non_contractible`).
+- lifecycle authority remains coherent: capability clauses are executable and
+  claim-bound, while full-document evolution remains open until promotion
+  criteria are met.
