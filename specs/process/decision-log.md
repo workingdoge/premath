@@ -2167,3 +2167,27 @@ explicit without introducing a parallel authority surface.
 - span/square commutation is now merge-gated under `coherence-check`.
 - the new typed layer is integrated across spec index, unification doctrine,
   traceability matrix, and executable fixtures.
+
+---
+
+## 2026-02-22 — Decision 0076: Tighten span/square vectors with invariance and digest-mismatch adversarial coverage
+
+### Decision
+Extend `coherence-site` vectors for `span_square_commutation` with:
+
+- invariance case:
+  - `invariance/span_square_commutation_permuted_accept`
+- adversarial digest mismatch case:
+  - `adversarial/span_square_commutation_digest_mismatch_reject`.
+
+### Rationale
+Initial span/square vectors proved baseline accept/reject behavior. Additional
+coverage closes two important boundaries:
+
+- permutation invariance of span declarations,
+- deterministic rejection when square witness digest is not bound to canonical
+  square fields.
+
+### Consequences
+- span/square layer now has explicit invariance + digest-integrity checks in
+  executable conformance fixtures.

@@ -19,6 +19,8 @@
     "golden/cwf_comprehension_eta_accept",
     "adversarial/cwf_comprehension_eta_reject",
     "golden/span_square_commutation_accept",
-    "adversarial/span_square_commutation_reject"
+    "adversarial/span_square_commutation_reject",
+    "adversarial/span_square_commutation_digest_mismatch_reject",
+    "invariance/span_square_commutation_permuted_accept"
   ]
 }
