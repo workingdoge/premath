@@ -2095,3 +2095,26 @@ derived file paths. That could allow stale cache hits when overlay files drift.
 - coherence-contract cache bindings now include overlay file surfaces read by
   checker semantics.
 - cache hits remain invalidated when overlay docs change or disappear.
+
+---
+
+## 2026-02-22 — Decision 0073: Bind coherence-contract cache inputs to kernel obligation authority source
+
+### Decision
+Extend `load_coherence_contract_input_paths()` to include:
+
+- `crates/premath-kernel/src`
+
+for the `coherence-contract` suite cache-input closure.
+
+### Rationale
+`coherence-check` consumes kernel obligation registry authority from
+`premath-kernel`. Without binding kernel source into the suite cache plan,
+changes to obligation authority could be skipped by stale conformance cache
+hits.
+
+### Consequences
+- coherence-contract cache refs now drift when kernel obligation authority
+  source changes.
+- cache validity aligns with checker authority dependencies across
+  kernel/coherence layers.

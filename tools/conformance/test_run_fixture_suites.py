@@ -38,6 +38,7 @@ class RunFixtureSuitesTests(unittest.TestCase):
             root / "specs" / "premath" / "profile" / "ADJOINTS-AND-SITES.md",
             paths,
         )
+        self.assertIn(root / "crates" / "premath-kernel" / "src", paths)
 
     def test_coherence_contract_input_closure_is_duplicate_free(self) -> None:
         paths = run_fixture_suites.load_coherence_contract_input_paths()

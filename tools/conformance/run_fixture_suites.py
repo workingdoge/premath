@@ -79,6 +79,7 @@ def load_coherence_contract_input_paths() -> Tuple[Path, ...]:
         contract_path,
         ROOT / "tests" / "conformance" / "fixtures" / "coherence-transport",
         ROOT / "tests" / "conformance" / "fixtures" / "coherence-site",
+        ROOT / "crates" / "premath-kernel" / "src",
         ROOT / "crates" / "premath-coherence" / "src",
         ROOT / "crates" / "premath-cli" / "src" / "commands" / "coherence_check.rs",
     ]
