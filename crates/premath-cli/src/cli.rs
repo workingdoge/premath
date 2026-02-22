@@ -484,6 +484,21 @@ pub enum IssueCommands {
         #[arg(long)]
         json: bool,
     },
+
+    /// Replay an issue.event.v1 log into an issues JSONL snapshot
+    ReplayEvents {
+        /// Path to issue-event JSONL input
+        #[arg(long, default_value = ".premath/memory/events.jsonl")]
+        events: String,
+
+        /// Path to projected issues JSONL output
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand, Clone, Debug)]

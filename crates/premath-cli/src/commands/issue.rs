@@ -1,7 +1,7 @@
 use crate::cli::IssueCommands;
 use premath_bd::{
-    DepType, Issue, MemoryStore, migrate_store_to_events, replay_events_from_path,
-    stores_equivalent, write_events_to_path,
+    DepType, Issue, MemoryStore, migrate_store_to_events, read_events_from_path,
+    replay_events_from_path, stores_equivalent, write_events_to_path,
 };
 use premath_surreal::QueryCache;
 use serde_json::json;
@@ -105,6 +105,12 @@ pub fn run(command: IssueCommands) {
             events,
             json,
         } => run_migrate_events(issues, events, json),
+
+        IssueCommands::ReplayEvents {
+            events,
+            issues,
+            json,
+        } => run_replay_events(events, issues, json),
     }
 }
 
@@ -682,6 +688,65 @@ fn run_migrate_events(issues: String, events: String, json_output: bool) {
             store.len(),
             events.len(),
             equivalent
+        );
+    }
+}
+
+fn run_replay_events(events: String, issues: String, json_output: bool) {
+    let events_path = PathBuf::from(events);
+    if !events_path.exists() {
+        eprintln!("error: events file not found: {}", events_path.display());
+        std::process::exit(1);
+    }
+
+    let event_count = read_events_from_path(&events_path)
+        .unwrap_or_else(|e| {
+            eprintln!("error: failed to load {}: {e}", events_path.display());
+            std::process::exit(1);
+        })
+        .len();
+    let replayed = replay_events_from_path(&events_path).unwrap_or_else(|e| {
+        eprintln!("error: failed to replay {}: {e}", events_path.display());
+        std::process::exit(1);
+    });
+
+    let issues_path = PathBuf::from(issues);
+    let equivalent_to_existing = if issues_path.exists() {
+        let existing = MemoryStore::load_jsonl(&issues_path).unwrap_or_else(|e| {
+            eprintln!("error: failed to load {}: {e}", issues_path.display());
+            std::process::exit(1);
+        });
+        Some(stores_equivalent(&existing, &replayed))
+    } else {
+        None
+    };
+
+    save_store_or_exit(&replayed, &issues_path);
+
+    if json_output {
+        let payload = json!({
+            "action": "issue.replay-events",
+            "eventsPath": events_path.display().to_string(),
+            "issuesPath": issues_path.display().to_string(),
+            "eventCount": event_count,
+            "issueCount": replayed.len(),
+            "equivalentToExisting": equivalent_to_existing
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else {
+        let equivalent_label = equivalent_to_existing
+            .map(|value| value.to_string())
+            .unwrap_or_else(|| "n/a".to_string());
+        println!(
+            "premath issue replay-events\n  Events: {}\n  Issues: {}\n  Event count: {}\n  Issue count: {}\n  Equivalent to existing: {}",
+            events_path.display(),
+            issues_path.display(),
+            event_count,
+            replayed.len(),
+            equivalent_label
         );
     }
 }

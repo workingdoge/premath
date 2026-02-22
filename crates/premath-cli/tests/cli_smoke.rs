@@ -519,6 +519,103 @@ fn issue_migrate_events_json_smoke() {
 }
 
 #[test]
+fn issue_replay_events_json_smoke() {
+    let tmp = TempDirGuard::new("issue-replay-events");
+    let issues = tmp.path().join("issues.jsonl");
+    let replayed_issues = tmp.path().join("replayed-issues.jsonl");
+    let events = tmp.path().join("events.jsonl");
+
+    let out_add_root = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Root issue"),
+        OsString::from("--id"),
+        OsString::from("bd-root"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_root);
+
+    let out_add_child = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Child issue"),
+        OsString::from("--id"),
+        OsString::from("bd-child"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_child);
+
+    let out_dep = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep);
+
+    let out_migrate = run_premath([
+        OsString::from("issue"),
+        OsString::from("migrate-events"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--events"),
+        events.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_migrate);
+
+    let out_replay_first = run_premath([
+        OsString::from("issue"),
+        OsString::from("replay-events"),
+        OsString::from("--events"),
+        events.as_os_str().to_os_string(),
+        OsString::from("--issues"),
+        replayed_issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_replay_first);
+    let replay_first = parse_json_stdout(&out_replay_first);
+    assert_eq!(replay_first["action"], "issue.replay-events");
+    assert_eq!(replay_first["eventCount"], 3);
+    assert_eq!(replay_first["issueCount"], 2);
+    assert_eq!(replay_first["equivalentToExisting"], Value::Null);
+
+    let out_replay_second = run_premath([
+        OsString::from("issue"),
+        OsString::from("replay-events"),
+        OsString::from("--events"),
+        events.as_os_str().to_os_string(),
+        OsString::from("--issues"),
+        replayed_issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_replay_second);
+    let replay_second = parse_json_stdout(&out_replay_second);
+    assert_eq!(replay_second["equivalentToExisting"], true);
+
+    let out_ready = run_premath([
+        OsString::from("issue"),
+        OsString::from("ready"),
+        OsString::from("--issues"),
+        replayed_issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_ready);
+    let ready = parse_json_stdout(&out_ready);
+    assert_eq!(ready["count"], 1);
+    assert_eq!(ready["items"][0]["id"], "bd-root");
+}
+
+#[test]
 fn dep_project_views_json_smoke() {
     let tmp = TempDirGuard::new("dep-project-views");
     let issues = tmp.path().join("issues.jsonl");

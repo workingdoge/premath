@@ -920,3 +920,27 @@ multiagent coordination bugs.
 ### Consequences
 - change-morphism conformance now catches stale-claim and lease-binding drift.
 - runtime and conformance both fail-closed on invalid claim lease bindings.
+
+---
+
+## 2026-02-22 — Decision 0032: Make issue event memory projection bidirectional at CLI surface
+
+### Decision
+Expose deterministic event replay alongside migration:
+
+- `premath issue migrate-events`: snapshot (`issues.jsonl`) -> event log
+  (`issue.event.v1`)
+- `premath issue replay-events`: event log (`issue.event.v1`) -> snapshot
+  (`issues.jsonl`)
+
+Replay writes a deterministic snapshot projection and reports equivalence to any
+pre-existing snapshot at the target path.
+
+### Rationale
+Event memory should not be write-only from snapshot state. Operators and agents
+need a deterministic, auditable projection path in both directions to support
+rebuilds, cache invalidation, and reproducible substrate recovery.
+
+### Consequences
+- issue memory CLI now supports deterministic snapshot/event round-trips.
+- replay idempotence and projection behavior are smoke-tested.
