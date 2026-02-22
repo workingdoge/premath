@@ -1,10 +1,10 @@
 use crate::cli::IssueCommands;
+use crate::support::{ISSUE_QUERY_PROJECTION_KIND, collect_backend_status};
 use premath_bd::{
     DepType, Issue, MemoryStore, event_stream_ref, migrate_store_to_events, read_events_from_path,
     replay_events, replay_events_from_path, store_snapshot_ref, stores_equivalent,
     write_events_to_path,
 };
-use premath_jj::JjClient;
 use premath_surreal::QueryCache;
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -125,8 +125,6 @@ pub fn run(command: IssueCommands) {
     }
 }
 
-const ISSUE_QUERY_PROJECTION_KIND: &str = "premath.surreal.issue_projection.v0";
-
 #[allow(clippy::too_many_arguments)]
 fn run_add(
     title: String,
@@ -237,66 +235,33 @@ fn run_list(status: Option<String>, assignee: Option<String>, issues: String, js
 }
 
 fn run_backend_status(issues: String, repo: String, projection: String, json_output: bool) {
-    let issues_path = PathBuf::from(issues);
-    let repo_root = PathBuf::from(repo);
-    let projection_path = PathBuf::from(projection);
-
-    let issues_exists = issues_path.exists();
-    let projection_exists = projection_path.exists();
-
-    let jj_available = JjClient::is_available();
-    let mut jj_repo_root: Option<String> = None;
-    let mut jj_head_change_id: Option<String> = None;
-    let mut jj_error: Option<String> = None;
-
-    if jj_available {
-        match JjClient::discover(&repo_root) {
-            Ok(client) => {
-                jj_repo_root = Some(client.repo_root().display().to_string());
-                match client.current_change_id() {
-                    Ok(change_id) => {
-                        jj_head_change_id = Some(change_id);
-                    }
-                    Err(err) => {
-                        jj_error = Some(err.to_string());
-                    }
-                }
-            }
-            Err(err) => {
-                jj_error = Some(err.to_string());
-            }
-        }
-    }
-
-    let jj_state = if !jj_available {
-        "unavailable"
-    } else if jj_error.is_none() {
-        "ready"
-    } else {
-        "error"
-    };
+    let status = collect_backend_status(
+        PathBuf::from(issues),
+        PathBuf::from(repo),
+        PathBuf::from(projection),
+    );
 
     if json_output {
         let payload = json!({
             "action": "issue.backend-status",
-            "issuesPath": issues_path.display().to_string(),
-            "repoRoot": repo_root.display().to_string(),
+            "issuesPath": status.issues_path.display().to_string(),
+            "repoRoot": status.repo_root.display().to_string(),
             "canonicalMemory": {
                 "kind": "jsonl",
-                "path": issues_path.display().to_string(),
-                "exists": issues_exists
+                "path": status.issues_path.display().to_string(),
+                "exists": status.issues_exists
             },
             "queryProjection": {
                 "kind": ISSUE_QUERY_PROJECTION_KIND,
-                "path": projection_path.display().to_string(),
-                "exists": projection_exists
+                "path": status.projection_path.display().to_string(),
+                "exists": status.projection_exists
             },
             "jj": {
-                "state": jj_state,
-                "available": jj_available,
-                "repoRoot": jj_repo_root,
-                "headChangeId": jj_head_change_id,
-                "error": jj_error
+                "state": status.jj_state,
+                "available": status.jj_available,
+                "repoRoot": status.jj_repo_root,
+                "headChangeId": status.jj_head_change_id,
+                "error": status.jj_error
             }
         });
         println!(
@@ -305,19 +270,19 @@ fn run_backend_status(issues: String, repo: String, projection: String, json_out
         );
     } else {
         println!("premath issue backend-status");
-        println!("  issues: {}", issues_path.display());
-        println!("  issues exists: {}", issues_exists);
-        println!("  repo: {}", repo_root.display());
-        println!("  projection: {}", projection_path.display());
-        println!("  projection exists: {}", projection_exists);
-        println!("  jj state: {}", jj_state);
-        if let Some(root) = jj_repo_root {
+        println!("  issues: {}", status.issues_path.display());
+        println!("  issues exists: {}", status.issues_exists);
+        println!("  repo: {}", status.repo_root.display());
+        println!("  projection: {}", status.projection_path.display());
+        println!("  projection exists: {}", status.projection_exists);
+        println!("  jj state: {}", status.jj_state);
+        if let Some(root) = status.jj_repo_root {
             println!("  jj repo root: {}", root);
         }
-        if let Some(change_id) = jj_head_change_id {
+        if let Some(change_id) = status.jj_head_change_id {
             println!("  jj head change: {}", change_id);
         }
-        if let Some(err) = jj_error {
+        if let Some(err) = status.jj_error {
             println!("  jj error: {}", err);
         }
     }

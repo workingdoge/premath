@@ -9,9 +9,24 @@ use std::path::{Path, PathBuf};
 
 pub const CONFLICT_SAMPLE_LIMIT: usize = 25;
 pub const DEFAULT_ISSUES_PATH: &str = ".premath/issues.jsonl";
+pub const ISSUE_QUERY_PROJECTION_KIND: &str = "premath.surreal.issue_projection.v0";
 const DEFAULT_ISSUES_SAMPLE_PATH: &str = ".premath/issues.jsonl.new";
 const LEGACY_ISSUES_PATH: &str = ".beads/issues.jsonl";
 const LEGACY_ISSUES_SAMPLE_PATH: &str = ".beads/issues.jsonl.new";
+
+#[derive(Debug, Clone)]
+pub struct BackendStatus {
+    pub issues_path: PathBuf,
+    pub repo_root: PathBuf,
+    pub projection_path: PathBuf,
+    pub issues_exists: bool,
+    pub projection_exists: bool,
+    pub jj_state: &'static str,
+    pub jj_available: bool,
+    pub jj_repo_root: Option<String>,
+    pub jj_head_change_id: Option<String>,
+    pub jj_error: Option<String>,
+}
 
 pub fn parse_level_or_exit(level: &str) -> CoherenceLevel {
     level.parse().unwrap_or_else(|e| {
@@ -129,6 +144,64 @@ pub fn maybe_jj_snapshot(repo: &str) -> Option<serde_json::Value> {
         "change_id": snapshot.change_id,
         "status": snapshot.status,
     }))
+}
+
+pub fn collect_backend_status(
+    issues_path: impl AsRef<Path>,
+    repo_root: impl AsRef<Path>,
+    projection_path: impl AsRef<Path>,
+) -> BackendStatus {
+    let issues_path = issues_path.as_ref().to_path_buf();
+    let repo_root = repo_root.as_ref().to_path_buf();
+    let projection_path = projection_path.as_ref().to_path_buf();
+
+    let issues_exists = issues_path.exists();
+    let projection_exists = projection_path.exists();
+
+    let jj_available = JjClient::is_available();
+    let mut jj_repo_root: Option<String> = None;
+    let mut jj_head_change_id: Option<String> = None;
+    let mut jj_error: Option<String> = None;
+
+    if jj_available {
+        match JjClient::discover(&repo_root) {
+            Ok(client) => {
+                jj_repo_root = Some(client.repo_root().display().to_string());
+                match client.current_change_id() {
+                    Ok(change_id) => {
+                        jj_head_change_id = Some(change_id);
+                    }
+                    Err(err) => {
+                        jj_error = Some(err.to_string());
+                    }
+                }
+            }
+            Err(err) => {
+                jj_error = Some(err.to_string());
+            }
+        }
+    }
+
+    let jj_state = if !jj_available {
+        "unavailable"
+    } else if jj_error.is_none() {
+        "ready"
+    } else {
+        "error"
+    };
+
+    BackendStatus {
+        issues_path,
+        repo_root,
+        projection_path,
+        issues_exists,
+        projection_exists,
+        jj_state,
+        jj_available,
+        jj_repo_root,
+        jj_head_change_id,
+        jj_error,
+    }
 }
 
 pub fn read_json_file_or_exit<T>(path: &str, label: &str) -> T

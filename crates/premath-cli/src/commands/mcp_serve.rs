@@ -1,4 +1,5 @@
 use super::init::{InitOutcome, init_layout};
+use crate::support::{ISSUE_QUERY_PROJECTION_KIND, collect_backend_status};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use premath_bd::{DepType, Issue, IssueLease, IssueLeaseState, MemoryStore};
@@ -592,7 +593,6 @@ tool_box!(
 );
 
 const ISSUE_QUERY_PROJECTION_SCHEMA: u64 = 1;
-const ISSUE_QUERY_PROJECTION_KIND: &str = "premath.surreal.issue_projection.v0";
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -922,63 +922,29 @@ fn call_issue_backend_status(
     let issues_path = resolve_path(tool.issues_path, &config.issues_path);
     let repo_root = resolve_repo_root(&config.repo_root);
     let projection_path = resolve_issue_query_projection_path(config);
-
-    let issues_exists = issues_path.exists();
-    let projection_exists = projection_path.exists();
-
-    let jj_available = JjClient::is_available();
-    let mut jj_repo_root: Option<String> = None;
-    let mut jj_head_change_id: Option<String> = None;
-    let mut jj_error: Option<String> = None;
-
-    if jj_available {
-        match JjClient::discover(&repo_root) {
-            Ok(client) => {
-                jj_repo_root = Some(client.repo_root().display().to_string());
-                match client.current_change_id() {
-                    Ok(change_id) => {
-                        jj_head_change_id = Some(change_id);
-                    }
-                    Err(err) => {
-                        jj_error = Some(err.to_string());
-                    }
-                }
-            }
-            Err(err) => {
-                jj_error = Some(err.to_string());
-            }
-        }
-    }
-
-    let jj_state = if !jj_available {
-        "unavailable"
-    } else if jj_error.is_none() {
-        "ready"
-    } else {
-        "error"
-    };
+    let status = collect_backend_status(&issues_path, &repo_root, &projection_path);
 
     json_result(json!({
         "action": "issue.backend-status",
-        "issuesPath": issues_path.display().to_string(),
-        "repoRoot": repo_root.display().to_string(),
+        "issuesPath": status.issues_path.display().to_string(),
+        "repoRoot": status.repo_root.display().to_string(),
         "queryBackend": config.issue_query_backend.as_str(),
         "canonicalMemory": {
             "kind": "jsonl",
-            "path": issues_path.display().to_string(),
-            "exists": issues_exists
+            "path": status.issues_path.display().to_string(),
+            "exists": status.issues_exists
         },
         "queryProjection": {
             "kind": ISSUE_QUERY_PROJECTION_KIND,
-            "path": projection_path.display().to_string(),
-            "exists": projection_exists
+            "path": status.projection_path.display().to_string(),
+            "exists": status.projection_exists
         },
         "jj": {
-            "state": jj_state,
-            "available": jj_available,
-            "repoRoot": jj_repo_root,
-            "headChangeId": jj_head_change_id,
-            "error": jj_error
+            "state": status.jj_state,
+            "available": status.jj_available,
+            "repoRoot": status.jj_repo_root,
+            "headChangeId": status.jj_head_change_id,
+            "error": status.jj_error
         }
     }))
 }
