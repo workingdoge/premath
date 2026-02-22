@@ -267,12 +267,15 @@ python3 tools/conformance/run_tusk_core_vectors.py
 Validates doctrine-to-operation site coherence using:
 
 - `specs/premath/draft/DOCTRINE-INF.md` (morphism registry),
-- `specs/premath/draft/DOCTRINE-SITE.json` (site map),
+- `specs/premath/draft/DOCTRINE-SITE-SOURCE.json` (site topology source),
+- `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node registry),
+- generated `specs/premath/draft/DOCTRINE-SITE.json` (canonical site map),
 - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`),
 - operation entrypoints referenced in the site map.
 
 Checks include:
 
+- generation roundtrip (`generated == tracked`),
 - declaration presence and exact set coherence (`preserved`/`notPreserved`),
 - edge morphism validity against doctrine registry,
 - cover/node references,
@@ -282,6 +285,23 @@ Run:
 
 ```bash
 python3 tools/conformance/check_doctrine_site.py
+```
+
+## `generate_doctrine_site.py`
+
+Generates canonical doctrine-site JSON from source + operation registry +
+declaration-bearing specs.
+
+Run:
+
+```bash
+python3 tools/conformance/generate_doctrine_site.py
+```
+
+Drift check (no write):
+
+```bash
+python3 tools/conformance/generate_doctrine_site.py --check
 ```
 
 ## `run_doctrine_inf_vectors.py`

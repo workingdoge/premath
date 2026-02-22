@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "registryKind": "premath.doctrine_operation_registry.v1",
+  "parentNodeId": "raw/PREMATH-CI",
+  "coverId": "cover.ci",
+  "baseCoverParts": [
+    "draft/LLM-INSTRUCTION-DOCTRINE",
+    "draft/LLM-PROPOSAL-CHECKING",
+    "raw/CI-TOPOS"
+  ],
+  "operations": [
+    {
+      "id": "op/ci.run_gate",
+      "edgeId": "e.ci.op.run_gate",
+      "path": "tools/ci/run_gate.sh",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "op/ci.run_instruction",
+      "edgeId": "e.ci.op.run_instruction",
+      "path": "tools/ci/run_instruction.sh",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/ci.verify_required_witness",
+      "edgeId": "e.ci.op.verify_required_witness",
+      "path": "tools/ci/verify_required_witness.py",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/ci.decide_required",
+      "edgeId": "e.ci.op.decide_required",
+      "path": "tools/ci/decide_required.py",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/conformance.stub",
+      "edgeId": "e.ci.op.stub",
+      "path": "tools/conformance/check_stub_invariance.py",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "op/conformance.capability",
+      "edgeId": "e.ci.op.capability",
+      "path": "tools/conformance/run_capability_vectors.py",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.evidence",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "op/conformance.doctrine",
+      "edgeId": "e.ci.op.doctrine",
+      "path": "tools/conformance/check_doctrine_site.py",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "op/conformance.doctrine_inf",
+      "edgeId": "e.ci.op.doctrine_inf",
+      "path": "tools/conformance/run_doctrine_inf_vectors.py",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    }
+  ]
+}

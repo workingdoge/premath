@@ -148,7 +148,8 @@ The entries below are informative/default reading surfaces unless they are
 explicitly claimed under §5.4 or §5.6.
 
 - `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
-  (`draft/DOCTRINE-SITE.json`).
+  (`draft/DOCTRINE-SITE-SOURCE.json` + `draft/DOCTRINE-OP-REGISTRY.json` ->
+  `draft/DOCTRINE-SITE.json`).
 - `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
   explicit gap targets.
 - `draft/PREMATH-COHERENCE` — typed coherence-contract checker/witness model
@@ -238,7 +239,9 @@ If you are implementing change discipline:
 
 If you are implementing higher-order CI/CD:
 1) `draft/DOCTRINE-INF`
-2) `draft/DOCTRINE-SITE` (+ `draft/DOCTRINE-SITE.json`)
+2) `draft/DOCTRINE-SITE`
+   (`draft/DOCTRINE-SITE-SOURCE.json` + `draft/DOCTRINE-OP-REGISTRY.json` ->
+   `draft/DOCTRINE-SITE.json`)
 3) `draft/LLM-INSTRUCTION-DOCTRINE`
 4) `draft/LLM-PROPOSAL-CHECKING`
 5) `raw/PREMATH-CI`

@@ -1,0 +1,292 @@
+{
+  "schema": 1,
+  "sourceKind": "premath.doctrine_operation_site.source.v1",
+  "siteId": "premath.doctrine_operation_site.v0",
+  "version": "v0",
+  "doctrineSpecPath": "specs/premath/draft/DOCTRINE-INF.md",
+  "operationRegistryPath": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
+  "nodes": [
+    {
+      "id": "draft/DOCTRINE-INF",
+      "path": "specs/premath/draft/DOCTRINE-INF.md",
+      "kind": "doctrine",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "draft/PREMATH-KERNEL",
+      "path": "specs/premath/draft/PREMATH-KERNEL.md",
+      "kind": "kernel",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "draft/GATE",
+      "path": "specs/premath/draft/GATE.md",
+      "kind": "kernel-gate",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "draft/BIDIR-DESCENT",
+      "path": "specs/premath/draft/BIDIR-DESCENT.md",
+      "kind": "kernel-obligation",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "draft/CONFORMANCE",
+      "path": "specs/premath/draft/CONFORMANCE.md",
+      "kind": "conformance",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "draft/LLM-INSTRUCTION-DOCTRINE",
+      "path": "specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md",
+      "kind": "instruction-doctrine",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "draft/LLM-PROPOSAL-CHECKING",
+      "path": "specs/premath/draft/LLM-PROPOSAL-CHECKING.md",
+      "kind": "instruction-proposal-checking",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "raw/TUSK-CORE",
+      "path": "specs/premath/raw/TUSK-CORE.md",
+      "kind": "runtime-local",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "raw/SQUEAK-CORE",
+      "path": "specs/premath/raw/SQUEAK-CORE.md",
+      "kind": "runtime-transport",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "raw/SQUEAK-SITE",
+      "path": "specs/premath/raw/SQUEAK-SITE.md",
+      "kind": "runtime-location-site",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "raw/PREMATH-CI",
+      "path": "specs/premath/raw/PREMATH-CI.md",
+      "kind": "ci-control-loop",
+      "requiresDeclaration": true
+    },
+    {
+      "id": "raw/CI-TOPOS",
+      "path": "specs/premath/raw/CI-TOPOS.md",
+      "kind": "ci-projection",
+      "requiresDeclaration": true
+    }
+  ],
+  "covers": [
+    {
+      "id": "cover.kernel",
+      "over": "draft/DOCTRINE-INF",
+      "parts": [
+        "draft/PREMATH-KERNEL",
+        "draft/GATE",
+        "draft/CONFORMANCE"
+      ]
+    },
+    {
+      "id": "cover.runtime",
+      "over": "draft/PREMATH-KERNEL",
+      "parts": [
+        "draft/BIDIR-DESCENT",
+        "raw/TUSK-CORE",
+        "raw/SQUEAK-CORE",
+        "raw/SQUEAK-SITE"
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "e.doctrine.kernel",
+      "from": "draft/DOCTRINE-INF",
+      "to": "draft/PREMATH-KERNEL",
+      "morphisms": [
+        "dm.identity",
+        "dm.refine.context",
+        "dm.refine.cover",
+        "dm.policy.rebind"
+      ]
+    },
+    {
+      "id": "e.doctrine.gate",
+      "from": "draft/DOCTRINE-INF",
+      "to": "draft/GATE",
+      "morphisms": [
+        "dm.identity",
+        "dm.refine.context",
+        "dm.refine.cover",
+        "dm.profile.evidence",
+        "dm.policy.rebind"
+      ]
+    },
+    {
+      "id": "e.doctrine.conformance",
+      "from": "draft/DOCTRINE-INF",
+      "to": "draft/CONFORMANCE",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.evidence",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.doctrine.llm_instruction",
+      "from": "draft/DOCTRINE-INF",
+      "to": "draft/LLM-INSTRUCTION-DOCTRINE",
+      "morphisms": [
+        "dm.identity",
+        "dm.policy.rebind",
+        "dm.profile.execution",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.doctrine.llm_proposal",
+      "from": "draft/DOCTRINE-INF",
+      "to": "draft/LLM-PROPOSAL-CHECKING",
+      "morphisms": [
+        "dm.identity",
+        "dm.policy.rebind",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.kernel.bidir",
+      "from": "draft/PREMATH-KERNEL",
+      "to": "draft/BIDIR-DESCENT",
+      "morphisms": [
+        "dm.identity",
+        "dm.refine.context",
+        "dm.refine.cover",
+        "dm.profile.evidence",
+        "dm.policy.rebind"
+      ]
+    },
+    {
+      "id": "e.kernel.tusk",
+      "from": "draft/PREMATH-KERNEL",
+      "to": "raw/TUSK-CORE",
+      "morphisms": [
+        "dm.identity",
+        "dm.refine.context",
+        "dm.refine.cover",
+        "dm.profile.execution",
+        "dm.profile.evidence",
+        "dm.policy.rebind"
+      ]
+    },
+    {
+      "id": "e.tusk.squeak_core",
+      "from": "raw/TUSK-CORE",
+      "to": "raw/SQUEAK-CORE",
+      "morphisms": [
+        "dm.identity",
+        "dm.transport.world",
+        "dm.profile.evidence"
+      ]
+    },
+    {
+      "id": "e.squeak_core.site",
+      "from": "raw/SQUEAK-CORE",
+      "to": "raw/SQUEAK-SITE",
+      "morphisms": [
+        "dm.identity",
+        "dm.transport.location",
+        "dm.refine.cover",
+        "dm.profile.execution",
+        "dm.profile.evidence"
+      ]
+    },
+    {
+      "id": "e.gate.ci",
+      "from": "draft/GATE",
+      "to": "raw/PREMATH-CI",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.profile.evidence",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.conformance.ci",
+      "from": "draft/CONFORMANCE",
+      "to": "raw/PREMATH-CI",
+      "morphisms": [
+        "dm.identity",
+        "dm.commitment.attest",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.topos",
+      "from": "raw/PREMATH-CI",
+      "to": "raw/CI-TOPOS",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.llm_instruction",
+      "from": "raw/PREMATH-CI",
+      "to": "draft/LLM-INSTRUCTION-DOCTRINE",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.ci.llm_proposal",
+      "from": "raw/PREMATH-CI",
+      "to": "draft/LLM-PROPOSAL-CHECKING",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.llm_instruction.llm_proposal",
+      "from": "draft/LLM-INSTRUCTION-DOCTRINE",
+      "to": "draft/LLM-PROPOSAL-CHECKING",
+      "morphisms": [
+        "dm.identity",
+        "dm.policy.rebind",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "e.llm_proposal.bidir",
+      "from": "draft/LLM-PROPOSAL-CHECKING",
+      "to": "draft/BIDIR-DESCENT",
+      "morphisms": [
+        "dm.identity",
+        "dm.policy.rebind"
+      ]
+    },
+    {
+      "id": "e.llm_instruction.op.run_instruction",
+      "from": "draft/LLM-INSTRUCTION-DOCTRINE",
+      "to": "op/ci.run_instruction",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ]
+    }
+  ]
+}

@@ -60,17 +60,23 @@ where:
 - `Edges` are declared doctrine-preserving relations,
 - `Entrypoints` are operational executables (`tools/...`) reachable from doctrine.
 
-## 3. Canonical map artifact
+## 3. Canonical map artifacts
 
-The canonical machine-readable artifact for this site is:
+The canonical machine-readable artifacts for this site are:
 
-- `draft/DOCTRINE-SITE.json`
+- `draft/DOCTRINE-SITE-SOURCE.json` (site topology source),
+- `draft/DOCTRINE-OP-REGISTRY.json` (operation-node + CI edge registry),
+- `draft/DOCTRINE-SITE.json` (generated canonical map).
 
-Conforming repositories MUST keep this artifact coherent with:
+Conforming repositories MUST generate `draft/DOCTRINE-SITE.json`
+deterministically from:
 
-- `draft/DOCTRINE-INF` morphism registry,
-- per-spec `Doctrine Preservation Declaration (v0)` sections,
-- operational tool paths referenced by the map.
+- `draft/DOCTRINE-SITE-SOURCE.json`,
+- `draft/DOCTRINE-OP-REGISTRY.json`,
+- declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`).
+
+`draft/DOCTRINE-SITE.json` MUST roundtrip to exactly the same generated output
+under deterministic canonicalization.
 
 ## 4. Required node classes
 
@@ -121,6 +127,7 @@ doctrine ancestry.
 
 Repositories SHOULD provide a deterministic checker that validates:
 
+- generated map roundtrip against tracked map artifacts,
 - declaration presence and morphism ID validity,
 - declaration set coherence with `draft/DOCTRINE-SITE.json`,
 - edge and cover coherence,
@@ -129,6 +136,10 @@ Repositories SHOULD provide a deterministic checker that validates:
 In this repository, that checker is:
 
 - `tools/conformance/check_doctrine_site.py`
+
+And the canonical map generator is:
+
+- `tools/conformance/generate_doctrine_site.py`
 
 ## 8. Security and robustness
 

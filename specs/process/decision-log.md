@@ -1498,3 +1498,36 @@ must be checked at the server surface, not inferred from local gate execution.
   admin-read token requirement (`PREMATH_BRANCH_POLICY_TOKEN`).
 - governance hardening remains fail-closed on bypass actors under the tracked
   policy.
+
+---
+
+## 2026-02-22 — Decision 0052: Make doctrine-site mapping generation-first with typed source + operation registry
+
+### Decision
+Adopt a generation-first doctrine-site contract flow:
+
+- add `draft/DOCTRINE-SITE-SOURCE.json` as the non-operation topology source,
+- add `draft/DOCTRINE-OP-REGISTRY.json` as operation-node + CI-edge registry,
+- generate `draft/DOCTRINE-SITE.json` deterministically from:
+  - source topology,
+  - operation registry,
+  - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`).
+
+Require doctrine-site checker roundtrip parity (`generated == tracked`) in
+addition to existing morphism/declaration/reachability checks.
+
+### Rationale
+`DOCTRINE-SITE.json` previously duplicated declaration sets directly, creating a
+hand-maintained drift surface. Generation-first removes duplicate encoding,
+keeps operation ancestry auditable, and preserves one canonical projection path.
+
+### Consequences
+- doctrine-site authority now has three explicit artifacts:
+  `DOCTRINE-SITE-SOURCE.json` + `DOCTRINE-OP-REGISTRY.json` ->
+  `DOCTRINE-SITE.json`.
+- `tools/conformance/check_doctrine_site.py` now enforces roundtrip drift
+  rejection and points to the generator for repair.
+- new helper/generator/test surfaces:
+  - `tools/conformance/doctrine_site_contract.py`
+  - `tools/conformance/generate_doctrine_site.py`
+  - `tools/conformance/test_doctrine_site_contract.py`

@@ -10,7 +10,8 @@ Start here:
 - `SPEC-INDEX.md` — front door for claims, profiles, and normative scope.
 - `DOCTRINE-INF.md` — doctrine/infinity-layer preservation contract.
 - `DOCTRINE-SITE.md` — doctrine-to-operation site map contract
-  (`DOCTRINE-SITE.json`).
+  (`DOCTRINE-SITE-SOURCE.json` + `DOCTRINE-OP-REGISTRY.json` ->
+  `DOCTRINE-SITE.json`).
 - `LLM-INSTRUCTION-DOCTRINE.md` — instruction typing/binding doctrine for
   LLM-driven control loops.
 - `LLM-PROPOSAL-CHECKING.md` — proposal ingestion contract binding LLM outputs
