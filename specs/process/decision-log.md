@@ -3263,3 +3263,39 @@ one deterministic contract path from doctrine text to vectors to checker output.
   material with deterministic class mapping.
 - Coherence and drift-budget checks now fail closed on Stage 1 parity/rollback
   contract drift.
+
+---
+
+## 2026-02-22 — Decision 0109: Close Stage 2 authority-flip docs/traceability with executable clause mapping
+
+### Decision
+Promote Stage 2 authority-flip documentation from prose-only status to explicit
+clause-to-surface executable mapping and close traceability status for
+`UNIFICATION-DOCTRINE`.
+
+Implemented scope:
+
+1. extend `draft/UNIFICATION-DOCTRINE` with
+   `§10.6.4 Stage 2 authority mapping table (normative)` binding Stage 2
+   doctrine clauses to:
+   - typed contract fields (`draft/CONTROL-PLANE-CONTRACT.json`),
+   - coherence checker surfaces (`gate_chain_parity` Stage 2 checks),
+   - executable vector rows (`gate_chain_parity_stage2_*` and
+     `capabilities.ci_witnesses` boundary-authority vectors).
+2. update `draft/SPEC-INDEX` to state Stage 2 typed-authority claims must bind
+   to `§10.6.4` mapping (including boundary-authority vectors).
+3. update `draft/SPEC-TRACEABILITY` to mark `UNIFICATION-DOCTRINE.md` as
+   `covered` with Stage 1+Stage 2 checker/vector surfaces explicitly listed.
+
+### Rationale
+Stage 2 implementation surfaces were already executable, but the documentation
+still left the authority-flip closure partially implicit. We need one explicit
+normative map from doctrine clauses to checker/vector evidence so Stage 2
+status is auditable and replayable.
+
+### Consequences
+- Stage 2 authority boundaries are now documented as executable mappings, not
+  narrative guidance.
+- Traceability status for `UNIFICATION-DOCTRINE` now reflects actual checker and
+  vector coverage.
+- Future Stage 2 drift can be detected against one canonical docs contract.

@@ -449,6 +449,23 @@ at least:
 - `unification.evidence_stage1.rollback.unbound`
   (missing deterministic binding context for rollback witness comparison).
 
+#### 10.6.4 Stage 2 authority mapping table (normative)
+
+When Stage 2 is active, implementations MUST bind doctrine clauses to
+deterministic checker/vector surfaces as follows.
+
+| Stage 2 clause | Typed contract surface | Checker surface | Executable vectors |
+| --- | --- | --- | --- |
+| typed core is authority; alias is projection-only | `draft/CONTROL-PLANE-CONTRACT.json` `evidenceStage2Authority` (`activeStage=stage2`, `aliasRole=projection_only`) | `mise run coherence-check` (`gate_chain_parity` Stage 2 checks) | `tests/conformance/fixtures/coherence-site/*/gate_chain_parity_stage2_*` |
+| alias-window fail-closed enforcement | lifecycle table in `draft/CONTROL-PLANE-CONTRACT.json` + §5.1 governance | `gate_chain_parity` Stage 2 alias-window checks | `gate_chain_parity_stage2_alias_window_reject` |
+| alias-as-authority rejection | `evidenceStage2Authority.requiredFailureClasses.authorityAliasViolation` | `gate_chain_parity` Stage 2 alias-role checks | `gate_chain_parity_stage2_alias_role_reject` |
+| unbound typed authority rejection | `evidenceStage2Authority.requiredFailureClasses.unbound` | `gate_chain_parity` Stage 2 unbound checks | `gate_chain_parity_stage2_unbound_binding_reject` |
+| kernel-compliance sentinel parity | `evidenceStage2Authority.kernelComplianceSentinel` + canonical obligation set | `gate_chain_parity` Stage 2 kernel sentinel checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
+| typed-first consumer lineage (CI/instruction/decision/observation) | typed authority fields carried in witness/decision/snapshot payloads (`typedCoreProjectionDigest`, `authorityPayloadDigest`, `normalizerId`, `policyDigest`) | CI witness validators + observation projection selection | `capabilities.ci_witnesses` boundary-authority vectors (`golden/boundary_authority_lineage_accept`, adversarial/invariance pairs) |
+
+Equivalent implementation-local routes are permitted only when replay-stable
+and mapped deterministically to these clause-level surfaces.
+
 ## 11. Cross-layer Obstruction Algebra (v0)
 
 Implementations MAY project failure classes into one typed obstruction algebra
