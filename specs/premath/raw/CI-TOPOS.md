@@ -74,8 +74,9 @@ The v0 baseline check set is:
 3. semantic toy vectors
 4. KCIR toy vectors
 5. conformance stub invariance
-6. doctrine-site coverage checks
-7. executable conformance fixture suites (interop-core, gate, capabilities)
+6. spec traceability matrix integrity check
+7. doctrine-site coverage checks
+8. executable conformance fixture suites (interop-core, gate, witness-id, capabilities)
 
 Canonical local command:
 

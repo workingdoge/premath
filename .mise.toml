@@ -32,6 +32,9 @@ run = "python3 tools/kcir_toy/run_kcir_toy_vectors.py --fixtures tests/kcir_toy/
 [tasks.conformance-check]
 run = "python3 tools/conformance/check_stub_invariance.py"
 
+[tasks.traceability-check]
+run = "python3 tools/conformance/check_spec_traceability.py"
+
 [tasks.doctrine-check]
 run = "python3 tools/conformance/check_doctrine_site.py"
 
@@ -49,6 +52,7 @@ run = [
   "mise run test-toy",
   "mise run test-kcir-toy",
   "mise run conformance-check",
+  "mise run traceability-check",
   "mise run doctrine-check",
   "mise run ci-command-surface-check",
   "mise run ci-hygiene-check",

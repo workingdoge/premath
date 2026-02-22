@@ -53,6 +53,26 @@ Run:
 python3 tools/conformance/check_stub_invariance.py
 ```
 
+## `check_spec_traceability.py`
+
+Validates promoted draft spec coverage matrix integrity using:
+
+- `specs/premath/draft/SPEC-TRACEABILITY.md`
+- `specs/premath/draft/` promoted draft spec set
+
+Checks include:
+
+- every promoted draft spec appears exactly once in the matrix,
+- status is one of `covered|instrumented|gap`,
+- `gap` rows carry target IDs (`T-*-*`),
+- matrix rows do not reference unknown draft specs.
+
+Run:
+
+```bash
+python3 tools/conformance/check_spec_traceability.py
+```
+
 ## `run_capability_vectors.py`
 
 Runs executable capability vectors (current set):

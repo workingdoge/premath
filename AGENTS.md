@@ -30,7 +30,7 @@
 
 - `cargo build --workspace` — build all crates.
 - `cargo test --workspace` — run Rust tests.
-- `mise run baseline` — full local closure gate (`py-setup` + fmt + clippy + build/tests + toy + KCIR toy + conformance checks + doctrine-site check; includes `rust-setup` for `rustfmt`/`clippy` components).
+- `mise run baseline` — full local closure gate (`py-setup` + fmt + clippy + build/tests + toy + KCIR toy + conformance checks + traceability matrix check + doctrine-site check; includes `rust-setup` for `rustfmt`/`clippy` components).
 - `mise run hk-install` — install optional `hk`-managed git hooks using `hk.pkl`.
 - `mise run hk-pre-commit` / `mise run hk-pre-push` — run hk hook profiles manually.
 - `mise run hk-check` / `mise run hk-fix` — run hk baseline check or fast local fixes (`hk-fix` runs on all files with no auto-stage).
@@ -59,6 +59,7 @@
 - `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
 - `mise run conformance-run` — run executable fixture suites (Interop Core + Gate + capability vectors) through the cached suite runner.
 - `mise run doctrine-check` — validate doctrine declarations and doctrine-to-operation site reachability (`specs/premath/draft/DOCTRINE-SITE.json`).
+- `mise run traceability-check` — validate promoted draft spec coverage matrix integrity (`specs/premath/draft/SPEC-TRACEABILITY.md`).
 - `mise run precommit` — same as baseline.
 - `python3 tools/conformance/check_stub_invariance.py` — validate capability fixture stubs/invariance pairs.
 - `cargo run --package premath-cli -- <args>` — run CLI commands locally.

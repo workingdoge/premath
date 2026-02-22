@@ -63,7 +63,8 @@ Purpose:
 | `DOCTRINE-SITE.json` | `mise run doctrine-check` | covered | - |
 | `LLM-INSTRUCTION-DOCTRINE.md` | `capabilities.instruction_typing`; `capabilities.ci_witnesses`; `mise run ci-pipeline-test` | covered | - |
 | `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_policy.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
-| `SPEC-INDEX.md` | index/reference contract; validated indirectly by doc updates and doctrine-site references | instrumented | `T-INDEX-01` |
+| `SPEC-INDEX.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
+| `SPEC-TRACEABILITY.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
 
 ## 4. Coverage Targets (Open Gaps/Upgrades)
 
@@ -76,11 +77,6 @@ declared preserved/not-preserved boundaries.
 
 Define a canonical kernel conformance vector profile for reproducible
 cross-model comparison (in addition to host-specific proofs/tests).
-
-### `T-INDEX-01` Index/Lifecycle Integrity Check
-
-Add a deterministic check that all promoted draft specs are present in this
-matrix and classified (`covered|instrumented|gap`) with a target when needed.
 
 ## 5. Maintenance Rules
 

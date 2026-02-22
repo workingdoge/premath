@@ -671,3 +671,30 @@ determinism/sensitivity behavior is validated at fixture level.
 - `draft/SPEC-TRACEABILITY` marks `WITNESS-ID.md` as `covered`.
 - Open traceability upgrades continue under `T-DINF-01`, `T-KERNEL-01`, and
   `T-INDEX-01`.
+
+---
+
+## 2026-02-22 — Decision 0024: Execute T-INDEX-01 with deterministic traceability matrix check
+
+### Decision
+Implement and merge deterministic traceability matrix integrity validation via
+`tools/conformance/check_spec_traceability.py`, and wire it into
+`mise run baseline` as `mise run traceability-check`.
+
+Coverage checks enforce:
+
+- every promoted draft spec under `specs/premath/draft/` appears exactly once
+  in `draft/SPEC-TRACEABILITY`,
+- matrix status classes are restricted to `covered|instrumented|gap`,
+- `gap` rows require concrete target IDs (`T-*-*`),
+- no matrix rows reference unknown draft specs.
+
+### Rationale
+`SPEC-INDEX`/traceability coverage was previously instrumentation-by-convention.
+`T-INDEX-01` required a deterministic executable surface to prevent drift
+between promoted draft spec inventory and matrix rows.
+
+### Consequences
+- `mise run baseline` now includes `mise run traceability-check`.
+- `draft/SPEC-TRACEABILITY` marks `SPEC-INDEX.md` as `covered`.
+- Open traceability upgrades continue under `T-DINF-01` and `T-KERNEL-01`.
