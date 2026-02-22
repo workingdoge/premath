@@ -296,6 +296,83 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Build one CI required witness through core checker semantics
+    RequiredWitness {
+        /// Runtime JSON path (projection/results/gate refs/timestamps/profile bindings)
+        #[arg(long)]
+        runtime: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Project changed paths to required check IDs through core checker semantics
+    RequiredProjection {
+        /// Projection input JSON path (`{changedPaths:[...]}`)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Detect git/workspace delta paths through core checker command surface
+    RequiredDelta {
+        /// Delta input JSON path (`{repoRoot,fromRef?,toRef?}`)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Build one required gate witness ref (+optional fallback payload) through core semantics
+    RequiredGateRef {
+        /// Input JSON path (`{checkId,artifactRelPath,source?,gatePayload?|fallback?}`)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Verify one CI required witness against deterministic projection semantics
+    RequiredWitnessVerify {
+        /// Verify input JSON path (witness + changedPaths + optional gate payload map)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Decide one CI required witness (accept/reject) through core checker semantics
+    RequiredWitnessDecide {
+        /// Decide input JSON path (witness + optional compare paths + optional gate payload map)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Verify one CI required decision against witness/delta attestation semantics
+    RequiredDecisionVerify {
+        /// Verify input JSON path (decision + witness + deltaSnapshot + actual sha values)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON
@@ -407,6 +484,25 @@ pub enum IssueCommands {
         /// Path to issues JSONL
         #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Report issue backend integration state (JSONL authority, projection cache, JJ)
+    BackendStatus {
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Repository root used for JJ discovery
+        #[arg(long, default_value = ".")]
+        repo: String,
+
+        /// Path to surreal issue-query projection cache
+        #[arg(long, default_value = ".premath/surreal_issue_cache.json")]
+        projection: String,
 
         /// Output as JSON
         #[arg(long)]

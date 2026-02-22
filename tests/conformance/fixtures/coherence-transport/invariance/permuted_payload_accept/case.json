@@ -3,6 +3,7 @@
   "status": "executable",
   "vectorId": "invariance/permuted_payload_accept",
   "semanticScenarioId": "transport_functoriality_invariance_01",
+  "profile": "local",
   "artifacts": {
     "binding": {
       "policyDigest": "policy.coherence.v1",

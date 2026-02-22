@@ -73,6 +73,13 @@
 - `cargo run --package premath-cli -- proposal-check --proposal <proposal.json> --json` — validate/canonicalize one proposal payload, compile obligations, and emit deterministic discharge output.
 - `cargo run --package premath-cli -- instruction-check --instruction <instruction.json> --repo-root . --json` — validate/canonicalize one instruction envelope and emit typed execution decision metadata.
 - `cargo run --package premath-cli -- instruction-witness --instruction <instruction.json> --runtime <runtime.json> --repo-root . --json` — finalize one CI instruction witness from typed instruction semantics plus executed check runtime payload.
+- `cargo run --package premath-cli -- required-projection --input <projection_input.json> --json` — project `changedPaths` to deterministic required check IDs through core semantics.
+- `cargo run --package premath-cli -- required-delta --input <delta_input.json> --json` — detect deterministic `changedPaths` + `{source,fromRef,toRef}` through core git/workspace delta semantics.
+- `cargo run --package premath-cli -- required-gate-ref --input <gate_ref_input.json> --json` — build deterministic `gateWitnessRef` (and optional fallback `gatePayload`) from native gate payload or fallback synthesis inputs.
+- `cargo run --package premath-cli -- required-witness --runtime <runtime.json> --json` — finalize one CI required witness from projection/check/gate-ref runtime payload.
+- `cargo run --package premath-cli -- required-witness-verify --input <verify_input.json> --json` — verify one CI required witness against deterministic projection semantics and emit `{errors,derived}`.
+- `cargo run --package premath-cli -- required-witness-decide --input <decide_input.json> --json` — decide one CI required witness (`accept|reject`) through core semantics and emit deterministic decision fields.
+- `cargo run --package premath-cli -- required-decision-verify --input <verify_decision_input.json> --json` — verify one CI decision attestation chain (`decision + witness + delta + actual digests`) through core semantics.
 - `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json` — evaluate typed coherence obligations and emit deterministic coherence witness output.
 - `cargo run --package premath-cli -- ref project --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --json` — project deterministic backend refs via profile-bound `project_ref`.
 - `cargo run --package premath-cli -- ref verify --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --evidence-hex <hex> --ref-scheme-id <id> --ref-params-hash <hash> --ref-domain <domain> --ref-digest <digest> --json` — verify provided refs via profile-bound `verify_ref`.
@@ -82,6 +89,7 @@
 - `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
 - `cargo run --package premath-cli -- issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json` — atomically claim work (`assignee` + `in_progress`).
 - `cargo run --package premath-cli -- issue discover <parent-issue-id> \"Title\" --issues .premath/issues.jsonl --json` — create discovered follow-up work linked by `discovered-from`.
+- `cargo run --package premath-cli -- issue backend-status --issues .premath/issues.jsonl --repo . --projection .premath/surreal_issue_cache.json --json` — report backend integration state (JSONL authority refs/errors, surreal projection provenance/freshness state, JJ availability/head metadata).
 - `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json` — list issues with optional filters.
 - `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json` — return unblocked open issues.
 - `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues blocked by unresolved dependencies.

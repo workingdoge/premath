@@ -9,6 +9,60 @@
     "golden/glue_or_witness_glue_accept",
     "golden/glue_or_witness_obstruction_accept",
     "adversarial/glue_or_witness_missing_reject",
-    "invariance/glue_or_witness_permuted_glue_accept"
-  ]
+    "invariance/glue_or_witness_permuted_glue_accept",
+    "invariance/glue_or_witness_permuted_glue_accept_external",
+    "golden/cwf_substitution_identity_accept",
+    "adversarial/cwf_substitution_identity_reject",
+    "golden/cwf_substitution_composition_accept",
+    "adversarial/cwf_substitution_composition_reject",
+    "golden/cwf_comprehension_beta_accept",
+    "adversarial/cwf_comprehension_beta_reject",
+    "golden/cwf_comprehension_eta_accept",
+    "adversarial/cwf_comprehension_eta_reject",
+    "golden/span_square_commutation_accept",
+    "adversarial/span_square_commutation_reject",
+    "adversarial/span_square_commutation_digest_mismatch_reject",
+    "invariance/span_square_commutation_permuted_accept",
+    "invariance/span_square_commutation_permuted_accept_external"
+  ],
+  "obligationVectors": {
+    "coverage_base_change": [
+      "golden/base_change_cover_pullback_accept",
+      "adversarial/base_change_cover_pullback_reject"
+    ],
+    "coverage_transitivity": [
+      "golden/transitivity_cover_composition_accept",
+      "adversarial/transitivity_cover_composition_reject"
+    ],
+    "glue_or_witness_contractibility": [
+      "golden/glue_or_witness_glue_accept",
+      "golden/glue_or_witness_obstruction_accept",
+      "adversarial/glue_or_witness_missing_reject",
+      "invariance/glue_or_witness_permuted_glue_accept",
+      "invariance/glue_or_witness_permuted_glue_accept_external"
+    ],
+    "cwf_substitution_identity": [
+      "golden/cwf_substitution_identity_accept",
+      "adversarial/cwf_substitution_identity_reject"
+    ],
+    "cwf_substitution_composition": [
+      "golden/cwf_substitution_composition_accept",
+      "adversarial/cwf_substitution_composition_reject"
+    ],
+    "cwf_comprehension_beta": [
+      "golden/cwf_comprehension_beta_accept",
+      "adversarial/cwf_comprehension_beta_reject"
+    ],
+    "cwf_comprehension_eta": [
+      "golden/cwf_comprehension_eta_accept",
+      "adversarial/cwf_comprehension_eta_reject"
+    ],
+    "span_square_commutation": [
+      "golden/span_square_commutation_accept",
+      "adversarial/span_square_commutation_reject",
+      "adversarial/span_square_commutation_digest_mismatch_reject",
+      "invariance/span_square_commutation_permuted_accept",
+      "invariance/span_square_commutation_permuted_accept_external"
+    ]
+  }
 }

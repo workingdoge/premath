@@ -169,6 +169,8 @@ explicitly claimed under §5.4 or §5.6.
   `capabilities.instruction_typing` is claimed).
 - `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries and deterministic projections.
+- `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
+  pipeline/base-change commutation in coherence checker surfaces.
 - `raw/CTX-SITE` — informational site base (`Ctx`) + coverage (`J`) model for
   context/refinement decomposition.
 - `raw/SHEAF-STACK` — informational presheaf/sheaf/stack rendering of
@@ -213,7 +215,29 @@ Current tracked promotion queue:
   admissible-map allowlist policy, Beck-Chevalley obligations, and deterministic
   `(normalizerId, policyDigest)` discharge binding for profile claims.
 
+Joint capability note:
+
+- Implementations MAY jointly claim `capabilities.adjoints_sites` and
+  `capabilities.squeak_site`; such compositions SHOULD follow lane separation
+  and single-authority encoding rules in `draft/UNIFICATION-DOCTRINE` §9.
+
 ## 6. Suggested reading order
+
+Minimal authority path (default for all implementations):
+1) `draft/SPEC-INDEX`
+2) `draft/DOCTRINE-INF`
+3) `draft/PREMATH-KERNEL`
+4) `draft/BIDIR-DESCENT` + `draft/GATE`
+5) `draft/NORMALIZER` + `draft/REF-BINDING` (when normalized evidence paths are used)
+
+Surface-reduction guidance:
+
+- Treat the minimal authority path above as canonical.
+- Add profile/capability/control-plane docs only when the corresponding claim is
+  implemented.
+- When composing overlays, route composition semantics through
+  `draft/UNIFICATION-DOCTRINE` (single-authority encoding; deterministic
+  projections).
 
 If you are proving semantics:
 1) `draft/DOCTRINE-INF`
@@ -255,6 +279,15 @@ If you are implementing the adjoints-and-sites overlay:
 2) `draft/GATE`
 3) `draft/BIDIR-DESCENT`
 4) `profile/ADJOINTS-AND-SITES`
+
+If you are integrating Sig/Pi + Squeak in one system:
+1) `draft/PREMATH-KERNEL`
+2) `draft/BIDIR-DESCENT` + `draft/GATE`
+3) `profile/ADJOINTS-AND-SITES`
+4) `raw/SQUEAK-CORE` + `raw/SQUEAK-SITE`
+5) `draft/SPAN-SQUARE-CHECKING`
+6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+7) `draft/UNIFICATION-DOCTRINE` (§9 lane separation)
 
 ## 7. Notes on restrictiveness
 

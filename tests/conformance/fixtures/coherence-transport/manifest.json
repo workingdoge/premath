@@ -7,6 +7,7 @@
     "adversarial/identity_violation_reject",
     "adversarial/composition_violation_reject",
     "adversarial/naturality_violation_reject",
-    "invariance/permuted_payload_accept"
+    "invariance/permuted_payload_accept",
+    "invariance/permuted_payload_accept_external"
   ]
 }

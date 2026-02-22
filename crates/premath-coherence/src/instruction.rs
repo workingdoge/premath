@@ -77,6 +77,7 @@ pub struct ValidatedInstructionEnvelope {
     pub scope: Value,
     pub normalizer_id: String,
     pub policy_digest: String,
+    pub instruction_digest: String,
     pub requested_checks: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instruction_type: Option<String>,
@@ -1129,12 +1130,14 @@ pub fn validate_instruction_envelope_payload(
         &typing_policy,
         proposal.as_ref(),
     );
+    let instruction_digest = format!("instr1_{}", stable_hash(raw));
 
     Ok(ValidatedInstructionEnvelope {
         intent,
         scope: scope.clone(),
         normalizer_id,
         policy_digest,
+        instruction_digest,
         requested_checks,
         instruction_type,
         instruction_classification,

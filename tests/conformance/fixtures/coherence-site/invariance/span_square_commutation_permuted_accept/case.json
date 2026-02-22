@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "span_square_commutation",
+  "semanticScenarioId": "span_square_commutation_permuted_accept",
+  "profile": "local",
+  "artifacts": {
+    "spanSquare": {
+      "spans": [
+        {
+          "id": "reindex_output",
+          "kind": "base_change",
+          "left": {"out": "y"},
+          "apex": {"map": "rho"},
+          "right": {"out": "y"}
+        },
+        {
+          "id": "run_after_reindex",
+          "kind": "pipeline",
+          "left": {"ctx": "Gamma", "input": "x"},
+          "apex": {"run": "r_base"},
+          "right": {"out": "y"}
+        },
+        {
+          "id": "reindex_input",
+          "kind": "base_change",
+          "left": {"ctx": "Delta", "input": "x"},
+          "apex": {"map": "rho"},
+          "right": {"ctx": "Gamma", "input": "x"}
+        },
+        {
+          "id": "run_on_base",
+          "kind": "pipeline",
+          "left": {"ctx": "Gamma", "input": "x"},
+          "apex": {"run": "r_base"},
+          "right": {"out": "y"}
+        }
+      ],
+      "squares": [
+        {
+          "id": "sq_accept_permuted",
+          "top": "run_on_base",
+          "bottom": "run_after_reindex",
+          "left": "reindex_input",
+          "right": "reindex_output",
+          "result": "accepted",
+          "failureClasses": [],
+          "digest": "sqw1_4f42fafb0510c945ce414ca03c9e5668c05b7d4aabd6041f05d0eafa51474235"
+        }
+      ]
+    }
+  }
+}

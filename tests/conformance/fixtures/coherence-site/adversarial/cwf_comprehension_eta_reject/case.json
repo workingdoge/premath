@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "cwf_comprehension_eta",
+  "artifacts": {
+    "cwf": {
+      "comprehension": {
+        "eta": [
+          {
+            "label": "sigma",
+            "original": {"subst": "sigma"},
+            "afterEta": {"subst": "sigma_bad"}
+          }
+        ]
+      }
+    }
+  }
+}

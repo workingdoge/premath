@@ -1634,3 +1634,752 @@ drift risk.
 - traceability for `draft/LLM-PROPOSAL-CHECKING` now points to
   `test_instruction_check_client.py` + `test_instruction_reject_witness.py`.
 - instruction policy semantics remain single-path and checker-owned.
+
+---
+
+## 2026-02-22 — Decision 0056: Add CwF strict presentation obligations to coherence-check
+
+### Decision
+Extend `premath coherence-check` and `draft/COHERENCE-CONTRACT.json` with four
+strict CwF obligations:
+
+- `cwf_substitution_identity`
+- `cwf_substitution_composition`
+- `cwf_comprehension_beta`
+- `cwf_comprehension_eta`
+
+Bind them to executable vectors under
+`tests/conformance/fixtures/coherence-site/` and evaluate them through the same
+deterministic site-obligation runner already used for cover/glue obligations.
+
+### Rationale
+Premath already separates semantic `≈` (kernel/fibration/site) from operational
+`≡` surfaces used by deterministic CI/witness pipelines. CwF laws provide the
+minimal strict substitution/comprehension contract needed at that operational
+boundary without redefining kernel semantic authority.
+
+### Consequences
+- coherence contract required-obligation set grows by four CwF IDs.
+- coherence-site fixture manifest now includes golden/adversarial vectors for
+  strict substitution identity/composition and comprehension beta/eta.
+- `draft/PREMATH-COHERENCE` now specifies CwF strictification obligations
+  explicitly.
+
+---
+
+## 2026-02-22 — Decision 0057: Make instruction digest checker-authoritative on the instruction path
+
+### Decision
+Extend `premath instruction-check` output with canonical
+`instructionDigest` (`instr1_<sha256(canonical-json)>`) and consume that value
+directly in `tools/ci/run_instruction.py` when building instruction witnesses.
+
+Keep Python wrappers as transport adapters only:
+
+- no Python-side canonical digest recomputation on accepted instruction paths,
+- stale local binary payload-shape drift is auto-healed by retrying through
+  `cargo run --package premath-cli -- instruction-check ...`.
+
+### Rationale
+`bd-34` targets one authority path for checker semantics. Instruction digest
+computation duplicated in Python was an avoidable parallel encoding surface.
+Moving digest authority to core reduces drift risk and tightens deterministic
+lineage from envelope check to witness emission.
+
+### Consequences
+- `ValidatedInstructionEnvelope` now includes `instructionDigest`.
+- `run_instruction.py` now uses core-emitted digest for witness runtime payloads
+  on accepted envelopes.
+- `instruction_check_client.py` validates presence of `instructionDigest` and
+  retries through cargo when a stale local binary emits older payload shape.
+- instruction-path smoke and client/unit tests cover this fallback behavior.
+
+---
+
+## 2026-02-22 — Decision 0058: Move ci.required witness assembly to core `premath required-witness`
+
+### Decision
+Add a core `required-witness` command path and route
+`tools/ci/run_required_checks.py` witness assembly through it.
+
+This introduces:
+
+- `premath-coherence` required witness runtime/output types and deterministic
+  lineage assembly (`verdictClass`, operational/semantic failure unions),
+- `premath-cli required-witness --runtime <json> --json`,
+- `tools/ci/required_witness_client.py` as a thin transport adapter with
+  stale-local-binary fallback to cargo.
+
+### Rationale
+`bd-34` requires reducing Python semantic authority in gate/check pipelines.
+`run_required_checks.py` previously built `ci.required.v1` witness semantics
+locally; that duplicated authority with the checker layer. Moving witness
+assembly to core keeps wrappers transport-only and reduces drift risk.
+
+### Consequences
+- `run_required_checks.py` now sends runtime payload to core and consumes one
+  authoritative `ci.required.v1` witness JSON output.
+- CI pipeline test surface now includes dedicated required-witness client tests.
+- CLI smoke coverage now includes `required-witness` JSON command surface.
+
+---
+
+## 2026-02-22 — Decision 0059: Move ci.required verification semantics to core `premath required-witness-verify`
+
+### Decision
+Add a core required witness verification path:
+
+- `premath-coherence` now exposes deterministic required witness verification
+  (`verify_required_witness_payload`) including projection parity, gate witness
+  linkage integrity, native-required source constraints, and failure-lineage
+  union checks.
+- `premath-cli` adds `required-witness-verify --input <json> --json`.
+- Python verifier helpers now delegate to core through
+  `tools/ci/required_witness_verify_client.py` and keep filesystem loading as
+  adapter-only behavior.
+
+### Rationale
+`bd-34` aims to remove Python-local checker authority from required/instruction
+gate paths. Required witness validation previously lived in
+`tools/ci/required_witness.py`, creating a parallel semantic surface.
+
+### Consequences
+- `tools/ci/required_witness.py` is now a thin adapter that forwards
+  `{witness, changedPaths, nativeRequiredChecks, gateWitnessPayloads}` to core.
+- `verify_required_witness.py` keeps orchestration but semantic verdicts come
+  from core output (`errors`, `derived`).
+- pipeline and CLI smoke surfaces now include
+  `required-witness-verify` client/command tests.
+
+---
+
+## 2026-02-22 — Decision 0060: Move Delta→requiredChecks projection semantics to core `premath required-projection`
+
+### Decision
+Make required-check projection (`changedPaths -> requiredChecks + reasons +
+projectionDigest`) core-owned:
+
+- add `premath-coherence` projection evaluator
+  (`project_required_checks`, `normalize_projection_paths`) with deterministic
+  result shape,
+- add `premath-cli required-projection --input <json> --json`,
+- route `tools/ci/change_projection.py` projection evaluation through
+  `tools/ci/required_projection_client.py` and keep Python-side logic limited to
+  git delta discovery + wrapper orchestration.
+
+Also bind required-witness verification to the same projection authority by
+reusing `required_projection` logic inside `required_verify`.
+
+### Rationale
+`bd-34` requires one semantic authority path for CI gate projection surfaces.
+Projection logic previously lived in Python (`change_projection.py`) and was
+duplicated in core verification code. Moving this boundary to core removes
+parallel encodings and reduces drift risk across run/verify/decide paths.
+
+### Consequences
+- `run_required_checks.py`, `verify_required_witness.py`,
+  `decide_required.py`, and capability/conformance helpers now consume projection
+  semantics through the core command/client path.
+- `required_verify` and runtime projection now share one core implementation.
+- pipeline and CLI smoke surfaces now include required-projection client/command
+  tests.
+
+---
+
+## 2026-02-22 — Decision 0061: Move git/workspace delta detection to core `premath required-delta`
+
+### Decision
+Make changed-path detection (`repoRoot + optional fromRef/toRef -> {changedPaths,
+source, fromRef, toRef}`) core-owned:
+
+- add `premath-cli required-delta --input <delta_input.json> --json`,
+- route `tools/ci/change_projection.py` delta detection through
+  `tools/ci/required_delta_client.py`,
+- keep Python wrappers as adapter-only orchestration surfaces.
+
+### Rationale
+`bd-34` targets one checker-owned semantic authority path for required-gate
+planning. After Decision 0060, Python still owned git/workspace delta detection
+rules; that left a second semantic boundary outside core command surfaces.
+Moving this path into `premath-cli` reduces drift risk and aligns run/verify/
+decide consumers on the same deterministic delta semantics.
+
+### Consequences
+- `change_projection.py` no longer embeds git ref fallback/source classification
+  logic.
+- required-gate pipeline tests now include `test_required_delta_client.py`.
+- CLI smoke coverage now includes `required-delta` against a temporary git repo
+  fixture.
+
+---
+
+## 2026-02-22 — Decision 0062: Move required decision attestation verification to core `premath required-decision-verify`
+
+### Decision
+Move decision-chain verification semantics (`decision + witness + delta +
+actual digest bindings`) into core:
+
+- add `premath-coherence` verifier
+  (`verify_required_decision_request`),
+- add `premath-cli required-decision-verify --input <json> --json`,
+- route `tools/ci/verify_decision.py` through
+  `tools/ci/required_decision_verify_client.py` and keep Python path as
+  filesystem/path transport only.
+
+### Rationale
+After projection/delta/witness/verify/decide migrations, `verify_decision.py`
+still carried cross-artifact semantic checks. This kept a second decision
+authority surface in Python. Moving those checks into core keeps attestation
+semantics checker-authoritative and reduces wrapper drift risk.
+
+### Consequences
+- decision-chain semantic checks now execute through one core command surface.
+- pipeline tests include `test_required_decision_verify_client.py`.
+- CLI smoke coverage includes `required-decision-verify`.
+
+---
+
+## 2026-02-22 — Decision 0063: Move required gate-ref and fallback payload synthesis to core `premath required-gate-ref`
+
+### Decision
+Move per-check gate reference assembly and fallback gate payload synthesis into
+core semantics:
+
+- add `premath-coherence` gate-ref builder (`build_required_gate_ref`),
+- add `premath-cli required-gate-ref --input <json> --json`,
+- route `tools/ci/run_required_checks.py` native/fallback gate ref assembly
+  through `tools/ci/required_gate_ref_client.py`,
+- route `tools/ci/emit_gate_witness.py` fallback envelope emission through the
+  same core command surface.
+
+### Rationale
+`run_required_checks.py` previously owned semantic pieces of gate lineage
+assembly (`sha256` projection, failure-class extraction, fallback envelope
+materialization). That left a parallel authority path outside core checker
+surfaces. This decision keeps wrappers in transport mode and makes gate-ref
+lineage deterministic under one command surface.
+
+### Consequences
+- required-gate runtime wrappers no longer compute gate ref semantics locally.
+- pipeline tests include `test_required_gate_ref_client.py`.
+- CLI smoke coverage includes `required-gate-ref`.
+
+---
+
+## 2026-02-22 — Decision 0064: Deduplicate required client transport into shared `core_cli_client`
+
+### Decision
+Consolidate repeated Python wrapper transport behavior for required gate command
+clients into one helper module:
+
+- add `tools/ci/core_cli_client.py`,
+- centralize premath binary resolution, temp JSON input handoff, stale local
+  binary retry-to-cargo, deterministic failure-class extraction, and JSON
+  decode/retry handling,
+- keep per-client payload-shape validation local in each
+  `required_*_client.py`.
+
+### Rationale
+After moving required gate semantics into core commands, wrappers still carried
+duplicated transport code across seven client modules. That duplication
+increased drift risk without adding semantic expressiveness. Centralizing
+transport keeps wrappers thinner while preserving command-specific validation.
+
+### Consequences
+- `required_*_client.py` modules now encode only command metadata and payload
+  shape validation.
+- behavior parity remains covered by existing required-client tests and
+  `ci-pipeline-test`.
+
+---
+
+## 2026-02-22 — Decision 0065: Route proposal-check Python client through shared core transport
+
+### Decision
+Adopt `tools/ci/core_cli_client.py` in
+`tools/ci/proposal_check_client.py` and keep only proposal payload validation
+plus proposal-specific failure-class mapping in the proposal client.
+
+### Rationale
+After Decision 0064, `proposal_check_client.py` still carried duplicate command
+transport behavior. Reusing the shared helper removes another parallel wrapper
+surface while keeping proposal-domain error semantics explicit.
+
+### Consequences
+- `proposal_check_client.py` now shares command transport behavior with
+  required-gate clients.
+- proposal-specific validation classes remain stable
+  (`proposal_nondeterministic`, `proposal_kcir_ref_mismatch`,
+  `proposal_invalid_step`).
+
+---
+
+## 2026-02-22 — Decision 0066: Route instruction-check/instruction-witness clients through shared core transport
+
+### Decision
+Adopt `tools/ci/core_cli_client.py` transport helpers in
+`tools/ci/instruction_check_client.py` for both:
+
+- `instruction-check` (path-input command),
+- `instruction-witness` (runtime payload-input command with optional
+  pre-execution flags).
+
+Extend shared transport helpers with:
+
+- path-input execution mode (`run_core_json_command_from_path`),
+- optional extra command args,
+- explicit invalid-json failure-class override.
+
+### Rationale
+Instruction clients still carried duplicated command transport logic after
+Decision 0064/0065. Moving them onto the shared helper removes another
+wrapper-level authority duplicate while preserving instruction-domain failure
+classes.
+
+### Consequences
+- instruction client wrappers now follow the same minimum-encoding transport
+  surface as required/proposal wrappers.
+- `instruction_envelope_invalid_shape` remains the parse/shape failure class for
+  instruction-check payload decoding failures.
+
+---
+
+## 2026-02-22 — Decision 0067: Enforce CI client transport parity with executable tests
+
+### Decision
+Add deterministic parity enforcement for CI command wrapper transport surfaces:
+
+- introduce `tools/ci/test_client_transport_parity.py`,
+- require required/proposal/instruction clients to import and use
+  `tools/ci/core_cli_client.py`,
+- ban reintroduction of local transport loops in those clients
+  (tempfile command loops, inline stale-subcommand handling),
+- include this test in `mise run ci-pipeline-test`.
+
+### Rationale
+After transport consolidation, parity needed an executable guard so wrapper
+surfaces could not silently regress to duplicated local transport behavior.
+
+### Consequences
+- command-wrapper reduction has a concrete, merge-gated invariant.
+- bd-33 parity scope now includes wrapper transport surface checks, not only
+  docs/spec-level coherence.
+
+---
+
+## 2026-02-22 — Decision 0068: Add PREMATH-COHERENCE obligation-set parity to scope checker
+
+### Decision
+Extend `scope_noncontradiction` in `premath-coherence` to enforce parity between:
+
+- required coherence obligation IDs implemented by the checker, and
+- obligation IDs listed in `draft/PREMATH-COHERENCE` §3.
+
+Add explicit contract surface bindings for the PREMATH-COHERENCE obligation
+section bounds (`coherenceSpecPath`, `coherenceSpecObligationStart`,
+`coherenceSpecObligationEnd`) and fail with deterministic classes when drift is
+detected (`coherence_spec_missing_obligation`,
+`coherence_spec_unknown_obligation`).
+
+### Rationale
+The checker already enforced parity between BIDIR obligation vocabulary and
+kernel registry exports, but the coherence-obligation normative list itself was
+not executable. This created a doc/runtime drift gap in the same obligation
+family.
+
+### Consequences
+- coherence checker now guards PREMATH-COHERENCE §3 as an executable parity
+  surface.
+- contract surfaces explicitly bind both BIDIR and PREMATH-COHERENCE obligation
+  sections.
+- bd-33 parity coverage includes required coherence obligation vocabulary drift.
+
+---
+
+## 2026-02-22 — Decision 0069: Add end-to-end CLI rejection witness for coherence obligation drift
+
+### Decision
+Add a `premath-cli` smoke test that mutates `PREMATH-COHERENCE` §3 obligation
+IDs via a temporary coherence contract binding and asserts `coherence-check`
+returns a rejected witness with deterministic drift classes:
+
+- `coherence.scope_noncontradiction.coherence_spec_missing_obligation`
+- `coherence.scope_noncontradiction.coherence_spec_unknown_obligation`
+
+### Rationale
+Decision 0068 added checker-level parity enforcement and unit coverage, but the
+CLI surface did not yet prove this drift path end-to-end. The smoke test closes
+that boundary by validating witness behavior through the canonical command
+surface.
+
+### Consequences
+- coherence obligation-list drift is now covered at both checker unit and CLI
+  witness layers.
+- bd-33 parity scope gains executable E2E regression protection for this drift
+  class.
+
+---
+
+## 2026-02-22 — Decision 0070: Close coherence-contract cache bindings over contract-declared surfaces
+
+### Decision
+Update `tools/conformance/run_fixture_suites.py` so the `coherence-contract`
+suite cache-input closure is derived from `draft/COHERENCE-CONTRACT.json`:
+
+- include all `surfaces.*Path` and `surfaces.*Root` entries,
+- include top-level `expectedOperationPaths[]`,
+- keep baseline fallback inputs for deterministic behavior if contract parsing
+  fails.
+
+Add `tools/conformance/test_run_fixture_suites.py` and gate it in
+`ci-pipeline-test`.
+
+### Rationale
+The prior cache binding for `coherence-contract` omitted several files read by
+`coherence-check` (for example `PREMATH-COHERENCE`, `SPEC-INDEX`, capability
+manifests, and operation paths). That allowed stale cache hits when those
+surfaces changed.
+
+### Consequences
+- conformance cache validity for `coherence-contract` now tracks the full
+  checker-read surface declared by contract.
+- cache hits cannot bypass coherence-check execution after relevant doc/surface
+  edits.
+
+---
+
+## 2026-02-22 — Decision 0071: Add cache-ref drift proof for coherence-spec changes
+
+### Decision
+Add a deterministic unit test in
+`tools/conformance/test_run_fixture_suites.py` proving
+`coherence-contract` suite cache refs drift when
+`PREMATH-COHERENCE` content changes.
+
+The test:
+
+- uses the real `coherence-contract` suite input closure,
+- swaps only the coherence-spec input path with a mutated temporary copy,
+- asserts `params_hash` stays constant while `material_digest` and `cache_ref`
+  both change.
+
+### Rationale
+Decision 0070 closed cache input coverage, but we still needed an executable
+proof that the suite plan actually responds to edits on a contract-declared doc
+surface and cannot produce stale cache hits.
+
+### Consequences
+- cache drift on coherence-spec edits is now explicitly regression-tested.
+- `bd-33` gains stronger cache correctness evidence without expanding command
+  surface.
+
+---
+
+## 2026-02-22 — Decision 0072: Add overlayDocs-derived files to coherence cache input closure
+
+### Decision
+Extend `load_coherence_contract_input_paths()` so `coherence-contract` cache
+inputs include overlay markdown files derived from contract `overlayDocs`:
+
+- each `overlayDocs` entry `x` maps to `specs/premath/{x}.md`.
+
+Add unit coverage asserting inclusion of
+`specs/premath/profile/ADJOINTS-AND-SITES.md`.
+
+### Rationale
+`coherence-check` evaluates overlay file existence in
+`overlay_traceability`, but prior cache-input closure did not include those
+derived file paths. That could allow stale cache hits when overlay files drift.
+
+### Consequences
+- coherence-contract cache bindings now include overlay file surfaces read by
+  checker semantics.
+- cache hits remain invalidated when overlay docs change or disappear.
+
+---
+
+## 2026-02-22 — Decision 0073: Bind coherence-contract cache inputs to kernel obligation authority source
+
+### Decision
+Extend `load_coherence_contract_input_paths()` to include:
+
+- `crates/premath-kernel/src`
+
+for the `coherence-contract` suite cache-input closure.
+
+### Rationale
+`coherence-check` consumes kernel obligation registry authority from
+`premath-kernel`. Without binding kernel source into the suite cache plan,
+changes to obligation authority could be skipped by stale conformance cache
+hits.
+
+### Consequences
+- coherence-contract cache refs now drift when kernel obligation authority
+  source changes.
+- cache validity aligns with checker authority dependencies across
+  kernel/coherence layers.
+
+---
+
+## 2026-02-22 — Decision 0074: Bind coherence-contract cache inputs to Cargo manifests
+
+### Decision
+Extend `load_coherence_contract_input_paths()` to include repository Cargo
+manifests:
+
+- `Cargo.toml`
+- `Cargo.lock`
+
+for `coherence-contract` suite cache-input closure.
+
+### Rationale
+`coherence-check` behavior can drift when dependency graph or crate feature
+resolution changes. Without Cargo manifests in cache bindings, those changes
+could be skipped by stale conformance cache hits.
+
+### Consequences
+- coherence-contract cache refs now invalidate on workspace dependency/feature
+  changes.
+- cache validity remains aligned with executable checker runtime composition.
+
+---
+
+## 2026-02-22 — Decision 0075: Introduce span/square commutation obligation and draft spec
+
+### Decision
+Add a first-class coherence obligation for typed span/square commutation:
+
+- new required obligation id: `span_square_commutation`,
+- new draft spec: `draft/SPAN-SQUARE-CHECKING`,
+- new coherence-site vectors:
+  - `golden/span_square_commutation_accept`
+  - `adversarial/span_square_commutation_reject`.
+
+Implement checker hook in `premath-coherence` via site-obligation evaluator
+`evaluate_site_case_span_square_commutation`.
+
+### Rationale
+Pipeline/base-change witness squares were previously implicit across checker and
+CI surfaces. Adding a minimal span/square typed layer makes this boundary
+explicit without introducing a parallel authority surface.
+
+### Consequences
+- span/square commutation is now merge-gated under `coherence-check`.
+- the new typed layer is integrated across spec index, unification doctrine,
+  traceability matrix, and executable fixtures.
+
+---
+
+## 2026-02-22 — Decision 0076: Tighten span/square vectors with invariance and digest-mismatch adversarial coverage
+
+### Decision
+Extend `coherence-site` vectors for `span_square_commutation` with:
+
+- invariance case:
+  - `invariance/span_square_commutation_permuted_accept`
+- adversarial digest mismatch case:
+  - `adversarial/span_square_commutation_digest_mismatch_reject`.
+
+### Rationale
+Initial span/square vectors proved baseline accept/reject behavior. Additional
+coverage closes two important boundaries:
+
+- permutation invariance of span declarations,
+- deterministic rejection when square witness digest is not bound to canonical
+  square fields.
+
+### Consequences
+- span/square layer now has explicit invariance + digest-integrity checks in
+  executable conformance fixtures.
+
+---
+
+## 2026-02-22 — Decision 0077: Require golden/adversarial polarity coverage per coherence-site obligation
+
+### Decision
+Tighten `coherence-site` checker semantics so each matched site obligation
+vector set must include:
+
+- at least one `golden/` vector, and
+- at least one `adversarial/` vector.
+
+Missing either polarity now rejects with deterministic failure classes:
+
+- `coherence.<obligation_id>.missing_golden_vector`
+- `coherence.<obligation_id>.missing_adversarial_vector`.
+
+### Rationale
+Site obligations are checker authority surfaces. Requiring both acceptance and
+rejection exemplars for each obligation keeps the fixture contract expressive
+while minimizing accidental under-specification.
+
+### Consequences
+- coherence checker now enforces per-obligation fixture polarity coverage.
+- new unit tests cover missing-golden, missing-adversarial, and both-present
+  passing cases.
+
+---
+
+## 2026-02-22 — Decision 0078: Require semantic polarity coverage for coherence-site obligations
+
+### Decision
+Extend `coherence-site` polarity enforcement so each matched site obligation
+vector set must include semantic result polarity from `expect.result`:
+
+- at least one vector with `accepted`,
+- at least one vector with `rejected`.
+
+Missing either semantic result polarity now rejects with deterministic failure
+classes:
+
+- `coherence.<obligation_id>.missing_expected_accepted_vector`
+- `coherence.<obligation_id>.missing_expected_rejected_vector`.
+
+### Rationale
+Path prefix polarity (`golden/` and `adversarial/`) is necessary but not
+sufficient. Semantic result polarity closes mislabeling gaps where prefixes can
+look balanced while all vectors assert the same expected result.
+
+### Consequences
+- coherence checker now enforces both path polarity and semantic result
+  polarity for site obligations.
+- unit tests now cover missing-expected-accept, missing-expected-reject, and
+  mixed semantic polarity pass cases.
+
+---
+
+## 2026-02-22 — Decision 0079: Scope coherence-site vector parsing by obligation map
+
+### Decision
+Require `coherence-site/manifest.json` to declare `obligationVectors` mapping
+from obligation id to vector ids. Update checker semantics so each obligation
+parses/evaluates only vectors in its mapped scope.
+
+### Rationale
+With one shared site manifest, malformed unrelated vectors could fail multiple
+obligations. Obligation-scoped vector parsing removes that blast radius while
+preserving one canonical fixture surface.
+
+### Consequences
+- coherence checker now emits deterministic manifest-scope failures when
+  obligation mappings are missing or inconsistent.
+- unscoped malformed vectors no longer fail untouched obligations.
+- regression test added for scope isolation behavior.
+
+---
+
+## 2026-02-22 — Decision 0080: Enforce invariance-pair contract for coherence-site vectors
+
+### Decision
+Require `invariance/` site vectors to carry scenario/profile metadata and to be
+validated as deterministic profile pairs:
+
+- each invariance vector case MUST declare non-empty
+  `semanticScenarioId` and `profile`,
+- for each obligation id + `semanticScenarioId`, checker input MUST include
+  exactly two invariance vectors with distinct profiles,
+- paired vectors MUST evaluate to the same result and failure-class set.
+
+### Rationale
+Invariance vectors existed but were not structurally constrained as profile
+pairs. Enforcing pair shape prevents drift where invariance is nominally present
+but not actually tested across profile choices.
+
+### Consequences
+- coherence checker now emits deterministic invariance failures for missing
+  metadata, missing/extra pairs, non-distinct profiles, or semantic mismatch.
+- coherence-site fixtures now include explicit local/external pair vectors for
+  invariance scenarios.
+- unit tests now cover pair-count mismatch, pair-result mismatch, and passing
+  invariance pairs.
+
+---
+
+## 2026-02-22 — Decision 0081: Harmonize invariance-pair contract across coherence fixture families
+
+### Decision
+Apply the same invariance-pair contract used by `coherence-site` to
+`coherence-transport`:
+
+- `invariance/` transport vectors MUST declare non-empty
+  `semanticScenarioId` and `profile`,
+- for each `semanticScenarioId` under `transport_functoriality`, checker input
+  MUST include exactly two invariance vectors with distinct profiles,
+- paired vectors MUST evaluate to identical result and failure-class sets.
+
+### Rationale
+Coherence fixture families were drifting: site vectors had enforced invariance
+pair semantics while transport vectors only had single-vector invariance
+coverage. One shared contract keeps the checker surface minimal and expressive.
+
+### Consequences
+- transport checker now emits deterministic invariance-pair failure classes
+  aligned with site semantics.
+- transport fixtures now include explicit local/external invariance pair vectors
+  for the same semantic scenario.
+- unit coverage now includes transport invariance pair-count mismatch,
+  pair-result mismatch, and passing pair cases.
+
+---
+
+## 2026-02-22 — Decision 0082: Enforce transport polarity coverage parity
+
+### Decision
+Apply site-style polarity requirements to `coherence-transport` vectors under
+`transport_functoriality`:
+
+- require at least one matched `golden/` vector,
+- require at least one matched `adversarial/` vector,
+- require at least one matched `expectedResult = accepted`,
+- require at least one matched `expectedResult = rejected`.
+
+### Rationale
+Transport checker semantics were still weaker than site semantics on polarity
+coverage. Enforcing the same minimal polarity contract closes under-specification
+without adding new surface types.
+
+### Consequences
+- transport checker now emits deterministic polarity failures aligned with site
+  vocabulary:
+  - `missing_golden_vector`
+  - `missing_adversarial_vector`
+  - `missing_expected_accepted_vector`
+  - `missing_expected_rejected_vector`
+- transport witness details now expose matched vector-kind and expected-result
+  counters.
+- unit tests now cover all four missing-polarity modes and one passing mixed
+  polarity case.
+
+---
+
+## 2026-02-22 — Decision 0083: Clarify lane separation for Sig/Pi, CwF, spans, and Squeak
+
+### Decision
+Adopt an explicit lane-separation contract for architectural composition:
+
+1. semantic doctrine lane: kernel + Gate + bidirectional obligation authority,
+2. strict checker lane: coherence/CwF strict-equality control-plane checks,
+3. witness commutation lane: span/square typed commutation artifacts,
+4. runtime transport lane: Squeak world/location transport and site checks.
+
+Sig/Pi (`Sigma_f -| f* -| Pi_f`) obligations remain semantic-lane authority.
+Squeak transport/site evidence remains capability-scoped transport lane.
+Composition between these lanes MUST route through one canonical obligation and
+witness authority boundary; no second semantic authority schema is allowed.
+
+### Rationale
+Recent capability growth (adjoints-sites + Squeak + span/square + CwF
+obligations) increases expressiveness but risks architectural duplication if lane
+ownership is implicit.
+
+Making lane boundaries explicit preserves the doctrine rule:
+minimum canonical encoding, maximum derived expressiveness.
+
+### Consequences
+- `draft/UNIFICATION-DOCTRINE` now includes a normative lane map and composition
+  constraints for Sig/Pi + Squeak integration.
+- `draft/SPEC-INDEX` now documents joint capability guidance and reading order
+  for composed Sig/Pi + Squeak systems.
+- Future composed profiles should add vectors/contracts by routing through
+  existing obligation/witness authority, not by adding parallel semantic
+  encodings.
