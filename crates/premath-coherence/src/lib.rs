@@ -749,19 +749,39 @@ fn parse_checker_obligation_map_keys(
     text: &str,
     map_name: &str,
 ) -> Result<BTreeSet<String>, CoherenceError> {
-    let map_re = compile_regex(&format!(
+    let py_map_re = compile_regex(&format!(
         r#"(?s){}\s*=\s*\{{(.*?)\}}"#,
         regex::escape(map_name)
     ))?;
-    let body = map_re
+    if let Some(body) = py_map_re
         .captures(text)
         .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-        .ok_or_else(|| CoherenceError::Contract(format!("missing map assignment: {map_name}")))?;
-    let key_re = compile_regex(r#""([a-z_]+)"\s*:"#)?;
-    Ok(key_re
-        .captures_iter(body.as_str())
-        .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-        .collect())
+    {
+        let key_re = compile_regex(r#""([a-z_]+)"\s*:"#)?;
+        return Ok(key_re
+            .captures_iter(body.as_str())
+            .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+            .collect());
+    }
+
+    let rs_tuple_re = compile_regex(&format!(
+        r#"(?s){}\s*:[^=]*=\s*&\s*\[(.*?)\]"#,
+        regex::escape(map_name)
+    ))?;
+    if let Some(body) = rs_tuple_re
+        .captures(text)
+        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+    {
+        let key_re = compile_regex(r#"\(\s*"([a-z_]+)"\s*,"#)?;
+        return Ok(key_re
+            .captures_iter(body.as_str())
+            .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+            .collect());
+    }
+
+    Err(CoherenceError::Contract(format!(
+        "missing map assignment: {map_name}"
+    )))
 }
 
 fn parse_baseline_task_ids_from_toml(
@@ -1041,6 +1061,20 @@ OBLIGATION_TO_GATE_FAILURE = {
     "stability": "stability_failure",
     "locality": "locality_failure",
 }
+"#;
+        let keys = parse_checker_obligation_map_keys(text, "OBLIGATION_TO_GATE_FAILURE")
+            .expect("map extraction should succeed");
+        assert!(keys.contains("stability"));
+        assert!(keys.contains("locality"));
+    }
+
+    #[test]
+    fn parse_checker_obligation_map_keys_extracts_rust_tuple_set() {
+        let text = r#"
+const OBLIGATION_TO_GATE_FAILURE: &[(&str, &str)] = &[
+    ("stability", "stability_failure"),
+    ("locality", "locality_failure"),
+];
 "#;
         let keys = parse_checker_obligation_map_keys(text, "OBLIGATION_TO_GATE_FAILURE")
             .expect("map extraction should succeed");

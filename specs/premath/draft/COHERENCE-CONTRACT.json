@@ -93,7 +93,7 @@
     "bidirSpecPath": "specs/premath/draft/BIDIR-DESCENT.md",
     "bidirSpecSectionStart": "## 6. Obligation kinds (normative)",
     "bidirSpecSectionEnd": "### 6.1 Obligation record format (required)",
-    "bidirCheckerPath": "tools/ci/instruction_proposal.py",
+    "bidirCheckerPath": "crates/premath-coherence/src/proposal.rs",
     "bidirCheckerMapName": "OBLIGATION_TO_GATE_FAILURE",
     "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6"
   }
