@@ -11,7 +11,6 @@ from typing import Dict, List, Sequence, Tuple
 
 
 CAP_ASSIGN_RE = re.compile(r"^(CAPABILITY_[A-Z0-9_]+)\s*=\s*\"(capabilities\.[a-z0-9_]+)\"$", re.MULTILINE)
-CHECK_ASSIGN_RE = re.compile(r"^(CHECK_[A-Z0-9_]+)\s*=\s*\"([a-z0-9-]+)\"$", re.MULTILINE)
 SYMBOL_RE = re.compile(r"\b([A-Z][A-Z0-9_]+)\b")
 BACKTICK_CAP_RE = re.compile(r"`(capabilities\.[a-z0-9_]+)`")
 BACKTICK_TASK_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
@@ -149,6 +148,32 @@ def parse_manifest_capabilities(fixtures_root: Path) -> List[str]:
     return capability_ids
 
 
+def parse_control_plane_projection_checks(contract_path: Path) -> List[str]:
+    payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{contract_path}: root must be an object")
+    if payload.get("schema") != 1:
+        raise ValueError(f"{contract_path}: schema must be 1")
+    if payload.get("contractKind") != "premath.control_plane.contract.v1":
+        raise ValueError(f"{contract_path}: contractKind mismatch")
+    required = payload.get("requiredGateProjection")
+    if not isinstance(required, dict):
+        raise ValueError(f"{contract_path}: requiredGateProjection must be an object")
+    check_order = required.get("checkOrder")
+    if not isinstance(check_order, list) or not check_order:
+        raise ValueError(f"{contract_path}: requiredGateProjection.checkOrder must be a non-empty list")
+    parsed: List[str] = []
+    for idx, item in enumerate(check_order):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(
+                f"{contract_path}: requiredGateProjection.checkOrder[{idx}] must be a non-empty string"
+            )
+        parsed.append(item.strip())
+    if len(set(parsed)) != len(parsed):
+        raise ValueError(f"{contract_path}: requiredGateProjection.checkOrder must not contain duplicates")
+    return parsed
+
+
 def parse_spec_index_capability_doc_map(section_54: str) -> Dict[str, str]:
     pattern = re.compile(r"- `([^`]+)`\s+\(for `([^`]+)`\)")
     out: Dict[str, str] = {}
@@ -179,7 +204,7 @@ def main() -> int:
     errors: List[str] = []
 
     run_capability_vectors = root / "tools" / "conformance" / "run_capability_vectors.py"
-    change_projection = root / "tools" / "ci" / "change_projection.py"
+    control_plane_contract = root / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json"
     mise_toml = root / ".mise.toml"
     readme = root / "README.md"
     conformance_readme = root / "tools" / "conformance" / "README.md"
@@ -270,8 +295,7 @@ def main() -> int:
             f"expected=[{sorted_csv(baseline_task_ids)}], got=[{sorted_csv(ci_baseline_tasks)}]"
         )
 
-    projection_text = load_text(change_projection)
-    projection_checks = parse_symbol_tuple_values(projection_text, CHECK_ASSIGN_RE, "CHECK_ORDER")
+    projection_checks = parse_control_plane_projection_checks(control_plane_contract)
     projection_check_set = set(projection_checks)
 
     ci_projection_section = extract_section_between(
@@ -282,7 +306,7 @@ def main() -> int:
     ci_projection_checks = {token for token in BACKTICK_TASK_RE.findall(ci_projection_section)}
     if ci_projection_checks != projection_check_set:
         errors.append(
-            "CI-CLOSURE projected check ID list mismatch with tools/ci/change_projection.py CHECK_ORDER: "
+            "CI-CLOSURE projected check ID list mismatch with CONTROL-PLANE-CONTRACT checkOrder: "
             f"expected=[{sorted_csv(projection_checks)}], got=[{sorted_csv(ci_projection_checks)}]"
         )
 

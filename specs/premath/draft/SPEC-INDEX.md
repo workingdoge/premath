@@ -155,6 +155,9 @@ explicitly claimed under §5.4 or §5.6.
   for repository control-plane surfaces (`draft/COHERENCE-CONTRACT.json`).
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
+- `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
+  (projection policy/check order + CI witness kinds) consumed by CI/coherence
+  adapter surfaces.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
   instruction flows (normative only when `capabilities.instruction_typing` is
   claimed).

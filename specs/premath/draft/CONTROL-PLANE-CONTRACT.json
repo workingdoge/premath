@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "contractKind": "premath.control_plane.contract.v1",
+  "contractId": "control-plane.default.v1",
+  "requiredGateProjection": {
+    "projectionPolicy": "ci-topos-v0",
+    "checkIds": {
+      "baseline": "baseline",
+      "build": "build",
+      "test": "test",
+      "testToy": "test-toy",
+      "testKcirToy": "test-kcir-toy",
+      "conformanceCheck": "conformance-check",
+      "conformanceRun": "conformance-run",
+      "doctrineCheck": "doctrine-check"
+    },
+    "checkOrder": [
+      "baseline",
+      "build",
+      "test",
+      "test-toy",
+      "test-kcir-toy",
+      "conformance-check",
+      "conformance-run",
+      "doctrine-check"
+    ]
+  },
+  "requiredWitness": {
+    "witnessKind": "ci.required.v1",
+    "decisionKind": "ci.required.decision.v1"
+  },
+  "instructionWitness": {
+    "witnessKind": "ci.instruction.v1",
+    "policyKind": "ci.instruction.policy.v1",
+    "policyDigestPrefix": "pol1_"
+  }
+}

@@ -40,7 +40,6 @@ const REQUIRED_OBLIGATION_IDS: &[&str] = &[
 
 const CAP_ASSIGN_PATTERN: &str =
     r#"(?m)^(CAPABILITY_[A-Z0-9_]+)\s*=\s*"(capabilities\.[a-z0-9_]+)"$"#;
-const CHECK_ASSIGN_PATTERN: &str = r#"(?m)^(CHECK_[A-Z0-9_]+)\s*=\s*"([a-z0-9-]+)"$"#;
 
 #[derive(Debug, Error)]
 pub enum CoherenceError {
@@ -110,8 +109,7 @@ pub struct CoherenceSurfaces {
     pub ci_closure_projection_end: String,
     pub mise_path: String,
     pub mise_baseline_task: String,
-    pub projection_source_path: String,
-    pub projection_tuple: String,
+    pub control_plane_contract_path: String,
     pub doctrine_site_path: String,
     pub doctrine_root_node_id: String,
     pub profile_readme_path: String,
@@ -123,6 +121,21 @@ pub struct CoherenceSurfaces {
     pub informative_clause_needle: String,
     pub transport_fixture_root_path: String,
     pub site_fixture_root_path: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneProjectionContract {
+    schema: u32,
+    contract_kind: String,
+    required_gate_projection: RequiredGateProjection,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct RequiredGateProjection {
+    projection_policy: String,
+    check_order: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -529,15 +542,36 @@ fn check_gate_chain_parity(
     )?;
     let ci_baseline_set = parse_backticked_tasks(ci_baseline_section)?;
 
-    let projection_source_text = read_text(&resolve_path(
+    let control_plane_contract_path = resolve_path(
         repo_root,
-        contract.surfaces.projection_source_path.as_str(),
-    ))?;
-    let projection_checks = parse_symbol_tuple_values(
-        &projection_source_text,
-        CHECK_ASSIGN_PATTERN,
-        contract.surfaces.projection_tuple.as_str(),
-    )?;
+        contract.surfaces.control_plane_contract_path.as_str(),
+    );
+    let control_plane_contract: ControlPlaneProjectionContract =
+        serde_json::from_slice(&read_bytes(&control_plane_contract_path)?).map_err(|source| {
+            CoherenceError::ParseJson {
+                path: display_path(&control_plane_contract_path),
+                source,
+            }
+        })?;
+    if control_plane_contract.schema != 1 {
+        return Err(CoherenceError::Contract(format!(
+            "control-plane contract schema must be 1: {}",
+            display_path(&control_plane_contract_path)
+        )));
+    }
+    if control_plane_contract.contract_kind != "premath.control_plane.contract.v1" {
+        return Err(CoherenceError::Contract(format!(
+            "control-plane contract kind mismatch at {}: {:?}",
+            display_path(&control_plane_contract_path),
+            control_plane_contract.contract_kind
+        )));
+    }
+    let projection_checks = dedupe_sorted(
+        control_plane_contract
+            .required_gate_projection
+            .check_order
+            .clone(),
+    );
     let projection_set: BTreeSet<String> = projection_checks.iter().cloned().collect();
 
     let ci_projection_section = extract_section_between(
@@ -560,7 +594,8 @@ fn check_gate_chain_parity(
         details: json!({
             "baselineFromMise": baseline_tasks,
             "baselineFromCiClosure": sorted_vec_from_set(&ci_baseline_set),
-            "projectionFromSource": projection_checks,
+            "projectionPolicy": control_plane_contract.required_gate_projection.projection_policy,
+            "projectionFromControlPlane": projection_checks,
             "projectionFromCiClosure": sorted_vec_from_set(&ci_projection_set),
         }),
     })

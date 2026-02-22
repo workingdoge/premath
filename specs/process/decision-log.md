@@ -1376,3 +1376,32 @@ single-source.
   obligation-vocabulary checks.
 - CLI/automation can consume one deterministic JSON registry artifact for
   cross-surface parity work (`bd-58`, `bd-59`, `bd-63`).
+
+---
+
+## 2026-02-22 — Decision 0048: Introduce shared CONTROL-PLANE-CONTRACT artifact for projection parity
+
+### Decision
+Add `draft/CONTROL-PLANE-CONTRACT.json` as a shared typed control-plane
+artifact and wire two independent surfaces to consume it:
+
+- CI projection engine (`tools/ci/change_projection.py`) now loads
+  `projectionPolicy` + `checkIds` + `checkOrder` from this contract.
+- Coherence gate-chain parity (`premath coherence-check`) now compares CI
+  closure projected checks against the contract’s `requiredGateProjection`
+  section instead of parsing Python source constants.
+
+### Rationale
+Control-plane constants (projection policy/check order) were duplicated in code
+and checked by source scraping. Moving them to one typed artifact reduces
+encoding duplication and establishes a common contract consumed by both CI
+execution and coherence checking.
+
+### Consequences
+- `COHERENCE-CONTRACT` now references `controlPlaneContractPath` as the
+  projection authority input.
+- docs coherence checker now validates CI closure projected checks against
+  `CONTROL-PLANE-CONTRACT` instead of `CHECK_ORDER` source parsing.
+- this is the first `bd-63` slice; remaining scope includes migrating
+  additional control-plane constants (witness class/binding keys and related
+  roundtrip conformance vectors) onto the same contract artifact.

@@ -114,8 +114,8 @@ MUST reject when documented gate chain surfaces drift from executable sources.
 Minimum parity set includes:
 
 - baseline task composition parity (`.mise.toml` vs CI closure docs),
-- deterministic projected check ID parity (`tools/ci/change_projection.py`
-  vs CI closure docs).
+- deterministic projected check ID parity (`draft/CONTROL-PLANE-CONTRACT.json`
+  required-gate projection order vs CI closure docs).
 
 ### 4.4 `operation_reachability`
 

@@ -21,6 +21,8 @@ Start here:
   normalized evidence modes.
 - `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
   `premath coherence-check`.
+- `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
+  by CI projection and coherence parity checks.
 - `PREMATH-KERNEL.md` — semantic kernel contract.
 - `UNIFICATION-DOCTRINE.md` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries.

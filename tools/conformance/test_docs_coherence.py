@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import json
+import tempfile
 import unittest
+from pathlib import Path
 
 import check_docs_coherence
 
@@ -48,6 +51,21 @@ run = "echo ok"
         self.assertEqual(commands, ["mise run fmt", "mise run test"])
         task_ids = check_docs_coherence.parse_baseline_task_ids_from_commands(commands)
         self.assertEqual(task_ids, ["fmt", "test"])
+
+    def test_parse_control_plane_projection_checks(self) -> None:
+        payload = {
+            "schema": 1,
+            "contractKind": "premath.control_plane.contract.v1",
+            "requiredGateProjection": {
+                "projectionPolicy": "ci-topos-v0",
+                "checkOrder": ["baseline", "build"],
+            },
+        }
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-") as tmp:
+            path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            checks = check_docs_coherence.parse_control_plane_projection_checks(path)
+            self.assertEqual(checks, ["baseline", "build"])
 
     def test_parse_doctrine_check_commands(self) -> None:
         text = """
