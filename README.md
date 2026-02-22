@@ -289,7 +289,9 @@ Observation surface (frontend/query projection):
   (`latest`, `needs_attention`, `instruction`, `projection`).
 - `mise run ci-observation-serve` starts a tiny UX HTTP read API over the same
   semantics (`GET /latest`, `GET /needs-attention`,
-  `GET /instruction?id=<instruction_id>`, `GET /projection?digest=<projection_digest>`).
+  `GET /instruction?id=<instruction_id>`,
+  `GET /projection?digest=<projection_digest>[&match=typed|compatibility_alias]`).
+  Projection lookup defaults to typed authority matching.
 - `mise run ci-observation-check` enforces that observation output is a pure
   projection of CI witness artifacts (no semantic drift).
 - `docs/observation/index.html` is a lightweight human-facing dashboard view

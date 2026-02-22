@@ -11,7 +11,7 @@ use premath_bd::issue::{issue_type_variants, parse_issue_type};
 use premath_bd::{DepType, Issue, IssueLease, IssueLeaseState, MemoryStore, store_snapshot_ref};
 use premath_coherence::validate_instruction_envelope_payload;
 use premath_jj::JjClient;
-use premath_surreal::QueryCache;
+use premath_surreal::{ProjectionMatchMode, QueryCache};
 use premath_ux::{ObserveQuery, SurrealObservationBackend, UxService};
 use rust_mcp_sdk::{
     McpServer, StdioTransport, ToMcpServerHandler, TransportOptions,
@@ -581,6 +581,25 @@ struct ObserveInstructionTool {
     surface_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+enum ObserveProjectionMatchArg {
+    #[default]
+    Typed,
+    CompatibilityAlias,
+}
+
+impl From<ObserveProjectionMatchArg> for ProjectionMatchMode {
+    fn from(value: ObserveProjectionMatchArg) -> Self {
+        match value {
+            ObserveProjectionMatchArg::Typed => ProjectionMatchMode::Typed,
+            ObserveProjectionMatchArg::CompatibilityAlias => {
+                ProjectionMatchMode::CompatibilityAlias
+            }
+        }
+    }
+}
+
 #[mcp_tool(
     name = "observe_projection",
     description = "Return one projection view from observation surface",
@@ -590,6 +609,8 @@ struct ObserveInstructionTool {
 #[serde(rename_all = "camelCase")]
 struct ObserveProjectionTool {
     projection_digest: String,
+    #[serde(default)]
+    projection_match: ObserveProjectionMatchArg,
     #[serde(default)]
     surface_path: Option<String>,
 }
@@ -1934,6 +1955,7 @@ fn call_observe_projection(
     let value = service
         .query_json(ObserveQuery::Projection {
             projection_digest: tool.projection_digest,
+            projection_match: tool.projection_match.into(),
         })
         .map_err(|e| call_tool_error(format!("failed to query projection: {e}")))?;
 

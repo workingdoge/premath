@@ -12,9 +12,9 @@ mod trajectory;
 pub use observation::{
     DecisionSummary, DeltaSummary, INSTRUCTION_EVENT_KIND, INSTRUCTION_WITNESS_KIND,
     InstructionSummary, LatestObservation, OBSERVATION_KIND, OBSERVATION_SCHEMA, ObservationError,
-    ObservationEvent, ObservationIndex, ObservationSummary, ObservationSurface, ProjectionView,
-    REQUIRED_DECISION_EVENT_KIND, REQUIRED_DECISION_KIND, REQUIRED_EVENT_KIND,
-    REQUIRED_WITNESS_KIND, RequiredSummary, build_events, build_surface,
+    ObservationEvent, ObservationIndex, ObservationSummary, ObservationSurface,
+    ProjectionMatchMode, ProjectionView, REQUIRED_DECISION_EVENT_KIND, REQUIRED_DECISION_KIND,
+    REQUIRED_EVENT_KIND, REQUIRED_WITNESS_KIND, RequiredSummary, build_events, build_surface,
 };
 pub use trajectory::{
     HARNESS_TRAJECTORY_KIND, HARNESS_TRAJECTORY_SCHEMA, HarnessTrajectoryProjection,

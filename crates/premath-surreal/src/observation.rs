@@ -148,6 +148,14 @@ pub struct ProjectionView {
     pub decision: Option<DecisionSummary>,
 }
 
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum ProjectionMatchMode {
+    #[default]
+    Typed,
+    CompatibilityAlias,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct ObservationEvent {
@@ -475,12 +483,6 @@ fn coherence_policy_drift(
     if let Some(digest) = decision.and_then(|row| row.projection_digest.clone()) {
         alias_projection_digests.insert(digest);
     }
-    let effective_projection_digests = if typed_projection_digests.is_empty() {
-        alias_projection_digests.clone()
-    } else {
-        typed_projection_digests.clone()
-    };
-
     let mut instruction_policy_digests = BTreeSet::new();
     let mut missing_instruction_policy_ids = BTreeSet::new();
     for row in instructions {
@@ -495,7 +497,7 @@ fn coherence_policy_drift(
     if projection_policies.len() > 1 {
         drift_classes.push("projection_policy_drift".to_string());
     }
-    if effective_projection_digests.len() > 1 {
+    if typed_projection_digests.len() > 1 {
         drift_classes.push("projection_digest_drift".to_string());
     }
     if instruction_policy_digests.len() > 1 {
@@ -504,7 +506,7 @@ fn coherence_policy_drift(
 
     json!({
         "projectionPolicies": projection_policies.into_iter().collect::<Vec<_>>(),
-        "projectionDigests": effective_projection_digests.into_iter().collect::<Vec<_>>(),
+        "projectionDigests": typed_projection_digests.iter().cloned().collect::<Vec<_>>(),
         "typedCoreProjectionDigests": typed_projection_digests.into_iter().collect::<Vec<_>>(),
         "aliasProjectionDigests": alias_projection_digests.into_iter().collect::<Vec<_>>(),
         "instructionPolicyDigests": instruction_policy_digests.into_iter().collect::<Vec<_>>(),
@@ -891,24 +893,16 @@ pub fn build_surface(
 
     let latest_projection_digest = decision
         .as_ref()
-        .and_then(|row| {
-            row.typed_core_projection_digest
-                .clone()
-                .or_else(|| row.projection_digest.clone())
+        .and_then(|row| row.typed_core_projection_digest.clone())
+        .or_else(|| {
+            required
+                .as_ref()
+                .and_then(|row| row.typed_core_projection_digest.clone())
         })
         .or_else(|| {
-            required.as_ref().and_then(|row| {
-                row.typed_core_projection_digest
-                    .clone()
-                    .or_else(|| row.projection_digest.clone())
-            })
-        })
-        .or_else(|| {
-            delta.as_ref().and_then(|row| {
-                row.typed_core_projection_digest
-                    .clone()
-                    .or_else(|| row.projection_digest.clone())
-            })
+            delta
+                .as_ref()
+                .and_then(|row| row.typed_core_projection_digest.clone())
         });
     let latest_instruction_id = instructions.last().map(|row| row.instruction_id.clone());
 
@@ -1076,10 +1070,15 @@ impl ObservationIndex {
             .and_then(|idx| self.surface.instructions.get(*idx))
     }
 
-    pub fn projection(&self, projection_digest: &str) -> Option<ProjectionView> {
+    pub fn projection(
+        &self,
+        projection_digest: &str,
+        projection_match: ProjectionMatchMode,
+    ) -> Option<ProjectionView> {
         let matches_projection = |typed: Option<&String>, alias: Option<&String>| {
             typed.is_some_and(|digest| digest == projection_digest)
-                || alias.is_some_and(|digest| digest == projection_digest)
+                || (projection_match == ProjectionMatchMode::CompatibilityAlias
+                    && alias.is_some_and(|digest| digest == projection_digest))
         };
         let required = self.surface.latest.required.clone().filter(|row| {
             matches_projection(
@@ -1127,7 +1126,7 @@ mod tests {
                 state: "accepted".to_string(),
                 needs_attention: false,
                 top_failure_class: Some("verified_accept".to_string()),
-                latest_projection_digest: Some("proj1_alpha".to_string()),
+                latest_projection_digest: Some("ev1_alpha".to_string()),
                 latest_instruction_id: Some("i1".to_string()),
                 required_check_count: 1,
                 executed_check_count: 1,
@@ -1210,8 +1209,26 @@ mod tests {
                 .instruction("20260221T010000Z-ci-wiring-golden")
                 .is_some()
         );
-        assert!(index.projection("proj1_alpha").is_some());
-        assert!(index.projection("proj1_missing").is_none());
+        assert!(
+            index
+                .projection("ev1_alpha", ProjectionMatchMode::Typed)
+                .is_some()
+        );
+        assert!(
+            index
+                .projection("proj1_alpha", ProjectionMatchMode::Typed)
+                .is_none()
+        );
+        assert!(
+            index
+                .projection("proj1_alpha", ProjectionMatchMode::CompatibilityAlias)
+                .is_some()
+        );
+        assert!(
+            index
+                .projection("proj1_missing", ProjectionMatchMode::CompatibilityAlias)
+                .is_none()
+        );
     }
 
     #[test]
@@ -1284,6 +1301,7 @@ mod tests {
             json!({
                 "projectionPolicy": "ci-topos-v0",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "deltaSource": "explicit",
                 "changedPaths": ["README.md"]
             }),
@@ -1294,6 +1312,7 @@ mod tests {
                 "witnessKind": REQUIRED_WITNESS_KIND,
                 "projectionPolicy": "ci-topos-v0",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "verdictClass": "accepted",
                 "requiredChecks": ["baseline"],
                 "executedChecks": ["baseline"],
@@ -1305,6 +1324,7 @@ mod tests {
             json!({
                 "decisionKind": REQUIRED_DECISION_KIND,
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "decision": "accept",
                 "reasonClass": "verified_accept"
             }),
@@ -1333,7 +1353,7 @@ mod tests {
         assert!(!surface.summary.needs_attention);
         assert_eq!(
             surface.summary.latest_projection_digest.as_deref(),
-            Some("proj1_alpha")
+            Some("ev1_alpha")
         );
         assert_eq!(surface.summary.required_check_count, 1);
         assert_eq!(surface.summary.changed_path_count, 1);

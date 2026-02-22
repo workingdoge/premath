@@ -35,6 +35,8 @@ class PipelineRequiredTests(unittest.TestCase):
                 json.dumps(
                     {
                         "projectionDigest": "proj1_test_digest",
+                        "typedCoreProjectionDigest": "ev1_test_digest",
+                        "authorityPayloadDigest": "proj1_test_digest",
                         "verdictClass": "accepted",
                         "requiredChecks": ["baseline", "test"],
                     },
@@ -61,6 +63,8 @@ class PipelineRequiredTests(unittest.TestCase):
                     {
                         "decision": "accept",
                         "reasonClass": "verified_accept",
+                        "typedCoreProjectionDigest": "ev1_test_digest",
+                        "authorityPayloadDigest": "proj1_test_digest",
                         "witnessSha256": "witness_hash",
                         "deltaSha256": "delta_hash",
                     },
@@ -76,13 +80,15 @@ class PipelineRequiredTests(unittest.TestCase):
             self.assertEqual(summary_a, summary_b)
 
             self.assertIn("### CI Required Attestation", summary_a)
-            self.assertIn("- projection digest: `proj1_test_digest`", summary_a)
+            self.assertIn("- typed authority digest: `ev1_test_digest`", summary_a)
+            self.assertIn("- compatibility alias digest: `proj1_test_digest`", summary_a)
             self.assertIn("- witness verdict: `accepted`", summary_a)
             self.assertIn("- required checks: `baseline, test`", summary_a)
             self.assertIn("- delta source: `explicit`", summary_a)
             self.assertIn("- delta changed paths: `2`", summary_a)
             self.assertIn("- decision: `accept`", summary_a)
             self.assertIn("- decision reason: `verified_accept`", summary_a)
+            self.assertIn("- decision typed authority: `ev1_test_digest`", summary_a)
 
             witness_sha_path = ciwitness / "latest-required.sha256"
             delta_sha_path = ciwitness / "latest-delta.sha256"
@@ -145,6 +151,8 @@ class PipelineRequiredTests(unittest.TestCase):
                 json.dumps(
                     {
                         "projectionDigest": "proj1_retry",
+                        "typedCoreProjectionDigest": "ev1_retry",
+                        "authorityPayloadDigest": "proj1_retry",
                         "verdictClass": "accepted",
                         "requiredChecks": ["baseline"],
                     },

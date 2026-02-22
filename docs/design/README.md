@@ -43,6 +43,8 @@ Authority rule:
   Plane contracts, coherence boundaries, and issue posture.
 - `EV-STAGE1-CHECKLIST.md`: execution checklist for `Ev` Stage 1
   (typed-core dual projection) delivery.
+- `EV-STAGE3-EXECUTION-RUNBOOK.md`: deterministic Stage 3 execution order,
+  per-task gate set, and commit/issue hygiene cadence.
 - `LIFECYCLE-COHERENCE-FLOWS.md`: operator flow for schema lifecycle policy and
   coherence gate-chain enforcement.
 - `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move

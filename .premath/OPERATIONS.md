@@ -23,6 +23,12 @@ This file captures repeatable operational conventions and rollout evidence.
    - `gh run view <run-id> -R workingdoge/premath --log-failed` (if needed)
 5. Record evidence in issue notes and append to log below.
 
+## Stage3 Lane Runbook
+
+For `Ev` Stage 3 execution order, gate cadence, and issue hygiene workflow, use:
+
+- `docs/design/EV-STAGE3-EXECUTION-RUNBOOK.md`
+
 ## Evidence Log
 
 | Date (UTC) | Operation | Issue | Decision | Evidence |

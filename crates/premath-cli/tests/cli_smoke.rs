@@ -414,7 +414,7 @@ fn write_observation_surface(path: &Path) {
             "state": "accepted",
             "needsAttention": false,
             "topFailureClass": "verified_accept",
-            "latestProjectionDigest": "proj1_alpha",
+            "latestProjectionDigest": "ev1_alpha",
             "latestInstructionId": "20260221T010000Z-ci-wiring-golden",
             "requiredCheckCount": 1,
             "executedCheckCount": 1,
@@ -425,6 +425,7 @@ fn write_observation_surface(path: &Path) {
                 "ref": "artifacts/ciwitness/latest-delta.json",
                 "projectionPolicy": "ci-topos-v0",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "deltaSource": "explicit",
                 "fromRef": "origin/main",
                 "toRef": "HEAD",
@@ -436,6 +437,7 @@ fn write_observation_surface(path: &Path) {
                 "witnessKind": "ci.required.v1",
                 "projectionPolicy": "ci-topos-v0",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "verdictClass": "accepted",
                 "requiredChecks": ["baseline"],
                 "executedChecks": ["baseline"],
@@ -445,6 +447,7 @@ fn write_observation_surface(path: &Path) {
                 "ref": "artifacts/ciwitness/latest-decision.json",
                 "decisionKind": "ci.required.decision.v1",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "decision": "accept",
                 "reasonClass": "verified_accept",
                 "witnessPath": "artifacts/ciwitness/latest-required.json",
@@ -931,7 +934,7 @@ fn observe_latest_json_smoke() {
 
     let payload = parse_json_stdout(&output);
     assert_eq!(payload["summary"]["state"], "accepted");
-    assert_eq!(payload["summary"]["latestProjectionDigest"], "proj1_alpha");
+    assert_eq!(payload["summary"]["latestProjectionDigest"], "ev1_alpha");
     assert_eq!(
         payload["latest"]["required"]["requiredChecks"][0],
         "baseline"
@@ -965,6 +968,74 @@ fn observe_instruction_json_smoke() {
 }
 
 #[test]
+fn observe_projection_uses_typed_default() {
+    let tmp = TempDirGuard::new("observe-projection-typed-default");
+    let surface = tmp.path().join("surface.json");
+    write_observation_surface(&surface);
+
+    let output = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("projection"),
+        OsString::from("--projection-digest"),
+        OsString::from("ev1_alpha"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["projectionDigest"], "ev1_alpha");
+    assert_eq!(
+        payload["required"]["typedCoreProjectionDigest"],
+        "ev1_alpha"
+    );
+}
+
+#[test]
+fn observe_projection_alias_requires_compatibility_mode() {
+    let tmp = TempDirGuard::new("observe-projection-alias-mode");
+    let surface = tmp.path().join("surface.json");
+    write_observation_surface(&surface);
+
+    let default_mode = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("projection"),
+        OsString::from("--projection-digest"),
+        OsString::from("proj1_alpha"),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !default_mode.status.success(),
+        "alias lookup should fail in typed default mode"
+    );
+
+    let compat_mode = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("projection"),
+        OsString::from("--projection-digest"),
+        OsString::from("proj1_alpha"),
+        OsString::from("--projection-match"),
+        OsString::from("compatibility_alias"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&compat_mode);
+    let payload = parse_json_stdout(&compat_mode);
+    assert_eq!(payload["projectionDigest"], "proj1_alpha");
+    assert_eq!(
+        payload["required"]["typedCoreProjectionDigest"],
+        "ev1_alpha"
+    );
+}
+
+#[test]
 fn observe_build_json_smoke() {
     let tmp = TempDirGuard::new("observe-build-json");
     let repo_root = tmp.path();
@@ -979,6 +1050,7 @@ fn observe_build_json_smoke() {
         serde_json::to_vec_pretty(&serde_json::json!({
             "projectionPolicy": "ci-topos-v0",
             "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
             "deltaSource": "explicit",
             "changedPaths": ["README.md"]
         }))
@@ -991,6 +1063,7 @@ fn observe_build_json_smoke() {
             "witnessKind": "ci.required.v1",
             "projectionPolicy": "ci-topos-v0",
             "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
             "verdictClass": "accepted",
             "requiredChecks": ["baseline"],
             "executedChecks": ["baseline"],
@@ -1004,6 +1077,7 @@ fn observe_build_json_smoke() {
         serde_json::to_vec_pretty(&serde_json::json!({
             "decisionKind": "ci.required.decision.v1",
             "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
             "decision": "accept",
             "reasonClass": "verified_accept"
         }))
@@ -1052,7 +1126,7 @@ fn observe_build_json_smoke() {
 
     let payload = parse_json_stdout(&output);
     assert_eq!(payload["summary"]["state"], "accepted");
-    assert_eq!(payload["summary"]["latestProjectionDigest"], "proj1_alpha");
+    assert_eq!(payload["summary"]["latestProjectionDigest"], "ev1_alpha");
     assert_eq!(payload["summary"]["requiredCheckCount"], 1);
     assert!(payload["summary"]["coherence"].is_object());
     assert!(out_json.exists());

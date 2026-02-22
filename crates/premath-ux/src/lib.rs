@@ -8,7 +8,7 @@ pub mod http;
 
 use premath_surreal::{
     DecisionSummary, DeltaSummary, InstructionSummary, LatestObservation, ObservationError,
-    ObservationIndex, ObservationSummary, ProjectionView, RequiredSummary,
+    ObservationIndex, ObservationSummary, ProjectionMatchMode, ProjectionView, RequiredSummary,
 };
 use serde::Serialize;
 use serde_json::Value;
@@ -21,7 +21,11 @@ pub trait ObservationBackend {
     fn latest_required(&self) -> Option<RequiredSummary>;
     fn latest_decision(&self) -> Option<DecisionSummary>;
     fn instruction(&self, instruction_id: &str) -> Option<InstructionSummary>;
-    fn projection(&self, projection_digest: &str) -> Option<ProjectionView>;
+    fn projection(
+        &self,
+        projection_digest: &str,
+        projection_match: ProjectionMatchMode,
+    ) -> Option<ProjectionView>;
 }
 
 #[derive(Debug, Clone)]
@@ -60,8 +64,12 @@ impl ObservationBackend for SurrealObservationBackend {
         self.index.instruction(instruction_id).cloned()
     }
 
-    fn projection(&self, projection_digest: &str) -> Option<ProjectionView> {
-        self.index.projection(projection_digest)
+    fn projection(
+        &self,
+        projection_digest: &str,
+        projection_match: ProjectionMatchMode,
+    ) -> Option<ProjectionView> {
+        self.index.projection(projection_digest, projection_match)
     }
 }
 
@@ -87,8 +95,13 @@ pub struct NeedsAttentionView {
 pub enum ObserveQuery {
     Latest,
     NeedsAttention,
-    Instruction { instruction_id: String },
-    Projection { projection_digest: String },
+    Instruction {
+        instruction_id: String,
+    },
+    Projection {
+        projection_digest: String,
+        projection_match: ProjectionMatchMode,
+    },
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -138,8 +151,12 @@ impl<B: ObservationBackend> UxService<B> {
         self.backend.instruction(instruction_id)
     }
 
-    pub fn projection(&self, projection_digest: &str) -> Option<ProjectionView> {
-        self.backend.projection(projection_digest)
+    pub fn projection(
+        &self,
+        projection_digest: &str,
+        projection_match: ProjectionMatchMode,
+    ) -> Option<ProjectionView> {
+        self.backend.projection(projection_digest, projection_match)
     }
 
     pub fn query_json(&self, query: ObserveQuery) -> Result<Value, ObserveQueryError> {
@@ -155,10 +172,15 @@ impl<B: ObservationBackend> UxService<B> {
                 serde_json::to_value(row)
                     .map_err(|e| ObserveQueryError::Serialization(e.to_string()))
             }
-            ObserveQuery::Projection { projection_digest } => {
-                let row = self.projection(&projection_digest).ok_or_else(|| {
-                    ObserveQueryError::ProjectionNotFound(projection_digest.clone())
-                })?;
+            ObserveQuery::Projection {
+                projection_digest,
+                projection_match,
+            } => {
+                let row = self
+                    .projection(&projection_digest, projection_match)
+                    .ok_or_else(|| {
+                        ObserveQueryError::ProjectionNotFound(projection_digest.clone())
+                    })?;
                 serde_json::to_value(row)
                     .map_err(|e| ObserveQueryError::Serialization(e.to_string()))
             }
@@ -218,7 +240,11 @@ mod tests {
             None
         }
 
-        fn projection(&self, projection_digest: &str) -> Option<ProjectionView> {
+        fn projection(
+            &self,
+            projection_digest: &str,
+            _projection_match: ProjectionMatchMode,
+        ) -> Option<ProjectionView> {
             Some(ProjectionView {
                 projection_digest: projection_digest.to_string(),
                 required: self.latest_required(),
@@ -251,7 +277,7 @@ mod tests {
     fn projection_passthrough_works() {
         let service = UxService::new(MockBackend);
         let projection = service
-            .projection("proj1_x")
+            .projection("proj1_x", ProjectionMatchMode::Typed)
             .expect("projection should exist");
         assert_eq!(projection.projection_digest, "proj1_x");
     }

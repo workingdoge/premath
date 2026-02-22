@@ -177,6 +177,10 @@ pub enum Commands {
         #[arg(long)]
         projection_digest: Option<String>,
 
+        /// Projection lookup match mode (typed authority only by default)
+        #[arg(long, default_value = "typed")]
+        projection_match: ProjectionMatchArg,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -470,6 +474,14 @@ pub enum ObserveModeArg {
     Instruction,
     #[value(name = "projection")]
     Projection,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum ProjectionMatchArg {
+    #[value(name = "typed")]
+    Typed,
+    #[value(name = "compatibility_alias")]
+    CompatibilityAlias,
 }
 
 #[derive(Subcommand, Clone, Debug)]

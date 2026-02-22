@@ -30,11 +30,26 @@ def resolve_premath_cli(root: Path) -> List[str]:
 def _validate_payload(payload: Any) -> Dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("required-decision-verify payload must be an object")
-    if not isinstance(payload.get("errors"), list):
+    errors = payload.get("errors")
+    if not isinstance(errors, list):
         raise ValueError("required-decision-verify payload errors must be a list")
     derived = payload.get("derived")
     if not isinstance(derived, dict):
         raise ValueError("required-decision-verify payload derived must be an object")
+
+    decision = derived.get("decision")
+    if errors == [] and decision == "accept":
+        for key in (
+            "typedCoreProjectionDigest",
+            "authorityPayloadDigest",
+            "normalizerId",
+            "policyDigest",
+        ):
+            value = derived.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"required-decision-verify payload missing {key} for accept decision"
+                )
     return payload
 
 

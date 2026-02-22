@@ -466,6 +466,11 @@ deterministic checker/vector surfaces as follows.
 Equivalent implementation-local routes are permitted only when replay-stable
 and mapped deterministically to these clause-level surfaces.
 
+Observation/projection consumers MUST treat typed digests as canonical by
+default. Compatibility alias lookup MAY exist only behind an explicit
+compatibility mode (for example `match=compatibility_alias`), and MUST NOT be
+the default projection-selection path.
+
 ## 11. Cross-layer Obstruction Algebra (v0)
 
 Implementations MAY project failure classes into one typed obstruction algebra

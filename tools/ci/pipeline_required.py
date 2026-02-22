@@ -128,12 +128,12 @@ def render_summary(
         raw_digest = _write_sha(witness_path, digest_path)
         checks = payload.get("requiredChecks", [])
         checks_line = ", ".join(checks) if isinstance(checks, list) and checks else "(none)"
-        typed_projection = payload.get("typedCoreProjectionDigest") or payload.get("projectionDigest")
+        typed_projection = payload.get("typedCoreProjectionDigest")
         authority_alias = payload.get("authorityPayloadDigest")
         lines.extend(
             [
                 "",
-                f"- projection digest: `{typed_projection or '(missing)'}`",
+                f"- typed authority digest: `{typed_projection or '(missing)'}`",
                 f"- compatibility alias digest: `{authority_alias or '(missing)'}`",
                 f"- witness verdict: `{payload.get('verdictClass', '(missing)')}`",
                 f"- required checks: `{checks_line}`",
@@ -161,7 +161,7 @@ def render_summary(
     else:
         decision = json.loads(decision_path.read_text(encoding="utf-8"))
         decision_digest = _write_sha(decision_path, decision_digest_path)
-        typed_projection = decision.get("typedCoreProjectionDigest") or decision.get("projectionDigest")
+        typed_projection = decision.get("typedCoreProjectionDigest")
         authority_alias = decision.get("authorityPayloadDigest")
         lines.extend(
             [

@@ -89,12 +89,14 @@ fn main() {
             mode,
             instruction_id,
             projection_digest,
+            projection_match,
             json,
         } => commands::observe::run(commands::observe::Args {
             surface,
             mode,
             instruction_id,
             projection_digest,
+            projection_match,
             json,
         }),
 

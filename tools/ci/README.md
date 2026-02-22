@@ -145,7 +145,11 @@ contract as a tiny HTTP read API for frontend clients:
 - `GET /latest`
 - `GET /needs-attention`
 - `GET /instruction?id=<instruction_id>`
-- `GET /projection?digest=<projection_digest>`
+- `GET /projection?digest=<projection_digest>[&match=typed|compatibility_alias]`
+
+Projection lookup defaults to `match=typed` (canonical typed authority digest
+only). Alias lookups are compatibility-scoped and require
+`match=compatibility_alias`.
 
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
 entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
