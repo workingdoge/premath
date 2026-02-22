@@ -1433,3 +1433,89 @@ fn coherence_check_json_smoke() {
         "accepted"
     );
 }
+
+#[test]
+fn coherence_check_rejects_on_coherence_spec_obligation_drift() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let contract_path = repo_root.join("specs/premath/draft/COHERENCE-CONTRACT.json");
+    let coherence_spec_path = repo_root.join("specs/premath/draft/PREMATH-COHERENCE.md");
+
+    let temp = TempDirGuard::new("coherence-obligation-drift");
+    let mutated_spec_path = temp.path().join("PREMATH-COHERENCE.drift.md");
+    let mutated_contract_path = temp.path().join("COHERENCE-CONTRACT.drift.json");
+
+    let coherence_spec =
+        fs::read_to_string(&coherence_spec_path).expect("coherence spec should be readable");
+    let mutated_coherence_spec =
+        coherence_spec.replacen("`cwf_comprehension_eta`", "`cwf_comprehension_eta_typo`", 1);
+    assert_ne!(
+        coherence_spec, mutated_coherence_spec,
+        "expected coherence spec mutation to change content"
+    );
+    fs::write(&mutated_spec_path, mutated_coherence_spec)
+        .expect("mutated coherence spec should be writable");
+
+    let mut contract: Value = serde_json::from_slice(
+        &fs::read(&contract_path).expect("coherence contract should be readable"),
+    )
+    .expect("coherence contract should parse");
+    let surfaces = contract
+        .get_mut("surfaces")
+        .and_then(Value::as_object_mut)
+        .expect("contract surfaces should be object");
+    surfaces.insert(
+        "coherenceSpecPath".to_string(),
+        Value::String(mutated_spec_path.to_string_lossy().to_string()),
+    );
+    fs::write(
+        &mutated_contract_path,
+        serde_json::to_vec_pretty(&contract).expect("mutated contract should serialize"),
+    )
+    .expect("mutated coherence contract should be writable");
+
+    let output = run_premath([
+        OsString::from("coherence-check"),
+        OsString::from("--contract"),
+        mutated_contract_path.as_os_str().to_os_string(),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "coherence-check should return non-zero on rejected witness"
+    );
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["witnessKind"], "premath.coherence.v1");
+    assert_eq!(
+        payload["result"]
+            .as_str()
+            .expect("coherence-check result should be string"),
+        "rejected"
+    );
+
+    let failure_classes = payload["failureClasses"]
+        .as_array()
+        .expect("failureClasses should be array");
+    assert!(
+        failure_classes.iter().any(|item| {
+            item.as_str()
+                == Some("coherence.scope_noncontradiction.coherence_spec_missing_obligation")
+        }),
+        "expected missing-obligation failure class in top-level union"
+    );
+    assert!(
+        failure_classes.iter().any(|item| {
+            item.as_str()
+                == Some("coherence.scope_noncontradiction.coherence_spec_unknown_obligation")
+        }),
+        "expected unknown-obligation failure class in top-level union"
+    );
+}

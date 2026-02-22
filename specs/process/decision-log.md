@@ -1993,3 +1993,27 @@ family.
 - contract surfaces explicitly bind both BIDIR and PREMATH-COHERENCE obligation
   sections.
 - bd-33 parity coverage includes required coherence obligation vocabulary drift.
+
+---
+
+## 2026-02-22 — Decision 0069: Add end-to-end CLI rejection witness for coherence obligation drift
+
+### Decision
+Add a `premath-cli` smoke test that mutates `PREMATH-COHERENCE` §3 obligation
+IDs via a temporary coherence contract binding and asserts `coherence-check`
+returns a rejected witness with deterministic drift classes:
+
+- `coherence.scope_noncontradiction.coherence_spec_missing_obligation`
+- `coherence.scope_noncontradiction.coherence_spec_unknown_obligation`
+
+### Rationale
+Decision 0068 added checker-level parity enforcement and unit coverage, but the
+CLI surface did not yet prove this drift path end-to-end. The smoke test closes
+that boundary by validating witness behavior through the canonical command
+surface.
+
+### Consequences
+- coherence obligation-list drift is now covered at both checker unit and CLI
+  witness layers.
+- bd-33 parity scope gains executable E2E regression protection for this drift
+  class.
