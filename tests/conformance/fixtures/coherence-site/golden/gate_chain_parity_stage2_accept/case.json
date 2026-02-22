@@ -1,0 +1,156 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "gate_chain_parity",
+  "artifacts": {
+    "controlPlaneContract": {
+      "schema": 1,
+      "contractKind": "premath.control_plane.contract.v1",
+      "requiredGateProjection": {
+        "projectionPolicy": "ci-topos-v0",
+        "checkOrder": [
+          "baseline"
+        ]
+      },
+      "requiredWitness": {
+        "witnessKind": "ci.required.v1",
+        "decisionKind": "ci.required.decision.v1"
+      },
+      "instructionWitness": {
+        "witnessKind": "ci.instruction.v1",
+        "policyKind": "ci.instruction.policy.v1",
+        "policyDigestPrefix": "pol1_"
+      },
+      "schemaLifecycle": {
+        "activeEpoch": "2026-02",
+        "kindFamilies": {
+          "controlPlaneContractKind": {
+            "canonicalKind": "premath.control_plane.contract.v1",
+            "compatibilityAliases": [
+              {
+                "aliasKind": "premath.control_plane.contract.v0",
+                "supportUntilEpoch": "2026-06",
+                "replacementKind": "premath.control_plane.contract.v1"
+              }
+            ]
+          }
+        }
+      },
+      "evidenceStage1Parity": {
+        "profileKind": "ev.stage1.core.v1",
+        "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+        "comparisonTuple": {
+          "authorityDigestRef": "authorityPayloadDigest",
+          "typedCoreDigestRef": "typedCoreProjectionDigest",
+          "normalizerIdRef": "normalizerId",
+          "policyDigestRef": "policyDigest"
+        },
+        "failureClasses": {
+          "missing": "unification.evidence_stage1.parity.missing",
+          "mismatch": "unification.evidence_stage1.parity.mismatch",
+          "unbound": "unification.evidence_stage1.parity.unbound"
+        }
+      },
+      "evidenceStage1Rollback": {
+        "profileKind": "ev.stage1.rollback.v1",
+        "witnessKind": "ev.stage1.rollback.witness.v1",
+        "fromStage": "stage1",
+        "toStage": "stage0",
+        "triggerFailureClasses": [
+          "unification.evidence_stage1.parity.missing",
+          "unification.evidence_stage1.parity.mismatch",
+          "unification.evidence_stage1.parity.unbound"
+        ],
+        "identityRefs": {
+          "authorityDigestRef": "authorityPayloadDigest",
+          "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+          "normalizerIdRef": "normalizerId",
+          "policyDigestRef": "policyDigest"
+        },
+        "failureClasses": {
+          "precondition": "unification.evidence_stage1.rollback.precondition",
+          "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+          "unbound": "unification.evidence_stage1.rollback.unbound"
+        }
+      },
+      "evidenceStage2Authority": {
+        "profileKind": "ev.stage2.authority.v1",
+        "activeStage": "stage2",
+        "typedAuthority": {
+          "kindRef": "ev.stage1.core.v1",
+          "digestRef": "typedCoreProjectionDigest",
+          "normalizerIdRef": "normalizerId",
+          "policyDigestRef": "policyDigest"
+        },
+        "compatibilityAlias": {
+          "kindRef": "ev.legacy.payload.v1",
+          "digestRef": "authorityPayloadDigest",
+          "role": "projection_only",
+          "supportUntilEpoch": "2026-06"
+        },
+        "kernelComplianceSentinel": {
+          "requiredObligations": [
+            "stability",
+            "locality",
+            "descent_exists",
+            "descent_contractible",
+            "adjoint_triple",
+            "ext_gap",
+            "ext_ambiguous"
+          ],
+          "failureClasses": {
+            "missing": "unification.evidence_stage2.kernel_compliance_missing",
+            "drift": "unification.evidence_stage2.kernel_compliance_drift"
+          }
+        },
+        "failureClasses": {
+          "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+          "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+          "unbound": "unification.evidence_stage2.unbound"
+        }
+      },
+      "evidenceLanes": {
+        "semanticDoctrine": "semantic_doctrine",
+        "strictChecker": "strict_checker",
+        "witnessCommutation": "witness_commutation",
+        "runtimeTransport": "runtime_transport"
+      },
+      "laneArtifactKinds": {
+        "semantic_doctrine": [
+          "kernel_obligation",
+          "gate_failure_class",
+          "adjoint_site_obligation"
+        ],
+        "strict_checker": [
+          "coherence_obligation",
+          "cwf_strict_equality"
+        ],
+        "witness_commutation": [
+          "span_ref",
+          "square_witness"
+        ],
+        "runtime_transport": [
+          "squeak_transport_witness",
+          "squeak_site_witness"
+        ]
+      },
+      "laneOwnership": {
+        "checkerCoreOnlyObligations": [
+          "cwf_substitution_identity",
+          "cwf_substitution_composition",
+          "cwf_comprehension_beta",
+          "cwf_comprehension_eta"
+        ],
+        "requiredCrossLaneWitnessRoute": {
+          "pullbackBaseChange": "span_square_commutation"
+        }
+      },
+      "laneFailureClasses": [
+        "lane_unknown",
+        "lane_kind_unbound",
+        "lane_ownership_violation",
+        "lane_route_missing"
+      ]
+    }
+  }
+}

@@ -1531,8 +1531,10 @@ fn check_gate_chain_parity(
     let stage1_rollback_check = evaluate_control_plane_stage1_rollback(&control_plane_contract);
     failures.extend(stage1_rollback_check.failure_classes.clone());
 
-    let stage2_authority_check =
-        evaluate_control_plane_stage2_authority(&control_plane_contract, contract);
+    let stage2_authority_check = evaluate_control_plane_stage2_authority(
+        &control_plane_contract,
+        &contract.required_bidir_obligations,
+    );
     failures.extend(stage2_authority_check.failure_classes.clone());
 
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
@@ -1878,7 +1880,7 @@ fn schema_lifecycle_rollover_epoch(
 
 fn evaluate_control_plane_stage2_authority(
     control_plane_contract: &ControlPlaneProjectionContract,
-    coherence_contract: &CoherenceContract,
+    required_bidir_obligations_input: &[String],
 ) -> ObligationCheck {
     let required_failure_classes = json!({
         "authorityAliasViolation": STAGE2_AUTHORITY_CLASS_ALIAS_VIOLATION,
@@ -1894,8 +1896,7 @@ fn evaluate_control_plane_stage2_authority(
         .map(|obligation| (*obligation).to_string())
         .collect();
     let required_bidir_obligations = dedupe_sorted(
-        coherence_contract
-            .required_bidir_obligations
+        required_bidir_obligations_input
             .iter()
             .map(|obligation| obligation.trim().to_string())
             .filter(|obligation| !obligation.is_empty())
@@ -2361,10 +2362,19 @@ fn evaluate_site_case_gate_chain_parity(
 
     let stage1_parity_check = evaluate_control_plane_stage1_parity(&control_plane_contract);
     let stage1_rollback_check = evaluate_control_plane_stage1_rollback(&control_plane_contract);
+    let required_bidir_obligations: Vec<String> = STAGE2_REQUIRED_KERNEL_OBLIGATIONS
+        .iter()
+        .map(|obligation| (*obligation).to_string())
+        .collect();
+    let stage2_authority_check = evaluate_control_plane_stage2_authority(
+        &control_plane_contract,
+        &required_bidir_obligations,
+    );
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     let mut failures = Vec::new();
     failures.extend(stage1_parity_check.failure_classes.clone());
     failures.extend(stage1_rollback_check.failure_classes.clone());
+    failures.extend(stage2_authority_check.failure_classes.clone());
     failures.extend(lane_registry_check.failure_classes.clone());
     let failures = dedupe_sorted(failures);
     let result = if failures.is_empty() {
@@ -2378,6 +2388,7 @@ fn evaluate_site_case_gate_chain_parity(
         details: json!({
             "stage1Parity": stage1_parity_check.details,
             "stage1Rollback": stage1_rollback_check.details,
+            "stage2Authority": stage2_authority_check.details,
             "laneRegistry": lane_registry_check.details,
         }),
     })
