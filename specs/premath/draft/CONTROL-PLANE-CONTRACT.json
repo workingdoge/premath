@@ -119,6 +119,20 @@
     "lane_ownership_violation",
     "lane_route_missing"
   ],
+  "harnessRetry": {
+    "policyKind": "ci.harness.retry.policy.v1",
+    "policyPath": "policies/control/harness-retry-policy-v1.json",
+    "escalationActions": [
+      "issue_discover",
+      "mark_blocked",
+      "stop"
+    ],
+    "activeIssueEnvKeys": [
+      "PREMATH_ACTIVE_ISSUE_ID",
+      "PREMATH_ISSUE_ID"
+    ],
+    "issuesPathEnvKey": "PREMATH_ISSUES_PATH"
+  },
   "requiredGateProjection": {
     "projectionPolicy": "ci-topos-v0",
     "checkIds": {

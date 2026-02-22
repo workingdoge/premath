@@ -2980,3 +2980,38 @@ the operational loop for long-running workflows.
 - Missing issue context produces deterministic skipped-escalation metadata.
 - Mutation command failures are fail-closed in wrappers (non-success return
   with typed escalation error metadata).
+
+---
+
+## 2026-02-22 — Decision 0102: Promote harness retry/escalation bindings into typed spec surfaces
+
+### Decision
+Bind harness retry/escalation semantics into normative control-plane spec
+artifacts rather than design docs only.
+
+Implemented scope:
+
+1. extend `draft/CONTROL-PLANE-CONTRACT.json` with `harnessRetry`:
+   - policy kind/path,
+   - escalation action vocabulary,
+   - active issue context env keys and issues-path env key.
+2. extend `tools/ci/control_plane_contract.py` loader + exported constants for
+   `harnessRetry` and fail-closed contract validation.
+3. extend drift-budget sentinel parity checks for harness retry fields.
+4. update spec text:
+   - `draft/PREMATH-COHERENCE` gate-chain parity semantics include
+     `harnessRetry` contract presence/shape checks.
+   - `raw/PREMATH-CI` adds retry/escalation control-loop binding clauses.
+   - `draft/SPEC-INDEX` marks harness retry/escalation as part of
+     `draft/CONTROL-PLANE-CONTRACT` informative control-plane constants.
+
+### Rationale
+The implementation had working retry/escalation behavior, but spec authority
+was primarily in design docs + decision log. Typing these bindings into the
+control-plane contract reduces drift risk and keeps CI/coherence loaders
+fail-closed on schema divergence.
+
+### Consequences
+- Harness retry/escalation contract is now machine-bound in typed spec payloads.
+- Drift checks enforce loader/contract parity for retry/escalation fields.
+- Control-plane semantics remain non-authoritative for kernel admissibility.

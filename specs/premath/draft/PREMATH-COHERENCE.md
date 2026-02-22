@@ -127,6 +127,9 @@ Minimum parity set includes:
 - shared control-plane witness/policy identifiers are present and well-formed
   in `draft/CONTROL-PLANE-CONTRACT.json` (`requiredWitness`,
   `instructionWitness`),
+- shared harness retry/escalation bindings are present and well-formed in
+  `draft/CONTROL-PLANE-CONTRACT.json` (`harnessRetry` policy kind/path,
+  escalation action set, active-issue env keys, issues-path env key),
 - control-plane schema lifecycle table is present and deterministic
   (`schemaLifecycle`): canonical kind families + alias windows +
   fail-closed expiry semantics for contract/witness/projection kinds,

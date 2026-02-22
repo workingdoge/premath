@@ -123,6 +123,20 @@ def _base_payload() -> dict:
             "policyKind": "ci.instruction.policy.v1",
             "policyDigestPrefix": "pol1_",
         },
+        "harnessRetry": {
+            "policyKind": "ci.harness.retry.policy.v1",
+            "policyPath": "policies/control/harness-retry-policy-v1.json",
+            "escalationActions": [
+                "issue_discover",
+                "mark_blocked",
+                "stop",
+            ],
+            "activeIssueEnvKeys": [
+                "PREMATH_ACTIVE_ISSUE_ID",
+                "PREMATH_ISSUE_ID",
+            ],
+            "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+        },
     }
 
 
@@ -181,6 +195,11 @@ class ControlPlaneContractTests(unittest.TestCase):
             loaded["schemaLifecycle"]["epochDiscipline"]["aliasRunwayMonths"],
             4,
         )
+        self.assertEqual(
+            loaded["harnessRetry"]["policyKind"],
+            "ci.harness.retry.policy.v1",
+        )
+        self.assertIn("mark_blocked", loaded["harnessRetry"]["escalationActions"])
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())
@@ -227,6 +246,15 @@ class ControlPlaneContractTests(unittest.TestCase):
             for alias_row in aliases:
                 alias_row["supportUntilEpoch"] = "2027-03"
         with self.assertRaisesRegex(ValueError, "max runway"):
+            self._load(payload)
+
+    def test_load_rejects_duplicate_harness_escalation_actions(self) -> None:
+        payload = _base_payload()
+        payload["harnessRetry"]["escalationActions"] = [
+            "issue_discover",
+            "issue_discover",
+        ]
+        with self.assertRaisesRegex(ValueError, "must not contain duplicates"):
             self._load(payload)
 
 

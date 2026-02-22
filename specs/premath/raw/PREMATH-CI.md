@@ -252,6 +252,29 @@ typed reject witness artifact with deterministic `failure_classes`.
 Doctrine typing/binding constraints for this flow are specified in
 `draft/LLM-INSTRUCTION-DOCTRINE`.
 
+### 6.3 Retry/escalation control loop binding
+
+Implementations MAY expose deterministic retry classification for required and
+instruction pipeline wrappers.
+
+When exposed, retry policy binding SHOULD be declared in one typed contract
+surface (for example `draft/CONTROL-PLANE-CONTRACT.json`) and SHOULD bind:
+
+- retry policy kind + policy artifact path,
+- escalation action vocabulary,
+- active issue context environment keys for issue-memory mutation routing.
+
+Terminal escalation actions MUST remain control-plane operations and MUST NOT
+redefine semantic admissibility authority.
+
+When escalation actions are bound to issue-memory operations (for example
+`issue_discover` or `mark_blocked`), implementations SHOULD:
+
+- emit deterministic witness-linked escalation metadata,
+- fail closed on mutation execution errors,
+- preserve deterministic behavior when active issue context is missing
+  (explicit skip classification rather than silent no-op).
+
 ## 7. Invariance requirements
 
 For fixed semantic inputs and fixed policy bindings:

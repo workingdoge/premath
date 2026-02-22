@@ -308,6 +308,31 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         root.get("laneFailureClasses"), "laneFailureClasses"
     )
 
+    harness_retry_obj = _require_object(
+        root.get("harnessRetry"),
+        "harnessRetry",
+    )
+    harness_retry_policy_kind = _require_non_empty_string(
+        harness_retry_obj.get("policyKind"),
+        "harnessRetry.policyKind",
+    )
+    harness_retry_policy_path = _require_non_empty_string(
+        harness_retry_obj.get("policyPath"),
+        "harnessRetry.policyPath",
+    )
+    harness_retry_escalation_actions = _require_string_list(
+        harness_retry_obj.get("escalationActions"),
+        "harnessRetry.escalationActions",
+    )
+    harness_retry_active_issue_env_keys = _require_string_list(
+        harness_retry_obj.get("activeIssueEnvKeys"),
+        "harnessRetry.activeIssueEnvKeys",
+    )
+    harness_retry_issues_path_env_key = _require_non_empty_string(
+        harness_retry_obj.get("issuesPathEnvKey"),
+        "harnessRetry.issuesPathEnvKey",
+    )
+
     required_gate_projection = _require_object(
         root.get("requiredGateProjection"), "requiredGateProjection"
     )
@@ -417,6 +442,13 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
             "requiredCrossLaneWitnessRoute": required_cross_lane_witness_route,
         },
         "laneFailureClasses": lane_failure_classes,
+        "harnessRetry": {
+            "policyKind": harness_retry_policy_kind,
+            "policyPath": harness_retry_policy_path,
+            "escalationActions": harness_retry_escalation_actions,
+            "activeIssueEnvKeys": harness_retry_active_issue_env_keys,
+            "issuesPathEnvKey": harness_retry_issues_path_env_key,
+        },
         "requiredGateProjection": {
             "projectionPolicy": projection_policy,
             "checkIds": check_ids,
@@ -515,3 +547,22 @@ REQUIRED_CROSS_LANE_WITNESS_ROUTE: Optional[str] = _CONTRACT.get(
     "laneOwnership", {}
 ).get("requiredCrossLaneWitnessRoute")
 LANE_FAILURE_CLASSES: Tuple[str, ...] = tuple(_CONTRACT.get("laneFailureClasses", ()))
+
+HARNESS_RETRY_POLICY_KIND: str = _CONTRACT.get("harnessRetry", {}).get(
+    "policyKind",
+    "",
+)
+HARNESS_RETRY_POLICY_PATH: str = _CONTRACT.get("harnessRetry", {}).get(
+    "policyPath",
+    "",
+)
+HARNESS_ESCALATION_ACTIONS: Tuple[str, ...] = tuple(
+    _CONTRACT.get("harnessRetry", {}).get("escalationActions", ())
+)
+HARNESS_ACTIVE_ISSUE_ENV_KEYS: Tuple[str, ...] = tuple(
+    _CONTRACT.get("harnessRetry", {}).get("activeIssueEnvKeys", ())
+)
+HARNESS_ISSUES_PATH_ENV_KEY: str = _CONTRACT.get("harnessRetry", {}).get(
+    "issuesPathEnvKey",
+    "",
+)

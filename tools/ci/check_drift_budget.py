@@ -299,6 +299,20 @@ def check_control_plane_lane_bindings(
     contract_lane_failure_classes = as_sorted_strings(
         loaded_control_plane_contract.get("laneFailureClasses", ())
     )
+    contract_harness_retry = loaded_control_plane_contract.get("harnessRetry", {})
+    if not isinstance(contract_harness_retry, dict):
+        contract_harness_retry = {}
+    contract_harness_policy_kind = str(contract_harness_retry.get("policyKind", ""))
+    contract_harness_policy_path = str(contract_harness_retry.get("policyPath", ""))
+    contract_harness_escalation_actions = as_sorted_strings(
+        contract_harness_retry.get("escalationActions", ())
+    )
+    contract_harness_active_issue_env_keys = as_sorted_strings(
+        contract_harness_retry.get("activeIssueEnvKeys", ())
+    )
+    contract_harness_issues_path_env_key = str(
+        contract_harness_retry.get("issuesPathEnvKey", "")
+    )
 
     checker_expected_core = as_sorted_strings(
         lane_registry.get("expectedCheckerCoreOnlyObligations", ())
@@ -341,6 +355,21 @@ def check_control_plane_lane_bindings(
     loader_lane_failure_classes = as_sorted_strings(
         getattr(control_plane_module, "LANE_FAILURE_CLASSES", ())
     )
+    loader_harness_policy_kind = str(
+        getattr(control_plane_module, "HARNESS_RETRY_POLICY_KIND", "")
+    )
+    loader_harness_policy_path = str(
+        getattr(control_plane_module, "HARNESS_RETRY_POLICY_PATH", "")
+    )
+    loader_harness_escalation_actions = as_sorted_strings(
+        getattr(control_plane_module, "HARNESS_ESCALATION_ACTIONS", ())
+    )
+    loader_harness_active_issue_env_keys = as_sorted_strings(
+        getattr(control_plane_module, "HARNESS_ACTIVE_ISSUE_ENV_KEYS", ())
+    )
+    loader_harness_issues_path_env_key = str(
+        getattr(control_plane_module, "HARNESS_ISSUES_PATH_ENV_KEY", "")
+    )
 
     if loader_evidence_lanes != contract_evidence_lanes:
         reasons.append("control_plane_contract.py EVIDENCE_LANES drift from contract payload")
@@ -358,6 +387,29 @@ def check_control_plane_lane_bindings(
         reasons.append(
             "control_plane_contract.py LANE_FAILURE_CLASSES drift from contract payload"
         )
+    if loader_harness_policy_kind != contract_harness_policy_kind:
+        reasons.append(
+            "control_plane_contract.py HARNESS_RETRY_POLICY_KIND drift from contract payload"
+        )
+    if loader_harness_policy_path != contract_harness_policy_path:
+        reasons.append(
+            "control_plane_contract.py HARNESS_RETRY_POLICY_PATH drift from contract payload"
+        )
+    if loader_harness_escalation_actions != contract_harness_escalation_actions:
+        reasons.append(
+            "control_plane_contract.py HARNESS_ESCALATION_ACTIONS drift from contract payload"
+        )
+    if (
+        loader_harness_active_issue_env_keys
+        != contract_harness_active_issue_env_keys
+    ):
+        reasons.append(
+            "control_plane_contract.py HARNESS_ACTIVE_ISSUE_ENV_KEYS drift from contract payload"
+        )
+    if loader_harness_issues_path_env_key != contract_harness_issues_path_env_key:
+        reasons.append(
+            "control_plane_contract.py HARNESS_ISSUES_PATH_ENV_KEY drift from contract payload"
+        )
 
     details = {
         "reasons": reasons,
@@ -367,6 +419,13 @@ def check_control_plane_lane_bindings(
             "checkerCoreOnlyObligations": contract_checker_core,
             "requiredCrossLaneWitnessRoute": contract_required_route,
             "laneFailureClasses": contract_lane_failure_classes,
+            "harnessRetry": {
+                "policyKind": contract_harness_policy_kind,
+                "policyPath": contract_harness_policy_path,
+                "escalationActions": contract_harness_escalation_actions,
+                "activeIssueEnvKeys": contract_harness_active_issue_env_keys,
+                "issuesPathEnvKey": contract_harness_issues_path_env_key,
+            },
         },
         "checker": {
             "evidenceLanes": checker_lane_values,
@@ -381,6 +440,13 @@ def check_control_plane_lane_bindings(
             "checkerCoreOnlyObligations": loader_checker_core,
             "requiredCrossLaneWitnessRoute": loader_required_route,
             "laneFailureClasses": loader_lane_failure_classes,
+            "harnessRetry": {
+                "policyKind": loader_harness_policy_kind,
+                "policyPath": loader_harness_policy_path,
+                "escalationActions": loader_harness_escalation_actions,
+                "activeIssueEnvKeys": loader_harness_active_issue_env_keys,
+                "issuesPathEnvKey": loader_harness_issues_path_env_key,
+            },
         },
     }
     return bool(reasons), details

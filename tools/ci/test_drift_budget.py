@@ -37,6 +37,16 @@ class DriftBudgetChecksTests(unittest.TestCase):
                 "requiredCrossLaneWitnessRoute": "span_square_commutation",
             },
             "laneFailureClasses": ("lane_unknown", "lane_kind_unbound"),
+            "harnessRetry": {
+                "policyKind": "ci.harness.retry.policy.v1",
+                "policyPath": "policies/control/harness-retry-policy-v1.json",
+                "escalationActions": ("issue_discover", "mark_blocked", "stop"),
+                "activeIssueEnvKeys": (
+                    "PREMATH_ACTIVE_ISSUE_ID",
+                    "PREMATH_ISSUE_ID",
+                ),
+                "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+            },
         }
         control_plane_module = SimpleNamespace(
             EVIDENCE_LANES=loaded_contract["evidenceLanes"],
@@ -46,6 +56,17 @@ class DriftBudgetChecksTests(unittest.TestCase):
             ],
             REQUIRED_CROSS_LANE_WITNESS_ROUTE="span_square_commutation",
             LANE_FAILURE_CLASSES=loaded_contract["laneFailureClasses"],
+            HARNESS_RETRY_POLICY_KIND=loaded_contract["harnessRetry"]["policyKind"],
+            HARNESS_RETRY_POLICY_PATH=loaded_contract["harnessRetry"]["policyPath"],
+            HARNESS_ESCALATION_ACTIONS=loaded_contract["harnessRetry"][
+                "escalationActions"
+            ],
+            HARNESS_ACTIVE_ISSUE_ENV_KEYS=loaded_contract["harnessRetry"][
+                "activeIssueEnvKeys"
+            ],
+            HARNESS_ISSUES_PATH_ENV_KEY=loaded_contract["harnessRetry"][
+                "issuesPathEnvKey"
+            ],
         )
         gate_chain_details = {
             "laneRegistry": {
