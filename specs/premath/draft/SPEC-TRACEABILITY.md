@@ -51,6 +51,7 @@ Purpose:
 | `KCIR-CORE.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`kcir_domain_table_*`) | covered | - |
 | `REF-BINDING.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`ref_projection_and_verify_*`) | covered | - |
 | `NF.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`nf_*`) + `capabilities.normal_forms` + kernel tests | covered | - |
+| `NORMALIZER.md` | `capabilities.normal_forms`; `python3 tools/conformance/run_interop_core_vectors.py` (`nf_*`) + normalized comparison checks in `capabilities.instruction_typing` | covered | - |
 | `WIRE-FORMATS.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`wire_*`) | covered | - |
 | `ERROR-CODES.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`error_code_registry_*`) | covered | - |
 | `WITNESS-ID.md` | `python3 tools/conformance/run_witness_id_vectors.py`; `premath-kernel` witness-id unit tests | covered | - |

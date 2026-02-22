@@ -98,7 +98,7 @@ Canonical obligation kinds include:
 - Refinement invariance: agreement under cover refinement.
 
 The recommended operational interface is specified in `draft/BIDIR-DESCENT`, with deterministic
-interop support specified in `draft/NF`, `raw/NORMALIZER`, and `draft/REF-BINDING`.
+interop support specified in `draft/NF`, `draft/NORMALIZER`, and `draft/REF-BINDING`.
 
 ## 2. Ambient coherence level
 

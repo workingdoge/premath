@@ -17,6 +17,8 @@ Start here:
   into checking/discharge (never self-authorizing).
 - `PREMATH-COHERENCE.md` — typed coherence contract + checker witness model for
   repository control-plane consistency.
+- `NORMALIZER.md` — deterministic normalization and comparison-key policy for
+  normalized evidence modes.
 - `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
   `premath coherence-check`.
 - `PREMATH-KERNEL.md` — semantic kernel contract.

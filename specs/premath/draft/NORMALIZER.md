@@ -1,9 +1,9 @@
 ---
-slug: raw
+slug: draft
 shortname: NORMALIZER
 title: workingdoge.com/premath/NORMALIZER
 name: Normalization and Comparison Keys for NF
-status: raw
+status: draft
 category: Standards Track
 tags:
   - premath

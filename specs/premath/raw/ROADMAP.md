@@ -34,7 +34,7 @@ are most expensive to change:
 
 1. Reference model + binding interface (`draft/KCIR-CORE`, `draft/REF-BINDING`)
 2. NF byte grammars (`draft/NF`)
-3. Normalizer comparison key semantics (`raw/NORMALIZER`)
+3. Normalizer comparison key semantics (`draft/NORMALIZER`)
 4. Bidirectional/descent obligations (`draft/BIDIR-DESCENT`)
 5. Gate law wording + witness classes (`draft/GATE`)
 

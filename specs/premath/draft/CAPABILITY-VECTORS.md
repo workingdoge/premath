@@ -47,7 +47,7 @@ Implementations MAY expose them as namespaced manifest keys (for example
 Meaning:
 
 - MorNF tag `0x16` (`PullAtom`) is accepted (see `draft/NF`).
-- MOR pull classification may use `PullAtom` fusion (see `raw/NORMALIZER`).
+- MOR pull classification may use `PullAtom` fusion (see `draft/NORMALIZER`).
 
 Required vectors when NOT claimed:
 
@@ -94,7 +94,7 @@ Meaning:
 - The implementation supports an explicit normalized-comparison capability for
   witness/discharge flows.
 - In normalized mode, outputs are bound to `normalizerId` and `policyDigest`
-  per `raw/NORMALIZER` and `draft/BIDIR-DESCENT`.
+  per `draft/NORMALIZER` and `draft/BIDIR-DESCENT`.
 
 Required vectors when NOT claimed:
 

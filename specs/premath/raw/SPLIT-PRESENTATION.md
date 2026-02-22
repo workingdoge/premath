@@ -73,7 +73,7 @@ In this repository bundle:
 
 - `draft/NF` provides a compact IR (ObjNF / MorNF bytes).
 - `raw/OPCODES` provides the verification contracts that construct/transform those IR forms.
-- `raw/NORMALIZER` specifies the canonicalization policy that turns IR into a comparison key.
+- `draft/NORMALIZER` specifies the canonicalization policy that turns IR into a comparison key.
 - `draft/BIDIR-DESCENT` specifies how obligations are generated and discharged.
 
 This combination is an instance of a split presentation:
@@ -88,6 +88,6 @@ Implementations SHOULD:
 1. treat IR byte grammars (`draft/NF`) as the definition of definitional equality (`≡`) after
    canonicalization,
 2. treat semantic equivalence claims as obligations discharged in `normalized` mode via
-   `raw/NORMALIZER`, and
+   `draft/NORMALIZER`, and
 3. record any policy/normalizer versions in emitted artifacts to prevent replay across changes.
 

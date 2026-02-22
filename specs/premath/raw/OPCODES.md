@@ -183,7 +183,7 @@ Verify:
 Verify:
 
 - Decode factors.
-- Apply canonicalization policy as defined by `raw/NORMALIZER` for `mkTensorObj`.
+- Apply canonicalization policy as defined by `draft/NORMALIZER` for `mkTensorObj`.
 - Encode canonical ObjNF bytes.
 - Bind via `project_nf` and check equality to `out`.
 
@@ -312,7 +312,7 @@ Verify prelude:
 1. If `isIdMap(pId)`, `stepTag` MUST be `0x00` (ID) and `out == inObjRef`.
 2. Otherwise load and parse `inObjRef` as ObjNF bytes.
 3. Compute `expStep = classify_obj_pull(pId, inObjBytes)` and check `stepTag == expStep`.
-4. Dispatch by `stepTag`, rebuilding canonical bytes using `raw/NORMALIZER` constructors.
+4. Dispatch by `stepTag`, rebuilding canonical bytes using `draft/NORMALIZER` constructors.
 
 `classify_obj_pull` MUST be deterministic and MUST depend only on `pId` and the parsed ObjNF constructor.
 
@@ -340,7 +340,7 @@ Verify:
 
 Verify:
 
-- Decode and apply canonicalization policy as defined by `raw/NORMALIZER` `mkCompMor`.
+- Decode and apply canonicalization policy as defined by `draft/NORMALIZER` `mkCompMor`.
 - Encode canonical MorNF bytes and bind via `project_nf`.
 
 ### 8.3 M_PULL (sort=MOR opcode=0x10)
@@ -353,7 +353,7 @@ Verify prelude:
 1. If `isIdMap(pId)`, `stepTag` MUST be `0x00` and `out == inMorRef`.
 2. Otherwise load and parse MorNF bytes.
 3. Compute `expStep = classify_mor_pull(pId, inMorBytes, adoptPullAtomMor)` and check equality.
-4. Dispatch by `stepTag` and rebuild via `raw/NORMALIZER` canonical constructors.
+4. Dispatch by `stepTag` and rebuild via `draft/NORMALIZER` canonical constructors.
 
 ## 9. Relationship to Gate
 

@@ -109,7 +109,7 @@ A `Premath Interop Core` conforming verifier MUST:
 
 A `Premath Interop Full` conforming verifier MUST satisfy all `Interop Core` requirements and MUST also:
 
-6. Implement `raw/NORMALIZER` for `normalized` comparisons and stable comparison keys.
+6. Implement `draft/NORMALIZER` for `normalized` comparisons and stable comparison keys.
 7. Implement `draft/BIDIR-DESCENT` mode discipline, obligation emission, and discharge.
 8. Enforce admissibility gate laws (`draft/GATE`) and emit Gate witness classes deterministically.
 

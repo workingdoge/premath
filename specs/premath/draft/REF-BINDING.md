@@ -155,4 +155,4 @@ implementations.
 - `draft/KCIR-CORE` defines the `Ref` and store model.
 - `draft/NF` defines canonical NF byte grammars.
 - `raw/OPCODES` computes expected outputs by building canonical bytes and applying `project_ref`.
-- `raw/NORMALIZER` computes canonical forms and uses `project_ref` to derive comparison keys.
+- `draft/NORMALIZER` computes canonical forms and uses `project_ref` to derive comparison keys.

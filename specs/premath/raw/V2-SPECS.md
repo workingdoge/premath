@@ -37,7 +37,7 @@ This document indexes the greenfield Premath kernel bundle.
 - `draft/KCIR-CORE`: core KCIR model
 - `draft/WIRE-FORMATS`: wire format registry
 - `draft/NF`: normal form grammars
-- `raw/NORMALIZER`: normalization and comparison keys
+- `draft/NORMALIZER`: normalization and comparison keys
 - `draft/BIDIR-DESCENT`: bidirectional evaluation with descent obligations
 - `raw/DSL`: dependency-pattern DSL (optional but recommended)
 - `raw/OPCODES`: opcode contracts (minimal in this bundle)

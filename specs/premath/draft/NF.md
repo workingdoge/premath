@@ -108,6 +108,6 @@ If `PullAtom` is not adopted, implementations MUST reject tag `0x16`.
 ## 5. Canonicality notes (informative)
 
 This spec defines the byte-level grammar. Canonicality policies (fusion, identity elimination,
-flattening) are defined by opcode constructors and by `raw/NORMALIZER`.
+flattening) are defined by opcode constructors and by `draft/NORMALIZER`.
 
 Implementations MAY enforce canonicality by rejecting noncanonical NF bytes in hardened modes.

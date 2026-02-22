@@ -114,7 +114,7 @@ verifiers, obligation checkers), not by whether it contains these exact boxes in
 
 Everything in Interop Core, plus:
 
-- `raw/NORMALIZER`
+- `draft/NORMALIZER`
 - `draft/BIDIR-DESCENT`
 - `draft/GATE`
 
@@ -192,7 +192,7 @@ If you are implementing Interop Full:
 1) `draft/DOCTRINE-INF`
 2) `draft/PREMATH-KERNEL`
 3) `draft/REF-BINDING` + `draft/KCIR-CORE`
-4) `draft/NF` → `raw/NORMALIZER`
+4) `draft/NF` → `draft/NORMALIZER`
 5) `draft/BIDIR-DESCENT` + `draft/GATE`
 6) `draft/WIRE-FORMATS` + `draft/ERROR-CODES`
 7) `draft/CONFORMANCE` + `draft/CAPABILITY-VECTORS`

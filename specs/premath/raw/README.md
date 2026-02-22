@@ -13,9 +13,11 @@ Use this directory for:
 
 Current raw tracks include:
 
-- kernel-oriented extensions (`NORMALIZER`, `DSL`, `OPCODES`, `HYPERDESCENT`, `UNIVERSE`),
+- kernel-oriented extensions (`DSL`, `OPCODES`, `HYPERDESCENT`, `UNIVERSE`),
 - operational runtime stack (`TUSK-CORE`, `SQUEAK-CORE`, `SQUEAK-SITE`, `PREMATH-CI`, `CI-TOPOS`),
 - explanatory semantics/presentation notes (`SEMANTICS-INFTOPOS`, `SPLIT-PRESENTATION`).
+
+Recent promotion: `NORMALIZER` moved to `../draft/NORMALIZER.md`.
 
 For lifecycle and promotions, see:
 

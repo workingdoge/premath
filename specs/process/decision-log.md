@@ -19,7 +19,7 @@ We commit to a **profile-preserving** specification structure:
    - Kernel and opcode contracts MUST be phrased in terms of canonical bytes + `project_ref`, never a specific hash function.
 
 3. **Operational totality is expressed via normalization + obligation discharge.**
-   - `raw/NORMALIZER` and `draft/BIDIR-DESCENT` are part of the baseline "full" story.
+   - `draft/NORMALIZER` and `draft/BIDIR-DESCENT` are part of the baseline "full" story.
    - In `normalized` mode, equality is **only** reference equality on normalized comparison refs (`cmpRef`).
 
 4. **Gemini-style ∞-topos framing is adopted only as a semantics profile / optional dial.**
@@ -975,3 +975,30 @@ oracle.
 ### Consequences
 - replay projections are content-addressed and auditable.
 - conformance enforces replay-cache binding semantics and invariance profiles.
+
+---
+
+## 2026-02-22 — Decision 0034: Promote NORMALIZER to draft and align Interop Full normative surface
+
+### Decision
+Promote `NORMALIZER` from raw to draft lifecycle and make all normative
+Interop Full references point to `draft/NORMALIZER`.
+
+Concretely:
+
+- move `specs/premath/raw/NORMALIZER.md` to
+  `specs/premath/draft/NORMALIZER.md`,
+- set lifecycle frontmatter to `slug: draft` and `status: draft`,
+- update cross-spec references from `raw/NORMALIZER` to `draft/NORMALIZER`,
+- add `NORMALIZER.md` to the draft traceability matrix.
+
+### Rationale
+`NORMALIZER` is required for Interop Full claims and is already treated as a
+normative dependency by `BIDIR-DESCENT`, capability vectors, and conformance
+surfaces. Keeping it in raw status created lifecycle ambiguity and weakened
+spec-index coherence.
+
+### Consequences
+- Interop Full normative scope is lifecycle-consistent.
+- draft traceability now includes explicit coverage for `NORMALIZER.md`.
+- raw-spec surface is reduced to genuinely non-promoted tracks.
