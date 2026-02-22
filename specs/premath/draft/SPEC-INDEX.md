@@ -223,6 +223,22 @@ Joint capability note:
 
 ## 6. Suggested reading order
 
+Minimal authority path (default for all implementations):
+1) `draft/SPEC-INDEX`
+2) `draft/DOCTRINE-INF`
+3) `draft/PREMATH-KERNEL`
+4) `draft/BIDIR-DESCENT` + `draft/GATE`
+5) `draft/NORMALIZER` + `draft/REF-BINDING` (when normalized evidence paths are used)
+
+Surface-reduction guidance:
+
+- Treat the minimal authority path above as canonical.
+- Add profile/capability/control-plane docs only when the corresponding claim is
+  implemented.
+- When composing overlays, route composition semantics through
+  `draft/UNIFICATION-DOCTRINE` (single-authority encoding; deterministic
+  projections).
+
 If you are proving semantics:
 1) `draft/DOCTRINE-INF`
 2) `draft/PREMATH-KERNEL`
