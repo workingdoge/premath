@@ -95,6 +95,8 @@
 - `cargo run --package premath-cli -- harness-feature read --path .premath/harness_feature_ledger.json --json` — read one harness feature ledger artifact.
 - `cargo run --package premath-cli -- harness-feature check --path .premath/harness_feature_ledger.json --require-closure --json` — validate typed ledger shape and optional full-closure condition.
 - `cargo run --package premath-cli -- harness-feature next --path .premath/harness_feature_ledger.json --json` — compute deterministic next unfinished feature (`in_progress` first, then `pending`).
+- `cargo run --package premath-cli -- harness-trajectory append --path .premath/harness_trajectory.jsonl --step-id <id> --issue-id <bd-id> --action <action> --result-class <class> --witness-ref <path-or-ref> --finished-at <rfc3339> --json` — append one typed harness step trajectory row (witness-linked, append-only).
+- `cargo run --package premath-cli -- harness-trajectory query --path .premath/harness_trajectory.jsonl --mode latest|failed|retry-needed --limit 20 --json` — project deterministic trajectory subsets for operator/agent handoff.
 - `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
 - `cargo run --package premath-cli -- issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json` — atomically claim work (`assignee` + `in_progress`).
 - `cargo run --package premath-cli -- issue discover <parent-issue-id> \"Title\" --issues .premath/issues.jsonl --json` — create discovered follow-up work linked by `discovered-from`.

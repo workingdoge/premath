@@ -431,6 +431,12 @@ pub enum Commands {
         command: HarnessFeatureCommands,
     },
 
+    /// Manage append-only Tusk harness step trajectory rows
+    HarnessTrajectory {
+        #[command(subcommand)]
+        command: HarnessTrajectoryCommands,
+    },
+
     /// Manage dependencies between issues
     Dep {
         #[command(subcommand)]
@@ -1028,6 +1034,81 @@ pub enum HarnessFeatureStatusArg {
     Blocked,
     #[value(name = "completed")]
     Completed,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum HarnessTrajectoryCommands {
+    /// Append one harness step trajectory row
+    Append {
+        /// Harness trajectory JSONL path
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        path: String,
+
+        /// Deterministic step identifier
+        #[arg(long)]
+        step_id: String,
+
+        /// Optional issue identifier linked to this step
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Action label for this step (e.g. apply.patch)
+        #[arg(long)]
+        action: String,
+
+        /// Result class label for this step
+        #[arg(long)]
+        result_class: String,
+
+        /// Optional instruction refs (repeatable)
+        #[arg(long = "instruction-ref")]
+        instruction_refs: Vec<String>,
+
+        /// Witness refs (repeatable)
+        #[arg(long = "witness-ref")]
+        witness_refs: Vec<String>,
+
+        /// Optional started-at timestamp (RFC3339)
+        #[arg(long)]
+        started_at: Option<String>,
+
+        /// Optional finished-at timestamp (RFC3339; default now)
+        #[arg(long)]
+        finished_at: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Query deterministic trajectory projections
+    Query {
+        /// Harness trajectory JSONL path
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        path: String,
+
+        /// Projection mode
+        #[arg(long, default_value = "latest")]
+        mode: HarnessTrajectoryModeArg,
+
+        /// Maximum rows returned
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum HarnessTrajectoryModeArg {
+    #[value(name = "latest")]
+    Latest,
+    #[value(name = "failed")]
+    Failed,
+    #[value(name = "retry-needed")]
+    RetryNeeded,
 }
 
 #[derive(Subcommand, Clone, Debug)]

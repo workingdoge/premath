@@ -3,6 +3,7 @@ pub mod coherence_check;
 pub mod dep;
 pub mod harness_feature;
 pub mod harness_session;
+pub mod harness_trajectory;
 pub mod init;
 pub mod instruction_check;
 pub mod instruction_witness;

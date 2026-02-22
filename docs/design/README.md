@@ -24,6 +24,8 @@ Authority rule:
   contract for fresh-context restartability.
 - `TUSK-HARNESS-FEATURE-LEDGER.md`: typed per-feature progress ledger, closure
   checks, and deterministic next-feature selection.
+- `TUSK-HARNESS-TRAJECTORY.md`: append-only step trajectory rows with
+  witness-linked deterministic query projections.
 
 ### Squeak/SigPi transport + runtime placement (between worlds)
 

@@ -5,7 +5,10 @@ mod commands;
 mod support;
 
 use clap::Parser;
-use cli::{Cli, Commands, HarnessFeatureCommands, HarnessSessionCommands, RefCommands};
+use cli::{
+    Cli, Commands, HarnessFeatureCommands, HarnessSessionCommands, HarnessTrajectoryCommands,
+    RefCommands,
+};
 
 fn main() {
     let cli = Cli::parse();
@@ -288,6 +291,40 @@ fn main() {
             HarnessFeatureCommands::Next { path, json } => {
                 commands::harness_feature::run_next(path, json)
             }
+        },
+
+        Commands::HarnessTrajectory { command } => match command {
+            HarnessTrajectoryCommands::Append {
+                path,
+                step_id,
+                issue_id,
+                action,
+                result_class,
+                instruction_refs,
+                witness_refs,
+                started_at,
+                finished_at,
+                json,
+            } => {
+                commands::harness_trajectory::run_append(commands::harness_trajectory::AppendArgs {
+                    path,
+                    step_id,
+                    issue_id,
+                    action,
+                    result_class,
+                    instruction_refs,
+                    witness_refs,
+                    started_at,
+                    finished_at,
+                    json,
+                })
+            }
+            HarnessTrajectoryCommands::Query {
+                path,
+                mode,
+                limit,
+                json,
+            } => commands::harness_trajectory::run_query(path, mode, limit, json),
         },
 
         Commands::Dep { command } => commands::dep::run(command),

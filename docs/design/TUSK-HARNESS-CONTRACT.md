@@ -109,18 +109,16 @@ Trajectory records are an operational lane, not semantic authority.
 | `step` mutation authority | `instruction-linked` mutation policy in MCP + instruction witness checks | present |
 | `step` deterministic verification | `ci-required-attested` (`run_required_checks` + verify/decide) | present |
 | `stop` lease + handoff | `harness-session` artifact + `issue_claim` / `issue_lease_renew` / `issue_lease_release` | partial |
-| trajectory projection | Observation Surface v0 (`observe-build` / `observe`) | partial |
+| trajectory projection | `harness-trajectory` rows + deterministic `query` projection (`latest`/`failed`/`retry-needed`) | present |
 | replayable work-memory | issue/event replay + witness artifacts | present |
 
 ## 8. Gaps (remaining)
 
-1. No harness-specific trajectory row schema (step-level, witness-linked).
-2. No single documented retry-policy table bound to failure classes.
+1. No single documented retry-policy table bound to failure classes.
 
 ## 9. Implementation slice plan (no math generalization required)
 
-1. Add step-trajectory append log + projection query (witness-ref linked).
-2. Add deterministic retry-policy table in control-plane docs + enforcement
+1. Add deterministic retry-policy table in control-plane docs + enforcement
    hook in pipeline wrappers.
 
 Each slice should ship with:
@@ -135,6 +133,7 @@ Each slice should ship with:
 - Runtime shape: `docs/design/TUSK-ARCHITECTURE.md`
 - Harness handoff artifact: `docs/design/TUSK-HARNESS-SESSION.md`
 - Harness feature ledger: `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
+- Harness trajectory rows: `docs/design/TUSK-HARNESS-TRAJECTORY.md`
 - Identity/refinement/witness details:
   - `docs/design/TUSK-IDENTITY.md`
   - `docs/design/TUSK-REFINEMENT.md`

@@ -2183,3 +2183,142 @@ fn harness_feature_ledger_complete_and_next_json_smoke() {
     assert_eq!(next_closed["closureComplete"], true);
     assert_eq!(next_closed["featureCount"], 2);
 }
+
+#[test]
+fn harness_trajectory_append_and_query_json_smoke() {
+    let tmp = TempDirGuard::new("harness-trajectory");
+    let path = tmp.path().join("harness-trajectory.jsonl");
+
+    let out_append_1 = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("append"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--step-id"),
+        OsString::from("step-1"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-1"),
+        OsString::from("--action"),
+        OsString::from("run.check"),
+        OsString::from("--result-class"),
+        OsString::from("transient_failure"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w1.json"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w1.json"),
+        OsString::from("--finished-at"),
+        OsString::from("2026-02-22T00:01:00Z"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_append_1);
+    let append_1 = parse_json_stdout(&out_append_1);
+    assert_eq!(append_1["action"], "harness-trajectory.append");
+    assert_eq!(append_1["row"]["stepKind"], "premath.harness.step.v1");
+    assert_eq!(
+        append_1["row"]["witnessRefs"],
+        serde_json::json!(["artifacts/ciwitness/w1.json"])
+    );
+
+    let out_append_2 = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("append"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--step-id"),
+        OsString::from("step-2"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-2"),
+        OsString::from("--action"),
+        OsString::from("run.check"),
+        OsString::from("--result-class"),
+        OsString::from("policy_reject"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w2.json"),
+        OsString::from("--finished-at"),
+        OsString::from("2026-02-22T00:02:00Z"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_append_2);
+
+    let out_append_3 = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("append"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--step-id"),
+        OsString::from("step-3"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-3"),
+        OsString::from("--action"),
+        OsString::from("apply.patch"),
+        OsString::from("--result-class"),
+        OsString::from("accepted"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w3.json"),
+        OsString::from("--finished-at"),
+        OsString::from("2026-02-22T00:03:00Z"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_append_3);
+
+    let out_latest = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("query"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("latest"),
+        OsString::from("--limit"),
+        OsString::from("2"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_latest);
+    let latest = parse_json_stdout(&out_latest);
+    assert_eq!(latest["action"], "harness-trajectory.query");
+    assert_eq!(
+        latest["projectionKind"],
+        "premath.harness.trajectory.projection.v1"
+    );
+    assert_eq!(latest["mode"], "latest");
+    assert_eq!(latest["count"], 2);
+    assert_eq!(latest["totalCount"], 3);
+    assert_eq!(latest["failedCount"], 2);
+    assert_eq!(latest["retryNeededCount"], 1);
+    assert_eq!(latest["items"][0]["stepId"], "step-3");
+    assert_eq!(latest["items"][1]["stepId"], "step-2");
+
+    let out_failed = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("query"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("failed"),
+        OsString::from("--limit"),
+        OsString::from("10"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_failed);
+    let failed = parse_json_stdout(&out_failed);
+    assert_eq!(failed["mode"], "failed");
+    assert_eq!(failed["count"], 2);
+    assert_eq!(failed["items"][0]["stepId"], "step-2");
+    assert_eq!(failed["items"][1]["stepId"], "step-1");
+
+    let out_retry = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("query"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("retry-needed"),
+        OsString::from("--limit"),
+        OsString::from("10"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_retry);
+    let retry = parse_json_stdout(&out_retry);
+    assert_eq!(retry["mode"], "retry_needed");
+    assert_eq!(retry["count"], 1);
+    assert_eq!(retry["items"][0]["stepId"], "step-1");
+}
