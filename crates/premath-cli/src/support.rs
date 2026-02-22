@@ -1,17 +1,83 @@
-use premath_bd::{DepType, MemoryStore};
+use premath_bd::{DepType, Issue, MemoryStore, store_snapshot_ref};
 use premath_jj::JjClient;
 use premath_kernel::{CoherenceLevel, ContextId, FiberSignature};
 use premath_surreal::QueryCache;
-use serde_json::json;
+use serde::{Deserialize, Serialize};
+use serde_json::{Value, json};
 use std::collections::{BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 
 pub const CONFLICT_SAMPLE_LIMIT: usize = 25;
 pub const DEFAULT_ISSUES_PATH: &str = ".premath/issues.jsonl";
+pub const ISSUE_QUERY_PROJECTION_SCHEMA: u64 = 1;
+pub const ISSUE_QUERY_PROJECTION_KIND: &str = "premath.surreal.issue_projection.v0";
 const DEFAULT_ISSUES_SAMPLE_PATH: &str = ".premath/issues.jsonl.new";
 const LEGACY_ISSUES_PATH: &str = ".beads/issues.jsonl";
 const LEGACY_ISSUES_SAMPLE_PATH: &str = ".beads/issues.jsonl.new";
+
+#[derive(Debug, Clone)]
+pub struct BackendStatus {
+    pub issues_path: PathBuf,
+    pub repo_root: PathBuf,
+    pub projection_path: PathBuf,
+    pub issues_exists: bool,
+    pub authority_snapshot_ref: Option<String>,
+    pub authority_error: Option<String>,
+    pub projection_exists: bool,
+    pub projection_state: &'static str,
+    pub projection_schema: Option<u64>,
+    pub projection_kind: Option<String>,
+    pub projection_source_issues_path: Option<String>,
+    pub projection_source_path_matches_authority: Option<bool>,
+    pub projection_source_snapshot_ref: Option<String>,
+    pub projection_snapshot_matches_payload: Option<bool>,
+    pub projection_snapshot_matches_authority: Option<bool>,
+    pub projection_error: Option<String>,
+    pub jj_state: &'static str,
+    pub jj_available: bool,
+    pub jj_repo_root: Option<String>,
+    pub jj_head_change_id: Option<String>,
+    pub jj_error: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueQueryProjectionPayload {
+    pub schema: u64,
+    pub kind: String,
+    pub source_issues_path: String,
+    #[serde(default)]
+    pub source_snapshot_ref: Option<String>,
+    pub generated_at_unix_ms: u128,
+    pub issue_count: usize,
+    pub issues: Vec<Issue>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct IssueQueryProjectionAnalysis {
+    pub schema: Option<u64>,
+    pub kind: Option<String>,
+    pub source_issues_path: Option<String>,
+    pub source_snapshot_ref: Option<String>,
+    pub source_snapshot_ref_matches_payload: Option<bool>,
+    pub payload_snapshot_ref: Option<String>,
+    pub store: Option<MemoryStore>,
+    pub error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectionPayloadMetadata {
+    #[serde(default)]
+    schema: Option<u64>,
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default)]
+    source_issues_path: Option<String>,
+    #[serde(default)]
+    source_snapshot_ref: Option<String>,
+}
 
 pub fn parse_level_or_exit(level: &str) -> CoherenceLevel {
     level.parse().unwrap_or_else(|e| {
@@ -131,6 +197,269 @@ pub fn maybe_jj_snapshot(repo: &str) -> Option<serde_json::Value> {
     }))
 }
 
+pub fn collect_backend_status(
+    issues_path: impl AsRef<Path>,
+    repo_root: impl AsRef<Path>,
+    projection_path: impl AsRef<Path>,
+) -> BackendStatus {
+    let issues_path = issues_path.as_ref().to_path_buf();
+    let repo_root = repo_root.as_ref().to_path_buf();
+    let projection_path = projection_path.as_ref().to_path_buf();
+
+    let issues_exists = issues_path.exists();
+    let projection_exists = projection_path.exists();
+    let mut authority_snapshot_ref: Option<String> = None;
+    let mut authority_error: Option<String> = None;
+    if issues_exists {
+        match MemoryStore::load_jsonl(&issues_path) {
+            Ok(store) => authority_snapshot_ref = Some(store_snapshot_ref(&store)),
+            Err(err) => authority_error = Some(err.to_string()),
+        }
+    }
+
+    let mut projection_state: &'static str = if projection_exists {
+        "unknown"
+    } else {
+        "missing"
+    };
+    let mut projection_schema: Option<u64> = None;
+    let mut projection_kind: Option<String> = None;
+    let mut projection_source_issues_path: Option<String> = None;
+    let mut projection_source_path_matches_authority: Option<bool> = None;
+    let mut projection_source_snapshot_ref: Option<String> = None;
+    let mut projection_snapshot_matches_payload: Option<bool> = None;
+    let mut projection_snapshot_matches_authority: Option<bool> = None;
+    let mut projection_error: Option<String> = None;
+
+    if projection_exists {
+        let projection = analyze_issue_query_projection(&projection_path);
+        projection_schema = projection.schema;
+        projection_kind = projection.kind;
+        projection_source_issues_path = projection.source_issues_path;
+        projection_source_snapshot_ref = projection.source_snapshot_ref;
+        projection_snapshot_matches_payload = projection.source_snapshot_ref_matches_payload;
+
+        if let Some(err) = projection.error {
+            projection_state = "invalid";
+            projection_error = Some(err);
+        } else {
+            if let Some(source_path) = projection_source_issues_path.as_deref() {
+                projection_source_path_matches_authority =
+                    Some(paths_equivalent(Path::new(source_path), &issues_path));
+            }
+            if let (Some(source_ref), Some(authority_ref)) = (
+                projection_source_snapshot_ref.as_deref(),
+                authority_snapshot_ref.as_deref(),
+            ) {
+                projection_snapshot_matches_authority = Some(source_ref == authority_ref);
+            }
+
+            projection_state = match (
+                projection_source_path_matches_authority,
+                projection_snapshot_matches_authority,
+            ) {
+                (Some(false), _) | (_, Some(false)) => "stale",
+                (Some(true), Some(true)) => "fresh",
+                _ => "unknown",
+            };
+        }
+    }
+
+    let jj_available = JjClient::is_available();
+    let mut jj_repo_root: Option<String> = None;
+    let mut jj_head_change_id: Option<String> = None;
+    let mut jj_error: Option<String> = None;
+
+    if jj_available {
+        match JjClient::discover(&repo_root) {
+            Ok(client) => {
+                jj_repo_root = Some(client.repo_root().display().to_string());
+                match client.current_change_id() {
+                    Ok(change_id) => {
+                        jj_head_change_id = Some(change_id);
+                    }
+                    Err(err) => {
+                        jj_error = Some(err.to_string());
+                    }
+                }
+            }
+            Err(err) => {
+                jj_error = Some(err.to_string());
+            }
+        }
+    }
+
+    let jj_state = if !jj_available {
+        "unavailable"
+    } else if jj_error.is_none() {
+        "ready"
+    } else {
+        "error"
+    };
+
+    BackendStatus {
+        issues_path,
+        repo_root,
+        projection_path,
+        issues_exists,
+        authority_snapshot_ref,
+        authority_error,
+        projection_exists,
+        projection_state,
+        projection_schema,
+        projection_kind,
+        projection_source_issues_path,
+        projection_source_path_matches_authority,
+        projection_source_snapshot_ref,
+        projection_snapshot_matches_payload,
+        projection_snapshot_matches_authority,
+        projection_error,
+        jj_state,
+        jj_available,
+        jj_repo_root,
+        jj_head_change_id,
+        jj_error,
+    }
+}
+
+pub fn analyze_issue_query_projection(path: &Path) -> IssueQueryProjectionAnalysis {
+    let mut analysis = IssueQueryProjectionAnalysis::default();
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            analysis.error = Some(format!("failed to read {}: {err}", path.display()));
+            return analysis;
+        }
+    };
+
+    if let Ok(metadata) = serde_json::from_slice::<ProjectionPayloadMetadata>(&bytes) {
+        analysis.schema = metadata.schema;
+        analysis.kind = metadata.kind;
+        analysis.source_issues_path = metadata.source_issues_path;
+        analysis.source_snapshot_ref = metadata.source_snapshot_ref;
+    }
+
+    let payload = match serde_json::from_slice::<IssueQueryProjectionPayload>(&bytes) {
+        Ok(payload) => payload,
+        Err(err) => {
+            analysis.error = Some(format!("failed to parse {}: {err}", path.display()));
+            return analysis;
+        }
+    };
+
+    analysis.schema = Some(payload.schema);
+    analysis.kind = Some(payload.kind.clone());
+    analysis.source_issues_path = Some(payload.source_issues_path.clone());
+    analysis.source_snapshot_ref = payload.source_snapshot_ref.clone();
+
+    if payload.schema != ISSUE_QUERY_PROJECTION_SCHEMA
+        || payload.kind.as_str() != ISSUE_QUERY_PROJECTION_KIND
+    {
+        analysis.error = Some(format!(
+            "projection metadata mismatch (expected schema={} kind={}, actual schema={:?} kind={:?})",
+            ISSUE_QUERY_PROJECTION_SCHEMA,
+            ISSUE_QUERY_PROJECTION_KIND,
+            analysis.schema,
+            analysis.kind
+        ));
+        return analysis;
+    }
+
+    let store = match MemoryStore::from_issues(payload.issues) {
+        Ok(store) => store,
+        Err(err) => {
+            analysis.error = Some(format!(
+                "failed to hydrate projection payload issues: {err}"
+            ));
+            return analysis;
+        }
+    };
+    let payload_snapshot_ref = store_snapshot_ref(&store);
+    analysis.payload_snapshot_ref = Some(payload_snapshot_ref.clone());
+    analysis.store = Some(store);
+
+    if let Some(source_ref) = analysis.source_snapshot_ref.as_deref() {
+        let matches_payload = source_ref == payload_snapshot_ref;
+        analysis.source_snapshot_ref_matches_payload = Some(matches_payload);
+        if !matches_payload {
+            analysis.error = Some(format!(
+                "projection payload snapshot mismatch (sourceSnapshotRef={}, payloadSnapshotRef={})",
+                source_ref, payload_snapshot_ref
+            ));
+        }
+    }
+
+    analysis
+}
+
+pub fn backend_status_payload(
+    action: &str,
+    status: &BackendStatus,
+    query_backend: Option<&str>,
+) -> Value {
+    let mut payload = json!({
+        "action": action,
+        "issuesPath": status.issues_path.display().to_string(),
+        "repoRoot": status.repo_root.display().to_string(),
+        "canonicalMemory": {
+            "kind": "jsonl",
+            "path": status.issues_path.display().to_string(),
+            "exists": status.issues_exists,
+            "snapshotRef": status.authority_snapshot_ref.clone(),
+            "error": status.authority_error.clone()
+        },
+        "queryProjection": {
+            "kind": ISSUE_QUERY_PROJECTION_KIND,
+            "path": status.projection_path.display().to_string(),
+            "exists": status.projection_exists,
+            "state": status.projection_state,
+            "schema": status.projection_schema,
+            "projectionKind": status.projection_kind.clone(),
+            "sourceIssuesPath": status.projection_source_issues_path.clone(),
+            "sourcePathMatchesAuthority": status.projection_source_path_matches_authority,
+            "sourceSnapshotRef": status.projection_source_snapshot_ref.clone(),
+            "snapshotRefMatchesProjection": status.projection_snapshot_matches_payload,
+            "snapshotRefMatchesAuthority": status.projection_snapshot_matches_authority,
+            "error": status.projection_error.clone()
+        },
+        "jj": {
+            "state": status.jj_state,
+            "available": status.jj_available,
+            "repoRoot": status.jj_repo_root.clone(),
+            "headChangeId": status.jj_head_change_id.clone(),
+            "error": status.jj_error.clone()
+        }
+    });
+
+    if let Some(query_backend) = query_backend
+        && let Value::Object(ref mut map) = payload
+    {
+        map.insert(
+            "queryBackend".to_string(),
+            Value::String(query_backend.to_string()),
+        );
+    }
+
+    payload
+}
+
+pub fn paths_equivalent(left: &Path, right: &Path) -> bool {
+    if left == right {
+        return true;
+    }
+    normalize_path(left) == normalize_path(right)
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        return fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    }
+    let joined = std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(path);
+    fs::canonicalize(&joined).unwrap_or(joined)
+}
+
 pub fn read_json_file_or_exit<T>(path: &str, label: &str) -> T
 where
     T: serde::de::DeserializeOwned,
@@ -168,4 +497,93 @@ pub fn print_sample_block(header: &str, items: &[String], truncated: usize) {
 
 pub fn yes_no(ok: bool) -> &'static str {
     if ok { "yes" } else { "no" }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_dir(prefix: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("premath-support-{prefix}-{nonce}"));
+        fs::create_dir_all(&dir).expect("temp dir should create");
+        dir
+    }
+
+    #[test]
+    fn analyze_issue_query_projection_accepts_matching_snapshot_ref() {
+        let root = temp_dir("projection-analysis-ok");
+        let projection_path = root.join("projection.json");
+        let store = MemoryStore::default();
+        let snapshot_ref = store_snapshot_ref(&store);
+        let payload = IssueQueryProjectionPayload {
+            schema: ISSUE_QUERY_PROJECTION_SCHEMA,
+            kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
+            source_issues_path: root.join("issues.jsonl").display().to_string(),
+            source_snapshot_ref: Some(snapshot_ref.clone()),
+            generated_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            issue_count: 0,
+            issues: Vec::new(),
+        };
+        fs::write(
+            &projection_path,
+            serde_json::to_vec_pretty(&payload).expect("payload should serialize"),
+        )
+        .expect("projection should write");
+
+        let analysis = analyze_issue_query_projection(&projection_path);
+        assert_eq!(analysis.schema, Some(ISSUE_QUERY_PROJECTION_SCHEMA));
+        assert_eq!(analysis.kind.as_deref(), Some(ISSUE_QUERY_PROJECTION_KIND));
+        assert_eq!(
+            analysis.source_snapshot_ref.as_deref(),
+            Some(snapshot_ref.as_str())
+        );
+        assert_eq!(
+            analysis.payload_snapshot_ref.as_deref(),
+            Some(snapshot_ref.as_str())
+        );
+        assert_eq!(analysis.source_snapshot_ref_matches_payload, Some(true));
+        assert!(analysis.store.is_some());
+        assert!(analysis.error.is_none());
+    }
+
+    #[test]
+    fn analyze_issue_query_projection_rejects_snapshot_ref_mismatch() {
+        let root = temp_dir("projection-analysis-mismatch");
+        let projection_path = root.join("projection.json");
+        let payload = IssueQueryProjectionPayload {
+            schema: ISSUE_QUERY_PROJECTION_SCHEMA,
+            kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
+            source_issues_path: root.join("issues.jsonl").display().to_string(),
+            source_snapshot_ref: Some("iss1_invalid_projection_ref".to_string()),
+            generated_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            issue_count: 0,
+            issues: Vec::new(),
+        };
+        fs::write(
+            &projection_path,
+            serde_json::to_vec_pretty(&payload).expect("payload should serialize"),
+        )
+        .expect("projection should write");
+
+        let analysis = analyze_issue_query_projection(&projection_path);
+        assert_eq!(analysis.source_snapshot_ref_matches_payload, Some(false));
+        assert!(
+            analysis
+                .error
+                .as_deref()
+                .expect("analysis should contain mismatch error")
+                .contains("payload snapshot mismatch")
+        );
+    }
 }

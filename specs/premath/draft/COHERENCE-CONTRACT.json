@@ -32,6 +32,10 @@
       "description": "Ensure base/fibre transport fixtures satisfy identity, composition, and naturality equalities under deterministic canonicalization."
     },
     {
+      "id": "span_square_commutation",
+      "description": "Ensure pipeline/base-change span-square witnesses are typed, digest-stable, and commute under accepted squares."
+    },
+    {
       "id": "coverage_base_change",
       "description": "Ensure admissible covers remain stable under base-change pullbacks over context refinements."
     },
@@ -42,6 +46,22 @@
     {
       "id": "glue_or_witness_contractibility",
       "description": "Ensure descent outcomes are deterministic glue-or-obstruction witnesses (never neither, never both)."
+    },
+    {
+      "id": "cwf_substitution_identity",
+      "description": "Ensure strict CwF substitution identity equalities hold for types and terms."
+    },
+    {
+      "id": "cwf_substitution_composition",
+      "description": "Ensure strict CwF substitution composition equalities hold for types and terms."
+    },
+    {
+      "id": "cwf_comprehension_beta",
+      "description": "Ensure strict CwF comprehension beta equalities hold for generic term substitution."
+    },
+    {
+      "id": "cwf_comprehension_eta",
+      "description": "Ensure strict CwF comprehension eta equalities hold for substitution reconstruction."
     }
   ],
   "conditionalCapabilityDocs": [
@@ -108,6 +128,9 @@
     "bidirSpecPath": "specs/premath/draft/BIDIR-DESCENT.md",
     "bidirSpecSectionStart": "## 6. Obligation kinds (normative)",
     "bidirSpecSectionEnd": "### 6.1 Obligation record format (required)",
+    "coherenceSpecPath": "specs/premath/draft/PREMATH-COHERENCE.md",
+    "coherenceSpecObligationStart": "## 3. Obligation Set (normative)",
+    "coherenceSpecObligationEnd": "## 4. Obligation Semantics",
     "obligationRegistryKind": "premath.obligation_gate_registry.v1",
     "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6",
     "transportFixtureRootPath": "tests/conformance/fixtures/coherence-transport",

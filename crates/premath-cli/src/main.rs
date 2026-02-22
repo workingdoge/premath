@@ -147,6 +147,30 @@ fn main() {
             json,
         ),
 
+        Commands::RequiredWitness { runtime, json } => {
+            commands::required_witness::run(runtime, json)
+        }
+
+        Commands::RequiredProjection { input, json } => {
+            commands::required_projection::run(input, json)
+        }
+
+        Commands::RequiredDelta { input, json } => commands::required_delta::run(input, json),
+
+        Commands::RequiredGateRef { input, json } => commands::required_gate_ref::run(input, json),
+
+        Commands::RequiredWitnessVerify { input, json } => {
+            commands::required_witness_verify::run(input, json)
+        }
+
+        Commands::RequiredWitnessDecide { input, json } => {
+            commands::required_witness_decide::run(input, json)
+        }
+
+        Commands::RequiredDecisionVerify { input, json } => {
+            commands::required_decision_verify::run(input, json)
+        }
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
 
         Commands::Ref { command } => match command {

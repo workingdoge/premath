@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -19,17 +20,21 @@ from change_projection import (
     project_required_checks,
     projection_plan_payload,
 )
-from control_plane_contract import REQUIRED_WITNESS_KIND
 from delta_snapshot import (
     default_delta_snapshot_path,
     make_delta_snapshot_payload,
     write_delta_snapshot,
 )
-from gate_witness_envelope import (
-    make_gate_witness_envelope,
-    sanitize_check_id,
-    stable_sha256,
-)
+from required_gate_ref_client import RequiredGateRefError, run_required_gate_ref
+from required_witness_client import RequiredWitnessError, run_required_witness
+
+_SAFE_CHECK_ID_RE = re.compile(r"[^A-Za-z0-9._-]+")
+
+
+def _sanitize_check_id(check_id: str) -> str:
+    sanitized = _SAFE_CHECK_ID_RE.sub("_", check_id.strip())
+    sanitized = sanitized.strip("._")
+    return sanitized or "check"
 
 
 def parse_args() -> argparse.Namespace:
@@ -78,7 +83,7 @@ def _gate_artifact_path(
 ) -> Path:
     gate_dir = out_dir / "gates" / projection_digest
     gate_dir.mkdir(parents=True, exist_ok=True)
-    file_name = f"{index + 1:02d}-{sanitize_check_id(check_id)}.json"
+    file_name = f"{index + 1:02d}-{_sanitize_check_id(check_id)}.json"
     return gate_dir / file_name
 
 
@@ -90,7 +95,7 @@ def _gate_source_path(
 ) -> Path:
     gate_dir = out_dir / "gates" / projection_digest
     gate_dir.mkdir(parents=True, exist_ok=True)
-    file_name = f"{index + 1:02d}-{sanitize_check_id(check_id)}.source"
+    file_name = f"{index + 1:02d}-{_sanitize_check_id(check_id)}.source"
     return gate_dir / file_name
 
 
@@ -113,39 +118,6 @@ def _load_gate_source(path: Path) -> Optional[str]:
     if raw in {"native", "fallback"}:
         return raw
     return None
-
-
-def _gate_ref_from_payload(
-    out_dir: Path,
-    gate_path: Path,
-    check_id: str,
-    payload: Dict[str, Any],
-    source: str,
-) -> Dict[str, Any]:
-    failure_classes: List[str] = []
-    failures_raw = payload.get("failures")
-    if isinstance(failures_raw, list):
-        for failure in failures_raw:
-            if not isinstance(failure, dict):
-                continue
-            class_name = failure.get("class")
-            if isinstance(class_name, str) and class_name.strip():
-                failure_classes.append(class_name.strip())
-
-    ref: Dict[str, Any] = {
-        "checkId": check_id,
-        "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
-        "sha256": stable_sha256(payload),
-        "source": source,
-        "failureClasses": sorted(set(failure_classes)),
-    }
-    if "runId" in payload:
-        ref["runId"] = payload.get("runId")
-    if "witnessKind" in payload:
-        ref["witnessKind"] = payload.get("witnessKind")
-    if "result" in payload:
-        ref["result"] = payload.get("result")
-    return ref
 
 
 def run_check_with_witness(
@@ -199,17 +171,27 @@ def run_check_with_witness(
                 source = source_candidate
         if source is None:
             source = "native"
-        row["nativeGateWitnessRef"] = _gate_ref_from_payload(
-            out_dir=out_dir,
-            gate_path=gate_path,
-            check_id=check_id,
-            payload=payload,
-            source=source,
-        )
+        try:
+            gate_ref_payload = run_required_gate_ref(
+                root,
+                {
+                    "checkId": check_id,
+                    "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
+                    "source": source,
+                    "gatePayload": payload,
+                },
+            )
+        except RequiredGateRefError as exc:
+            raise ValueError(f"{exc.failure_class}: {exc.reason}") from exc
+        gate_ref = gate_ref_payload.get("gateWitnessRef")
+        if not isinstance(gate_ref, dict):
+            raise ValueError("required-gate-ref payload missing gateWitnessRef")
+        row["nativeGateWitnessRef"] = gate_ref
     return row
 
 
 def emit_gate_witness(
+    root: Path,
     out_dir: Path,
     projection_digest: str,
     policy_digest: str,
@@ -223,45 +205,42 @@ def emit_gate_witness(
     ctx_ref = from_ref or "ctx:unknown"
     data_head_ref = to_ref or "HEAD"
 
-    envelope = make_gate_witness_envelope(
-        check_id=check_id,
-        exit_code=exit_code,
-        projection_digest=projection_digest,
-        policy_digest=policy_digest,
-        ctx_ref=ctx_ref,
-        data_head_ref=data_head_ref,
-    )
-
     gate_path = _gate_artifact_path(
         out_dir=out_dir,
         projection_digest=projection_digest,
         check_id=check_id,
         index=index,
     )
+    try:
+        gate_ref_payload = run_required_gate_ref(
+            root,
+            {
+                "checkId": check_id,
+                "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
+                "source": "fallback",
+                "fallback": {
+                    "exitCode": exit_code,
+                    "projectionDigest": projection_digest,
+                    "policyDigest": policy_digest,
+                    "ctxRef": ctx_ref,
+                    "dataHeadRef": data_head_ref,
+                },
+            },
+        )
+    except RequiredGateRefError as exc:
+        raise ValueError(f"{exc.failure_class}: {exc.reason}") from exc
+
+    gate_payload = gate_ref_payload.get("gatePayload")
+    if not isinstance(gate_payload, dict):
+        raise ValueError("required-gate-ref fallback payload missing gatePayload")
+    gate_ref = gate_ref_payload.get("gateWitnessRef")
+    if not isinstance(gate_ref, dict):
+        raise ValueError("required-gate-ref fallback payload missing gateWitnessRef")
+
     with gate_path.open("w", encoding="utf-8") as f:
-        json.dump(envelope, f, indent=2, ensure_ascii=False)
+        json.dump(gate_payload, f, indent=2, ensure_ascii=False)
         f.write("\n")
-
-    failure_classes: List[str] = []
-    failures_raw = envelope.get("failures")
-    if isinstance(failures_raw, list):
-        for failure in failures_raw:
-            if not isinstance(failure, dict):
-                continue
-            class_name = failure.get("class")
-            if isinstance(class_name, str) and class_name.strip():
-                failure_classes.append(class_name.strip())
-
-    return {
-        "checkId": check_id,
-        "artifactRelPath": gate_path.relative_to(out_dir).as_posix(),
-        "sha256": stable_sha256(envelope),
-        "source": "fallback",
-        "runId": envelope["runId"],
-        "witnessKind": envelope["witnessKind"],
-        "result": envelope["result"],
-        "failureClasses": sorted(set(failure_classes)),
-    }
+    return gate_ref
 
 
 def main() -> int:
@@ -301,18 +280,22 @@ def main() -> int:
     results: List[Dict[str, Any]] = []
     for idx, check_id in enumerate(required_checks):
         print(f"[ci-required] running check: {check_id}")
-        results.append(
-            run_check_with_witness(
-                root=root,
-                out_dir=out_dir,
-                check_id=check_id,
-                projection_digest=plan["projectionDigest"],
-                policy_digest=plan["projectionPolicy"],
-                from_ref=from_ref,
-                to_ref=to_ref,
-                index=idx,
+        try:
+            results.append(
+                run_check_with_witness(
+                    root=root,
+                    out_dir=out_dir,
+                    check_id=check_id,
+                    projection_digest=plan["projectionDigest"],
+                    policy_digest=plan["projectionPolicy"],
+                    from_ref=from_ref,
+                    to_ref=to_ref,
+                    index=idx,
+                )
             )
-        )
+        except ValueError as exc:
+            print(f"[error] required gate ref build failed for {check_id}: {exc}", file=sys.stderr)
+            return 2
 
     gate_witness_refs: List[Dict[str, Any]] = []
     for idx, check_row in enumerate(results):
@@ -321,47 +304,36 @@ def main() -> int:
             gate_witness_refs.append(native_ref)
             continue
 
-        gate_witness_refs.append(
-            emit_gate_witness(
-                out_dir=out_dir,
-                projection_digest=plan["projectionDigest"],
-                policy_digest=plan["projectionPolicy"],
-                from_ref=from_ref,
-                to_ref=to_ref,
-                check_row=check_row,
-                index=idx,
+        try:
+            gate_witness_refs.append(
+                emit_gate_witness(
+                    root=root,
+                    out_dir=out_dir,
+                    projection_digest=plan["projectionDigest"],
+                    policy_digest=plan["projectionPolicy"],
+                    from_ref=from_ref,
+                    to_ref=to_ref,
+                    check_row=check_row,
+                    index=idx,
+                )
             )
-        )
+        except ValueError as exc:
+            print(
+                f"[error] required gate fallback synthesis failed for {check_row.get('checkId')}: {exc}",
+                file=sys.stderr,
+            )
+            return 2
 
     failed = [row for row in results if row["exitCode"] != 0]
-    verdict_class = "accepted" if not failed else "rejected"
-    operational_failure_classes = ["check_failed"] if failed else []
-    semantic_failure_classes: List[str] = []
-    for ref in gate_witness_refs:
-        classes_raw = ref.get("failureClasses")
-        if not isinstance(classes_raw, list):
-            continue
-        for class_name in classes_raw:
-            if isinstance(class_name, str) and class_name.strip():
-                semantic_failure_classes.append(class_name.strip())
-    semantic_failure_classes = sorted(set(semantic_failure_classes))
-    failure_classes = sorted(set(operational_failure_classes + semantic_failure_classes))
 
     finished_at = datetime.now(timezone.utc)
-    witness = {
-        "ciSchema": 1,
-        "witnessKind": REQUIRED_WITNESS_KIND,
+    runtime_payload = {
         "projectionPolicy": plan["projectionPolicy"],
         "projectionDigest": plan["projectionDigest"],
         "changedPaths": plan["changedPaths"],
-        "requiredChecks": required_checks,
-        "executedChecks": [row["checkId"] for row in results],
+        "requiredChecks": list(required_checks),
         "results": results,
         "gateWitnessRefs": gate_witness_refs,
-        "verdictClass": verdict_class,
-        "operationalFailureClasses": operational_failure_classes,
-        "semanticFailureClasses": semantic_failure_classes,
-        "failureClasses": failure_classes,
         "docsOnly": plan["docsOnly"],
         "reasons": plan["reasons"],
         "deltaSource": plan["deltaSource"],
@@ -376,6 +348,14 @@ def main() -> int:
         "runFinishedAt": finished_at.isoformat(),
         "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
     }
+    try:
+        witness = run_required_witness(root, runtime_payload)
+    except RequiredWitnessError as exc:
+        print(
+            f"[error] required witness build failed: {exc.failure_class}: {exc.reason}",
+            file=sys.stderr,
+        )
+        return 2
 
     out_path = out_dir / f"{plan['projectionDigest']}.json"
     with out_path.open("w", encoding="utf-8") as f:
@@ -398,7 +378,7 @@ def main() -> int:
     print(f"[ci-required] latest witness: {latest_path}")
     print(f"[ci-required] latest delta: {delta_snapshot_path}")
 
-    if verdict_class == "rejected" and not args.allow_failure:
+    if witness.get("verdictClass") == "rejected" and not args.allow_failure:
         return 1
     return 0
 

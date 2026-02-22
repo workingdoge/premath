@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "glue_or_witness_contractibility",
+  "semanticScenarioId": "glue_or_witness_permuted_glue_accept",
+  "profile": "external",
+  "artifacts": {
+    "descent": {
+      "locals": [
+        {
+          "value": {
+            "term": "a"
+          },
+          "id": "s2"
+        },
+        {
+          "value": {
+            "term": "a"
+          },
+          "id": "s1"
+        }
+      ],
+      "compatibilityWitnesses": [
+        {
+          "witnessRef": "wit_overlap_12",
+          "overlap": "s1_s2"
+        }
+      ],
+      "glue": {
+        "value": {
+          "term": "a_global"
+        },
+        "id": "g"
+      }
+    }
+  }
+}

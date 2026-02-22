@@ -172,6 +172,211 @@ fn write_instruction_runtime_input(dir: &Path, instruction_ref: &str, failed: bo
     runtime_path
 }
 
+fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
+    let runtime = serde_json::json!({
+        "projectionPolicy": "ci-topos-v0",
+        "projectionDigest": "proj1_demo",
+        "changedPaths": ["README.md"],
+        "requiredChecks": ["baseline"],
+        "results": [{
+            "checkId": "baseline",
+            "status": if failed { "failed" } else { "passed" },
+            "exitCode": if failed { 1 } else { 0 },
+            "durationMs": 25
+        }],
+        "gateWitnessRefs": [{
+            "checkId": "baseline",
+            "artifactRelPath": "gates/proj1_demo/01-baseline.json",
+            "sha256": "abc123",
+            "source": "native",
+            "runId": "run1_demo",
+            "witnessKind": "gate",
+            "result": if failed { "rejected" } else { "accepted" },
+            "failureClasses": if failed { vec!["descent_failure"] } else { Vec::<&str>::new() }
+        }],
+        "docsOnly": false,
+        "reasons": ["kernel_or_ci_or_governance_change"],
+        "deltaSource": "explicit",
+        "fromRef": "origin/main",
+        "toRef": "HEAD",
+        "policyDigest": "ci-topos-v0",
+        "squeakSiteProfile": "local",
+        "runStartedAt": "2026-02-22T00:00:00Z",
+        "runFinishedAt": "2026-02-22T00:00:01Z",
+        "runDurationMs": 1000
+    });
+    let runtime_path = dir.join("required-runtime.json");
+    fs::write(
+        &runtime_path,
+        serde_json::to_vec_pretty(&runtime).expect("runtime should serialize"),
+    )
+    .expect("required runtime should be written");
+    runtime_path
+}
+
+fn write_required_projection_input(dir: &Path, changed_paths: Vec<&str>) -> PathBuf {
+    let input = serde_json::json!({
+        "changedPaths": changed_paths
+    });
+    let input_path = dir.join("required-projection-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("projection input should serialize"),
+    )
+    .expect("required projection input should be written");
+    input_path
+}
+
+fn write_required_delta_input(
+    dir: &Path,
+    repo_root: &Path,
+    from_ref: Option<&str>,
+    to_ref: Option<&str>,
+) -> PathBuf {
+    let mut input = serde_json::Map::new();
+    input.insert(
+        "repoRoot".to_string(),
+        Value::String(repo_root.to_string_lossy().to_string()),
+    );
+    if let Some(value) = from_ref {
+        input.insert("fromRef".to_string(), Value::String(value.to_string()));
+    }
+    if let Some(value) = to_ref {
+        input.insert("toRef".to_string(), Value::String(value.to_string()));
+    }
+    let input_path = dir.join("required-delta-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&Value::Object(input)).expect("delta input should serialize"),
+    )
+    .expect("required delta input should be written");
+    input_path
+}
+
+fn run_git<I, S>(repo_root: &Path, args: I)
+where
+    I: IntoIterator<Item = S>,
+    S: AsRef<OsStr>,
+{
+    let output = Command::new("git")
+        .arg("-C")
+        .arg(repo_root)
+        .args(args)
+        .output()
+        .expect("git command should execute");
+    if !output.status.success() {
+        panic!(
+            "git command failed with status {:?}\nstdout:\n{}\nstderr:\n{}",
+            output.status.code(),
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+    }
+}
+
+fn write_required_verify_input(dir: &Path, failed: bool) -> PathBuf {
+    let runtime = write_required_runtime_input(dir, failed);
+    let witness_output = run_premath([
+        OsString::from("required-witness"),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&witness_output);
+    let witness = parse_json_stdout(&witness_output);
+    let input = serde_json::json!({
+        "witness": witness,
+        "changedPaths": ["README.md"],
+        "nativeRequiredChecks": []
+    });
+    let input_path = dir.join("required-verify-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("verify input should serialize"),
+    )
+    .expect("required verify input should be written");
+    input_path
+}
+
+fn write_required_decide_input(dir: &Path, failed: bool) -> PathBuf {
+    let runtime = write_required_runtime_input(dir, failed);
+    let witness_output = run_premath([
+        OsString::from("required-witness"),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&witness_output);
+    let witness = parse_json_stdout(&witness_output);
+    let input = serde_json::json!({
+        "witness": witness,
+        "expectedChangedPaths": ["README.md"],
+        "nativeRequiredChecks": []
+    });
+    let input_path = dir.join("required-decide-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("decide input should serialize"),
+    )
+    .expect("required decide input should be written");
+    input_path
+}
+
+fn write_required_decision_verify_input(dir: &Path) -> PathBuf {
+    let decision = serde_json::json!({
+        "decisionKind": "ci.required.decision.v1",
+        "decision": "accept",
+        "projectionDigest": "proj1_demo",
+        "requiredChecks": ["baseline"],
+        "witnessSha256": "witness_hash",
+        "deltaSha256": "delta_hash"
+    });
+    let witness = serde_json::json!({
+        "projectionDigest": "proj1_demo",
+        "requiredChecks": ["baseline"]
+    });
+    let delta = serde_json::json!({
+        "projectionDigest": "proj1_demo",
+        "requiredChecks": ["baseline"]
+    });
+    let input = serde_json::json!({
+        "decision": decision,
+        "witness": witness,
+        "deltaSnapshot": delta,
+        "actualWitnessSha256": "witness_hash",
+        "actualDeltaSha256": "delta_hash"
+    });
+    let input_path = dir.join("required-decision-verify-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("decision verify input should serialize"),
+    )
+    .expect("required decision verify input should be written");
+    input_path
+}
+
+fn write_required_gate_ref_input(dir: &Path) -> PathBuf {
+    let input = serde_json::json!({
+        "checkId": "baseline",
+        "artifactRelPath": "gates/proj1_demo/01-baseline.json",
+        "source": "fallback",
+        "fallback": {
+            "exitCode": 1,
+            "projectionDigest": "proj1_demo",
+            "policyDigest": "ci-topos-v0",
+            "ctxRef": "origin/main",
+            "dataHeadRef": "HEAD"
+        }
+    });
+    let input_path = dir.join("required-gate-ref-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("gate ref input should serialize"),
+    )
+    .expect("required gate ref input should be written");
+    input_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -431,6 +636,214 @@ fn instruction_witness_json_smoke() {
     );
     assert_eq!(payload["verdictClass"], "accepted");
     assert_eq!(payload["failureClasses"], serde_json::json!([]));
+}
+
+#[test]
+fn required_witness_json_smoke() {
+    let tmp = TempDirGuard::new("required-witness-json");
+    let runtime = write_required_runtime_input(tmp.path(), true);
+
+    let output = run_premath([
+        OsString::from("required-witness"),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["witnessKind"], "ci.required.v1");
+    assert_eq!(payload["projectionDigest"], "proj1_demo");
+    assert_eq!(payload["verdictClass"], "rejected");
+    assert_eq!(
+        payload["failureClasses"],
+        serde_json::json!(["check_failed", "descent_failure"])
+    );
+}
+
+#[test]
+fn required_projection_json_smoke() {
+    let tmp = TempDirGuard::new("required-projection-json");
+    let input =
+        write_required_projection_input(tmp.path(), vec!["crates/premath-kernel/src/lib.rs"]);
+
+    let output = run_premath([
+        OsString::from("required-projection"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["projectionPolicy"], "ci-topos-v0");
+    assert_eq!(
+        payload["changedPaths"],
+        serde_json::json!(["crates/premath-kernel/src/lib.rs"])
+    );
+    assert_eq!(
+        payload["requiredChecks"],
+        serde_json::json!(["build", "test", "test-toy", "test-kcir-toy"])
+    );
+    assert_eq!(payload["docsOnly"], false);
+}
+
+#[test]
+fn required_delta_json_smoke() {
+    let tmp = TempDirGuard::new("required-delta-json");
+    let repo_root = tmp.path().join("repo");
+    fs::create_dir_all(&repo_root).expect("repo root should be created");
+
+    run_git(&repo_root, ["init", "--quiet"]);
+    let readme = repo_root.join("README.md");
+    fs::write(&readme, "first line\n").expect("initial readme should be written");
+    run_git(&repo_root, ["add", "README.md"]);
+    run_git(
+        &repo_root,
+        [
+            "-c",
+            "user.name=Premath Test",
+            "-c",
+            "user.email=premath@example.com",
+            "commit",
+            "-m",
+            "init",
+            "--quiet",
+        ],
+    );
+    fs::write(&readme, "first line\nsecond line\n").expect("readme should be updated");
+
+    let input = write_required_delta_input(tmp.path(), &repo_root, Some("HEAD"), Some("HEAD"));
+    let output = run_premath([
+        OsString::from("required-delta"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["deltaKind"], "ci.required.delta.v1");
+    assert_eq!(payload["fromRef"], "HEAD");
+    assert_eq!(payload["toRef"], "HEAD");
+    assert!(
+        payload["source"]
+            .as_str()
+            .expect("source should be a string")
+            .contains("workspace")
+    );
+    assert_eq!(payload["changedPaths"], serde_json::json!(["README.md"]));
+}
+
+#[test]
+fn required_witness_verify_json_smoke() {
+    let tmp = TempDirGuard::new("required-witness-verify-json");
+    let input = write_required_verify_input(tmp.path(), false);
+
+    let output = run_premath([
+        OsString::from("required-witness-verify"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert!(
+        payload["errors"]
+            .as_array()
+            .expect("errors should be an array")
+            .iter()
+            .any(|row| row
+                .as_str()
+                .unwrap_or_default()
+                .contains("projectionDigest mismatch"))
+    );
+    assert!(
+        payload["derived"]["projectionDigest"]
+            .as_str()
+            .expect("projectionDigest should be string")
+            .starts_with("proj1_")
+    );
+    assert_eq!(payload["derived"]["expectedVerdict"], "accepted");
+}
+
+#[test]
+fn required_witness_decide_json_smoke() {
+    let tmp = TempDirGuard::new("required-witness-decide-json");
+    let input = write_required_decide_input(tmp.path(), false);
+
+    let output = run_premath([
+        OsString::from("required-witness-decide"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["decisionKind"], "ci.required.decision.v1");
+    assert_eq!(payload["decision"], "reject");
+    assert_eq!(payload["reasonClass"], "verification_reject");
+    assert!(
+        payload["errors"]
+            .as_array()
+            .expect("errors should be an array")
+            .iter()
+            .any(|row| row
+                .as_str()
+                .unwrap_or_default()
+                .contains("projectionDigest mismatch"))
+    );
+}
+
+#[test]
+fn required_decision_verify_json_smoke() {
+    let tmp = TempDirGuard::new("required-decision-verify-json");
+    let input = write_required_decision_verify_input(tmp.path());
+
+    let output = run_premath([
+        OsString::from("required-decision-verify"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["errors"], serde_json::json!([]));
+    assert_eq!(payload["derived"]["decision"], "accept");
+    assert_eq!(payload["derived"]["projectionDigest"], "proj1_demo");
+    assert_eq!(
+        payload["derived"]["requiredChecks"],
+        serde_json::json!(["baseline"])
+    );
+}
+
+#[test]
+fn required_gate_ref_json_smoke() {
+    let tmp = TempDirGuard::new("required-gate-ref-json");
+    let input = write_required_gate_ref_input(tmp.path());
+
+    let output = run_premath([
+        OsString::from("required-gate-ref"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["gateWitnessRef"]["checkId"], "baseline");
+    assert_eq!(payload["gateWitnessRef"]["source"], "fallback");
+    assert_eq!(payload["gateWitnessRef"]["result"], "rejected");
+    assert_eq!(
+        payload["gateWitnessRef"]["failureClasses"],
+        serde_json::json!(["descent_failure"])
+    );
+    assert_eq!(payload["gatePayload"]["result"], "rejected");
 }
 
 #[test]
@@ -721,6 +1134,46 @@ fn issue_update_and_list_json_smoke() {
     let listed = parse_json_stdout(&out_list);
     assert_eq!(listed["count"], 1);
     assert_eq!(listed["items"][0]["id"], "bd-a");
+}
+
+#[test]
+fn issue_backend_status_json_smoke() {
+    let tmp = TempDirGuard::new("issue-backend-status");
+    let issues = tmp.path().join("issues.jsonl");
+    let projection = tmp.path().join("surreal_issue_cache.json");
+
+    write_sample_issues(&issues);
+    fs::write(&projection, "{}").expect("projection cache should write");
+
+    let out_status = run_premath([
+        OsString::from("issue"),
+        OsString::from("backend-status"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--repo"),
+        tmp.path().as_os_str().to_os_string(),
+        OsString::from("--projection"),
+        projection.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_status);
+
+    let payload = parse_json_stdout(&out_status);
+    assert_eq!(payload["action"], "issue.backend-status");
+    assert_eq!(payload["canonicalMemory"]["kind"], "jsonl");
+    assert_eq!(payload["canonicalMemory"]["exists"], true);
+    assert_eq!(
+        payload["queryProjection"]["kind"],
+        "premath.surreal.issue_projection.v0"
+    );
+    assert_eq!(payload["queryProjection"]["exists"], true);
+    assert_eq!(payload["queryProjection"]["state"], "invalid");
+    assert!(payload["queryProjection"]["error"].is_string());
+    assert!(payload["jj"]["available"].is_boolean());
+    let jj_state = payload["jj"]["state"]
+        .as_str()
+        .expect("jj.state should be a string");
+    assert!(jj_state == "ready" || jj_state == "error" || jj_state == "unavailable");
 }
 
 #[test]
@@ -1018,5 +1471,91 @@ fn coherence_check_json_smoke() {
     assert_eq!(
         payload["result"].as_str().expect("result should be string"),
         "accepted"
+    );
+}
+
+#[test]
+fn coherence_check_rejects_on_coherence_spec_obligation_drift() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let contract_path = repo_root.join("specs/premath/draft/COHERENCE-CONTRACT.json");
+    let coherence_spec_path = repo_root.join("specs/premath/draft/PREMATH-COHERENCE.md");
+
+    let temp = TempDirGuard::new("coherence-obligation-drift");
+    let mutated_spec_path = temp.path().join("PREMATH-COHERENCE.drift.md");
+    let mutated_contract_path = temp.path().join("COHERENCE-CONTRACT.drift.json");
+
+    let coherence_spec =
+        fs::read_to_string(&coherence_spec_path).expect("coherence spec should be readable");
+    let mutated_coherence_spec =
+        coherence_spec.replacen("`cwf_comprehension_eta`", "`cwf_comprehension_eta_typo`", 1);
+    assert_ne!(
+        coherence_spec, mutated_coherence_spec,
+        "expected coherence spec mutation to change content"
+    );
+    fs::write(&mutated_spec_path, mutated_coherence_spec)
+        .expect("mutated coherence spec should be writable");
+
+    let mut contract: Value = serde_json::from_slice(
+        &fs::read(&contract_path).expect("coherence contract should be readable"),
+    )
+    .expect("coherence contract should parse");
+    let surfaces = contract
+        .get_mut("surfaces")
+        .and_then(Value::as_object_mut)
+        .expect("contract surfaces should be object");
+    surfaces.insert(
+        "coherenceSpecPath".to_string(),
+        Value::String(mutated_spec_path.to_string_lossy().to_string()),
+    );
+    fs::write(
+        &mutated_contract_path,
+        serde_json::to_vec_pretty(&contract).expect("mutated contract should serialize"),
+    )
+    .expect("mutated coherence contract should be writable");
+
+    let output = run_premath([
+        OsString::from("coherence-check"),
+        OsString::from("--contract"),
+        mutated_contract_path.as_os_str().to_os_string(),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "coherence-check should return non-zero on rejected witness"
+    );
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["witnessKind"], "premath.coherence.v1");
+    assert_eq!(
+        payload["result"]
+            .as_str()
+            .expect("coherence-check result should be string"),
+        "rejected"
+    );
+
+    let failure_classes = payload["failureClasses"]
+        .as_array()
+        .expect("failureClasses should be array");
+    assert!(
+        failure_classes.iter().any(|item| {
+            item.as_str()
+                == Some("coherence.scope_noncontradiction.coherence_spec_missing_obligation")
+        }),
+        "expected missing-obligation failure class in top-level union"
+    );
+    assert!(
+        failure_classes.iter().any(|item| {
+            item.as_str()
+                == Some("coherence.scope_noncontradiction.coherence_spec_unknown_obligation")
+        }),
+        "expected unknown-obligation failure class in top-level union"
     );
 }

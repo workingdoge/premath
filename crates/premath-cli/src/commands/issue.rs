@@ -1,4 +1,5 @@
 use crate::cli::IssueCommands;
+use crate::support::{backend_status_payload, collect_backend_status};
 use premath_bd::{
     DepType, Issue, MemoryStore, event_stream_ref, migrate_store_to_events, read_events_from_path,
     replay_events, replay_events_from_path, store_snapshot_ref, stores_equivalent,
@@ -42,6 +43,13 @@ pub fn run(command: IssueCommands) {
             issues,
             json,
         } => run_list(status, assignee, issues, json),
+
+        IssueCommands::BackendStatus {
+            issues,
+            repo,
+            projection,
+            json,
+        } => run_backend_status(issues, repo, projection, json),
 
         IssueCommands::Ready { issues, json } => run_ready(issues, json),
 
@@ -222,6 +230,39 @@ fn run_list(status: Option<String>, assignee: Option<String>, issues: String, js
                 "  - {} [{} p{}] {}",
                 issue.id, issue.status, issue.priority, issue.title
             );
+        }
+    }
+}
+
+fn run_backend_status(issues: String, repo: String, projection: String, json_output: bool) {
+    let status = collect_backend_status(
+        PathBuf::from(issues),
+        PathBuf::from(repo),
+        PathBuf::from(projection),
+    );
+
+    if json_output {
+        let payload = backend_status_payload("issue.backend-status", &status, None);
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else {
+        println!("premath issue backend-status");
+        println!("  issues: {}", status.issues_path.display());
+        println!("  issues exists: {}", status.issues_exists);
+        println!("  repo: {}", status.repo_root.display());
+        println!("  projection: {}", status.projection_path.display());
+        println!("  projection exists: {}", status.projection_exists);
+        println!("  jj state: {}", status.jj_state);
+        if let Some(root) = status.jj_repo_root {
+            println!("  jj repo root: {}", root);
+        }
+        if let Some(change_id) = status.jj_head_change_id {
+            println!("  jj head change: {}", change_id);
+        }
+        if let Some(err) = status.jj_error {
+            println!("  jj error: {}", err);
         }
     }
 }

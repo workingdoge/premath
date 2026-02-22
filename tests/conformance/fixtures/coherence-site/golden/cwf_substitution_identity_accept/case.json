@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "cwf_substitution_identity",
+  "artifacts": {
+    "cwf": {
+      "substitution": {
+        "types": [
+          {
+            "label": "A",
+            "direct": {"type": "A_at_Gamma"},
+            "afterIdentity": {"type": "A_at_Gamma"}
+          },
+          {
+            "label": "B",
+            "direct": {"type": "B_at_Gamma"},
+            "afterIdentity": {"type": "B_at_Gamma"}
+          }
+        ],
+        "terms": [
+          {
+            "label": "t",
+            "direct": {"term": "t_at_Gamma"},
+            "afterIdentity": {"term": "t_at_Gamma"}
+          }
+        ]
+      }
+    }
+  }
+}

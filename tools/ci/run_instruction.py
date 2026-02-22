@@ -143,7 +143,7 @@ def main() -> int:
         instruction_id = instruction_id_from_path(instruction_path)
         requested_checks = checked["requestedChecks"]
         execution_decision = checked["executionDecision"]
-        raw_envelope = load_instruction(instruction_path)
+        instruction_digest = checked["instructionDigest"]
     except (InstructionCheckError, ValueError, json.JSONDecodeError) as exc:
         try:
             raw_envelope = load_instruction(instruction_path)
@@ -207,7 +207,6 @@ def main() -> int:
         print(f"[instruction] reject witness written: {reject_path}", file=sys.stderr)
         return 2
 
-    instruction_digest = _normalized_instruction_digest(instruction_path, raw_envelope)
     rel_instruction_ref = str(instruction_path.relative_to(root)) if instruction_path.is_relative_to(root) else str(instruction_path)
 
     results: List[Dict[str, Any]] = []

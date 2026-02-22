@@ -11,12 +11,19 @@ by `mise run ci-required`.
 
 It computes deterministic change projection (`Delta -> requiredChecks`) and
 executes only those checks through `tools/ci/run_gate.sh`.
+Projection + delta detection semantics are core-owned
+(`premath required-projection`, `premath required-delta`);
+`tools/ci/change_projection.py` is a thin adapter over those command surfaces.
 It writes `artifacts/ciwitness/latest-delta.json` as a single-source delta
 snapshot for strict compare phases (`ci-verify-required-strict`,
 `ci-decide-required`).
 For each executed check it requests a per-check gate envelope artifact under
 `artifacts/ciwitness/gates/<projection-digest>/` and links it from
 `ci.required.v1` via `gateWitnessRefs`.
+Gate-ref assembly and fallback gate payload synthesis are core-owned via
+`premath required-gate-ref`.
+It delegates final `ci.required.v1` witness assembly to core
+`premath required-witness` (Python wrapper is transport only).
 `run_gate.sh` prefers a native runner/task artifact when present; otherwise it
 emits a deterministic fallback envelope (`tools/ci/emit_gate_witness.py`).
 Each gate ref includes `source: native|fallback` provenance.
@@ -37,6 +44,8 @@ native-or-fallback gate envelope emission for that check.
 
 `tools/ci/verify_required_witness.py` verifies `ci.required` artifacts against
 deterministic projection semantics.
+It delegates semantic verification to core
+`premath required-witness-verify` via a thin adapter.
 When `gateWitnessRefs` are present, verification also enforces linkage integrity
 (check ordering, artifact digest, and payload/result consistency).
 `--require-native-check <id>` can phase in native-only requirements for selected
@@ -45,6 +54,8 @@ By default it verifies `artifacts/ciwitness/latest-required.json`.
 
 `tools/ci/decide_required.py` emits deterministic merge/promotion decisions from
 verified witness semantics (`accept` or `reject`).
+It delegates decision semantics to core
+`premath required-witness-decide` via a thin adapter.
 `mise run ci-decide-required` writes `artifacts/ciwitness/latest-decision.json`.
 
 `tools/ci/verify_decision.py` verifies the decision attestation chain:
@@ -52,6 +63,10 @@ verified witness semantics (`accept` or `reject`).
 - decision references the current witness and delta snapshot,
 - decision hash bindings (`witnessSha256`, `deltaSha256`) match artifact bytes,
 - projection/required-check semantics align across decision, witness, and snapshot.
+
+It delegates attestation-chain semantics to core
+`premath required-decision-verify`; Python wrapper logic is path/artifact
+transport only.
 
 `tools/ci/check_ci_wiring.py` validates that CI workflow wiring uses the
 canonical attested gate chain entrypoint and does not split the required gate
@@ -157,7 +172,7 @@ It separates:
 - input: `instructions/<ts>-<id>.json`
 - delegates instruction typing/proposal ingestion to core
   `premath instruction-check` (typed `instructionClassification` +
-  authoritative `executionDecision`)
+  authoritative `executionDecision` + canonical `instructionDigest`)
 - rejects unroutable `unknown(reason)` unless `typingPolicy.allowUnknown=true`
 - carries optional `capabilityClaims` from envelope into witness artifacts for
   downstream mutation-policy gating surfaces

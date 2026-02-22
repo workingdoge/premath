@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Produce an accept/reject decision from verified ci.required witness semantics."""
+"""Produce an accept/reject decision from ci.required witness semantics."""
 
 from __future__ import annotations
 
@@ -7,7 +7,6 @@ import argparse
 import hashlib
 import json
 import os
-import sys
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -17,7 +16,10 @@ from delta_snapshot import (
     load_delta_snapshot,
     read_changed_paths,
 )
-from required_witness import verify_required_witness_payload
+from required_witness_decide_client import (
+    RequiredWitnessDecideError,
+    run_required_witness_decide,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -145,6 +147,19 @@ def _resolve_witness_path(root: Path, args: argparse.Namespace, changed_paths: L
     return out_dir / f"{projection.projection_digest}.json"
 
 
+def _render_and_write(decision: Dict[str, Any], root: Path, out_path_arg: Path | None) -> None:
+    print(json.dumps(decision, indent=2, ensure_ascii=False))
+    if out_path_arg is None:
+        return
+    out_path = out_path_arg
+    if not out_path.is_absolute():
+        out_path = (root / out_path).resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    with out_path.open("w", encoding="utf-8") as f:
+        json.dump(decision, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+
+
 def main() -> int:
     args = parse_args()
     root = Path(__file__).resolve().parents[2]
@@ -152,17 +167,17 @@ def main() -> int:
     if not out_dir.is_absolute():
         out_dir = (root / out_dir).resolve()
 
-    changed_paths: List[str] = []
+    compare_paths: List[str] = []
     delta_snapshot_path: Path | None = None
     if args.compare_delta:
         try:
             snapshot_candidate = _resolve_delta_snapshot_path(root, args, out_dir)
             if snapshot_candidate.exists() and snapshot_candidate.is_file():
                 snapshot = load_delta_snapshot(snapshot_candidate)
-                changed_paths = normalize_paths(read_changed_paths(snapshot))
+                compare_paths = normalize_paths(read_changed_paths(snapshot))
                 delta_snapshot_path = snapshot_candidate
             else:
-                changed_paths = _resolve_compare_paths(root, out_dir, args)
+                compare_paths = _resolve_compare_paths(root, out_dir, args)
         except ValueError as exc:
             decision = {
                 "schema": 1,
@@ -171,10 +186,10 @@ def main() -> int:
                 "reasonClass": "invalid_delta_snapshot",
                 "errors": [str(exc)],
             }
-            print(json.dumps(decision, indent=2, ensure_ascii=False))
+            _render_and_write(decision, root, args.out)
             return 2
 
-    witness_path = _resolve_witness_path(root, args, changed_paths)
+    witness_path = _resolve_witness_path(root, args, compare_paths)
     if not witness_path.exists() or not witness_path.is_file():
         decision = {
             "schema": 1,
@@ -184,7 +199,7 @@ def main() -> int:
             "witnessPath": str(witness_path),
             "errors": [f"witness not found: {witness_path}"],
         }
-        print(json.dumps(decision, indent=2, ensure_ascii=False))
+        _render_and_write(decision, root, args.out)
         return 2
 
     try:
@@ -198,45 +213,31 @@ def main() -> int:
             "witnessPath": str(witness_path),
             "errors": [str(exc)],
         }
-        print(json.dumps(decision, indent=2, ensure_ascii=False))
+        _render_and_write(decision, root, args.out)
         return 2
 
-    witness_changed_paths = witness.get("changedPaths")
-    if not isinstance(witness_changed_paths, list):
+    native_required_checks = _native_required_checks(args)
+    decide_input: Dict[str, Any] = {
+        "witness": witness,
+        "nativeRequiredChecks": native_required_checks,
+        "witnessRoot": str(witness_path.parent),
+    }
+    if args.compare_delta:
+        decide_input["expectedChangedPaths"] = normalize_paths(compare_paths)
+
+    try:
+        core_decision = run_required_witness_decide(root, decide_input)
+    except RequiredWitnessDecideError as exc:
         decision = {
             "schema": 1,
             "decisionKind": "ci.required.decision.v1",
             "decision": "reject",
-            "reasonClass": "invalid_witness_shape",
+            "reasonClass": exc.failure_class,
             "witnessPath": str(witness_path),
-            "errors": ["changedPaths must be a list"],
+            "errors": [exc.reason],
         }
-        print(json.dumps(decision, indent=2, ensure_ascii=False))
-        return 1
-
-    native_required_checks = _native_required_checks(args)
-    errors, derived = verify_required_witness_payload(
-        witness,
-        witness_changed_paths,
-        witness_root=witness_path.parent,
-        native_required_checks=native_required_checks,
-    )
-
-    if args.compare_delta:
-        expected_paths = normalize_paths(changed_paths)
-        actual_paths = normalize_paths(witness_changed_paths)
-        if expected_paths != actual_paths:
-            errors.append(
-                "delta comparison mismatch "
-                f"(detected={expected_paths}, witness={actual_paths})"
-            )
-
-    witness_verdict = witness.get("verdictClass")
-    if witness_verdict != "accepted":
-        errors.append(
-            f"required witness verdict must be accepted for decision accept "
-            f"(actual={witness_verdict!r})"
-        )
+        _render_and_write(decision, root, args.out)
+        return 2
 
     witness_sha = _sha256_file(witness_path)
     delta_sha: str | None = None
@@ -245,30 +246,21 @@ def main() -> int:
 
     decision = {
         "schema": 1,
-        "decisionKind": "ci.required.decision.v1",
-        "decision": "accept" if not errors else "reject",
+        "decisionKind": core_decision.get("decisionKind", "ci.required.decision.v1"),
+        "decision": core_decision.get("decision", "reject"),
         "witnessPath": str(witness_path),
         "witnessSha256": witness_sha,
         "deltaSnapshotPath": str(delta_snapshot_path) if delta_snapshot_path is not None else None,
         "deltaSha256": delta_sha,
-        "projectionDigest": derived.get("projectionDigest"),
-        "requiredChecks": derived.get("requiredChecks"),
+        "projectionDigest": core_decision.get("projectionDigest"),
+        "requiredChecks": core_decision.get("requiredChecks"),
         "nativeRequiredChecks": native_required_checks,
-        "reasonClass": "verified_accept" if not errors else "verification_reject",
-        "errors": errors,
+        "reasonClass": core_decision.get("reasonClass", "verification_reject"),
+        "errors": core_decision.get("errors", []),
     }
 
-    print(json.dumps(decision, indent=2, ensure_ascii=False))
-    if args.out is not None:
-        out_path = args.out
-        if not out_path.is_absolute():
-            out_path = (root / out_path).resolve()
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with out_path.open("w", encoding="utf-8") as f:
-            json.dump(decision, f, indent=2, ensure_ascii=False)
-            f.write("\n")
-
-    return 0 if not errors else 1
+    _render_and_write(decision, root, args.out)
+    return 0 if decision.get("decision") == "accept" else 1
 
 
 if __name__ == "__main__":
