@@ -327,6 +327,45 @@ fn proposal_check_json_smoke() {
 }
 
 #[test]
+fn instruction_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let instruction = repo_root
+        .join("tests")
+        .join("ci")
+        .join("fixtures")
+        .join("instructions")
+        .join("20260221T010000Z-ci-wiring-golden.json");
+
+    let output = run_premath([
+        OsString::from("instruction-check"),
+        OsString::from("--instruction"),
+        instruction.as_os_str().to_os_string(),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["normalizerId"], "normalizer.ci.v1");
+    assert!(
+        payload["policyDigest"]
+            .as_str()
+            .expect("policyDigest should be string")
+            .starts_with("pol1_")
+    );
+    assert_eq!(
+        payload["requestedChecks"],
+        serde_json::json!(["ci-wiring-check"])
+    );
+}
+
+#[test]
 fn init_text_smoke() {
     let tmp = TempDirGuard::new("init");
     let repo_root = tmp.path().join("repo");

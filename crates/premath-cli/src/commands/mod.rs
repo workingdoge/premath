@@ -2,6 +2,7 @@ pub mod check;
 pub mod coherence_check;
 pub mod dep;
 pub mod init;
+pub mod instruction_check;
 pub mod issue;
 pub mod mcp_serve;
 pub mod mock_gate;

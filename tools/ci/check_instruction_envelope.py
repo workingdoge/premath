@@ -1,111 +1,32 @@
 #!/usr/bin/env python3
-"""Validate instruction envelope schema/shape before execution."""
+"""Validate instruction envelopes via core `premath instruction-check`."""
 
 from __future__ import annotations
 
 import argparse
 import json
 from pathlib import Path
+import tempfile
 from typing import Any, Dict, List
 
-from instruction_policy import (
-    PolicyValidationError,
-    validate_proposal_binding_matches_envelope,
-    validate_requested_checks,
-)
-from instruction_proposal import ProposalValidationError, extract_instruction_proposal
-from proposal_check_client import ProposalCheckError, run_proposal_check
+from instruction_check_client import InstructionCheckError, run_instruction_check
 
 
 DEFAULT_GLOBS = (
     "instructions/*.json",
     "tests/ci/fixtures/instructions/*.json",
 )
-
-
-def ensure_string(value: Any, label: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{label} must be a non-empty string")
-    trimmed = value.strip()
-    if trimmed != value:
-        raise ValueError(f"{label} must not include leading/trailing whitespace")
-    return trimmed
-
-
-def ensure_nonempty_string_list(value: Any, label: str) -> List[str]:
-    if not isinstance(value, list) or not value:
-        raise ValueError(f"{label} must be a non-empty list")
-    out: List[str] = []
-    for idx, item in enumerate(value):
-        if not isinstance(item, str) or not item.strip():
-            raise ValueError(f"{label}[{idx}] must be a non-empty string")
-        out.append(item.strip())
-    if len(set(out)) != len(out):
-        raise ValueError(f"{label} must not contain duplicates")
-    return out
-
-
 def validate_envelope(path: Path, payload: Dict[str, Any], repo_root: Path) -> None:
-    stem = path.stem
-    if path.suffix != ".json":
-        raise ValueError("filename must end with .json")
-    if "-" not in stem:
-        raise ValueError("filename stem must follow <ts>-<id> format")
-
-    schema = payload.get("schema")
-    if not isinstance(schema, int) or schema <= 0:
-        raise ValueError("schema must be a positive integer")
-
-    ensure_string(payload.get("intent"), "intent")
-    normalizer_id = ensure_string(payload.get("normalizerId"), "normalizerId")
-    policy_digest = ensure_string(payload.get("policyDigest"), "policyDigest")
-    if "scope" not in payload:
-        raise ValueError("scope is required")
-    scope = payload.get("scope")
-    if scope in (None, ""):
-        raise ValueError("scope must be non-empty")
-    requested_checks = ensure_nonempty_string_list(payload.get("requestedChecks"), "requestedChecks")
-    try:
-        validate_requested_checks(policy_digest, requested_checks, normalizer_id=normalizer_id)
-    except PolicyValidationError as exc:
-        raise ValueError(f"{exc.failure_class}: {exc}") from exc
-
-    instruction_type = payload.get("instructionType")
-    if instruction_type is not None:
-        ensure_string(instruction_type, "instructionType")
-
-    typing_policy = payload.get("typingPolicy")
-    if typing_policy is not None:
-        if not isinstance(typing_policy, dict):
-            raise ValueError("typingPolicy must be an object when provided")
-        allow_unknown = typing_policy.get("allowUnknown")
-        if allow_unknown is not None and not isinstance(allow_unknown, bool):
-            raise ValueError("typingPolicy.allowUnknown must be a boolean when provided")
-
-    capability_claims = payload.get("capabilityClaims")
-    if capability_claims is not None:
-        if not isinstance(capability_claims, list):
-            raise ValueError("capabilityClaims must be a list when provided")
-        normalized_claims: List[str] = []
-        for idx, claim in enumerate(capability_claims):
-            if not isinstance(claim, str) or not claim.strip():
-                raise ValueError(f"capabilityClaims[{idx}] must be a non-empty string")
-            normalized_claims.append(claim.strip())
-        if len(set(normalized_claims)) != len(normalized_claims):
-            raise ValueError("capabilityClaims must not contain duplicates")
-
-    try:
-        raw_proposal = extract_instruction_proposal(payload)
-        proposal = None
-        if raw_proposal is not None:
-            proposal = run_proposal_check(repo_root, raw_proposal)
-        validate_proposal_binding_matches_envelope(normalizer_id, policy_digest, proposal)
-    except ProposalValidationError as exc:
-        raise ValueError(f"{exc.failure_class}: {exc}") from exc
-    except ProposalCheckError as exc:
-        raise ValueError(str(exc)) from exc
-    except PolicyValidationError as exc:
-        raise ValueError(f"{exc.failure_class}: {exc}") from exc
+    with tempfile.TemporaryDirectory(prefix="premath-instruction-envelope-check-") as tmp:
+        tmp_path = Path(tmp) / path.name
+        tmp_path.write_text(
+            json.dumps(payload, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        try:
+            run_instruction_check(repo_root, tmp_path)
+        except InstructionCheckError as exc:
+            raise ValueError(str(exc)) from exc
 
 
 def parse_args(default_root: Path) -> argparse.Namespace:

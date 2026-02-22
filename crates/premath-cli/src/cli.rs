@@ -254,6 +254,21 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Validate one instruction envelope through core checker semantics
+    InstructionCheck {
+        /// Instruction JSON path
+        #[arg(long)]
+        instruction: String,
+
+        /// Repository root used for policy artifact resolution
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Manage issues in premath-bd JSONL memory
     Issue {
         #[command(subcommand)]

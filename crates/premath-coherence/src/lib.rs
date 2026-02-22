@@ -3,8 +3,13 @@
 //! This crate evaluates a machine contract artifact against repository surfaces
 //! and emits deterministic witnesses.
 
+mod instruction;
 mod proposal;
 
+pub use instruction::{
+    InstructionError, InstructionTypingPolicy, ValidatedInstructionEnvelope,
+    ValidatedInstructionProposal, validate_instruction_envelope_payload,
+};
 pub use proposal::{
     CanonicalProposal, ProposalBinding, ProposalDischarge, ProposalError, ProposalObligation,
     ProposalStep, ProposalTargetJudgment, ValidatedProposal, compile_proposal_obligations,

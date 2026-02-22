@@ -125,6 +125,12 @@ fn main() {
 
         Commands::ProposalCheck { proposal, json } => commands::proposal_check::run(proposal, json),
 
+        Commands::InstructionCheck {
+            instruction,
+            repo_root,
+            json,
+        } => commands::instruction_check::run(instruction, repo_root, json),
+
         Commands::Issue { command } => commands::issue::run(command),
 
         Commands::Dep { command } => commands::dep::run(command),

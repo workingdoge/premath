@@ -2,6 +2,7 @@ use super::init::{InitOutcome, init_layout};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use premath_bd::{DepType, Issue, IssueLease, IssueLeaseState, MemoryStore};
+use premath_coherence::validate_instruction_envelope_payload;
 use premath_jj::JjClient;
 use premath_surreal::QueryCache;
 use premath_ux::{ObserveQuery, SurrealObservationBackend, UxService};
@@ -1707,23 +1708,52 @@ fn call_instruction_check(
     let repo_root = resolve_repo_root(&config.repo_root);
     let instruction_path = resolve_instruction_path(&repo_root, &tool.instruction_path);
 
-    let output = Command::new("python3")
-        .arg("tools/ci/check_instruction_envelope.py")
-        .arg(&instruction_path)
-        .arg("--repo-root")
-        .arg(&repo_root)
-        .current_dir(&repo_root)
-        .output()
-        .map_err(|e| call_tool_error(format!("failed to execute instruction check: {e}")))?;
+    let result = fs::read(&instruction_path)
+        .map_err(|err| {
+            call_tool_error(format!(
+                "instruction_envelope_invalid: failed to read instruction file {}: {err}",
+                instruction_path.display()
+            ))
+        })
+        .and_then(|bytes| {
+            serde_json::from_slice::<Value>(&bytes).map_err(|err| {
+                call_tool_error(format!(
+                    "instruction_envelope_invalid_json: failed to parse instruction json {}: {err}",
+                    instruction_path.display()
+                ))
+            })
+        })
+        .and_then(|raw| {
+            validate_instruction_envelope_payload(&raw, &instruction_path, &repo_root)
+                .map_err(|err| call_tool_error(err.to_string()))
+        });
+
+    let (ok, exit_code, stdout, stderr) = match result {
+        Ok(checked) => (
+            true,
+            Some(0),
+            truncate_for_payload(
+                &serde_json::to_string_pretty(&checked).unwrap_or_else(|_| "{}".to_string()),
+                16_000,
+            ),
+            String::new(),
+        ),
+        Err(err) => (
+            false,
+            Some(2),
+            String::new(),
+            truncate_for_payload(&err.to_string(), 16_000),
+        ),
+    };
 
     let payload = json!({
         "action": "instruction.check",
         "repoRoot": repo_root.display().to_string(),
         "instructionPath": instruction_path.display().to_string(),
-        "ok": output.status.success(),
-        "exitCode": output.status.code(),
-        "stdout": truncate_for_payload(&String::from_utf8_lossy(&output.stdout), 16_000),
-        "stderr": truncate_for_payload(&String::from_utf8_lossy(&output.stderr), 16_000)
+        "ok": ok,
+        "exitCode": exit_code,
+        "stdout": stdout,
+        "stderr": stderr
     });
     json_result(payload)
 }

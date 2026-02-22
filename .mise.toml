@@ -115,6 +115,7 @@ run = [
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_policy.py",
   "python3 tools/ci/test_instruction_proposal.py",
+  "python3 tools/ci/test_instruction_check_client.py",
   "python3 tools/ci/test_proposal_check_client.py",
   "python3 tools/ci/test_instruction_reject_witness.py",
   "python3 tools/ci/test_repo_hygiene.py",

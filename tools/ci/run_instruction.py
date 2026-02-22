@@ -7,7 +7,6 @@ import argparse
 import hashlib
 import json
 import os
-import re
 import subprocess
 import sys
 import time
@@ -15,13 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from instruction_policy import (
-    PolicyValidationError,
-    validate_proposal_binding_matches_envelope,
-    validate_requested_checks,
-)
-from instruction_proposal import extract_instruction_proposal
-from proposal_check_client import run_proposal_check as run_core_proposal_check
+from instruction_check_client import InstructionCheckError, run_instruction_check
 
 
 SUPPORTED_INSTRUCTION_TYPES = {
@@ -69,58 +62,8 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def ensure_string(value: Any, label: str) -> str:
-    if not isinstance(value, str) or not value.strip():
-        raise ValueError(f"{label} must be a non-empty string")
-    trimmed = value.strip()
-    if trimmed != value:
-        raise ValueError(f"{label} must not include leading/trailing whitespace")
-    return trimmed
-
-
-def ensure_string_list(value: Any, label: str) -> List[str]:
-    if not isinstance(value, list) or not value:
-        raise ValueError(f"{label} must be a non-empty list")
-    out: List[str] = []
-    for idx, item in enumerate(value):
-        if not isinstance(item, str) or not item.strip():
-            raise ValueError(f"{label}[{idx}] must be a non-empty string")
-        out.append(item.strip())
-    if len(set(out)) != len(out):
-        raise ValueError(f"{label} must not contain duplicate check IDs")
-    return out
-
-
-def parse_typing_policy(envelope: Dict[str, Any]) -> Dict[str, Any]:
-    raw_policy = envelope.get("typingPolicy", {})
-    if raw_policy is None:
-        raw_policy = {}
-    if not isinstance(raw_policy, dict):
-        raise ValueError("typingPolicy must be an object when provided")
-    allow_unknown = raw_policy.get("allowUnknown", False)
-    if not isinstance(allow_unknown, bool):
-        raise ValueError("typingPolicy.allowUnknown must be a boolean when provided")
-    return {"allowUnknown": allow_unknown}
-
-
-def parse_capability_claims(envelope: Dict[str, Any]) -> List[str]:
-    raw_claims = envelope.get("capabilityClaims", [])
-    if raw_claims is None:
-        raw_claims = []
-    if not isinstance(raw_claims, list):
-        raise ValueError("capabilityClaims must be a list when provided")
-    claims: List[str] = []
-    for idx, item in enumerate(raw_claims):
-        if not isinstance(item, str) or not item.strip():
-            raise ValueError(f"capabilityClaims[{idx}] must be a non-empty string")
-        claims.append(item.strip())
-    return sorted(set(claims))
-
-
-def classify_instruction(envelope: Dict[str, Any], requested_checks: List[str]) -> Dict[str, str]:
-    instruction_type = envelope.get("instructionType")
+def classify_instruction(instruction_type: str | None, requested_checks: List[str]) -> Dict[str, str]:
     if instruction_type is not None:
-        instruction_type = ensure_string(instruction_type, "instructionType")
         if instruction_type in SUPPORTED_INSTRUCTION_TYPES:
             return {"state": "typed", "kind": instruction_type}
         return {"state": "unknown", "reason": "unsupported_instruction_type"}
@@ -166,52 +109,15 @@ def fallback_instruction_id_from_path(path: Path) -> str:
 
 
 def classify_invalid_envelope(exc: Exception) -> Dict[str, str]:
+    if isinstance(exc, InstructionCheckError):
+        return {
+            "failureClass": exc.failure_class,
+            "reason": exc.reason,
+        }
     message = str(exc).strip()
-    if not message:
-        return {
-            "failureClass": "instruction_envelope_invalid",
-            "reason": "invalid instruction envelope",
-        }
-
-    # Policy/proposal validation errors are raised as "<failure_class>: <message>".
-    match = re.match(r"^(?P<class>[a-z0-9_]+):\s*(?P<reason>.*)$", message)
-    if match:
-        return {
-            "failureClass": match.group("class"),
-            "reason": match.group("reason") or message,
-        }
-
-    lowered = message.lower()
-    if "jsondecodeerror" in lowered or "expecting value" in lowered:
-        failure_class = "instruction_envelope_invalid_json"
-    elif "filename" in lowered or ".json" in lowered:
-        failure_class = "instruction_filename_invalid"
-    elif "schema" in lowered:
-        failure_class = "instruction_invalid_schema"
-    elif "intent" in lowered:
-        failure_class = "instruction_invalid_intent"
-    elif "normalizerid" in lowered:
-        failure_class = "instruction_invalid_normalizer"
-    elif "policydigest" in lowered:
-        failure_class = "instruction_invalid_policy_digest"
-    elif "scope is required" in lowered:
-        failure_class = "instruction_scope_missing"
-    elif "scope" in lowered:
-        failure_class = "instruction_scope_invalid"
-    elif "requestedchecks" in lowered:
-        failure_class = "instruction_requested_checks_invalid"
-    elif "instructiontype" in lowered:
-        failure_class = "instruction_instruction_type_invalid"
-    elif "typingpolicy" in lowered:
-        failure_class = "instruction_typing_policy_invalid"
-    elif "root must be a json object" in lowered or "instruction envelope root must be an object" in lowered:
-        failure_class = "instruction_envelope_invalid_shape"
-    else:
-        failure_class = "instruction_envelope_invalid"
-
     return {
-        "failureClass": failure_class,
-        "reason": message,
+        "failureClass": "instruction_envelope_invalid",
+        "reason": message or "invalid instruction envelope",
     }
 
 
@@ -342,22 +248,6 @@ def run_check(root: Path, check_id: str) -> Dict[str, Any]:
     }
 
 
-def run_instruction_proposal_check(
-    root: Path, envelope: Dict[str, Any]
-) -> tuple[Dict[str, Any] | None, List[Dict[str, Any]], Dict[str, Any] | None]:
-    raw_proposal = extract_instruction_proposal(envelope)
-    if raw_proposal is None:
-        return None, [], None
-
-    payload = run_core_proposal_check(root, raw_proposal)
-
-    return {
-        "canonical": payload["canonical"],
-        "digest": payload["digest"],
-        "kcirRef": payload["kcirRef"],
-    }, payload["obligations"], payload["discharge"]
-
-
 def main() -> int:
     args = parse_args()
     root = Path(__file__).resolve().parents[2]
@@ -378,38 +268,34 @@ def main() -> int:
     raw_envelope: Dict[str, Any] | None = None
 
     try:
-        envelope = load_instruction(instruction_path)
-        raw_envelope = envelope
+        checked = run_instruction_check(root, instruction_path)
         instruction_id = instruction_id_from_path(instruction_path)
-
-        intent = ensure_string(envelope.get("intent"), "intent")
-        normalizer_id = ensure_string(envelope.get("normalizerId"), "normalizerId")
-        policy_digest = ensure_string(envelope.get("policyDigest"), "policyDigest")
-        if "scope" not in envelope:
-            raise ValueError("scope is required")
-        scope = envelope.get("scope")
-        if scope in (None, ""):
-            raise ValueError("scope must be non-empty")
-        requested_checks = ensure_string_list(envelope.get("requestedChecks"), "requestedChecks")
-        try:
-            validate_requested_checks(
-                policy_digest,
-                requested_checks,
-                normalizer_id=normalizer_id,
-            )
-        except PolicyValidationError as exc:
-            raise ValueError(f"{exc.failure_class}: {exc}") from exc
-        typing_policy = parse_typing_policy(envelope)
-        capability_claims = parse_capability_claims(envelope)
-        instruction_classification = classify_instruction(envelope, requested_checks)
-        proposal, proposal_obligations, proposal_discharge = run_instruction_proposal_check(
-            root, envelope
+        intent = checked["intent"]
+        scope = checked["scope"]
+        normalizer_id = checked["normalizerId"]
+        policy_digest = checked["policyDigest"]
+        requested_checks = checked["requestedChecks"]
+        typing_policy = checked.get("typingPolicy", {"allowUnknown": False})
+        capability_claims = checked.get("capabilityClaims", [])
+        instruction_classification = classify_instruction(
+            checked.get("instructionType"),
+            requested_checks,
         )
+        proposal_payload = checked.get("proposal")
+        if isinstance(proposal_payload, dict):
+            proposal = {
+                "canonical": proposal_payload.get("canonical"),
+                "digest": proposal_payload.get("digest"),
+                "kcirRef": proposal_payload.get("kcirRef"),
+            }
+            proposal_obligations = proposal_payload.get("obligations", [])
+            proposal_discharge = proposal_payload.get("discharge")
+        raw_envelope = load_instruction(instruction_path)
+    except (InstructionCheckError, ValueError, json.JSONDecodeError) as exc:
         try:
-            validate_proposal_binding_matches_envelope(normalizer_id, policy_digest, proposal)
-        except PolicyValidationError as exc:
-            raise ValueError(f"{exc.failure_class}: {exc}") from exc
-    except (ValueError, json.JSONDecodeError) as exc:
+            raw_envelope = load_instruction(instruction_path)
+        except Exception:  # noqa: BLE001
+            raw_envelope = None
         invalid = classify_invalid_envelope(exc)
         fallback_instruction_id = fallback_instruction_id_from_path(instruction_path)
         reject_path = write_pre_execution_reject_witness(
@@ -432,7 +318,7 @@ def main() -> int:
         print(f"[instruction] reject witness written: {reject_path}", file=sys.stderr)
         return 2
 
-    instruction_digest = "instr1_" + stable_hash(envelope)
+    instruction_digest = _normalized_instruction_digest(instruction_path, raw_envelope)
     rel_instruction_ref = str(instruction_path.relative_to(root)) if instruction_path.is_relative_to(root) else str(instruction_path)
 
     results: List[Dict[str, Any]] = []
