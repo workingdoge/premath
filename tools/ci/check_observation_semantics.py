@@ -67,7 +67,18 @@ def validate_summary(surface: Dict[str, Any]) -> None:
     if not isinstance(needs_attention, bool):
         raise ValueError("summary.needsAttention must be a boolean")
 
-    expected_needs_attention = state in {"rejected", "error"}
+    coherence = summary.get("coherence")
+    if coherence is not None and not isinstance(coherence, dict):
+        raise ValueError("summary.coherence must be null or an object")
+
+    coherence_needs_attention = False
+    if isinstance(coherence, dict):
+        attention_reasons = coherence.get("attentionReasons")
+        if not isinstance(attention_reasons, list):
+            raise ValueError("summary.coherence.attentionReasons must be a list")
+        coherence_needs_attention = bool(coherence.get("needsAttention"))
+
+    expected_needs_attention = state in {"rejected", "error"} or coherence_needs_attention
     if needs_attention != expected_needs_attention:
         raise ValueError(
             "summary.needsAttention mismatch "

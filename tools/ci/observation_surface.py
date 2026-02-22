@@ -6,11 +6,13 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 SCHEMA = 1
 SURFACE_KIND = "ci.observation.surface.v0"
+BLOCKING_DEP_TYPES = {"blocks", "parent-child", "conditional-blocks", "waits-for"}
 
 
 def _load_json(path: Path) -> Optional[Dict[str, Any]]:
@@ -35,6 +37,77 @@ def _string_list(value: Any) -> List[str]:
         return []
     out = [item for item in value if isinstance(item, str) and item.strip()]
     return sorted(set(out))
+
+
+def _parse_rfc3339(value: Any) -> Optional[datetime]:
+    text = _string(value)
+    if text is None:
+        return None
+    normalized = text[:-1] + "+00:00" if text.endswith("Z") else text
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def _rfc3339(value: datetime) -> str:
+    return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _canonical_dep_type(value: Any) -> Optional[str]:
+    text = _string(value)
+    if text is None:
+        return None
+    return text.lower().replace("_", "-")
+
+
+def _is_blocking_dep(dep: Dict[str, Any]) -> bool:
+    dep_type = _canonical_dep_type(dep.get("type"))
+    if dep_type is None:
+        dep_type = _canonical_dep_type(dep.get("dep_type"))
+    return dep_type in BLOCKING_DEP_TYPES
+
+
+def _issue_depends_on_id(dep: Dict[str, Any]) -> Optional[str]:
+    value = _string(dep.get("depends_on_id"))
+    if value is not None:
+        return value
+    return _string(dep.get("dependsOnId"))
+
+
+def _lease_expires_at(lease: Dict[str, Any]) -> Optional[datetime]:
+    expires = _parse_rfc3339(lease.get("expires_at"))
+    if expires is not None:
+        return expires
+    return _parse_rfc3339(lease.get("expiresAt"))
+
+
+def _load_issue_rows(issues_path: Path) -> List[Dict[str, Any]]:
+    if not issues_path.exists():
+        return []
+    if not issues_path.is_file():
+        raise ValueError(f"issues path is not a file: {issues_path}")
+
+    by_id: Dict[str, Dict[str, Any]] = {}
+    with issues_path.open("r", encoding="utf-8") as f:
+        for line_no, raw_line in enumerate(f, start=1):
+            line = raw_line.strip()
+            if not line:
+                continue
+            try:
+                data = json.loads(line)
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"invalid jsonl at {issues_path}:{line_no}: {exc}") from exc
+            if not isinstance(data, dict):
+                raise ValueError(f"jsonl row must be object at {issues_path}:{line_no}")
+            issue_id = _string(data.get("id"))
+            if issue_id is None:
+                raise ValueError(f"missing issue id at {issues_path}:{line_no}")
+            by_id[issue_id] = data
+    return [by_id[key] for key in sorted(by_id)]
 
 
 def _normalize_delta(payload: Dict[str, Any], rel_path: str) -> Dict[str, Any]:
@@ -82,6 +155,9 @@ def _normalize_decision(payload: Dict[str, Any], rel_path: str) -> Dict[str, Any
 
 def _normalize_instruction(payload: Dict[str, Any], rel_path: str) -> Dict[str, Any]:
     instruction_id = _string(payload.get("instructionId")) or Path(rel_path).stem
+    proposal_ingest = payload.get("proposalIngest")
+    if not isinstance(proposal_ingest, dict):
+        proposal_ingest = None
     return {
         "ref": rel_path,
         "witnessKind": _string(payload.get("witnessKind")),
@@ -95,6 +171,9 @@ def _normalize_instruction(payload: Dict[str, Any], rel_path: str) -> Dict[str, 
         "requiredChecks": _string_list(payload.get("requiredChecks", [])),
         "executedChecks": _string_list(payload.get("executedChecks", [])),
         "failureClasses": _string_list(payload.get("failureClasses", [])),
+        "runStartedAt": _string(payload.get("runStartedAt")),
+        "runFinishedAt": _string(payload.get("runFinishedAt")),
+        "proposalIngest": proposal_ingest,
     }
 
 
@@ -150,6 +229,309 @@ def _derive_state(
     }
 
 
+def _coherence_policy_drift(
+    delta: Optional[Dict[str, Any]],
+    required: Optional[Dict[str, Any]],
+    decision: Optional[Dict[str, Any]],
+    instructions: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    projection_policies = sorted(
+        {
+            policy
+            for policy in (
+                _string(delta.get("projectionPolicy")) if delta else None,
+                _string(required.get("projectionPolicy")) if required else None,
+            )
+            if policy is not None
+        }
+    )
+    projection_digests = sorted(
+        {
+            digest
+            for digest in (
+                _string(delta.get("projectionDigest")) if delta else None,
+                _string(required.get("projectionDigest")) if required else None,
+                _string(decision.get("projectionDigest")) if decision else None,
+            )
+            if digest is not None
+        }
+    )
+    instruction_policy_digests = sorted(
+        {
+            digest
+            for digest in (_string(row.get("policyDigest")) for row in instructions)
+            if digest is not None
+        }
+    )
+    missing_instruction_policy_ids = sorted(
+        row["instructionId"]
+        for row in instructions
+        if _string(row.get("policyDigest")) is None
+    )
+
+    drift_classes: List[str] = []
+    if len(projection_policies) > 1:
+        drift_classes.append("projection_policy_drift")
+    if len(projection_digests) > 1:
+        drift_classes.append("projection_digest_drift")
+    if len(instruction_policy_digests) > 1:
+        drift_classes.append("instruction_policy_drift")
+
+    return {
+        "projectionPolicies": projection_policies,
+        "projectionDigests": projection_digests,
+        "instructionPolicyDigests": instruction_policy_digests,
+        "missingInstructionPolicyIds": missing_instruction_policy_ids,
+        "driftClasses": drift_classes,
+        "driftDetected": bool(drift_classes),
+    }
+
+
+def _coherence_instruction_typing(instructions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    unknown_instruction_ids: List[str] = []
+    unknown_rejected_ids: List[str] = []
+    typed_instruction_ids: List[str] = []
+
+    for row in instructions:
+        instruction_id = _string(row.get("instructionId")) or "(unknown)"
+        classification = row.get("instructionClassification")
+        state = classification.get("state") if isinstance(classification, dict) else None
+        verdict = _string(row.get("verdictClass"))
+
+        if state == "unknown":
+            unknown_instruction_ids.append(instruction_id)
+            if verdict == "rejected":
+                unknown_rejected_ids.append(instruction_id)
+        elif state == "typed":
+            typed_instruction_ids.append(instruction_id)
+
+    instruction_count = len(instructions)
+    unknown_count = len(unknown_instruction_ids)
+    unknown_rate = (unknown_count / instruction_count) if instruction_count else 0.0
+    unknown_rate_percent = unknown_rate * 100.0
+
+    return {
+        "instructionCount": instruction_count,
+        "typedCount": len(typed_instruction_ids),
+        "unknownCount": unknown_count,
+        "unknownRejectedCount": len(unknown_rejected_ids),
+        "unknownRate": round(unknown_rate, 6),
+        "unknownRatePercent": round(unknown_rate_percent, 2),
+        "unknownInstructionIds": sorted(set(unknown_instruction_ids)),
+    }
+
+
+def _coherence_proposal_reject_classes(instructions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    counts: Dict[str, int] = {}
+    instruction_ids: List[str] = []
+
+    for row in instructions:
+        instruction_id = _string(row.get("instructionId")) or "(unknown)"
+        failures = row.get("failureClasses")
+        if not isinstance(failures, list):
+            continue
+
+        proposal_failures = sorted(
+            {
+                item
+                for item in failures
+                if isinstance(item, str) and item.startswith("proposal_")
+            }
+        )
+        if not proposal_failures:
+            continue
+
+        instruction_ids.append(instruction_id)
+        for failure in proposal_failures:
+            counts[failure] = counts.get(failure, 0) + 1
+
+    sorted_counts = {key: counts[key] for key in sorted(counts)}
+    ranked = sorted(sorted_counts.items(), key=lambda item: (-item[1], item[0]))
+
+    return {
+        "totalRejectCount": sum(sorted_counts.values()),
+        "classCounts": sorted_counts,
+        "topClasses": [name for name, _ in ranked[:5]],
+        "instructionIds": sorted(set(instruction_ids)),
+    }
+
+
+def _coherence_issue_partition(issue_rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    by_id: Dict[str, Dict[str, Any]] = {}
+    for row in issue_rows:
+        issue_id = _string(row.get("id"))
+        if issue_id is not None:
+            by_id[issue_id] = row
+
+    open_ids = sorted(
+        issue_id
+        for issue_id, row in by_id.items()
+        if _string(row.get("status")) == "open"
+    )
+
+    ready_ids: List[str] = []
+    blocked_ids: List[str] = []
+    for issue_id in open_ids:
+        row = by_id[issue_id]
+        dependencies = row.get("dependencies")
+        blocked = False
+        if isinstance(dependencies, list):
+            for dep in dependencies:
+                if not isinstance(dep, dict):
+                    continue
+                if not _is_blocking_dep(dep):
+                    continue
+                depends_on_id = _issue_depends_on_id(dep)
+                if depends_on_id is None:
+                    blocked = True
+                    break
+                blocker = by_id.get(depends_on_id)
+                blocker_status = _string(blocker.get("status")) if blocker else None
+                if blocker_status == "closed":
+                    continue
+                blocked = True
+                break
+        if blocked:
+            blocked_ids.append(issue_id)
+        else:
+            ready_ids.append(issue_id)
+
+    overlap_ids = sorted(set(ready_ids).intersection(blocked_ids))
+    open_partition_gap_ids = sorted(set(open_ids).difference(set(ready_ids).union(blocked_ids)))
+
+    return {
+        "openIssueCount": len(open_ids),
+        "readyCount": len(ready_ids),
+        "blockedCount": len(blocked_ids),
+        "readyIssueIds": ready_ids,
+        "blockedIssueIds": blocked_ids,
+        "overlapIssueIds": overlap_ids,
+        "openPartitionGapIssueIds": open_partition_gap_ids,
+        "isCoherent": not overlap_ids and not open_partition_gap_ids,
+    }
+
+
+def _derive_reference_time(
+    instructions: List[Dict[str, Any]],
+    issue_rows: List[Dict[str, Any]],
+) -> Optional[datetime]:
+    candidates: List[datetime] = []
+
+    for row in instructions:
+        finished_at = _parse_rfc3339(row.get("runFinishedAt"))
+        if finished_at is not None:
+            candidates.append(finished_at)
+            continue
+        started_at = _parse_rfc3339(row.get("runStartedAt"))
+        if started_at is not None:
+            candidates.append(started_at)
+
+    for row in issue_rows:
+        updated_at = _parse_rfc3339(row.get("updated_at"))
+        if updated_at is not None:
+            candidates.append(updated_at)
+            continue
+        updated_at = _parse_rfc3339(row.get("updatedAt"))
+        if updated_at is not None:
+            candidates.append(updated_at)
+
+    if not candidates:
+        return None
+    return max(candidates)
+
+
+def _coherence_lease_health(
+    issue_rows: List[Dict[str, Any]],
+    reference_time: Optional[datetime],
+) -> Dict[str, Any]:
+    stale_issue_ids: List[str] = []
+    contended_issue_ids: List[str] = []
+    unknown_evaluation_issue_ids: List[str] = []
+    active_lease_count = 0
+    lease_issue_count = 0
+
+    for row in issue_rows:
+        issue_id = _string(row.get("id")) or "(unknown)"
+        lease = row.get("lease")
+        if not isinstance(lease, dict):
+            continue
+        lease_issue_count += 1
+        if reference_time is None:
+            unknown_evaluation_issue_ids.append(issue_id)
+            continue
+
+        expires_at = _lease_expires_at(lease)
+        if expires_at is None:
+            unknown_evaluation_issue_ids.append(issue_id)
+            continue
+
+        if expires_at <= reference_time:
+            stale_issue_ids.append(issue_id)
+            continue
+
+        active_lease_count += 1
+        owner = _string(lease.get("owner")) or ""
+        status = _string(row.get("status")) or ""
+        assignee = _string(row.get("assignee")) or ""
+        if status != "in_progress" or assignee != owner:
+            contended_issue_ids.append(issue_id)
+
+    stale_issue_ids = sorted(set(stale_issue_ids))
+    contended_issue_ids = sorted(set(contended_issue_ids))
+    unknown_evaluation_issue_ids = sorted(set(unknown_evaluation_issue_ids))
+
+    return {
+        "referenceTime": _rfc3339(reference_time) if reference_time is not None else None,
+        "leaseIssueCount": lease_issue_count,
+        "activeLeaseCount": active_lease_count,
+        "staleCount": len(stale_issue_ids),
+        "staleIssueIds": stale_issue_ids,
+        "contendedCount": len(contended_issue_ids),
+        "contendedIssueIds": contended_issue_ids,
+        "unknownEvaluationCount": len(unknown_evaluation_issue_ids),
+        "unknownEvaluationIssueIds": unknown_evaluation_issue_ids,
+    }
+
+
+def _build_coherence_summary(
+    delta: Optional[Dict[str, Any]],
+    required: Optional[Dict[str, Any]],
+    decision: Optional[Dict[str, Any]],
+    instructions: List[Dict[str, Any]],
+    issue_rows: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    policy_drift = _coherence_policy_drift(delta, required, decision, instructions)
+    instruction_typing = _coherence_instruction_typing(instructions)
+    proposal_reject_classes = _coherence_proposal_reject_classes(instructions)
+    issue_partition = _coherence_issue_partition(issue_rows)
+    reference_time = _derive_reference_time(instructions, issue_rows)
+    lease_health = _coherence_lease_health(issue_rows, reference_time)
+
+    attention_reasons: List[str] = []
+    if policy_drift["driftDetected"]:
+        attention_reasons.append("policy_drift")
+    if instruction_typing["unknownCount"] > 0:
+        attention_reasons.append("instruction_unknown_classification")
+    if proposal_reject_classes["totalRejectCount"] > 0:
+        attention_reasons.append("proposal_reject_classes_present")
+    if not issue_partition["isCoherent"]:
+        attention_reasons.append("issue_partition_incoherent")
+    if lease_health["staleCount"] > 0:
+        attention_reasons.append("stale_claims")
+    if lease_health["contendedCount"] > 0:
+        attention_reasons.append("contended_claims")
+
+    return {
+        "policyDrift": policy_drift,
+        "instructionTyping": instruction_typing,
+        "proposalRejectClasses": proposal_reject_classes,
+        "issuePartition": issue_partition,
+        "leaseHealth": lease_health,
+        "needsAttention": bool(attention_reasons),
+        "attentionReasons": attention_reasons,
+    }
+
+
 def _relative(path: Path, root: Path) -> str:
     try:
         return str(path.relative_to(root))
@@ -157,14 +539,24 @@ def _relative(path: Path, root: Path) -> str:
         return str(path)
 
 
-def build_surface(repo_root: Path, ciwitness_dir: Path) -> Dict[str, Any]:
+def build_surface(
+    repo_root: Path,
+    ciwitness_dir: Path,
+    issues_path: Optional[Path] = None,
+) -> Dict[str, Any]:
     required_path = ciwitness_dir / "latest-required.json"
     delta_path = ciwitness_dir / "latest-delta.json"
     decision_path = ciwitness_dir / "latest-decision.json"
+    resolved_issues_path = (
+        issues_path
+        if issues_path is not None
+        else (repo_root / ".premath" / "issues.jsonl").resolve()
+    )
 
     required_payload = _load_json(required_path)
     delta_payload = _load_json(delta_path)
     decision_payload = _load_json(decision_path)
+    issue_rows = _load_issue_rows(resolved_issues_path)
 
     required = (
         _normalize_required(required_payload, _relative(required_path, repo_root))
@@ -208,13 +600,23 @@ def build_surface(repo_root: Path, ciwitness_dir: Path) -> Dict[str, Any]:
 
     latest_instruction_id = instructions[-1]["instructionId"] if instructions else None
     state = _derive_state(required, decision, instructions)
+    coherence = _build_coherence_summary(delta, required, decision, instructions, issue_rows)
+    needs_attention = bool(state["needsAttention"]) or bool(coherence["needsAttention"])
+    top_failure_class = state["topFailureClass"]
+    if coherence["attentionReasons"] and state["state"] in {"accepted", "running", "empty"}:
+        top_failure_class = coherence["attentionReasons"][0]
+    elif top_failure_class is None and coherence["attentionReasons"]:
+        top_failure_class = coherence["attentionReasons"][0]
     summary = {
-        **state,
+        "state": state["state"],
+        "needsAttention": needs_attention,
+        "topFailureClass": top_failure_class,
         "latestProjectionDigest": latest_projection,
         "latestInstructionId": latest_instruction_id,
         "requiredCheckCount": len(required["requiredChecks"]) if required else 0,
         "executedCheckCount": len(required["executedChecks"]) if required else 0,
         "changedPathCount": delta["changedPathCount"] if delta else 0,
+        "coherence": coherence,
     }
 
     surface = {
@@ -254,6 +656,9 @@ def build_events(surface: Dict[str, Any]) -> List[Dict[str, Any]]:
     summary = surface.get("summary")
     if isinstance(summary, dict):
         events.append({"kind": "ci.observation.surface.v0.summary", "payload": summary})
+        coherence = summary.get("coherence")
+        if isinstance(coherence, dict):
+            events.append({"kind": "ci.observation.surface.v0.coherence", "payload": coherence})
 
     return events
 
@@ -285,6 +690,9 @@ def query_surface(
         return {"mode": "latest", "summary": summary, "latest": latest}
 
     if mode == "needs_attention":
+        coherence = summary.get("coherence")
+        if not isinstance(coherence, dict):
+            coherence = None
         return {
             "mode": "needs_attention",
             "needsAttention": bool(summary.get("needsAttention")),
@@ -292,6 +700,7 @@ def query_surface(
             "topFailureClass": summary.get("topFailureClass"),
             "latestProjectionDigest": summary.get("latestProjectionDigest"),
             "latestInstructionId": summary.get("latestInstructionId"),
+            "coherence": coherence,
         }
 
     if mode == "instruction":
@@ -355,6 +764,12 @@ def parse_args(default_root: Path) -> argparse.Namespace:
         default=None,
         help="Optional JSONL event output path (default: <repo-root>/artifacts/observation/events.jsonl).",
     )
+    build.add_argument(
+        "--issues-path",
+        type=Path,
+        default=None,
+        help="Issue memory path (default: <repo-root>/.premath/issues.jsonl).",
+    )
 
     query = subparsers.add_parser("query", help="Query observation surface JSON.")
     query.add_argument(
@@ -397,13 +812,20 @@ def main() -> int:
         ciwitness_dir = _resolve_path(root, args.ciwitness_dir, Path("artifacts/ciwitness"))
         out_json = _resolve_path(root, args.out_json, Path("artifacts/observation/latest.json"))
         out_jsonl = _resolve_path(root, args.out_jsonl, Path("artifacts/observation/events.jsonl"))
+        issues_path = _resolve_path(root, args.issues_path, Path(".premath/issues.jsonl"))
 
-        surface = build_surface(root, ciwitness_dir)
+        surface = build_surface(root, ciwitness_dir, issues_path=issues_path)
         write_surface(surface, out_json, out_jsonl)
+        coherence = surface["summary"].get("coherence")
+        attention_reasons = (
+            coherence.get("attentionReasons", [])
+            if isinstance(coherence, dict)
+            else []
+        )
         print(
             "[observation-surface] OK "
             f"(state={surface['summary']['state']}, needsAttention={surface['summary']['needsAttention']}, "
-            f"out={out_json})"
+            f"attentionReasons={len(attention_reasons)}, out={out_json})"
         )
         return 0
 

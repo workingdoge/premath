@@ -62,8 +62,15 @@ are deterministic unit tests for provider-neutral pipeline summary/digest logic
 (`mise run ci-pipeline-test`).
 
 `tools/ci/observation_surface.py` builds and queries `Observation Surface v0`
-from CI witness artifacts (`mise run ci-observation-build`,
-`mise run ci-observation-query`).
+from CI witness artifacts plus issue-memory projection state
+(`mise run ci-observation-build`, `mise run ci-observation-query`).
+The summary includes explicit coherence projections for:
+
+- policy drift,
+- unknown instruction classification rate,
+- proposal reject classes,
+- ready-vs-blocked partition integrity,
+- stale/contended lease claims.
 It writes:
 
 - `artifacts/observation/latest.json` (deterministic read model),
@@ -73,8 +80,8 @@ It writes:
 `tools/ci/test_observation_surface.py` validates deterministic reducer/query
 behavior (`mise run ci-observation-test`).
 `tools/ci/check_observation_semantics.py` enforces projection invariance:
-observation output must match deterministic reducer output from CI witness
-artifacts (`mise run ci-observation-check`).
+observation output must match deterministic reducer output from CI witness and
+issue-memory artifacts (`mise run ci-observation-check`).
 
 `premath observe-serve` (from `premath-cli`) exposes the same observation query
 contract as a tiny HTTP read API for frontend clients:

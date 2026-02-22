@@ -1,5 +1,6 @@
 use crate::cli::ObserveModeArg;
 use premath_ux::{SurrealObservationBackend, UxService};
+use serde_json::Value;
 use std::process;
 
 pub struct Args {
@@ -35,14 +36,17 @@ pub fn run(args: Args) {
                     "  needs attention: {}",
                     yes_no(latest.summary.needs_attention)
                 );
-                if let Some(proj) = latest.summary.latest_projection_digest {
+                if let Some(proj) = latest.summary.latest_projection_digest.as_deref() {
                     println!("  projection: {proj}");
                 }
-                if let Some(inst) = latest.summary.latest_instruction_id {
+                if let Some(inst) = latest.summary.latest_instruction_id.as_deref() {
                     println!("  latest instruction: {inst}");
                 }
-                if let Some(reason) = latest.summary.top_failure_class {
+                if let Some(reason) = latest.summary.top_failure_class.as_deref() {
                     println!("  top failure: {reason}");
+                }
+                if let Some(coherence) = latest.summary.coherence.as_ref() {
+                    print_coherence_summary(coherence);
                 }
             }
         }
@@ -57,14 +61,17 @@ pub fn run(args: Args) {
                 println!("premath observe needs_attention");
                 println!("  state: {}", needs.state);
                 println!("  needs attention: {}", yes_no(needs.needs_attention));
-                if let Some(reason) = needs.top_failure_class {
+                if let Some(reason) = needs.top_failure_class.as_deref() {
                     println!("  top failure: {reason}");
                 }
-                if let Some(proj) = needs.latest_projection_digest {
+                if let Some(proj) = needs.latest_projection_digest.as_deref() {
                     println!("  projection: {proj}");
                 }
-                if let Some(inst) = needs.latest_instruction_id {
+                if let Some(inst) = needs.latest_instruction_id.as_deref() {
                     println!("  latest instruction: {inst}");
+                }
+                if let Some(coherence) = needs.coherence.as_ref() {
+                    print_coherence_summary(coherence);
                 }
             }
         }
@@ -134,4 +141,39 @@ pub fn run(args: Args) {
 
 fn yes_no(value: bool) -> &'static str {
     if value { "yes" } else { "no" }
+}
+
+fn print_coherence_summary(coherence: &Value) {
+    if let Some(policy_drift) = json_bool(coherence, "/policyDrift/driftDetected") {
+        println!("  policy drift: {}", yes_no(policy_drift));
+    }
+    if let Some(unknown_rate) = json_f64(coherence, "/instructionTyping/unknownRatePercent") {
+        println!("  unknown classification rate: {:.2}%", unknown_rate);
+    }
+    if let Some(proposal_rejects) = json_i64(coherence, "/proposalRejectClasses/totalRejectCount") {
+        println!("  proposal reject classes: {proposal_rejects}");
+    }
+    if let Some(partition_coherent) = json_bool(coherence, "/issuePartition/isCoherent") {
+        println!(
+            "  ready/blocked partition coherent: {}",
+            yes_no(partition_coherent)
+        );
+    }
+    let stale = json_i64(coherence, "/leaseHealth/staleCount").unwrap_or(0);
+    let contended = json_i64(coherence, "/leaseHealth/contendedCount").unwrap_or(0);
+    if stale > 0 || contended > 0 {
+        println!("  stale/contended claims: {stale}/{contended}");
+    }
+}
+
+fn json_bool(root: &Value, pointer: &str) -> Option<bool> {
+    root.pointer(pointer).and_then(Value::as_bool)
+}
+
+fn json_f64(root: &Value, pointer: &str) -> Option<f64> {
+    root.pointer(pointer).and_then(Value::as_f64)
+}
+
+fn json_i64(root: &Value, pointer: &str) -> Option<i64> {
+    root.pointer(pointer).and_then(Value::as_i64)
 }

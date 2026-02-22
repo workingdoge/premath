@@ -18,6 +18,8 @@ pub struct ObservationSummary {
     pub required_check_count: u64,
     pub executed_check_count: u64,
     pub changed_path_count: u64,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub coherence: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -223,6 +225,7 @@ mod tests {
                 required_check_count: 1,
                 executed_check_count: 1,
                 changed_path_count: 2,
+                coherence: None,
             },
             latest: LatestObservation {
                 delta: Some(DeltaSummary {

@@ -18,6 +18,14 @@ python3 -m http.server 43173 --directory docs
 
 Open `http://127.0.0.1:43173/observation/`.
 
+The dashboard shows both base state and coherence projections, including:
+
+- policy drift,
+- unknown instruction-classification rate,
+- proposal reject-class counts,
+- ready-vs-blocked partition integrity,
+- stale/contended lease claims.
+
 Default API base in the page is `http://127.0.0.1:43174` and can be changed in
 the UI.
 

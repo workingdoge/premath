@@ -257,6 +257,26 @@
         <div class="label">Latest Instruction</div>
         <div class="value" id="mInstruction">-</div>
       </article>
+      <article class="metric">
+        <div class="label">Policy Drift</div>
+        <div class="value" id="mPolicyDrift">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Unknown Classification</div>
+        <div class="value" id="mUnknownRate">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Proposal Reject Classes</div>
+        <div class="value" id="mProposalRejects">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Ready/Blocked Partition</div>
+        <div class="value" id="mIssuePartition">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Stale/Contended Claims</div>
+        <div class="value" id="mLeaseHealth">-</div>
+      </article>
     </section>
 
     <section class="panes">
@@ -271,6 +291,13 @@
         <h2>Needs Attention View</h2>
         <div class="body">
           <pre id="needsJson" class="mono"></pre>
+        </div>
+      </article>
+
+      <article class="pane">
+        <h2>Coherence Projection</h2>
+        <div class="body">
+          <pre id="coherenceJson" class="mono"></pre>
         </div>
       </article>
 
@@ -307,6 +334,13 @@
         <h2>Required Checks</h2>
         <div class="body">
           <ul id="checksList" class="list"></ul>
+        </div>
+      </article>
+
+      <article class="pane">
+        <h2>Attention Reasons</h2>
+        <div class="body">
+          <ul id="reasonsList" class="list"></ul>
         </div>
       </article>
     </section>
@@ -382,6 +416,44 @@
         setMetric("mProjection", needs.latestProjectionDigest || "-");
         setMetric("mInstruction", needs.latestInstructionId || "-");
 
+        const coherence = latest.summary?.coherence || {};
+        $("coherenceJson").textContent = pretty(coherence);
+
+        const policyDrift = Boolean(coherence.policyDrift?.driftDetected);
+        setMetric("mPolicyDrift", policyDrift ? "drift" : "stable", policyDrift ? "bad" : "ok");
+
+        const unknownCount = Number(coherence.instructionTyping?.unknownCount || 0);
+        const unknownRatePercent = Number(coherence.instructionTyping?.unknownRatePercent || 0);
+        setMetric(
+          "mUnknownRate",
+          `${unknownCount} (${unknownRatePercent.toFixed(2)}%)`,
+          unknownCount > 0 ? "warn" : "ok"
+        );
+
+        const proposalRejectCount = Number(coherence.proposalRejectClasses?.totalRejectCount || 0);
+        setMetric(
+          "mProposalRejects",
+          String(proposalRejectCount),
+          proposalRejectCount > 0 ? "warn" : "ok"
+        );
+
+        const issuePartition = coherence.issuePartition || {};
+        const partitionCoherent = issuePartition.isCoherent !== false;
+        setMetric(
+          "mIssuePartition",
+          partitionCoherent ? "coherent" : "incoherent",
+          partitionCoherent ? "ok" : "bad"
+        );
+
+        const staleCount = Number(coherence.leaseHealth?.staleCount || 0);
+        const contendedCount = Number(coherence.leaseHealth?.contendedCount || 0);
+        const leaseProblem = staleCount > 0 || contendedCount > 0;
+        setMetric(
+          "mLeaseHealth",
+          `${staleCount}/${contendedCount}`,
+          leaseProblem ? "bad" : "ok"
+        );
+
         if (needs.latestProjectionDigest) {
           $("projectionId").value = needs.latestProjectionDigest;
         }
@@ -391,8 +463,10 @@
 
         const changed = latest.latest?.delta?.changedPaths || [];
         const required = latest.latest?.required?.requiredChecks || [];
+        const reasons = coherence.attentionReasons || [];
         renderList($("pathsList"), changed);
         renderList($("checksList"), required);
+        renderList($("reasonsList"), reasons);
 
         const elapsed = Date.now() - started;
         setStatus(`Loaded from ${state.base} in ${elapsed}ms`);

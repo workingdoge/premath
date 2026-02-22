@@ -759,3 +759,42 @@ representations.
   bindings.
 - `draft/SPEC-TRACEABILITY` marks `PREMATH-KERNEL.md` as `covered`.
 - The traceability target backlog (`T-*-*`) is currently empty.
+
+---
+
+## 2026-02-22 — Decision 0027: Expand Observation Surface with coherence projections
+
+### Decision
+Extend `Observation Surface v0` to include explicit coherence projections in
+`summary.coherence` and expose them through observe query surfaces and the docs
+dashboard:
+
+- policy drift projection,
+- unknown instruction-classification rate,
+- proposal reject-class aggregation,
+- ready-vs-blocked open-issue partition integrity,
+- stale/contended lease-claim health.
+
+Implementation surfaces:
+
+- reducer/query: `tools/ci/observation_surface.py`
+- semantic invariance checks: `tools/ci/check_observation_semantics.py`
+- reducer tests: `tools/ci/test_observation_surface.py`
+- observe read models: `crates/premath-surreal/src/observation.rs`,
+  `crates/premath-ux/src/lib.rs`,
+  `crates/premath-cli/src/commands/observe.rs`
+- dashboard: `docs/observation/index.html`
+
+### Rationale
+Coherence v1 needed a single operator-facing observation surface that reports
+not only required-gate verdict state but also control-plane coherence risks
+(policy drift, unknown typing pressure, proposal failure shape, issue partition
+integrity, and lease staleness/contention). Without these projections,
+attention routing remained under-specified.
+
+### Consequences
+- `observe latest` and `observe needs_attention` now include coherence
+  projection data for downstream tools/dashboards.
+- `needsAttention` is now raised for rejected/error state *or* coherence
+  attention reasons.
+- Observation semantics checks now validate coherence-attention consistency.

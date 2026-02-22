@@ -360,6 +360,7 @@ mod tests {
                 required_check_count: 1,
                 executed_check_count: 1,
                 changed_path_count: 2,
+                coherence: None,
             }
         }
 

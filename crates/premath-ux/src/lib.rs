@@ -80,6 +80,7 @@ pub struct NeedsAttentionView {
     pub top_failure_class: Option<String>,
     pub latest_projection_digest: Option<String>,
     pub latest_instruction_id: Option<String>,
+    pub coherence: Option<Value>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -129,6 +130,7 @@ impl<B: ObservationBackend> UxService<B> {
             top_failure_class: summary.top_failure_class,
             latest_projection_digest: summary.latest_projection_digest,
             latest_instruction_id: summary.latest_instruction_id,
+            coherence: summary.coherence,
         }
     }
 
@@ -183,6 +185,7 @@ mod tests {
                 required_check_count: 1,
                 executed_check_count: 1,
                 changed_path_count: 2,
+                coherence: None,
             }
         }
 
