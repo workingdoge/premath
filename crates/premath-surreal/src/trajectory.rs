@@ -228,7 +228,7 @@ fn parse_rfc3339(value: &str) -> Option<DateTime<Utc>> {
 }
 
 fn sort_rows_desc(rows: &mut [HarnessTrajectoryRow]) {
-    rows.sort_by(|left, right| compare_rows_desc(left, right));
+    rows.sort_by(compare_rows_desc);
 }
 
 fn compare_rows_desc(left: &HarnessTrajectoryRow, right: &HarnessTrajectoryRow) -> Ordering {
