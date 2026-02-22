@@ -1002,3 +1002,32 @@ spec-index coherence.
 - Interop Full normative scope is lifecycle-consistent.
 - draft traceability now includes explicit coverage for `NORMALIZER.md`.
 - raw-spec surface is reduced to genuinely non-promoted tracks.
+
+---
+
+## 2026-02-22 — Decision 0035: Add KCIR proposal refs as the canonical instruction/proposal boundary
+
+### Decision
+Extend instruction proposal ingestion so canonical proposal payloads produce a
+deterministic KCIR ref and carry it through witness surfaces:
+
+- add deterministic `proposalKcirRef` (`kcir1_*`) derivation in
+  `tools/ci/instruction_proposal.py`,
+- permit optional declared `proposalKcirRef` in proposal payloads and reject on
+  mismatch (`proposal_kcir_ref_mismatch`),
+- emit `proposalKcirRef` inside `proposalIngest` witness payloads from
+  `tools/ci/run_instruction.py`,
+- expose `proposal kcir ref` in instruction pipeline summaries,
+- add instruction-typing adversarial vector
+  `proposal_kcir_ref_mismatch_reject`.
+
+### Rationale
+`proposalDigest` alone is a local digest. The unification path needs one
+portable IR boundary so instruction/proposal/coherence surfaces can reference
+the same canonical proposal identity in a KCIR-compatible namespace.
+
+### Consequences
+- proposal witness lineage is now KCIR-addressable (`kcir1_*`).
+- deterministic conformance coverage now rejects declared KCIR ref drift.
+- docs now prefer `proposalKcirRef` as canonical external key while retaining
+  `proposalDigest` for compatibility.

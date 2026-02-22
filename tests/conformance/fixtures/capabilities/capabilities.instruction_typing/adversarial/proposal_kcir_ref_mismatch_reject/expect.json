@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "proposal_kcir_ref_mismatch"
+  ],
+  "assertions": [
+    "declared proposal KCIR refs must match canonical proposal KCIR projection"
+  ]
+}

@@ -509,6 +509,7 @@ def main() -> int:
             "state": "typed",
             "kind": f"proposal.{proposal['canonical']['proposalKind']}",
             "proposalDigest": proposal["digest"],
+            "proposalKcirRef": proposal["kcirRef"],
             "binding": proposal["canonical"]["binding"],
             "targetCtxRef": proposal["canonical"]["targetCtxRef"],
             "targetJudgment": proposal["canonical"]["targetJudgment"],

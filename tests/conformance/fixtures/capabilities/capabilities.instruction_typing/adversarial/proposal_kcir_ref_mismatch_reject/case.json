@@ -2,11 +2,13 @@
   "schema": 1,
   "status": "executable",
   "capabilityId": "capabilities.instruction_typing",
-  "vectorId": "golden/instruction_proposal_typed_deterministic",
-  "description": "Typed LLM proposal ingestion is deterministic for fixed proposal payload, classification, and policy binding.",
-  "semanticScenarioId": "instruction_proposal_typed_determinism_01",
+  "vectorId": "adversarial/proposal_kcir_ref_mismatch_reject",
+  "description": "Typed proposal ingestion rejects when declared KCIR proposal refs are not canonical.",
+  "semanticScenarioId": "instruction_proposal_kcir_ref_mismatch_01",
   "artifacts": {
-    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "claimedCapabilities": [
+      "capabilities.instruction_typing"
+    ],
     "policy": {
       "allowUnknown": false
     },
@@ -25,18 +27,31 @@
         "kind": "mor",
         "shape": "mor:eq"
       },
-      "candidateRefs": ["ref:goal", "ref:lemma-1"],
+      "candidateRefs": [
+        "ref:goal",
+        "ref:lemma-1"
+      ],
       "steps": [
         {
           "ruleId": "eq.trans",
-          "inputs": ["ref:a", "ref:b"],
-          "outputs": ["ref:lemma-1"],
+          "inputs": [
+            "ref:a",
+            "ref:b"
+          ],
+          "outputs": [
+            "ref:lemma-1"
+          ],
           "claim": "compose local equalities"
         },
         {
           "ruleId": "eq.rewrite",
-          "inputs": ["ref:lemma-1", "ref:c"],
-          "outputs": ["ref:goal"],
+          "inputs": [
+            "ref:lemma-1",
+            "ref:c"
+          ],
+          "outputs": [
+            "ref:goal"
+          ],
           "claim": "rewrite to target judgment"
         }
       ],
@@ -53,18 +68,31 @@
         "kind": "mor",
         "shape": "mor:eq"
       },
-      "candidateRefs": ["ref:lemma-1", "ref:goal"],
+      "candidateRefs": [
+        "ref:lemma-1",
+        "ref:goal"
+      ],
       "steps": [
         {
           "ruleId": "eq.trans",
-          "inputs": ["ref:a", "ref:b"],
-          "outputs": ["ref:lemma-1"],
+          "inputs": [
+            "ref:a",
+            "ref:b"
+          ],
+          "outputs": [
+            "ref:lemma-1"
+          ],
           "claim": "compose local equalities"
         },
         {
           "ruleId": "eq.rewrite",
-          "inputs": ["ref:lemma-1", "ref:c"],
-          "outputs": ["ref:goal"],
+          "inputs": [
+            "ref:lemma-1",
+            "ref:c"
+          ],
+          "outputs": [
+            "ref:goal"
+          ],
           "claim": "rewrite to target judgment"
         }
       ],
@@ -72,7 +100,7 @@
         "normalizerId": "normalizer.test.v1",
         "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
       },
-      "proposalKcirRef": "kcir1_52ec9fe5606819d2f954d0f6fe7335e14d67b9cd92da2c7454f5688720b9851f"
+      "proposalKcirRef": "kcir1_deadbeef"
     }
   }
 }

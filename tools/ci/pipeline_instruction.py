@@ -102,6 +102,7 @@ def render_summary(repo_root: Path, instruction_id: str) -> str:
     proposal_ingest = payload.get("proposalIngest")
     if isinstance(proposal_ingest, dict):
         proposal_digest = proposal_ingest.get("proposalDigest", "(missing)")
+        proposal_kcir_ref = proposal_ingest.get("proposalKcirRef", "(missing)")
         proposal_kind = proposal_ingest.get("kind", "(missing)")
         obligations = proposal_ingest.get("obligations", [])
         obligation_count = len(obligations) if isinstance(obligations, list) else 0
@@ -119,6 +120,7 @@ def render_summary(repo_root: Path, instruction_id: str) -> str:
             [
                 f"- proposal kind: `{proposal_kind}`",
                 f"- proposal digest: `{proposal_digest}`",
+                f"- proposal kcir ref: `{proposal_kcir_ref}`",
                 f"- proposal obligations: `{obligation_count}`",
                 f"- proposal discharge: `{discharge_outcome}`",
                 f"- proposal discharge failures: `{discharge_failures}`",

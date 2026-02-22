@@ -36,6 +36,7 @@ from instruction_proposal import (  # type: ignore  # noqa: E402
     canonicalize_proposal,
     compile_proposal_obligations,
     compute_proposal_digest,
+    compute_proposal_kcir_ref,
     discharge_proposal_obligations,
 )
 from provider_env import map_github_to_premath_env, resolve_premath_ci_refs  # type: ignore  # noqa: E402
@@ -1058,6 +1059,11 @@ def evaluate_instruction_proposal_checking(case: Dict[str, Any]) -> VectorOutcom
     if computed_a != computed_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 
+    computed_kcir_a = compute_proposal_kcir_ref(canonical_a)
+    computed_kcir_b = compute_proposal_kcir_ref(canonical_b)
+    if computed_kcir_a != computed_kcir_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
     declared_a = proposal_a.get("proposalDigest")
     if declared_a is not None:
         if not isinstance(declared_a, str) or not declared_a:
@@ -1071,6 +1077,20 @@ def evaluate_instruction_proposal_checking(case: Dict[str, Any]) -> VectorOutcom
             return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
         if declared_b != computed_b:
             return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    declared_kcir_a = proposal_a.get("proposalKcirRef")
+    if declared_kcir_a is not None:
+        if not isinstance(declared_kcir_a, str) or not declared_kcir_a:
+            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
+        if declared_kcir_a != computed_kcir_a:
+            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
+
+    declared_kcir_b = proposal_b.get("proposalKcirRef")
+    if declared_kcir_b is not None:
+        if not isinstance(declared_kcir_b, str) or not declared_kcir_b:
+            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
+        if declared_kcir_b != computed_kcir_b:
+            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
 
     obligations_a = compile_proposal_obligations(canonical_a)
     obligations_b = compile_proposal_obligations(canonical_b)
@@ -1105,6 +1125,8 @@ def evaluate_instruction_typing_vector(vector_id: str, case: Dict[str, Any]) -> 
     if vector_id == "adversarial/proposal_invalid_step_reject":
         return evaluate_instruction_proposal_checking(case)
     if vector_id == "adversarial/proposal_nondeterministic_digest_reject":
+        return evaluate_instruction_proposal_checking(case)
+    if vector_id == "adversarial/proposal_kcir_ref_mismatch_reject":
         return evaluate_instruction_proposal_checking(case)
     if vector_id == "adversarial/proposal_ext_gap_discharge_reject":
         return evaluate_instruction_proposal_checking(case)

@@ -172,6 +172,8 @@ When witness records are emitted, they SHOULD include:
 
 When proposal material is present, witnesses SHOULD additionally include:
 
+- deterministic proposal KCIR ref (`proposal_kcir_ref`) when KCIR-linked
+  witness surfaces are enabled,
 - deterministic compiled `obligations[]`,
 - deterministic normalized `discharge` result,
 - discharge failure classes (if any), bound to `(normalizer_id, policy_digest)`.

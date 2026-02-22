@@ -48,6 +48,14 @@ def compute_proposal_digest(canonical_proposal: Dict[str, Any]) -> str:
     return "prop1_" + stable_hash(canonical_proposal)
 
 
+def compute_proposal_kcir_ref(canonical_proposal: Dict[str, Any]) -> str:
+    payload = {
+        "kind": "kcir.proposal.v1",
+        "canonicalProposal": canonical_proposal,
+    }
+    return "kcir1_" + stable_hash(payload)
+
+
 class ProposalValidationError(ValueError):
     """Validation error with deterministic failure class."""
 
@@ -222,6 +230,7 @@ def validate_instruction_proposal(envelope: Dict[str, Any]) -> Optional[Dict[str
 
     canonical = canonicalize_proposal(raw)
     digest = compute_proposal_digest(canonical)
+    kcir_ref = compute_proposal_kcir_ref(canonical)
 
     declared_digest = raw.get("proposalDigest")
     if declared_digest is not None:
@@ -236,9 +245,23 @@ def validate_instruction_proposal(envelope: Dict[str, Any]) -> Optional[Dict[str
                 "proposal.proposalDigest does not match canonical payload digest",
             )
 
+    declared_kcir_ref = raw.get("proposalKcirRef")
+    if declared_kcir_ref is not None:
+        declared_kcir_ref = _ensure_non_empty_string(
+            declared_kcir_ref,
+            "proposal.proposalKcirRef",
+            "proposal_kcir_ref_mismatch",
+        )
+        if declared_kcir_ref != kcir_ref:
+            raise ProposalValidationError(
+                "proposal_kcir_ref_mismatch",
+                "proposal.proposalKcirRef does not match canonical KCIR ref",
+            )
+
     return {
         "canonical": canonical,
         "digest": digest,
+        "kcirRef": kcir_ref,
     }
 
 

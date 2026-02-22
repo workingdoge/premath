@@ -74,6 +74,7 @@ LLMProposal {
     policyDigest
   }
   proposalDigest?     // optional declared digest; MUST match canonical payload when present
+  proposalKcirRef?    // optional declared KCIR ref; MUST match canonical proposal projection when present
 }
 ```
 
@@ -122,6 +123,11 @@ Implementations SHOULD emit proposal-ingest witness material containing at
 least deterministic `obligations[]` and deterministic `discharge` records so
 accept/reject outcomes are auditable without replaying runtime logs.
 
+When KCIR-linked evidence surfaces are exposed, implementations SHOULD emit a
+deterministic proposal KCIR ref (`kcir1_*`) derived from canonical proposal
+payload so instruction/proposal/coherence witnesses share one reference
+boundary.
+
 ## 5. Determinism binding
 
 Proposal checking in `normalized` mode MUST bind to:
@@ -139,6 +145,16 @@ For fixed semantic payload and fixed binding material:
 If `proposalDigest` is present, it MUST equal canonical digest output for the
 same payload.
 
+If `proposalKcirRef` is present, it MUST equal the canonical KCIR ref derived
+from canonical proposal payload.
+
+Migration guidance (minimum encoding):
+
+- new witness/API surfaces SHOULD treat `proposalKcirRef` as the canonical
+  external proposal key,
+- `proposalDigest` MAY be retained as a compatibility digest during transition,
+- when both are present they MUST bind to the same canonical proposal payload.
+
 ## 6. Deterministic failure classes
 
 Proposal ingestion MUST produce deterministic machine-readable classes for
@@ -151,6 +167,7 @@ checker-level failures before Gate discharge. Minimum set:
 - `proposal_unbound_policy`,
 - `proposal_binding_mismatch`,
 - `proposal_nondeterministic`.
+- `proposal_kcir_ref_mismatch`.
 
 These classes do not replace Gate failure classes; they gate entry into
 obligation discharge.
