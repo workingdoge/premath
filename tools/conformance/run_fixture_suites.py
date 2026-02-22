@@ -101,6 +101,18 @@ SUITES: Tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        suite_id="tusk-core",
+        domain="conformance.tusk-core",
+        command=("python3", "tools/conformance/run_tusk_core_vectors.py"),
+        input_paths=(
+            ROOT / "tools" / "conformance" / "run_fixture_suites.py",
+            ROOT / "tools" / "conformance" / "run_tusk_core_vectors.py",
+            ROOT / "tests" / "conformance" / "fixtures" / "tusk-core",
+            ROOT / "crates" / "premath-tusk" / "src",
+            ROOT / "crates" / "premath-cli" / "src" / "commands" / "tusk_eval.rs",
+        ),
+    ),
+    Suite(
         suite_id="capabilities",
         domain="conformance.capabilities",
         command=("python3", "tools/conformance/run_capability_vectors.py"),

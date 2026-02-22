@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "suiteId": "tusk-core",
+  "vectorId": "adversarial/tusk_eval_multi_local_missing_compat_locality_failure_reject",
+  "description": "Multi-local pack with no overlap compatibility maps to locality_failure.",
+  "artifacts": {
+    "identity": {
+      "worldId": "world.dev",
+      "unitId": "unit.test",
+      "contextId": "ctx.main",
+      "intentId": "intent.test",
+      "coverId": "cover.test",
+      "ctxRef": "ctx:head",
+      "dataHeadRef": "data:head",
+      "adapterId": "adapter.test",
+      "adapterVersion": "0.1.0",
+      "normalizerId": "normalizer.test.v1",
+      "policyDigest": "policy.test.v1"
+    },
+    "descentPack": {
+      "core": {
+        "coverId": "cover.test",
+        "locals": {
+          "part:a": {
+            "value": 1
+          },
+          "part:b": {
+            "value": 2
+          }
+        },
+        "compat": [],
+        "mode": {
+          "normalizerId": "normalizer.test.v1",
+          "policyDigest": "policy.test.v1"
+        }
+      },
+      "glueProposals": [
+        {
+          "proposalId": "proposal:1",
+          "payload": {
+            "selected": true
+          }
+        }
+      ]
+    }
+  }
+}

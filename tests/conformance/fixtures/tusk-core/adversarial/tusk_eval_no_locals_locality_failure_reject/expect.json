@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedOutcome": {
+    "result": "rejected",
+    "failureClasses": [
+      "locality_failure"
+    ],
+    "failureLawRefs": [
+      "GATE-3.2"
+    ],
+    "failurePairs": [
+      {
+        "class": "locality_failure",
+        "lawRef": "GATE-3.2"
+      }
+    ],
+    "glueSelected": null
+  }
+}

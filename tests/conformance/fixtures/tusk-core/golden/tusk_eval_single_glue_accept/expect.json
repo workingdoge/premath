@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "result": "accepted",
+  "expectedOutcome": {
+    "result": "accepted",
+    "failureClasses": [],
+    "failureLawRefs": [],
+    "failurePairs": [],
+    "glueSelected": "proposal:1"
+  }
+}

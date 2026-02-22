@@ -1166,3 +1166,32 @@ vector-mapped capability boundaries while keeping the full spec lifecycle-raw.
 - lifecycle authority remains coherent: capability clauses are executable and
   claim-bound, while full-document evolution remains open until promotion
   criteria are met.
+
+---
+
+## 2026-02-22 — Decision 0041: Keep TUSK-CORE lifecycle-raw with explicit runtime vector mapping
+
+### Decision
+Retain `raw/TUSK-CORE` in raw lifecycle state (do not promote to draft yet),
+while tightening deterministic boundary evidence through a dedicated fixture
+suite:
+
+- add executable `tusk-core` conformance vectors run via
+  `tools/conformance/run_tusk_core_vectors.py`,
+- wire `tusk-core` into cached `conformance-run` suite execution,
+- map `raw/TUSK-CORE` runtime boundary clauses to explicit vector IDs and
+  Gate-class/law-ref outcomes.
+
+### Rationale
+`tusk-core` remains an active runtime contract surface with ongoing profile and
+execution-shape iteration. Promotion now would freeze a boundary still under
+active operational refinement. We can preserve deterministic authority by
+binding runtime failure-class semantics to explicit vectors while keeping full
+document lifecycle-raw.
+
+### Consequences
+- required mapping paths in `raw/TUSK-CORE` (§5.2/§8) now have executable
+  vector evidence across accepted, locality, descent, and glue-contractibility
+  outcomes.
+- lifecycle authority remains coherent: contract text can iterate, while
+  failure mapping behavior is pinned by deterministic vectors and merge gates.

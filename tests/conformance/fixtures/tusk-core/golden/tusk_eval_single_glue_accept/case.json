@@ -1,0 +1,44 @@
+{
+  "schema": 1,
+  "suiteId": "tusk-core",
+  "vectorId": "golden/tusk_eval_single_glue_accept",
+  "description": "Single glue proposal yields accepted envelope and selected glue result.",
+  "artifacts": {
+    "identity": {
+      "worldId": "world.dev",
+      "unitId": "unit.test",
+      "contextId": "ctx.main",
+      "intentId": "intent.test",
+      "coverId": "cover.test",
+      "ctxRef": "ctx:head",
+      "dataHeadRef": "data:head",
+      "adapterId": "adapter.test",
+      "adapterVersion": "0.1.0",
+      "normalizerId": "normalizer.test.v1",
+      "policyDigest": "policy.test.v1"
+    },
+    "descentPack": {
+      "core": {
+        "coverId": "cover.test",
+        "locals": {
+          "part:a": {
+            "value": 1
+          }
+        },
+        "compat": [],
+        "mode": {
+          "normalizerId": "normalizer.test.v1",
+          "policyDigest": "policy.test.v1"
+        }
+      },
+      "glueProposals": [
+        {
+          "proposalId": "proposal:1",
+          "payload": {
+            "selected": true
+          }
+        }
+      ]
+    }
+  }
+}

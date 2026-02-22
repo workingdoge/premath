@@ -192,7 +192,8 @@ Current tracked promotion queue:
 
 - `raw/SQUEAK-SITE` — tracked by issue `bd-44` (raw-retain path recorded in
   Decision 0040; promote only when criteria are met).
-- `raw/TUSK-CORE` — tracked by issue `bd-45`.
+- `raw/TUSK-CORE` — tracked by issue `bd-45` (raw-retain path recorded in
+  Decision 0041; promote only when criteria are met).
 
 ### 5.6 Normative for profile overlays (only if claimed)
 

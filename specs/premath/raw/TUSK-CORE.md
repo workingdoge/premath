@@ -262,7 +262,38 @@ A conforming implementation MAY expose profile capabilities, including:
 Kernel admissibility outcomes MUST remain invariant for fixed semantic inputs
 and fixed policy bindings, regardless of chosen evidence profile.
 
-## 10. Security and robustness
+## 10. Conformance mapping (`tusk-core` fixture suite)
+
+Deterministic runtime-contract vectors live under:
+
+- `tests/conformance/fixtures/tusk-core/`
+
+and are executable through:
+
+- `python3 tools/conformance/run_tusk_core_vectors.py`
+- `mise run conformance-run` (cached suite id: `tusk-core`)
+
+Boundary coverage mapping:
+
+- accepted single-glue path (§5.2, §6):
+  `golden/tusk_eval_single_glue_accept`.
+- missing local restrictions (§5.1, §8):
+  `adversarial/tusk_eval_no_locals_locality_failure_reject`
+  -> `locality_failure` (`GATE-3.2`).
+- missing overlap compatibility for multi-local packs (§4.3, §8):
+  `adversarial/tusk_eval_multi_local_missing_compat_locality_failure_reject`
+  -> `locality_failure` (`GATE-3.2`).
+- no valid glue proposal (§5.2 required mapping):
+  `adversarial/tusk_eval_no_glue_descent_failure_reject`
+  -> `descent_failure` (`GATE-3.3`).
+- missing mode comparison binding (§5.2 required mapping):
+  `adversarial/tusk_eval_mode_missing_descent_failure_reject`
+  -> `descent_failure` (`GATE-3.3`).
+- non-contractible glue selection (§5.2 required mapping):
+  `adversarial/tusk_eval_multi_glue_non_contractible_reject`
+  -> `glue_non_contractible` (`GATE-3.4`).
+
+## 11. Security and robustness
 
 Implementations MUST treat context stores, event streams, and adapter payloads as
 untrusted input.
@@ -273,7 +304,7 @@ Implementations SHOULD:
 - fail closed on malformed mode bindings,
 - emit deterministic error diagnostics suitable for CI gating.
 
-## 11. Doctrine Preservation Declaration (v0)
+## 12. Doctrine Preservation Declaration (v0)
 
 Reference: `draft/DOCTRINE-INF`.
 

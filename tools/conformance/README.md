@@ -10,6 +10,7 @@ Runs the executable conformance fixture suites through one command surface:
 - `gate` (`run_gate_vectors.py`)
 - `witness-id` (`run_witness_id_vectors.py`)
 - `kernel-profile` (`run_kernel_profile_vectors.py`)
+- `tusk-core` (`run_tusk_core_vectors.py`)
 - `capabilities` (`run_capability_vectors.py`)
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
@@ -229,6 +230,27 @@ Run:
 
 ```bash
 python3 tools/conformance/run_kernel_profile_vectors.py
+```
+
+## `run_tusk_core_vectors.py`
+
+Runs deterministic Tusk runtime-contract vectors in:
+
+- `tests/conformance/fixtures/tusk-core/`
+
+Checks include stable runtime-eval boundary behavior for:
+
+- accepted single-glue selection path,
+- `locality_failure` mapping for missing locals,
+- `locality_failure` mapping for missing multi-local compatibility evidence,
+- `descent_failure` mapping for missing glue proposals,
+- `descent_failure` mapping for missing mode bindings,
+- `glue_non_contractible` mapping for multi-proposal ambiguity.
+
+Run:
+
+```bash
+python3 tools/conformance/run_tusk_core_vectors.py
 ```
 
 ## `check_doctrine_site.py`

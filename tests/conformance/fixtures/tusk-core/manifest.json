@@ -1,0 +1,11 @@
+{
+  "suiteId": "tusk-core",
+  "vectors": [
+    "golden/tusk_eval_single_glue_accept",
+    "adversarial/tusk_eval_no_locals_locality_failure_reject",
+    "adversarial/tusk_eval_multi_local_missing_compat_locality_failure_reject",
+    "adversarial/tusk_eval_no_glue_descent_failure_reject",
+    "adversarial/tusk_eval_mode_missing_descent_failure_reject",
+    "adversarial/tusk_eval_multi_glue_non_contractible_reject"
+  ]
+}
