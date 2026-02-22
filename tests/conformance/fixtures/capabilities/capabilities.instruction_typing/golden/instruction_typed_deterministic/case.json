@@ -13,7 +13,8 @@
         "kind": "repo",
         "target": "premath"
       },
-      "policyDigest": "policy.ci.v1",
+      "normalizerId": "normalizer.ci.v1",
+      "policyDigest": "pol1_4ba916ce38da5c5607eb7f41d963294b34b644deb1fa6d55e133b072ca001b39",
       "requestedChecks": ["hk-check", "conformance-run"]
     },
     "policy": {

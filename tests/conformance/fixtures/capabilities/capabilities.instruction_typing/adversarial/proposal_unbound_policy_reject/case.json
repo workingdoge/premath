@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "adversarial/proposal_unbound_policy_reject",
+  "description": "Proposal ingestion rejects when normalizer/policy binding material is missing.",
+  "semanticScenarioId": "instruction_proposal_unbound_policy_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "policy": {
+      "allowUnknown": false
+    },
+    "classificationA": {
+      "state": "typed",
+      "kind": "proposal.value"
+    },
+    "classificationB": {
+      "state": "typed",
+      "kind": "proposal.value"
+    },
+    "proposalA": {
+      "proposalKind": "value",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "obj",
+        "shape": "obj:type"
+      },
+      "candidateRefs": ["ref:obj-1"]
+    },
+    "proposalB": {
+      "proposalKind": "value",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "obj",
+        "shape": "obj:type"
+      },
+      "candidateRefs": ["ref:obj-1"]
+    }
+  }
+}

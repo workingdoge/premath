@@ -31,6 +31,7 @@ class PipelineInstructionTests(unittest.TestCase):
                     {
                         "instructionId": instruction_id,
                         "instructionDigest": "instr_digest",
+                        "normalizerId": "normalizer.test.v1",
                         "verdictClass": "accepted",
                         "requiredChecks": ["ci-wiring-check"],
                         "executedChecks": ["ci-wiring-check"],
@@ -49,6 +50,7 @@ class PipelineInstructionTests(unittest.TestCase):
             self.assertIn("### CI Instruction Witness", summary_a)
             self.assertIn(f"- instruction id: `{instruction_id}`", summary_a)
             self.assertIn("- instruction digest: `instr_digest`", summary_a)
+            self.assertIn("- normalizer id: `normalizer.test.v1`", summary_a)
             self.assertIn("- verdict: `accepted`", summary_a)
             self.assertIn("- required checks: `ci-wiring-check`", summary_a)
             self.assertIn("- executed checks: `ci-wiring-check`", summary_a)

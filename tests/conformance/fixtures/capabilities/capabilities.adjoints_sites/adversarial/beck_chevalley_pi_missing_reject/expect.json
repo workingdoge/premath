@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "adjoint_triple_coherence_failure"
+  ],
+  "assertions": [
+    "missing beck_chevalley_pi evidence rejects with adjoint_triple_coherence_failure"
+  ]
+}

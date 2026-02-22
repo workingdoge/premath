@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "glue_non_contractible"
+  ],
+  "assertions": [
+    "proposal discharge fails closed with glue_non_contractible for non-contractible value candidates"
+  ]
+}

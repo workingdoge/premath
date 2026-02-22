@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_discover_preserves_existing_and_links_discovered_from",
+  "description": "Discover flow adds a follow-up issue without dropping existing items and links discovered-from to parent.",
+  "semanticScenarioId": "change_projection_issue_discover_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_discover",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "existingIssues": [
+      {
+        "id": "bd-parent"
+      },
+      {
+        "id": "bd-other"
+      }
+    ],
+    "parentIssue": {
+      "id": "bd-parent"
+    },
+    "discoveredIssue": {
+      "id": "bd-found",
+      "title": "Follow-up discovered during implementation"
+    },
+    "expectedDependency": {
+      "issueId": "bd-found",
+      "dependsOnId": "bd-parent",
+      "type": "discovered-from"
+    },
+    "expectedTotalIssues": 3
+  }
+}

@@ -92,12 +92,38 @@ def render_summary(repo_root: Path, instruction_id: str) -> str:
             "",
             f"- instruction id: `{payload.get('instructionId', '(missing)')}`",
             f"- instruction digest: `{payload.get('instructionDigest', '(missing)')}`",
+            f"- normalizer id: `{payload.get('normalizerId', '(missing)')}`",
             f"- verdict: `{payload.get('verdictClass', '(missing)')}`",
             f"- required checks: `{required_line}`",
             f"- executed checks: `{executed_line}`",
             f"- witness sha256: `{digest}`",
         ]
     )
+    proposal_ingest = payload.get("proposalIngest")
+    if isinstance(proposal_ingest, dict):
+        proposal_digest = proposal_ingest.get("proposalDigest", "(missing)")
+        proposal_kind = proposal_ingest.get("kind", "(missing)")
+        obligations = proposal_ingest.get("obligations", [])
+        obligation_count = len(obligations) if isinstance(obligations, list) else 0
+        discharge = proposal_ingest.get("discharge")
+        discharge_outcome = "(missing)"
+        discharge_failures = "(none)"
+        if isinstance(discharge, dict):
+            discharge_outcome = str(discharge.get("outcome", "(missing)"))
+            failures = discharge.get("failureClasses", [])
+            if isinstance(failures, list) and failures:
+                discharge_failures = ", ".join(
+                    sorted({str(item) for item in failures if isinstance(item, str) and item})
+                )
+        lines.extend(
+            [
+                f"- proposal kind: `{proposal_kind}`",
+                f"- proposal digest: `{proposal_digest}`",
+                f"- proposal obligations: `{obligation_count}`",
+                f"- proposal discharge: `{discharge_outcome}`",
+                f"- proposal discharge failures: `{discharge_failures}`",
+            ]
+        )
     return "\n".join(lines) + "\n"
 
 
@@ -132,9 +158,13 @@ def main() -> int:
         cwd=root,
     )
     if validate.returncode != 0:
+        reject_run = subprocess.run(
+            ["python3", str(root / "tools/ci/run_instruction.py"), str(instruction_path)],
+            cwd=root,
+        )
         summary = render_summary(root, instruction_id)
         write_summary(summary, args.summary_out)
-        return int(validate.returncode)
+        return int(reject_run.returncode or validate.returncode)
 
     run_cmd = ["python3", str(root / "tools/ci/run_instruction.py"), str(instruction_path)]
     allow_failure_env = os.environ.get("ALLOW_FAILURE", "").strip().lower()

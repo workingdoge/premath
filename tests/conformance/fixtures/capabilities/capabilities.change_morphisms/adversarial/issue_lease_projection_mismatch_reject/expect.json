@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_contended_set_mismatch"
+  ],
+  "assertions": [
+    "lease projection set mismatch is rejected deterministically"
+  ]
+}

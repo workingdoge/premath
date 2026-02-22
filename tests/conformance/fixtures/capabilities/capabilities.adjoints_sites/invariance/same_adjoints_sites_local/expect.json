@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "kernel verdict matches paired external adjoints/sites profile",
+    "Gate failure classes (if any) match paired external adjoints/sites profile"
+  ]
+}

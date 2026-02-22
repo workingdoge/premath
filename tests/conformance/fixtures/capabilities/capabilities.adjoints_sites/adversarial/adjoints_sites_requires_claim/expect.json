@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "capability_not_claimed"
+  ],
+  "assertions": [
+    "adjoints/sites obligation checks require explicit capability claim"
+  ]
+}

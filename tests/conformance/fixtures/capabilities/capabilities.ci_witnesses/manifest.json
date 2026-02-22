@@ -4,6 +4,7 @@
   "capabilityId": "capabilities.ci_witnesses",
   "vectors": [
     "golden/instruction_witness_deterministic",
+    "golden/instruction_reject_witness_deterministic",
     "golden/witness_verifies_for_projected_delta",
     "golden/gate_witness_refs_integrity_accept",
     "golden/native_required_source_accept",
@@ -11,6 +12,7 @@
     "golden/delta_snapshot_projection_decision_stable",
     "golden/decision_attestation_chain_accept",
     "adversarial/instruction_witness_non_deterministic_reject",
+    "adversarial/instruction_reject_witness_failure_class_mismatch_reject",
     "adversarial/instruction_witness_requires_claim",
     "adversarial/ci_witness_requires_claim",
     "adversarial/witness_projection_digest_mismatch_reject",

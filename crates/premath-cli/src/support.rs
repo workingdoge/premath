@@ -8,6 +8,10 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 pub const CONFLICT_SAMPLE_LIMIT: usize = 25;
+pub const DEFAULT_ISSUES_PATH: &str = ".premath/issues.jsonl";
+const DEFAULT_ISSUES_SAMPLE_PATH: &str = ".premath/issues.jsonl.new";
+const LEGACY_ISSUES_PATH: &str = ".beads/issues.jsonl";
+const LEGACY_ISSUES_SAMPLE_PATH: &str = ".beads/issues.jsonl.new";
 
 pub fn parse_level_or_exit(level: &str) -> CoherenceLevel {
     level.parse().unwrap_or_else(|e| {
@@ -31,11 +35,21 @@ fn resolve_issues_path_or_exit(issues_arg: &str) -> PathBuf {
         return requested;
     }
 
-    // Convenience fallback for checked-in sample Beads data.
-    if issues_arg == ".beads/issues.jsonl" {
-        let fallback = PathBuf::from(".beads/issues.jsonl.new");
-        if fallback.exists() {
-            return fallback;
+    // Convenience fallback for sample or legacy issue stores.
+    let fallbacks: Vec<&str> = match issues_arg {
+        DEFAULT_ISSUES_PATH => vec![
+            DEFAULT_ISSUES_SAMPLE_PATH,
+            LEGACY_ISSUES_PATH,
+            LEGACY_ISSUES_SAMPLE_PATH,
+        ],
+        LEGACY_ISSUES_PATH => vec![LEGACY_ISSUES_SAMPLE_PATH],
+        _ => Vec::new(),
+    };
+
+    for fallback in fallbacks {
+        let path = PathBuf::from(fallback);
+        if path.exists() {
+            return path;
         }
     }
 

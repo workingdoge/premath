@@ -121,6 +121,18 @@ This keeps the kernel backend-generic while allowing Beads-style workflows to
 compose runtime (`tusk`) + storage (`bd`) + query adapters (`surreal`) + UX
 composition (`ux`) + versioning (`jj`) at the edges.
 
+Work-memory authority model (current default profile):
+
+- canonical long-running memory: `.premath/issues.jsonl` via `premath-bd`
+- mutation path: instruction-mediated writes (`mutation_policy=instruction-linked`)
+  with policy-scoped + capability-scoped authorization from instruction witness
+  (`capabilityClaims`, `policyDigest`)
+- operational mutation helpers: `issue_claim`/`issue_lease_renew`/`issue_lease_release`
+  (deterministic multiagent lease protocol) and `issue_discover`
+  (non-loss discovered work capture)
+- write evidence: mutation witness with optional JJ snapshot attribution
+- query/read acceleration: `premath-surreal` projection/cache (rebuildable, non-authoritative)
+
 ### Kernel vs KCIR note
 
 Premath semantics and KCIR-style representation should stay decoupled:
@@ -389,6 +401,8 @@ surface.
 `premath-cli` now includes runtime-facing commands for `premath-tusk` and
 `premath-ux`, plus Beads-style issue-memory operations:
 
+- `premath init [path]`
+  - initializes `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present).
 - `premath mock-gate --json`
   - emits a deterministic Gate witness envelope from synthetic failures.
 - `premath tusk-eval --identity <run_identity.json> --descent-pack <descent_pack.json> --json`
@@ -400,22 +414,35 @@ surface.
     `premath-surreal` observation index adapter).
 - `premath observe-serve --surface artifacts/observation/latest.json --bind 127.0.0.1:43174`
   - serves the same query contract over HTTP for frontend consumption.
-- `premath mcp-serve --issues .beads/issues.jsonl --surface artifacts/observation/latest.json --repo-root .`
+- `premath mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root .`
   - serves MCP tools over stdio for agent integration.
-  - data-plane tools: `issue_ready`, `issue_list`, `issue_add`, `issue_update`,
-    `dep_add`, `observe_latest`, `observe_needs_attention`,
-    `observe_instruction`, `observe_projection`.
+  - `.premath/issues.jsonl` remains canonical memory; `surreal` backend mode is a query projection layer.
+  - under `instruction-linked`, issue/dep writes require an accepted instruction
+    witness with allowed `policyDigest` plus action capability claims
+    (`capabilities.change_morphisms` + per-action claim or
+    `capabilities.change_morphisms.all`).
+  - data-plane tools: `init_tool`, `issue_ready`, `issue_list`, `issue_blocked`,
+    `issue_add`, `issue_claim`, `issue_lease_renew`, `issue_lease_release`,
+    `issue_lease_projection`, `issue_discover`, `issue_update`, `dep_add`,
+    `observe_latest`, `observe_needs_attention`, `observe_instruction`,
+    `observe_projection`.
   - doctrine-gated tools: `instruction_check`, `instruction_run`
     (runs `tools/ci/pipeline_instruction.py` and emits CI witness artifacts).
-- `premath issue add "Title" --issues .beads/issues.jsonl --json`
+- `premath issue add "Title" --issues .premath/issues.jsonl --json`
   - appends a new issue entry into JSONL-backed memory.
-- `premath issue list --issues .beads/issues.jsonl --json`
+- `premath issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json`
+  - atomically claims work by setting assignee and `in_progress` status.
+- `premath issue discover <parent-issue-id> "Title" --issues .premath/issues.jsonl --json`
+  - records discovered follow-up work and links it with `discovered-from`.
+- `premath issue list --issues .premath/issues.jsonl --json`
   - lists issues with optional status/assignee filters.
-- `premath issue ready --issues .beads/issues.jsonl --json`
+- `premath issue ready --issues .premath/issues.jsonl --json`
   - returns open issues with no unresolved blocking dependencies.
-- `premath issue update <issue-id> --status in_progress --issues .beads/issues.jsonl --json`
+- `premath issue blocked --issues .premath/issues.jsonl --json`
+  - returns non-closed issues with unresolved blocking dependencies.
+- `premath issue update <issue-id> --status in_progress --issues .premath/issues.jsonl --json`
   - updates mutable issue fields and persists JSONL.
-- `premath dep add <issue-id> <depends-on-id> --type blocks --issues .beads/issues.jsonl --json`
+- `premath dep add <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json`
   - adds a typed dependency edge between existing issues.
 
 ### MCP Client Config Snippets

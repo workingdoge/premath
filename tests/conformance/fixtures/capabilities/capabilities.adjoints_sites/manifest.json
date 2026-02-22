@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.adjoints_sites",
+  "vectors": [
+    "golden/adjoint_site_obligations_accept",
+    "adversarial/adjoint_triangle_missing_reject",
+    "adversarial/beck_chevalley_sigma_missing_reject",
+    "adversarial/beck_chevalley_pi_missing_reject",
+    "adversarial/refinement_invariance_missing_reject",
+    "adversarial/adjoints_sites_requires_claim",
+    "invariance/same_adjoints_sites_local",
+    "invariance/same_adjoints_sites_external"
+  ]
+}

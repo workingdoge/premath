@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/issue_lease_projection_mismatch_reject",
+  "description": "Lease projection mismatch is rejected with deterministic failure class.",
+  "semanticScenarioId": "change_projection_issue_lease_projection_02",
+  "artifacts": {
+    "request": {
+      "mode": "issue_lease_projection",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issues": [
+      {
+        "id": "bd-stale",
+        "status": "in_progress",
+        "assignee": "agent.alpha",
+        "lease": {
+          "owner": "agent.alpha",
+          "expiresAtUnixMs": 999999
+        }
+      },
+      {
+        "id": "bd-contended",
+        "status": "open",
+        "assignee": "agent.alpha",
+        "lease": {
+          "owner": "agent.beta",
+          "expiresAtUnixMs": 4600000
+        }
+      }
+    ],
+    "expectedStaleIssueIds": [
+      "bd-stale"
+    ],
+    "expectedContendedIssueIds": []
+  }
+}

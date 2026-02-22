@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "golden/instruction_proposal_typed_deterministic",
+  "description": "Typed LLM proposal ingestion is deterministic for fixed proposal payload, classification, and policy binding.",
+  "semanticScenarioId": "instruction_proposal_typed_determinism_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "policy": {
+      "allowUnknown": false
+    },
+    "classificationA": {
+      "state": "typed",
+      "kind": "proposal.derivation"
+    },
+    "classificationB": {
+      "state": "typed",
+      "kind": "proposal.derivation"
+    },
+    "proposalA": {
+      "proposalKind": "derivation",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "mor",
+        "shape": "mor:eq"
+      },
+      "candidateRefs": ["ref:goal", "ref:lemma-1"],
+      "steps": [
+        {
+          "ruleId": "eq.trans",
+          "inputs": ["ref:a", "ref:b"],
+          "outputs": ["ref:lemma-1"],
+          "claim": "compose local equalities"
+        },
+        {
+          "ruleId": "eq.rewrite",
+          "inputs": ["ref:lemma-1", "ref:c"],
+          "outputs": ["ref:goal"],
+          "claim": "rewrite to target judgment"
+        }
+      ],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      }
+    },
+    "proposalB": {
+      "proposalKind": "derivation",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "mor",
+        "shape": "mor:eq"
+      },
+      "candidateRefs": ["ref:lemma-1", "ref:goal"],
+      "steps": [
+        {
+          "ruleId": "eq.trans",
+          "inputs": ["ref:a", "ref:b"],
+          "outputs": ["ref:lemma-1"],
+          "claim": "compose local equalities"
+        },
+        {
+          "ruleId": "eq.rewrite",
+          "inputs": ["ref:lemma-1", "ref:c"],
+          "outputs": ["ref:goal"],
+          "claim": "rewrite to target judgment"
+        }
+      ],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      }
+    }
+  }
+}

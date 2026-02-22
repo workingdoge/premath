@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_lease_projection_stale_and_contended",
+  "description": "Lease projection deterministically separates stale and contended leases.",
+  "semanticScenarioId": "change_projection_issue_lease_projection_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_lease_projection",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issues": [
+      {
+        "id": "bd-stale",
+        "status": "in_progress",
+        "assignee": "agent.alpha",
+        "lease": {
+          "owner": "agent.alpha",
+          "expiresAtUnixMs": 999999
+        }
+      },
+      {
+        "id": "bd-contended",
+        "status": "open",
+        "assignee": "agent.alpha",
+        "lease": {
+          "owner": "agent.beta",
+          "expiresAtUnixMs": 4600000
+        }
+      },
+      {
+        "id": "bd-healthy",
+        "status": "in_progress",
+        "assignee": "agent.gamma",
+        "lease": {
+          "owner": "agent.gamma",
+          "expiresAtUnixMs": 4600000
+        }
+      }
+    ],
+    "expectedStaleIssueIds": [
+      "bd-stale"
+    ],
+    "expectedContendedIssueIds": [
+      "bd-contended"
+    ]
+  }
+}

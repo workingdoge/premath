@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.adjoints_sites",
+  "vectorId": "invariance/same_adjoints_sites_local",
+  "profile": "local",
+  "semanticScenarioId": "adjoints_sites_invariance_01",
+  "description": "Local adjoints/sites profile baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "overlay": "adjoints-sites"
+      }
+    }
+  }
+}

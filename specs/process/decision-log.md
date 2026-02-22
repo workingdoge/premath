@@ -395,3 +395,156 @@ promoted as new doctrine.
   draft-aligned.
 - capability fixtures were merged/renamed to match canonical IDs.
 - docs and command-surface references now use the canonical capability names.
+
+---
+
+## 2026-02-21 — Decision 0015: Introduce explicit profile-overlay lane (`specs/premath/profile`)
+
+### Decision
+Add an explicit profile-overlay lane under `specs/premath/profile/` and treat
+overlay specs as:
+
+- additive to base draft claims,
+- normative only when explicitly claimed,
+- required to compile into deterministic checker/discharge behavior.
+
+Initial overlay adopted in-repo:
+
+- `profile/ADJOINTS-AND-SITES`
+
+`draft/SPEC-INDEX` is updated to include:
+
+- profile-overlay claim guidance,
+- normative scope for claimed overlays,
+- a reading order for adjoints-and-sites implementation.
+
+### Rationale
+We need a place for mathematically stronger but optional structures (for example
+adjoint/Beck-Chevalley overlays) without inflating baseline kernel obligations.
+
+This keeps the kernel small while allowing policy-scoped strengthening that is
+auditable and capability-claim driven.
+
+### Consequences
+- Base kernel and existing capability claims remain unchanged unless an overlay
+  is explicitly claimed.
+- Future overlays should land in `specs/premath/profile/` and wire through
+  `draft/SPEC-INDEX` and conformance claims.
+- Overlay work should avoid duplicating semantic authority in orchestration
+  layers; checker/discharge remains the authority boundary.
+
+---
+
+## 2026-02-22 — Decision 0016: Pre-execution instruction failures MUST emit typed reject witnesses
+
+### Decision
+Instruction-envelope execution now emits first-class reject witness artifacts
+when validation fails before check execution (schema/shape, policy allowlist,
+proposal binding):
+
+- witness kind remains `ci.instruction.v1`,
+- verdict is `rejected`,
+- `rejectStage` is `pre_execution`,
+- `failureClasses` are deterministic typed classes.
+
+Provider-neutral instruction pipeline behavior is updated so validation failures
+still produce these artifacts rather than returning only stderr/exit status.
+
+### Rationale
+The control plane needs one auditable witness surface for both runtime check
+failures and pre-execution admission failures. Without this, invalid envelopes
+create blind spots in observation and multiagent coordination.
+
+### Consequences
+- `tools/ci/run_instruction.py` now writes reject witnesses on invalid envelopes.
+- `tools/ci/pipeline_instruction.py` now ensures invalid-envelope runs still
+  emit witness artifacts.
+- CI witness conformance now includes reject-witness determinism checks for
+  failure-class stability.
+
+---
+
+## 2026-02-22 — Decision 0017: Add executable adjoints/sites capability vectors
+
+### Decision
+Introduce executable capability claim `capabilities.adjoints_sites` for the
+`profile/ADJOINTS-AND-SITES` overlay with vectors that enforce deterministic
+obligation compilation/discharge bound to `(normalizerId, policyDigest)`.
+
+The executable surface now checks obligations for:
+
+- `adjoint_triangle`
+- `beck_chevalley_sigma`
+- `beck_chevalley_pi`
+- `refinement_invariance`
+
+### Rationale
+The profile overlay existed as normative text but had no executable claim
+surface. This left adjoint/site coherence behavior outside the conformance loop.
+Adding vectors keeps overlay claims auditable and regression-resistant.
+
+### Consequences
+- `tools/conformance/run_capability_vectors.py` now runs
+  `capabilities.adjoints_sites`.
+- Conformance fixtures now include golden/adversarial/invariance vectors for
+  adjoint/site obligations.
+- `draft/CAPABILITY-VECTORS`, `draft/CONFORMANCE`, and `draft/SPEC-INDEX`
+  now include the new capability claim semantics.
+
+---
+
+## 2026-02-22 — Decision 0018: Enforce capability-gated instruction-linked issue mutations
+
+### Decision
+Strengthen MCP `instruction-linked` mutation policy for issue/dep writes:
+
+- instruction witness must be `accepted`,
+- instruction witness must carry `policyDigest` in an allowed mutation scope,
+- instruction witness must carry capability claims including:
+  - base: `capabilities.change_morphisms`
+  - per-action claim (or wildcard `capabilities.change_morphisms.all`)
+
+Action claims are enforced for:
+`issue.add`, `issue.update`, `issue.claim`, `issue.discover`, and `dep.add`.
+
+### Rationale
+Instruction linkage by presence alone is too permissive. Mutation authorization
+must be capability-scoped and policy-scoped so agents cannot mutate long-running
+work memory outside declared boundaries.
+
+### Consequences
+- `crates/premath-cli/src/commands/mcp_serve.rs` now enforces capability and
+  policy gating on instruction-linked mutations.
+- instruction witness links now expose `capabilityClaims`.
+- instruction runner/checker surfaces now validate/carry optional
+  `capabilityClaims` fields.
+
+---
+
+## 2026-02-22 — Decision 0019: Introduce deterministic multiagent claim-lease protocol
+
+### Decision
+Extend issue mutation surface with deterministic lease lifecycle semantics:
+
+- `issue.claim` now binds claim ownership to a lease tuple
+  (`lease_id`, owner, expiry),
+- add `issue.lease_renew` and `issue.lease_release` mutations,
+- add `issue.lease_projection` read model for deterministic stale/contended
+  lease classification.
+
+Lease-contention and lease-lifecycle failures are typed with deterministic
+failure classes (for example `lease_contention_active`, `lease_stale`,
+`lease_owner_mismatch`, `lease_id_mismatch`).
+
+### Rationale
+Instruction-scoped mutation authorization was in place, but concurrent agents
+still needed deterministic coordination primitives to avoid implicit work
+stealing and long-running claim drift. A lease protocol narrows operational
+degrees of freedom while preserving explicit handoff/renew flows.
+
+### Consequences
+- `premath-bd` issue schema now includes first-class lease state.
+- MCP mutation surface includes renew/release actions and lease projection.
+- `capabilities.change_morphisms` executable vectors now cover lease claim
+  transitions, active-contention rejects, and stale/contended projection
+  invariants.

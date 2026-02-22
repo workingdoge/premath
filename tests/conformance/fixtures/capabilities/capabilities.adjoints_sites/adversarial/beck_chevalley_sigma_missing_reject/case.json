@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.adjoints_sites",
+  "vectorId": "adversarial/beck_chevalley_sigma_missing_reject",
+  "description": "Missing Beck-Chevalley Sigma discharge hint rejects deterministically.",
+  "semanticScenarioId": "adjoints_sites_missing_bc_sigma_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.adjoints_sites"],
+    "proposalA": {
+      "proposalKind": "refinementPlan",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "mor",
+        "shape": "mor:refinement"
+      },
+      "candidateRefs": [
+        "ref:cover.U",
+        "ref:cover.V",
+        "hint:adjoint_triangle",
+        "hint:beck_chevalley_pi",
+        "hint:refinement_invariance"
+      ],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      }
+    },
+    "proposalB": {
+      "proposalKind": "refinementPlan",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "mor",
+        "shape": "mor:refinement"
+      },
+      "candidateRefs": [
+        "hint:refinement_invariance",
+        "hint:beck_chevalley_pi",
+        "hint:adjoint_triangle",
+        "ref:cover.V",
+        "ref:cover.U"
+      ],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      }
+    }
+  }
+}

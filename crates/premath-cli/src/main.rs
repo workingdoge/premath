@@ -99,12 +99,18 @@ fn main() {
 
         Commands::McpServe {
             issues,
+            issue_query_backend,
+            issue_query_projection,
+            mutation_policy,
             surface,
             repo_root,
             server_name,
             server_version,
         } => commands::mcp_serve::run(commands::mcp_serve::Args {
             issues,
+            issue_query_backend,
+            issue_query_projection,
+            mutation_policy,
             surface,
             repo_root,
             server_name,

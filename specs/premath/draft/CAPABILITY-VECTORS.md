@@ -166,8 +166,24 @@ Required vectors when claimed:
   (docs-only, kernel-touch, conformance-touch, unknown-surface fallback).
 - golden: provider env mapping (direct vs mapped GitHub env) yields equivalent
   projection/reference material.
+- golden: work-memory mutation morphisms preserve deterministic claim/discover
+  transitions (`issue_claim` and `issue_discover` non-loss linkage), including
+  lease binding (`lease_id`, owner, expiry) for multiagent claim discipline.
+- golden: deterministic lease projection separates stale leases from contended
+  active leases.
+- golden: CLI issue command-surface parity preserves coherent
+  `issue_ready`/`issue_blocked` partition semantics over the same graph state.
 - adversarial: requesting change-morphism projection checks without claim rejects
   deterministically.
+- adversarial: active lease contention rejects deterministically
+  (`lease_contention_active`).
+- adversarial: work-memory discover morphism rejects when parent lineage is
+  missing.
+- adversarial: incoherent stale/contended lease projection expectations reject
+  deterministically (`lease_stale_set_mismatch`, `lease_contended_set_mismatch`).
+- adversarial: incoherent `issue_ready`/`issue_blocked` partition expectations
+  reject with deterministic failure classification (`issue_ready_set_mismatch`
+  and `issue_blocked_set_mismatch`).
 - invariance: paired profile outputs for the same semantic scenario preserve
   kernel verdict and Gate failure classes (local/external and provider-wrapper
   invariance).
@@ -234,7 +250,8 @@ Meaning:
 
 - The implementation supports doctrine-level instruction typing for control-loop
   inputs (`typed(kind)` vs `unknown(reason)`) as defined by
-  `draft/LLM-INSTRUCTION-DOCTRINE`.
+  `draft/LLM-INSTRUCTION-DOCTRINE` and typed proposal ingestion/checking
+  discipline as defined by `draft/LLM-PROPOSAL-CHECKING`.
 - This capability validates typed/unknown classification determinism and
   explicit unknown routing policy; it does not alter kernel admissibility
   semantics.
@@ -248,10 +265,44 @@ Required vectors when claimed:
 
 - golden: fixed instruction envelope and fixed policy produce deterministic
   `typed(kind)` classification.
+- golden: fixed typed LLM proposal payload with fixed binding material produces
+  deterministic proposal canonicalization/checking outcomes.
 - adversarial: `unknown(reason)` without explicit policy route rejects
+  deterministically.
+- adversarial: proposals missing `normalizerId`/`policyDigest` binding reject
+  deterministically.
+- adversarial: derivation proposals with invalid/unreplayable steps reject
+  deterministically.
+- adversarial: proposal digest/canonicalization nondeterminism rejects
   deterministically.
 - invariance: local/external instruction-typing execution profiles preserve
   kernel verdict and Gate failure classes for paired scenarios.
+
+### 2.11 `capabilities.adjoints_sites`
+
+Meaning:
+
+- The implementation supports the claimed `profile/ADJOINTS-AND-SITES` overlay
+  obligation surface in executable form, bound to `(normalizerId, policyDigest)`.
+- This capability validates deterministic obligation compilation/discharge for:
+  `adjoint_triangle`, `beck_chevalley_sigma`, `beck_chevalley_pi`,
+  and `refinement_invariance`.
+
+Required vectors when NOT claimed:
+
+- adversarial: explicit requests for adjoints/sites obligation checks reject
+  deterministically.
+
+Required vectors when claimed:
+
+- golden: fixed refinement-plan proposal material compiles/discharges the
+  required adjoint/site obligation set deterministically.
+- adversarial: missing `adjoint_triangle` evidence rejects deterministically.
+- adversarial: missing `beck_chevalley_sigma` evidence rejects deterministically.
+- adversarial: missing `beck_chevalley_pi` evidence rejects deterministically.
+- adversarial: missing `refinement_invariance` evidence rejects deterministically.
+- invariance: local/external adjoints-sites execution profiles preserve kernel
+  verdict and Gate failure classes for paired scenarios.
 
 ## 3. Fixture naming guidance (informative)
 

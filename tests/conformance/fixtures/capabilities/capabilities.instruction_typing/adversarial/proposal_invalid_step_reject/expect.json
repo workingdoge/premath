@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "proposal_invalid_step"
+  ],
+  "assertions": [
+    "proposal ingestion rejects irreplayable derivation steps"
+  ]
+}

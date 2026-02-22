@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_claim_assigns_active_lease",
+  "description": "Claim flow deterministically binds an active lease to the assignee.",
+  "semanticScenarioId": "change_projection_issue_claim_lease_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-201",
+      "status": "open",
+      "assignee": ""
+    },
+    "claim": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-lease-201_agent.alpha",
+      "leaseExpiresAtUnixMs": 4600000
+    },
+    "expectedAfter": {
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-lease-201_agent.alpha",
+        "owner": "agent.alpha",
+        "state": "active"
+      }
+    }
+  }
+}

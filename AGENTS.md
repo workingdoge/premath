@@ -55,22 +55,26 @@
 - `mise run jj-alias-install` — install repo-local JJ aliases (`jj gate-fast|gate-fix|gate-check|gate-pre-commit`) that delegate to hk/mise gates.
 - `mise run pf-start` / `mise run pf-status` / `mise run pf-stop` — optional pitchfork orchestration for local daemons in `pitchfork.toml` (`pf-start` starts both `docs-preview` and `observation-api`).
 - `mise run pf-gate-loop-start` / `mise run pf-gate-loop-stop` — optional background `ci-check` loop via pitchfork (`ci-check` every 30m).
-- `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools.
+- `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
 - `mise run conformance-run` — run executable capability vectors (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.change_morphisms`).
 - `mise run doctrine-check` — validate doctrine declarations and doctrine-to-operation site reachability (`specs/premath/draft/DOCTRINE-SITE.json`).
 - `mise run precommit` — same as baseline.
 - `python3 tools/conformance/check_stub_invariance.py` — validate capability fixture stubs/invariance pairs.
 - `cargo run --package premath-cli -- <args>` — run CLI commands locally.
+- `cargo run --package premath-cli -- init .` — initialize local `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present).
 - `cargo run --package premath-cli -- mock-gate --json` — emit a mock Gate witness envelope.
 - `cargo run --package premath-cli -- tusk-eval --identity <run_identity.json> --descent-pack <descent_pack.json> --json` — evaluate a Tusk descent pack and emit envelope + glue result.
 - `cargo run --package premath-cli -- observe --mode latest --json` — query Observation Surface v0 through the UX composition layer.
 - `cargo run --package premath-cli -- observe-serve --bind 127.0.0.1:43174` — serve Observation Surface v0 through the UX HTTP API.
-- `cargo run --package premath-cli -- mcp-serve --issues .beads/issues.jsonl --surface artifacts/observation/latest.json --repo-root .` — run MCP tools over stdio (includes doctrine-gated `instruction_check` and `instruction_run`).
-- `cargo run --package premath-cli -- issue add \"Title\" --issues .beads/issues.jsonl --json` — add an issue to JSONL-backed memory.
-- `cargo run --package premath-cli -- issue list --issues .beads/issues.jsonl --json` — list issues with optional filters.
-- `cargo run --package premath-cli -- issue ready --issues .beads/issues.jsonl --json` — return unblocked open issues.
-- `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .beads/issues.jsonl --json` — update issue fields.
-- `cargo run --package premath-cli -- dep add <issue-id> <depends-on-id> --type blocks --issues .beads/issues.jsonl --json` — add a dependency edge.
+- `cargo run --package premath-cli -- mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root .` — run MCP tools over stdio (includes doctrine-gated `instruction_check` and `instruction_run`).
+- `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
+- `cargo run --package premath-cli -- issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json` — atomically claim work (`assignee` + `in_progress`).
+- `cargo run --package premath-cli -- issue discover <parent-issue-id> \"Title\" --issues .premath/issues.jsonl --json` — create discovered follow-up work linked by `discovered-from`.
+- `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json` — list issues with optional filters.
+- `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json` — return unblocked open issues.
+- `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues blocked by unresolved dependencies.
+- `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .premath/issues.jsonl --json` — update issue fields.
+- `cargo run --package premath-cli -- dep add <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — add a dependency edge.
 
 ## CI Workflow Instructions
 

@@ -165,6 +165,21 @@ Discharge judgment:
 
 Witness identifiers and ordering MUST be deterministic.
 
+### 4.4 LLM proposal ingestion (checking-only)
+
+When LLM-generated proposal artifacts are used, implementations MUST treat them
+as untrusted checking inputs (see `draft/LLM-PROPOSAL-CHECKING`).
+
+Implementations MUST enforce:
+
+1. LLM proposal payloads enter checking mode only,
+2. LLM proposal payloads MUST NOT be inserted directly into authored subset `S`,
+3. proposal claims MUST compile to obligations before discharge,
+4. acceptance remains discharge-determined (`Γ ⊢ O ✓`), never proposal-determined.
+
+For proposal checks in `normalized` mode, deterministic binding to
+`(normalizerId, policyDigest)` is REQUIRED as in §3 and §7.
+
 ## 5. Refinement / comparison modes
 
 Implementations MUST expose at least one mode:

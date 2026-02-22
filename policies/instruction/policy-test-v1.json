@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "policyKind": "ci.instruction.policy.v1",
+  "policyId": "policy.test.v1",
+  "allowedChecks": [
+    "ci-wiring-check",
+    "conformance-run",
+    "hk-check"
+  ],
+  "allowedNormalizers": [
+    "normalizer.test.v1"
+  ],
+  "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+}

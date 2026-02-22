@@ -9,7 +9,23 @@
   "typingPolicy": {
     "allowUnknown": false
   },
-  "policyDigest": "policy.ci.instruction-smoke.v1",
+  "normalizerId": "normalizer.ci.v1",
+  "proposal": {
+    "proposalKind": "value",
+    "targetCtxRef": "ctx:repo.main",
+    "targetJudgment": {
+      "kind": "obj",
+      "shape": "obj:type"
+    },
+    "candidateRefs": [
+      "ref:ci.wiring"
+    ],
+    "binding": {
+      "normalizerId": "normalizer.ci.v1",
+      "policyDigest": "pol1_23a57a68a45e0c428868cce4b657206fc0bf100f4fd5b303eb0034ff29d92c9f"
+    }
+  },
+  "policyDigest": "pol1_23a57a68a45e0c428868cce4b657206fc0bf100f4fd5b303eb0034ff29d92c9f",
   "requestedChecks": [
     "ci-wiring-check"
   ]

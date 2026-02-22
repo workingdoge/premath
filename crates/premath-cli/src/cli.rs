@@ -24,7 +24,7 @@ pub enum Commands {
         level: String,
 
         /// Path to issues JSONL
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
         /// Repository path used for optional JJ snapshot metadata
@@ -46,7 +46,7 @@ pub enum Commands {
         level: String,
 
         /// Path to issues JSONL
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
         /// Repository path used for optional JJ snapshot metadata
@@ -196,8 +196,20 @@ pub enum Commands {
     /// Serve Premath MCP tools over stdio
     McpServe {
         /// Issues JSONL path used by issue/dep tools
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
+
+        /// Issue query backend: jsonl or surreal
+        #[arg(long, default_value = "jsonl")]
+        issue_query_backend: String,
+
+        /// Optional issue-query projection path used by surreal backend mode
+        #[arg(long, default_value = ".premath/surreal_issue_cache.json")]
+        issue_query_projection: String,
+
+        /// Mutation policy: open or instruction-linked (default: instruction-linked)
+        #[arg(long, default_value = "instruction-linked")]
+        mutation_policy: String,
 
         /// Observation surface JSON path used by observe tools
         #[arg(long, default_value = "artifacts/observation/latest.json")]
@@ -293,7 +305,7 @@ pub enum IssueCommands {
         owner: String,
 
         /// Path to issues JSONL
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
         /// Output as JSON
@@ -312,7 +324,7 @@ pub enum IssueCommands {
         assignee: Option<String>,
 
         /// Path to issues JSONL
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
         /// Output as JSON
@@ -323,7 +335,18 @@ pub enum IssueCommands {
     /// Show ready open work (unblocked issues)
     Ready {
         /// Path to issues JSONL
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Show non-closed issues that are currently blocked
+    Blocked {
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
         /// Output as JSON
@@ -365,7 +388,66 @@ pub enum IssueCommands {
         owner: Option<String>,
 
         /// Path to issues JSONL
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Atomically claim an issue for work (sets assignee + in_progress)
+    Claim {
+        /// Issue ID
+        id: String,
+
+        /// Assignee to claim with
+        #[arg(long)]
+        assignee: String,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Create discovered follow-up work linked to a parent issue
+    Discover {
+        /// Parent issue ID where work was discovered
+        parent_issue_id: String,
+
+        /// New issue title
+        title: String,
+
+        /// Optional explicit issue ID
+        #[arg(long)]
+        id: Option<String>,
+
+        /// Issue description
+        #[arg(long, default_value = "")]
+        description: String,
+
+        /// Priority (0..4)
+        #[arg(long, default_value_t = 2)]
+        priority: i32,
+
+        /// Issue type
+        #[arg(long = "type", default_value = "task")]
+        issue_type: String,
+
+        /// Optional assignee
+        #[arg(long, default_value = "")]
+        assignee: String,
+
+        /// Optional owner
+        #[arg(long, default_value = "")]
+        owner: String,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
         /// Output as JSON
@@ -393,7 +475,7 @@ pub enum DepCommands {
         created_by: String,
 
         /// Path to issues JSONL
-        #[arg(long, default_value = ".beads/issues.jsonl")]
+        #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
         /// Output as JSON

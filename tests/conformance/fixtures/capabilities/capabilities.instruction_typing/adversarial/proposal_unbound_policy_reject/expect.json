@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "proposal_unbound_policy"
+  ],
+  "assertions": [
+    "proposal ingestion fails closed without normalizer/policy binding"
+  ]
+}

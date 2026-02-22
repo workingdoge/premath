@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_ready_blocked_partition_coherent",
+  "description": "Ready and blocked command surfaces remain coherent over the same issue graph projection.",
+  "semanticScenarioId": "change_projection_issue_ready_blocked_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_ready_blocked",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "issues": [
+      {
+        "id": "bd-blocker-closed",
+        "status": "closed",
+        "dependencies": []
+      },
+      {
+        "id": "bd-ready-open",
+        "status": "open",
+        "dependencies": [
+          {
+            "dependsOnId": "bd-blocker-closed",
+            "type": "blocks"
+          }
+        ]
+      },
+      {
+        "id": "bd-root-open",
+        "status": "open",
+        "dependencies": []
+      },
+      {
+        "id": "bd-child-open",
+        "status": "open",
+        "dependencies": [
+          {
+            "dependsOnId": "bd-root-open",
+            "type": "blocks"
+          }
+        ]
+      },
+      {
+        "id": "bd-related-open",
+        "status": "open",
+        "dependencies": [
+          {
+            "dependsOnId": "bd-root-open",
+            "type": "related"
+          }
+        ]
+      },
+      {
+        "id": "bd-inprogress-waits",
+        "status": "in_progress",
+        "dependencies": [
+          {
+            "dependsOnId": "bd-missing",
+            "type": "waits-for"
+          }
+        ]
+      },
+      {
+        "id": "bd-closed-missing",
+        "status": "closed",
+        "dependencies": [
+          {
+            "dependsOnId": "bd-missing",
+            "type": "blocks"
+          }
+        ]
+      }
+    ],
+    "expectedReadyIds": [
+      "bd-ready-open",
+      "bd-related-open",
+      "bd-root-open"
+    ],
+    "expectedBlockedIds": [
+      "bd-child-open",
+      "bd-inprogress-waits"
+    ]
+  }
+}

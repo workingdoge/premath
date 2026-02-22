@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "issue_ready_set_mismatch"
+  ],
+  "assertions": [
+    "coherence mismatch between expected ready/blocked partition and graph semantics is rejected deterministically"
+  ]
+}

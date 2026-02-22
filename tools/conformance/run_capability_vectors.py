@@ -9,6 +9,7 @@ Current executable capability:
 - capabilities.squeak_site
 - capabilities.ci_witnesses
 - capabilities.instruction_typing
+- capabilities.adjoints_sites
 - capabilities.change_morphisms
 """
 
@@ -26,6 +27,14 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "ci"))
 
 from change_projection import project_required_checks  # type: ignore  # noqa: E402
+from instruction_policy import (  # type: ignore  # noqa: E402
+    PolicyValidationError,
+    validate_requested_checks,
+)
+from instruction_proposal import (  # type: ignore  # noqa: E402
+    compile_proposal_obligations,
+    discharge_proposal_obligations,
+)
 from provider_env import map_github_to_premath_env, resolve_premath_ci_refs  # type: ignore  # noqa: E402
 from required_witness import verify_required_witness_payload  # type: ignore  # noqa: E402
 
@@ -35,7 +44,21 @@ CAPABILITY_COMMITMENT_CHECKPOINTS = "capabilities.commitment_checkpoints"
 CAPABILITY_SQUEAK_SITE = "capabilities.squeak_site"
 CAPABILITY_CI_WITNESSES = "capabilities.ci_witnesses"
 CAPABILITY_INSTRUCTION_TYPING = "capabilities.instruction_typing"
+CAPABILITY_ADJOINTS_SITES = "capabilities.adjoints_sites"
 CAPABILITY_CHANGE_MORPHISMS = "capabilities.change_morphisms"
+PROPOSAL_KINDS = {"value", "derivation", "refinementPlan"}
+BLOCKING_DEP_TYPES = {
+    "blocks",
+    "parent-child",
+    "conditional-blocks",
+    "waits-for",
+}
+ADJOINTS_SITES_REQUIRED_OBLIGATIONS = {
+    "adjoint_triangle",
+    "beck_chevalley_sigma",
+    "beck_chevalley_pi",
+    "refinement_invariance",
+}
 DEFAULT_EXECUTABLE_CAPABILITIES: Sequence[str] = (
     CAPABILITY_NORMAL_FORMS,
     CAPABILITY_KCIR_WITNESSES,
@@ -43,6 +66,7 @@ DEFAULT_EXECUTABLE_CAPABILITIES: Sequence[str] = (
     CAPABILITY_SQUEAK_SITE,
     CAPABILITY_CI_WITNESSES,
     CAPABILITY_INSTRUCTION_TYPING,
+    CAPABILITY_ADJOINTS_SITES,
     CAPABILITY_CHANGE_MORPHISMS,
 )
 
@@ -107,6 +131,12 @@ def compute_checkpoint_ref(checkpoint_payload: Any) -> str:
 def ensure_string(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{label} must be a non-empty string")
+    return value
+
+
+def ensure_int(value: Any, label: str) -> int:
+    if not isinstance(value, int):
+        raise ValueError(f"{label} must be an integer")
     return value
 
 
@@ -330,6 +360,23 @@ def run_capability_vectors(
                     f"(expected={expected_result}, actual={outcome.result})"
                 )
                 continue
+            expected_failure_classes_raw = expect.get("expectedFailureClasses")
+            if expected_failure_classes_raw is not None:
+                expected_failure_classes = sorted(
+                    set(
+                        ensure_string_list(
+                            expected_failure_classes_raw,
+                            f"{expect_path}: expectedFailureClasses",
+                        )
+                    )
+                )
+                actual_failure_classes = sorted(set(outcome.gate_failure_classes))
+                if actual_failure_classes != expected_failure_classes:
+                    errors.append(
+                        f"{capability_dir.name}/{vector}: failure class mismatch "
+                        f"(expected={expected_failure_classes}, actual={actual_failure_classes})"
+                    )
+                    continue
 
             if vector.startswith("invariance/"):
                 scenario_id = ensure_string(
@@ -789,15 +836,21 @@ def canonical_instruction_envelope(instruction: Dict[str, Any]) -> Dict[str, Any
     scope = instruction.get("scope")
     if scope in (None, ""):
         raise ValueError("artifacts.instruction.scope must be non-empty")
+    normalizer_id = ensure_string(instruction.get("normalizerId"), "artifacts.instruction.normalizerId")
     policy_digest = ensure_string(instruction.get("policyDigest"), "artifacts.instruction.policyDigest")
     requested_checks = ensure_string_list(
         instruction.get("requestedChecks", []), "artifacts.instruction.requestedChecks"
     )
     if len(set(requested_checks)) != len(requested_checks):
         raise ValueError("artifacts.instruction.requestedChecks must not contain duplicates")
+    try:
+        validate_requested_checks(policy_digest, requested_checks, normalizer_id=normalizer_id)
+    except PolicyValidationError as exc:
+        raise ValueError(f"{exc.failure_class}: {exc}") from exc
     return {
         "intent": intent,
         "scope": scope,
+        "normalizerId": normalizer_id,
         "policyDigest": policy_digest,
         "requestedChecks": requested_checks,
     }
@@ -805,6 +858,109 @@ def canonical_instruction_envelope(instruction: Dict[str, Any]) -> Dict[str, Any
 
 def compute_instruction_digest(instruction: Dict[str, Any]) -> str:
     return "instr1_" + stable_hash(canonical_instruction_envelope(instruction))
+
+
+def canonical_llm_proposal(proposal: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+    proposal_kind = proposal.get("proposalKind")
+    if not isinstance(proposal_kind, str) or proposal_kind not in PROPOSAL_KINDS:
+        return None, "proposal_invalid_kind"
+
+    target_ctx_ref = proposal.get("targetCtxRef")
+    if not isinstance(target_ctx_ref, str) or not target_ctx_ref:
+        return None, "proposal_invalid_target"
+
+    target_judgment = proposal.get("targetJudgment")
+    if not isinstance(target_judgment, dict):
+        return None, "proposal_invalid_target_judgment"
+    target_kind = target_judgment.get("kind")
+    if target_kind not in {"obj", "mor"}:
+        return None, "proposal_invalid_target_judgment"
+    target_shape = target_judgment.get("shape")
+    if not isinstance(target_shape, str) or not target_shape:
+        return None, "proposal_invalid_target_judgment"
+
+    binding = proposal.get("binding")
+    if not isinstance(binding, dict):
+        return None, "proposal_unbound_policy"
+    normalizer_id = binding.get("normalizerId")
+    policy_digest = binding.get("policyDigest")
+    if (
+        not isinstance(normalizer_id, str)
+        or not normalizer_id
+        or not isinstance(policy_digest, str)
+        or not policy_digest
+    ):
+        return None, "proposal_unbound_policy"
+
+    candidate_refs_raw = proposal.get("candidateRefs", [])
+    if not isinstance(candidate_refs_raw, list):
+        return None, "proposal_invalid_step"
+    candidate_refs: List[str] = []
+    for item in candidate_refs_raw:
+        if not isinstance(item, str) or not item:
+            return None, "proposal_invalid_step"
+        candidate_refs.append(item)
+    candidate_refs = sorted(set(candidate_refs))
+
+    steps_raw = proposal.get("steps", [])
+    if not isinstance(steps_raw, list):
+        return None, "proposal_invalid_step"
+    if proposal_kind == "derivation" and not steps_raw:
+        return None, "proposal_invalid_step"
+    if proposal_kind != "derivation" and steps_raw:
+        return None, "proposal_invalid_step"
+
+    steps: List[Dict[str, Any]] = []
+    for step in steps_raw:
+        if not isinstance(step, dict):
+            return None, "proposal_invalid_step"
+        rule_id = step.get("ruleId")
+        claim = step.get("claim")
+        inputs = step.get("inputs", [])
+        outputs = step.get("outputs", [])
+        if (
+            not isinstance(rule_id, str)
+            or not rule_id
+            or not isinstance(claim, str)
+            or not claim
+            or not isinstance(inputs, list)
+            or not isinstance(outputs, list)
+        ):
+            return None, "proposal_invalid_step"
+        if any(not isinstance(item, str) or not item for item in inputs):
+            return None, "proposal_invalid_step"
+        if any(not isinstance(item, str) or not item for item in outputs):
+            return None, "proposal_invalid_step"
+        steps.append(
+            {
+                "ruleId": rule_id,
+                "inputs": list(inputs),
+                "outputs": list(outputs),
+                "claim": claim,
+            }
+        )
+
+    canonical: Dict[str, Any] = {
+        "proposalKind": proposal_kind,
+        "targetCtxRef": target_ctx_ref,
+        "targetJudgment": {
+            "kind": target_kind,
+            "shape": target_shape,
+        },
+        "candidateRefs": candidate_refs,
+        "binding": {
+            "normalizerId": normalizer_id,
+            "policyDigest": policy_digest,
+        },
+    }
+    if steps:
+        canonical["steps"] = steps
+
+    return canonical, None
+
+
+def compute_proposal_digest(proposal: Dict[str, Any]) -> str:
+    return "prop1_" + stable_hash(proposal)
 
 
 def canonical_instruction_classification(classification: Dict[str, Any], label: str) -> Dict[str, str]:
@@ -902,11 +1058,106 @@ def evaluate_instruction_typing_invariance(case: Dict[str, Any]) -> VectorOutcom
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_instruction_proposal_checking(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_INSTRUCTION_TYPING not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    proposal_a = artifacts.get("proposalA")
+    proposal_b = artifacts.get("proposalB")
+    classification_a = artifacts.get("classificationA")
+    classification_b = artifacts.get("classificationB")
+    policy = artifacts.get("policy")
+
+    if not isinstance(proposal_a, dict) or not isinstance(proposal_b, dict):
+        return VectorOutcome("rejected", "rejected", ["proposal_invalid_shape"])
+    if not isinstance(classification_a, dict) or not isinstance(classification_b, dict):
+        raise ValueError("artifacts.classificationA and artifacts.classificationB must be objects")
+    if policy is not None and not isinstance(policy, dict):
+        raise ValueError("artifacts.policy must be an object when provided")
+
+    left = canonical_instruction_classification(classification_a, "artifacts.classificationA")
+    right = canonical_instruction_classification(classification_b, "artifacts.classificationB")
+    if left != right:
+        return VectorOutcome("rejected", "rejected", ["instruction_type_non_deterministic"])
+
+    allow_unknown = False
+    if isinstance(policy, dict):
+        allow_unknown = bool(policy.get("allowUnknown", False))
+    if left["state"] == "unknown" and not allow_unknown:
+        return VectorOutcome("rejected", "rejected", ["instruction_unknown_unroutable"])
+
+    canonical_a, err_a = canonical_llm_proposal(proposal_a)
+    if err_a is not None:
+        return VectorOutcome("rejected", "rejected", [err_a])
+    canonical_b, err_b = canonical_llm_proposal(proposal_b)
+    if err_b is not None:
+        return VectorOutcome("rejected", "rejected", [err_b])
+
+    if canonical_a != canonical_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    computed_a = compute_proposal_digest(canonical_a)
+    computed_b = compute_proposal_digest(canonical_b)
+    if computed_a != computed_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    declared_a = proposal_a.get("proposalDigest")
+    if declared_a is not None:
+        if not isinstance(declared_a, str) or not declared_a:
+            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+        if declared_a != computed_a:
+            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    declared_b = proposal_b.get("proposalDigest")
+    if declared_b is not None:
+        if not isinstance(declared_b, str) or not declared_b:
+            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+        if declared_b != computed_b:
+            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    obligations_a = compile_proposal_obligations(canonical_a)
+    obligations_b = compile_proposal_obligations(canonical_b)
+    if obligations_a != obligations_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    discharge_a = discharge_proposal_obligations(canonical_a, obligations_a)
+    discharge_b = discharge_proposal_obligations(canonical_b, obligations_b)
+    if discharge_a != discharge_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+    if discharge_a.get("outcome") == "rejected":
+        failure_classes = ensure_string_list(
+            discharge_a.get("failureClasses", []),
+            "artifacts.proposal.discharge.failureClasses",
+        )
+        if failure_classes:
+            return VectorOutcome("rejected", "rejected", sorted(set(failure_classes)))
+        return VectorOutcome("rejected", "rejected", ["descent_failure"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def evaluate_instruction_typing_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id == "golden/instruction_typed_deterministic":
         return evaluate_instruction_typed_deterministic(case)
+    if vector_id == "golden/instruction_proposal_typed_deterministic":
+        return evaluate_instruction_proposal_checking(case)
     if vector_id == "adversarial/instruction_unknown_unroutable_reject":
         return evaluate_instruction_typed_deterministic(case)
+    if vector_id == "adversarial/proposal_unbound_policy_reject":
+        return evaluate_instruction_proposal_checking(case)
+    if vector_id == "adversarial/proposal_invalid_step_reject":
+        return evaluate_instruction_proposal_checking(case)
+    if vector_id == "adversarial/proposal_nondeterministic_digest_reject":
+        return evaluate_instruction_proposal_checking(case)
+    if vector_id == "adversarial/proposal_ext_gap_discharge_reject":
+        return evaluate_instruction_proposal_checking(case)
+    if vector_id == "adversarial/proposal_ext_ambiguous_discharge_reject":
+        return evaluate_instruction_proposal_checking(case)
     if vector_id == "adversarial/instruction_typing_requires_claim":
         return evaluate_instruction_typing_requires_claim(case)
     if vector_id.startswith("invariance/"):
@@ -916,6 +1167,125 @@ def evaluate_instruction_typing_vector(vector_id: str, case: Dict[str, Any]) -> 
 
 def run_instruction_typing(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
     return run_capability_vectors(capability_dir, evaluate_instruction_typing_vector, errors)
+
+
+def evaluate_adjoints_sites_requires_claim(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "adjoints_sites_obligations" and CAPABILITY_ADJOINTS_SITES not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_adjoints_sites_proposal(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_ADJOINTS_SITES not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    proposal_a = artifacts.get("proposalA")
+    proposal_b = artifacts.get("proposalB")
+    if not isinstance(proposal_a, dict) or not isinstance(proposal_b, dict):
+        return VectorOutcome("rejected", "rejected", ["proposal_invalid_shape"])
+
+    canonical_a, err_a = canonical_llm_proposal(proposal_a)
+    if err_a is not None:
+        return VectorOutcome("rejected", "rejected", [err_a])
+    canonical_b, err_b = canonical_llm_proposal(proposal_b)
+    if err_b is not None:
+        return VectorOutcome("rejected", "rejected", [err_b])
+
+    if canonical_a.get("proposalKind") != "refinementPlan" or canonical_b.get("proposalKind") != "refinementPlan":
+        return VectorOutcome("rejected", "rejected", ["adjoints_sites_requires_refinement_plan"])
+
+    if canonical_a != canonical_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    obligations_a = compile_proposal_obligations(canonical_a)
+    obligations_b = compile_proposal_obligations(canonical_b)
+    if obligations_a != obligations_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    obligation_kinds = {
+        ensure_string(item.get("kind"), "obligation.kind")
+        for item in obligations_a
+        if isinstance(item, dict)
+    }
+    missing = sorted(ADJOINTS_SITES_REQUIRED_OBLIGATIONS - obligation_kinds)
+    if missing:
+        return VectorOutcome("rejected", "rejected", ["adjoints_sites_obligation_missing"])
+
+    discharge_a = discharge_proposal_obligations(canonical_a, obligations_a)
+    discharge_b = discharge_proposal_obligations(canonical_b, obligations_b)
+    if discharge_a != discharge_b:
+        return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
+
+    outcome = ensure_string(discharge_a.get("outcome"), "discharge.outcome")
+    failure_classes = canonical_check_set(discharge_a.get("failureClasses", []), "discharge.failureClasses")
+    if outcome == "rejected":
+        return VectorOutcome("rejected", "rejected", failure_classes or ["adjoint_triple_coherence_failure"])
+    if outcome != "accepted":
+        raise ValueError("discharge.outcome must be 'accepted' or 'rejected'")
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_adjoints_sites_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    profile = ensure_string(case.get("profile"), "profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = ensure_string_list(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+
+    if profile != "local":
+        claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+        if CAPABILITY_ADJOINTS_SITES not in claimed:
+            return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
+def evaluate_adjoints_sites_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
+    if vector_id == "golden/adjoint_site_obligations_accept":
+        return evaluate_adjoints_sites_proposal(case)
+    if vector_id == "adversarial/adjoint_triangle_missing_reject":
+        return evaluate_adjoints_sites_proposal(case)
+    if vector_id == "adversarial/beck_chevalley_sigma_missing_reject":
+        return evaluate_adjoints_sites_proposal(case)
+    if vector_id == "adversarial/beck_chevalley_pi_missing_reject":
+        return evaluate_adjoints_sites_proposal(case)
+    if vector_id == "adversarial/refinement_invariance_missing_reject":
+        return evaluate_adjoints_sites_proposal(case)
+    if vector_id == "adversarial/adjoints_sites_requires_claim":
+        return evaluate_adjoints_sites_requires_claim(case)
+    if vector_id.startswith("invariance/"):
+        return evaluate_adjoints_sites_invariance(case)
+    raise ValueError(f"unsupported adjoints_sites vector id: {vector_id}")
+
+
+def run_adjoints_sites(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
+    return run_capability_vectors(capability_dir, evaluate_adjoints_sites_vector, errors)
 
 
 def canonical_check_set(value: Any, label: str) -> List[str]:
@@ -954,14 +1324,17 @@ def evaluate_ci_witness_deterministic(case: Dict[str, Any]) -> VectorOutcome:
     b_required = canonical_check_set(witness_b.get("requiredChecks", []), "artifacts.witnessB.requiredChecks")
     a_executed = canonical_check_set(witness_a.get("executedChecks", []), "artifacts.witnessA.executedChecks")
     b_executed = canonical_check_set(witness_b.get("executedChecks", []), "artifacts.witnessB.executedChecks")
+    a_failures = canonical_check_set(witness_a.get("failureClasses", []), "artifacts.witnessA.failureClasses")
+    b_failures = canonical_check_set(witness_b.get("failureClasses", []), "artifacts.witnessB.failureClasses")
 
     deterministic = (
         a_verdict == b_verdict and
         a_required == b_required and
-        a_executed == b_executed
+        a_executed == b_executed and
+        a_failures == b_failures
     )
     if deterministic:
-        return VectorOutcome("accepted", a_verdict, [])
+        return VectorOutcome("accepted", a_verdict, a_failures)
     return VectorOutcome("rejected", "rejected", ["ci_witness_non_deterministic"])
 
 
@@ -1009,7 +1382,9 @@ def evaluate_ci_witness_invariance(case: Dict[str, Any]) -> VectorOutcome:
 def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/instruction_witness_deterministic",
+        "golden/instruction_reject_witness_deterministic",
         "adversarial/instruction_witness_non_deterministic_reject",
+        "adversarial/instruction_reject_witness_failure_class_mismatch_reject",
     }:
         return evaluate_ci_witness_deterministic(case)
     if vector_id == "adversarial/instruction_witness_requires_claim":
@@ -1118,6 +1493,376 @@ def evaluate_change_projection_requires_claim(case: Dict[str, Any]) -> VectorOut
     return VectorOutcome("accepted", "accepted", [])
 
 
+def evaluate_change_projection_issue_claim(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "issue_claim" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    issue_before = artifacts.get("issueBefore")
+    if not isinstance(issue_before, dict):
+        raise ValueError("artifacts.issueBefore must be an object")
+    issue_id = ensure_string(issue_before.get("id"), "artifacts.issueBefore.id")
+    before_status = ensure_string(issue_before.get("status"), "artifacts.issueBefore.status")
+    before_assignee_raw = issue_before.get("assignee", "")
+    if not isinstance(before_assignee_raw, str):
+        raise ValueError("artifacts.issueBefore.assignee must be a string when present")
+    before_assignee = before_assignee_raw
+    now_unix_ms = ensure_int(artifacts.get("nowUnixMs", 0), "artifacts.nowUnixMs")
+
+    before_lease = issue_before.get("lease")
+    before_lease_owner: Optional[str] = None
+    before_lease_expires_at_unix_ms: Optional[int] = None
+    if before_lease is not None:
+        if not isinstance(before_lease, dict):
+            raise ValueError("artifacts.issueBefore.lease must be an object when present")
+        before_lease_owner = ensure_string(
+            before_lease.get("owner"),
+            "artifacts.issueBefore.lease.owner",
+        )
+        before_lease_expires_at_unix_ms = ensure_int(
+            before_lease.get("expiresAtUnixMs"),
+            "artifacts.issueBefore.lease.expiresAtUnixMs",
+        )
+
+    claim = artifacts.get("claim")
+    if not isinstance(claim, dict):
+        raise ValueError("artifacts.claim must be an object")
+    claim_assignee = ensure_string(claim.get("assignee"), "artifacts.claim.assignee")
+    claim_lease_id = claim.get("leaseId")
+    if claim_lease_id is not None and not isinstance(claim_lease_id, str):
+        raise ValueError("artifacts.claim.leaseId must be a string when present")
+    claim_lease_ttl_seconds = claim.get("leaseTtlSeconds", 3600)
+    if claim_lease_ttl_seconds is not None and not isinstance(claim_lease_ttl_seconds, int):
+        raise ValueError("artifacts.claim.leaseTtlSeconds must be an integer when present")
+    claim_lease_expires_at_unix_ms = claim.get("leaseExpiresAtUnixMs")
+    if claim_lease_expires_at_unix_ms is not None and not isinstance(claim_lease_expires_at_unix_ms, int):
+        raise ValueError("artifacts.claim.leaseExpiresAtUnixMs must be an integer when present")
+
+    if before_status == "closed":
+        return VectorOutcome("rejected", "rejected", ["issue_claim_closed"])
+    if (
+        before_lease_owner
+        and before_lease_expires_at_unix_ms is not None
+        and before_lease_expires_at_unix_ms > now_unix_ms
+        and before_lease_owner != claim_assignee
+    ):
+        return VectorOutcome("rejected", "rejected", ["lease_contention_active"])
+    if before_assignee and before_assignee != claim_assignee:
+        return VectorOutcome("rejected", "rejected", ["issue_already_claimed"])
+
+    lease_id = (
+        claim_lease_id
+        if isinstance(claim_lease_id, str) and claim_lease_id
+        else f"lease1_{issue_id}_{claim_assignee}"
+    )
+    if claim_lease_expires_at_unix_ms is not None:
+        lease_expires_at_unix_ms = claim_lease_expires_at_unix_ms
+    else:
+        ttl_seconds = claim_lease_ttl_seconds if isinstance(claim_lease_ttl_seconds, int) else 3600
+        lease_expires_at_unix_ms = now_unix_ms + ttl_seconds * 1000
+
+    actual_after = {
+        "status": "in_progress",
+        "assignee": claim_assignee,
+        "lease": {
+            "leaseId": lease_id,
+            "owner": claim_assignee,
+            "state": "active" if lease_expires_at_unix_ms > now_unix_ms else "stale",
+        },
+    }
+
+    expected_after = artifacts.get("expectedAfter")
+    if expected_after is not None:
+        if not isinstance(expected_after, dict):
+            raise ValueError("artifacts.expectedAfter must be an object when present")
+        expected_status = ensure_string(expected_after.get("status"), "artifacts.expectedAfter.status")
+        expected_assignee = ensure_string(
+            expected_after.get("assignee"),
+            "artifacts.expectedAfter.assignee",
+        )
+        expected_lease = expected_after.get("lease")
+        if expected_lease is not None:
+            if not isinstance(expected_lease, dict):
+                raise ValueError("artifacts.expectedAfter.lease must be an object when present")
+            expected_lease_id = ensure_string(
+                expected_lease.get("leaseId"),
+                "artifacts.expectedAfter.lease.leaseId",
+            )
+            expected_lease_owner = ensure_string(
+                expected_lease.get("owner"),
+                "artifacts.expectedAfter.lease.owner",
+            )
+            expected_lease_state = ensure_string(
+                expected_lease.get("state"),
+                "artifacts.expectedAfter.lease.state",
+            )
+            if (
+                actual_after["lease"]["leaseId"] != expected_lease_id
+                or actual_after["lease"]["owner"] != expected_lease_owner
+                or actual_after["lease"]["state"] != expected_lease_state
+            ):
+                return VectorOutcome("rejected", "rejected", ["issue_claim_transition_mismatch"])
+        if actual_after["status"] != expected_status or actual_after["assignee"] != expected_assignee:
+            return VectorOutcome("rejected", "rejected", ["issue_claim_transition_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def _extract_issue_ids(value: Any, label: str) -> List[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+    ids: List[str] = []
+    for idx, item in enumerate(value):
+        if isinstance(item, str):
+            issue_id = item
+        elif isinstance(item, dict):
+            issue_id = ensure_string(item.get("id"), f"{label}[{idx}].id")
+        else:
+            raise ValueError(f"{label}[{idx}] must be string or object")
+        ids.append(issue_id)
+    return ids
+
+
+def evaluate_change_projection_issue_discover(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "issue_discover" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    existing_ids = _extract_issue_ids(artifacts.get("existingIssues", []), "artifacts.existingIssues")
+    parent_issue = artifacts.get("parentIssue")
+    if not isinstance(parent_issue, dict):
+        raise ValueError("artifacts.parentIssue must be an object")
+    parent_id = ensure_string(parent_issue.get("id"), "artifacts.parentIssue.id")
+
+    discovered_issue = artifacts.get("discoveredIssue")
+    if not isinstance(discovered_issue, dict):
+        raise ValueError("artifacts.discoveredIssue must be an object")
+    discovered_id = ensure_string(discovered_issue.get("id"), "artifacts.discoveredIssue.id")
+
+    if parent_id not in existing_ids:
+        return VectorOutcome("rejected", "rejected", ["issue_discover_parent_missing"])
+    if discovered_id in existing_ids:
+        return VectorOutcome("rejected", "rejected", ["issue_discover_id_conflict"])
+
+    expected_dependency = artifacts.get("expectedDependency")
+    if expected_dependency is not None:
+        if not isinstance(expected_dependency, dict):
+            raise ValueError("artifacts.expectedDependency must be an object when present")
+        expected_issue_id = ensure_string(
+            expected_dependency.get("issueId"),
+            "artifacts.expectedDependency.issueId",
+        )
+        expected_depends_on = ensure_string(
+            expected_dependency.get("dependsOnId"),
+            "artifacts.expectedDependency.dependsOnId",
+        )
+        expected_type = ensure_string(
+            expected_dependency.get("type"),
+            "artifacts.expectedDependency.type",
+        )
+        if (
+            expected_issue_id != discovered_id
+            or expected_depends_on != parent_id
+            or expected_type != "discovered-from"
+        ):
+            return VectorOutcome("rejected", "rejected", ["issue_discover_link_mismatch"])
+
+    expected_total = artifacts.get("expectedTotalIssues")
+    if expected_total is not None:
+        if not isinstance(expected_total, int):
+            raise ValueError("artifacts.expectedTotalIssues must be an integer when present")
+        if len(existing_ids) + 1 != expected_total:
+            return VectorOutcome("rejected", "rejected", ["issue_discover_non_loss_violation"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def _extract_issue_graph_rows(value: Any, label: str) -> List[Dict[str, Any]]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+
+    out: List[Dict[str, Any]] = []
+    for idx, item in enumerate(value):
+        if not isinstance(item, dict):
+            raise ValueError(f"{label}[{idx}] must be an object")
+
+        issue_id = ensure_string(item.get("id"), f"{label}[{idx}].id")
+        status = ensure_string(item.get("status"), f"{label}[{idx}].status")
+        deps_raw = item.get("dependencies", [])
+        if not isinstance(deps_raw, list):
+            raise ValueError(f"{label}[{idx}].dependencies must be a list")
+
+        deps: List[Dict[str, str]] = []
+        for didx, dep in enumerate(deps_raw):
+            if not isinstance(dep, dict):
+                raise ValueError(f"{label}[{idx}].dependencies[{didx}] must be an object")
+            depends_on_id = ensure_string(
+                dep.get("dependsOnId"),
+                f"{label}[{idx}].dependencies[{didx}].dependsOnId",
+            )
+            dep_type = ensure_string(dep.get("type"), f"{label}[{idx}].dependencies[{didx}].type")
+            deps.append({"dependsOnId": depends_on_id, "type": dep_type})
+
+        out.append({"id": issue_id, "status": status, "dependencies": deps})
+
+    return out
+
+
+def evaluate_change_projection_issue_ready_blocked(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "issue_ready_blocked" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    rows = _extract_issue_graph_rows(artifacts.get("issues", []), "artifacts.issues")
+    expected_ready = canonical_check_set(artifacts.get("expectedReadyIds", []), "artifacts.expectedReadyIds")
+    expected_blocked = canonical_check_set(
+        artifacts.get("expectedBlockedIds", []),
+        "artifacts.expectedBlockedIds",
+    )
+
+    status_by_id: Dict[str, str] = {}
+    for row in rows:
+        issue_id = row["id"]
+        if issue_id in status_by_id:
+            raise ValueError(f"duplicate issue id in artifacts.issues: {issue_id}")
+        status_by_id[issue_id] = row["status"]
+
+    def has_unresolved_blocker(row: Dict[str, Any]) -> bool:
+        for dep in row["dependencies"]:
+            dep_type = dep["type"]
+            if dep_type not in BLOCKING_DEP_TYPES:
+                continue
+            blocker_status = status_by_id.get(dep["dependsOnId"])
+            if blocker_status != "closed":
+                return True
+        return False
+
+    ready_ids: List[str] = []
+    blocked_ids: List[str] = []
+    for row in rows:
+        unresolved = has_unresolved_blocker(row)
+        if row["status"] == "open" and not unresolved:
+            ready_ids.append(row["id"])
+        if row["status"] != "closed" and unresolved:
+            blocked_ids.append(row["id"])
+
+    ready_ids = sorted(ready_ids)
+    blocked_ids = sorted(blocked_ids)
+
+    if ready_ids != expected_ready:
+        return VectorOutcome("rejected", "rejected", ["issue_ready_set_mismatch"])
+    if blocked_ids != expected_blocked:
+        return VectorOutcome("rejected", "rejected", ["issue_blocked_set_mismatch"])
+
+    if set(ready_ids) & set(blocked_ids):
+        return VectorOutcome("rejected", "rejected", ["issue_ready_blocked_overlap"])
+
+    open_ids = sorted(row["id"] for row in rows if row["status"] == "open")
+    blocked_open_ids = sorted(issue_id for issue_id in blocked_ids if status_by_id.get(issue_id) == "open")
+    if sorted(set(ready_ids + blocked_open_ids)) != open_ids:
+        return VectorOutcome("rejected", "rejected", ["issue_ready_blocked_open_partition_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_issue_lease_projection(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "issue_lease_projection" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    rows = artifacts.get("issues", [])
+    if not isinstance(rows, list):
+        raise ValueError("artifacts.issues must be a list")
+    now_unix_ms = ensure_int(artifacts.get("nowUnixMs", 0), "artifacts.nowUnixMs")
+    expected_stale = canonical_check_set(
+        artifacts.get("expectedStaleIssueIds", []),
+        "artifacts.expectedStaleIssueIds",
+    )
+    expected_contended = canonical_check_set(
+        artifacts.get("expectedContendedIssueIds", []),
+        "artifacts.expectedContendedIssueIds",
+    )
+
+    stale_issue_ids: List[str] = []
+    contended_issue_ids: List[str] = []
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"artifacts.issues[{idx}] must be an object")
+        issue_id = ensure_string(row.get("id"), f"artifacts.issues[{idx}].id")
+        status = ensure_string(row.get("status"), f"artifacts.issues[{idx}].status")
+        assignee_raw = row.get("assignee", "")
+        if not isinstance(assignee_raw, str):
+            raise ValueError(f"artifacts.issues[{idx}].assignee must be a string when present")
+        lease = row.get("lease")
+        if lease is None:
+            continue
+        if not isinstance(lease, dict):
+            raise ValueError(f"artifacts.issues[{idx}].lease must be an object when present")
+
+        lease_owner = ensure_string(lease.get("owner"), f"artifacts.issues[{idx}].lease.owner")
+        lease_expires_at_unix_ms = ensure_int(
+            lease.get("expiresAtUnixMs"),
+            f"artifacts.issues[{idx}].lease.expiresAtUnixMs",
+        )
+
+        if lease_expires_at_unix_ms <= now_unix_ms:
+            stale_issue_ids.append(issue_id)
+            continue
+
+        if status != "in_progress" or assignee_raw != lease_owner:
+            contended_issue_ids.append(issue_id)
+
+    stale_issue_ids = sorted(set(stale_issue_ids))
+    contended_issue_ids = sorted(set(contended_issue_ids))
+
+    if stale_issue_ids != expected_stale:
+        return VectorOutcome("rejected", "rejected", ["lease_stale_set_mismatch"])
+    if contended_issue_ids != expected_contended:
+        return VectorOutcome("rejected", "rejected", ["lease_contended_set_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def evaluate_change_projection_invariance(case: Dict[str, Any]) -> VectorOutcome:
     profile = ensure_string(case.get("profile"), "profile")
     artifacts = case.get("artifacts")
@@ -1212,6 +1957,16 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         "golden/fallback_unknown_surface_runs_baseline",
     }:
         return evaluate_change_projection_docs_and_code(case)
+    if vector_id == "golden/issue_claim_sets_in_progress_and_assignee":
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id == "golden/issue_claim_assigns_active_lease":
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id == "golden/issue_discover_preserves_existing_and_links_discovered_from":
+        return evaluate_change_projection_issue_discover(case)
+    if vector_id == "golden/issue_ready_blocked_partition_coherent":
+        return evaluate_change_projection_issue_ready_blocked(case)
+    if vector_id == "golden/issue_lease_projection_stale_and_contended":
+        return evaluate_change_projection_issue_lease_projection(case)
     if vector_id == "golden/provider_env_mapping_github_equiv":
         return evaluate_change_projection_provider_env_mapping(case)
     if vector_id in {
@@ -1221,6 +1976,16 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_provider_wrapper_invariance(case)
     if vector_id == "adversarial/change_morphisms_requires_claim":
         return evaluate_change_projection_requires_claim(case)
+    if vector_id == "adversarial/issue_ready_blocked_partition_mismatch_reject":
+        return evaluate_change_projection_issue_ready_blocked(case)
+    if vector_id == "adversarial/issue_ready_blocked_set_mismatch_reject":
+        return evaluate_change_projection_issue_ready_blocked(case)
+    if vector_id == "adversarial/issue_discover_rejects_parent_missing":
+        return evaluate_change_projection_issue_discover(case)
+    if vector_id == "adversarial/issue_claim_rejects_active_lease_contention":
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id == "adversarial/issue_lease_projection_mismatch_reject":
+        return evaluate_change_projection_issue_lease_projection(case)
     if vector_id.startswith("invariance/"):
         return evaluate_change_projection_invariance(case)
     raise ValueError(f"unsupported change_morphisms vector id: {vector_id}")
@@ -1526,6 +2291,8 @@ def main() -> int:
             count, checked = run_ci_witnesses(capability_dir, errors)
         elif capability_id == CAPABILITY_INSTRUCTION_TYPING:
             count, checked = run_instruction_typing(capability_dir, errors)
+        elif capability_id == CAPABILITY_ADJOINTS_SITES:
+            count, checked = run_adjoints_sites(capability_dir, errors)
         elif capability_id == CAPABILITY_CHANGE_MORPHISMS:
             count, checked = run_change_projection(capability_dir, errors)
         else:

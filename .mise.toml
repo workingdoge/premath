@@ -92,6 +92,8 @@ run = "python3 tools/ci/check_pipeline_wiring.py"
 run = [
   "python3 tools/ci/test_pipeline_required.py",
   "python3 tools/ci/test_pipeline_instruction.py",
+  "python3 tools/ci/test_instruction_policy.py",
+  "python3 tools/ci/test_instruction_reject_witness.py",
 ]
 
 [tasks.ci-observation-build]
@@ -107,7 +109,7 @@ run = "python3 tools/ci/test_observation_surface.py"
 run = "cargo run --package premath-cli -- observe-serve --surface artifacts/observation/latest.json --bind 127.0.0.1:43174"
 
 [tasks.mcp-serve]
-run = "cargo run --package premath-cli -- mcp-serve --issues .beads/issues.jsonl --surface artifacts/observation/latest.json --repo-root ."
+run = "cargo run --package premath-cli -- mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root ."
 
 [tasks.ci-observation-check]
 run = [

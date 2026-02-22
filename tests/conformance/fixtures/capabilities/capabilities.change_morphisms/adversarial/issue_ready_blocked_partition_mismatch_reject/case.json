@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/issue_ready_blocked_partition_mismatch_reject",
+  "description": "Ready/blocked parity request is rejected when provided partition expectations are incoherent with graph semantics.",
+  "semanticScenarioId": "change_projection_issue_ready_blocked_02",
+  "artifacts": {
+    "request": {
+      "mode": "issue_ready_blocked",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "issues": [
+      {
+        "id": "bd-root-open",
+        "status": "open",
+        "dependencies": []
+      },
+      {
+        "id": "bd-child-open",
+        "status": "open",
+        "dependencies": [
+          {
+            "dependsOnId": "bd-root-open",
+            "type": "blocks"
+          }
+        ]
+      }
+    ],
+    "expectedReadyIds": [
+      "bd-child-open",
+      "bd-root-open"
+    ],
+    "expectedBlockedIds": [
+      "bd-child-open"
+    ]
+  }
+}

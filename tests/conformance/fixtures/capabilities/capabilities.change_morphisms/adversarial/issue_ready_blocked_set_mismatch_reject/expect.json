@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "issue_blocked_set_mismatch"
+  ],
+  "assertions": [
+    "blocked-set mismatch is rejected with deterministic classification"
+  ]
+}

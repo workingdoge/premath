@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/issue_discover_rejects_parent_missing",
+  "description": "Discover flow is rejected when parent issue is missing from current work-memory state.",
+  "semanticScenarioId": "change_projection_issue_discover_02",
+  "artifacts": {
+    "request": {
+      "mode": "issue_discover",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "existingIssues": [
+      {
+        "id": "bd-other"
+      }
+    ],
+    "parentIssue": {
+      "id": "bd-parent"
+    },
+    "discoveredIssue": {
+      "id": "bd-found",
+      "title": "Follow-up discovered during implementation"
+    },
+    "expectedDependency": {
+      "issueId": "bd-found",
+      "dependsOnId": "bd-parent",
+      "type": "discovered-from"
+    },
+    "expectedTotalIssues": 2
+  }
+}

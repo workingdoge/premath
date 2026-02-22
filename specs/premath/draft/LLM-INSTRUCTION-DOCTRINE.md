@@ -46,6 +46,7 @@ This specification complements:
 
 - `draft/DOCTRINE-INF` (morphism registry),
 - `draft/DOCTRINE-SITE` (doctrine-to-operation map),
+- `draft/LLM-PROPOSAL-CHECKING` (proposal ingestion/checking contract),
 - `raw/PREMATH-CI` (CI control-loop execution contract).
 
 Design map reference (non-normative):
@@ -60,7 +61,9 @@ An instruction envelope is modeled as:
 InstructionEnvelope {
   intent
   scope
+  normalizer_id
   policy_digest
+  capability_claims?
   requested_checks
 }
 ```
@@ -69,8 +72,12 @@ Equivalent field names MAY be used in implementation payloads, but this shape is
 the semantic contract.
 
 Repository profile note (v0): this repository currently uses camelCase fields
-in instruction JSON (`policyDigest`, `requestedChecks`).
+in instruction JSON (`normalizerId`, `policyDigest`, `requestedChecks`).
 It may additionally carry `instructionType` and `typingPolicy.allowUnknown`.
+When proposal material is embedded inline, repository v0 uses `proposal`
+(legacy alias `llmProposal` is accepted for compatibility).
+`policyDigest` is bound to canonical policy artifacts in
+`policies/instruction/*.json` and uses `pol1_<sha256(...)>` identity.
 
 For deterministic binding, implementations SHOULD derive:
 
@@ -119,13 +126,26 @@ Authority remains split as:
 Instruction operation SHOULD follow this chain:
 
 ```text
-envelope -> classify -> bind(policy_digest) -> project(required_checks)
+envelope -> classify -> bind(normalizer_id, policy_digest)
+-> project(allowed_checks(policy_digest, scope))
+-> execute(check runner) -> attest(CIWitness)
+```
+
+When an instruction carries or references LLM proposal material, operation SHOULD
+extend as:
+
+```text
+envelope -> classify -> bind(normalizer_id, policy_digest)
+-> proposal_ingest(checking-only) -> obligations -> discharge
+-> project(allowed_checks(policy_digest, scope))
 -> execute(check runner) -> attest(CIWitness)
 ```
 
 The chain MUST preserve:
 
 - explicit policy bindings,
+- explicit normalizer bindings,
+- explicit requested-check allowlist bounds under active policy,
 - deterministic check ID sets,
 - deterministic verdict-class attribution for fixed inputs/bindings.
 
@@ -143,9 +163,18 @@ For fixed envelope payload and fixed policy bindings:
 When witness records are emitted, they SHOULD include:
 
 - instruction identity material (`instruction_id`, `instruction_digest`),
+- normalizer binding (`normalizer_id`),
 - policy binding (`policy_digest`),
+- capability claims (`capability_claims`) when policy-scoped action surfaces
+  are enforced,
 - required/executed checks,
 - verdict class and failure classes.
+
+When proposal material is present, witnesses SHOULD additionally include:
+
+- deterministic compiled `obligations[]`,
+- deterministic normalized `discharge` result,
+- discharge failure classes (if any), bound to `(normalizer_id, policy_digest)`.
 
 ## 7. Conformance expectations
 
@@ -153,6 +182,9 @@ Implementations exposing instruction-envelope control loops SHOULD:
 
 - reject malformed envelopes deterministically,
 - reject duplicate check identifiers deterministically,
+- reject `requested_checks` outside policy-bound allowlists deterministically,
+- emit first-class pre-execution reject witnesses with deterministic
+  `failure_classes` when envelope/policy/proposal validation fails,
 - emit auditable CI witness artifacts bound to instruction identity material,
 - keep instruction flow compatible with `raw/PREMATH-CI` invariance rules.
 

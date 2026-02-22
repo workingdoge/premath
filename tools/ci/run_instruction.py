@@ -7,12 +7,25 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import subprocess
 import sys
 import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
+
+from instruction_policy import (
+    PolicyValidationError,
+    validate_proposal_binding_matches_envelope,
+    validate_requested_checks,
+)
+from instruction_proposal import (
+    ProposalValidationError,
+    compile_proposal_obligations,
+    discharge_proposal_obligations,
+    validate_instruction_proposal,
+)
 
 
 SUPPORTED_INSTRUCTION_TYPES = {
@@ -91,6 +104,20 @@ def parse_typing_policy(envelope: Dict[str, Any]) -> Dict[str, Any]:
     return {"allowUnknown": allow_unknown}
 
 
+def parse_capability_claims(envelope: Dict[str, Any]) -> List[str]:
+    raw_claims = envelope.get("capabilityClaims", [])
+    if raw_claims is None:
+        raw_claims = []
+    if not isinstance(raw_claims, list):
+        raise ValueError("capabilityClaims must be a list when provided")
+    claims: List[str] = []
+    for idx, item in enumerate(raw_claims):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f"capabilityClaims[{idx}] must be a non-empty string")
+        claims.append(item.strip())
+    return sorted(set(claims))
+
+
 def classify_instruction(envelope: Dict[str, Any], requested_checks: List[str]) -> Dict[str, str]:
     instruction_type = envelope.get("instructionType")
     if instruction_type is not None:
@@ -129,6 +156,179 @@ def instruction_id_from_path(path: Path) -> str:
     return instruction_id
 
 
+def fallback_instruction_id_from_path(path: Path) -> str:
+    stem = path.stem
+    if stem:
+        return stem
+    name = path.name
+    if name:
+        return name
+    return "instruction-invalid"
+
+
+def classify_invalid_envelope(exc: Exception) -> Dict[str, str]:
+    message = str(exc).strip()
+    if not message:
+        return {
+            "failureClass": "instruction_envelope_invalid",
+            "reason": "invalid instruction envelope",
+        }
+
+    # Policy/proposal validation errors are raised as "<failure_class>: <message>".
+    match = re.match(r"^(?P<class>[a-z0-9_]+):\s*(?P<reason>.*)$", message)
+    if match:
+        return {
+            "failureClass": match.group("class"),
+            "reason": match.group("reason") or message,
+        }
+
+    lowered = message.lower()
+    if "jsondecodeerror" in lowered or "expecting value" in lowered:
+        failure_class = "instruction_envelope_invalid_json"
+    elif "filename" in lowered or ".json" in lowered:
+        failure_class = "instruction_filename_invalid"
+    elif "schema" in lowered:
+        failure_class = "instruction_invalid_schema"
+    elif "intent" in lowered:
+        failure_class = "instruction_invalid_intent"
+    elif "normalizerid" in lowered:
+        failure_class = "instruction_invalid_normalizer"
+    elif "policydigest" in lowered:
+        failure_class = "instruction_invalid_policy_digest"
+    elif "scope is required" in lowered:
+        failure_class = "instruction_scope_missing"
+    elif "scope" in lowered:
+        failure_class = "instruction_scope_invalid"
+    elif "requestedchecks" in lowered:
+        failure_class = "instruction_requested_checks_invalid"
+    elif "instructiontype" in lowered:
+        failure_class = "instruction_instruction_type_invalid"
+    elif "typingpolicy" in lowered:
+        failure_class = "instruction_typing_policy_invalid"
+    elif "root must be a json object" in lowered or "instruction envelope root must be an object" in lowered:
+        failure_class = "instruction_envelope_invalid_shape"
+    else:
+        failure_class = "instruction_envelope_invalid"
+
+    return {
+        "failureClass": failure_class,
+        "reason": message,
+    }
+
+
+def _normalized_instruction_digest(path: Path, envelope: Dict[str, Any] | None) -> str:
+    if envelope is not None:
+        return "instr1_" + stable_hash(envelope)
+    return "instr1_" + hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _normalized_typing_policy(envelope: Dict[str, Any] | None) -> Dict[str, Any]:
+    if envelope is None:
+        return {"allowUnknown": False}
+    raw_policy = envelope.get("typingPolicy")
+    if not isinstance(raw_policy, dict):
+        return {"allowUnknown": False}
+    allow_unknown = raw_policy.get("allowUnknown", False)
+    if not isinstance(allow_unknown, bool):
+        return {"allowUnknown": False}
+    return {"allowUnknown": allow_unknown}
+
+
+def _normalized_requested_checks(envelope: Dict[str, Any] | None) -> List[str]:
+    if envelope is None:
+        return []
+    raw = envelope.get("requestedChecks", [])
+    if not isinstance(raw, list):
+        return []
+    out: List[str] = []
+    for item in raw:
+        if isinstance(item, str) and item.strip():
+            out.append(item.strip())
+    return sorted(set(out))
+
+
+def _normalized_capability_claims(envelope: Dict[str, Any] | None) -> List[str]:
+    if envelope is None:
+        return []
+    raw = envelope.get("capabilityClaims", [])
+    if not isinstance(raw, list):
+        return []
+    out: List[str] = []
+    for item in raw:
+        if isinstance(item, str) and item.strip():
+            out.append(item.strip())
+    return sorted(set(out))
+
+
+def _string_or_none(value: Any) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def write_pre_execution_reject_witness(
+    root: Path,
+    out_dir: Path,
+    instruction_path: Path,
+    instruction_id: str,
+    envelope: Dict[str, Any] | None,
+    failure_class: str,
+    reason: str,
+    started_at: datetime,
+) -> Path:
+    rel_instruction_ref = (
+        str(instruction_path.relative_to(root))
+        if instruction_path.is_relative_to(root)
+        else str(instruction_path)
+    )
+    finished_at = datetime.now(timezone.utc)
+
+    intent = _string_or_none(envelope.get("intent")) if envelope is not None else None
+    if intent is None:
+        intent = "(invalid envelope)"
+
+    witness = {
+        "ciSchema": 1,
+        "witnessKind": "ci.instruction.v1",
+        "instructionId": instruction_id,
+        "instructionRef": rel_instruction_ref,
+        "instructionDigest": _normalized_instruction_digest(instruction_path, envelope),
+        "instructionClassification": {
+            "state": "unknown",
+            "reason": "pre_execution_invalid",
+        },
+        "typingPolicy": _normalized_typing_policy(envelope),
+        "intent": intent,
+        "scope": envelope.get("scope") if envelope is not None else None,
+        "normalizerId": _string_or_none(envelope.get("normalizerId")) if envelope is not None else None,
+        "policyDigest": _string_or_none(envelope.get("policyDigest")) if envelope is not None else None,
+        "capabilityClaims": _normalized_capability_claims(envelope),
+        "requiredChecks": _normalized_requested_checks(envelope),
+        "executedChecks": [],
+        "results": [],
+        "verdictClass": "rejected",
+        "failureClasses": [failure_class],
+        "rejectStage": "pre_execution",
+        "rejectReason": reason,
+        "squeakSiteProfile": os.environ.get(
+            "PREMATH_SQUEAK_SITE_PROFILE",
+            os.environ.get("PREMATH_EXECUTOR_PROFILE", "local"),
+        ),
+        "runStartedAt": started_at.isoformat(),
+        "runFinishedAt": finished_at.isoformat(),
+        "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
+    }
+
+    if not out_dir.is_absolute():
+        out_dir = (root / out_dir).resolve()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    out_path = out_dir / f"{instruction_id}.json"
+    with out_path.open("w", encoding="utf-8") as f:
+        json.dump(witness, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    return out_path
+
+
 def run_check(root: Path, check_id: str) -> Dict[str, Any]:
     cmd = ["sh", str(root / "tools" / "ci" / "run_gate.sh"), check_id]
     started = time.perf_counter()
@@ -155,11 +355,20 @@ def main() -> int:
         print(f"[error] instruction file not found: {instruction_path}", file=sys.stderr)
         return 2
 
+    proposal: Dict[str, Any] | None = None
+    proposal_obligations: List[Dict[str, Any]] = []
+    proposal_discharge: Dict[str, Any] | None = None
+
+    started_at = datetime.now(timezone.utc)
+    raw_envelope: Dict[str, Any] | None = None
+
     try:
         envelope = load_instruction(instruction_path)
+        raw_envelope = envelope
         instruction_id = instruction_id_from_path(instruction_path)
 
         intent = ensure_string(envelope.get("intent"), "intent")
+        normalizer_id = ensure_string(envelope.get("normalizerId"), "normalizerId")
         policy_digest = ensure_string(envelope.get("policyDigest"), "policyDigest")
         if "scope" not in envelope:
             raise ValueError("scope is required")
@@ -167,16 +376,57 @@ def main() -> int:
         if scope in (None, ""):
             raise ValueError("scope must be non-empty")
         requested_checks = ensure_string_list(envelope.get("requestedChecks"), "requestedChecks")
+        try:
+            validate_requested_checks(
+                policy_digest,
+                requested_checks,
+                normalizer_id=normalizer_id,
+            )
+        except PolicyValidationError as exc:
+            raise ValueError(f"{exc.failure_class}: {exc}") from exc
         typing_policy = parse_typing_policy(envelope)
+        capability_claims = parse_capability_claims(envelope)
         instruction_classification = classify_instruction(envelope, requested_checks)
+        try:
+            proposal = validate_instruction_proposal(envelope)
+        except ProposalValidationError as exc:
+            raise ValueError(f"{exc.failure_class}: {exc}") from exc
+        try:
+            validate_proposal_binding_matches_envelope(normalizer_id, policy_digest, proposal)
+        except PolicyValidationError as exc:
+            raise ValueError(f"{exc.failure_class}: {exc}") from exc
+        if proposal is not None:
+            proposal_obligations = compile_proposal_obligations(proposal["canonical"])
+            proposal_discharge = discharge_proposal_obligations(
+                proposal["canonical"],
+                proposal_obligations,
+            )
     except (ValueError, json.JSONDecodeError) as exc:
-        print(f"[error] invalid instruction envelope: {exc}", file=sys.stderr)
+        invalid = classify_invalid_envelope(exc)
+        fallback_instruction_id = fallback_instruction_id_from_path(instruction_path)
+        reject_path = write_pre_execution_reject_witness(
+            root=root,
+            out_dir=args.out_dir,
+            instruction_path=instruction_path,
+            instruction_id=fallback_instruction_id,
+            envelope=raw_envelope,
+            failure_class=invalid["failureClass"],
+            reason=invalid["reason"],
+            started_at=started_at,
+        )
+        print(
+            (
+                "[error] invalid instruction envelope: "
+                f"{invalid['failureClass']}: {invalid['reason']}"
+            ),
+            file=sys.stderr,
+        )
+        print(f"[instruction] reject witness written: {reject_path}", file=sys.stderr)
         return 2
 
     instruction_digest = "instr1_" + stable_hash(envelope)
     rel_instruction_ref = str(instruction_path.relative_to(root)) if instruction_path.is_relative_to(root) else str(instruction_path)
 
-    started_at = datetime.now(timezone.utc)
     results: List[Dict[str, Any]] = []
     failed: List[Dict[str, Any]] = []
     failure_classes: List[str] = []
@@ -184,7 +434,10 @@ def main() -> int:
         instruction_classification.get("state") == "unknown"
         and not typing_policy.get("allowUnknown", False)
     )
-
+    proposal_rejected = (
+        proposal_discharge is not None
+        and proposal_discharge.get("outcome") == "rejected"
+    )
     if unknown_rejected:
         verdict_class = "rejected"
         failure_classes = ["instruction_unknown_unroutable"]
@@ -192,6 +445,20 @@ def main() -> int:
         print(
             f"[instruction] classification rejected: unknown(reason={reason}) "
             f"without allowUnknown policy",
+            file=sys.stderr,
+        )
+    elif proposal_rejected:
+        verdict_class = "rejected"
+        failure_classes = sorted(
+            set(
+                item
+                for item in proposal_discharge.get("failureClasses", [])
+                if isinstance(item, str) and item
+            )
+        )
+        print(
+            "[instruction] proposal discharge rejected before execution "
+            f"(failureClasses={failure_classes})",
             file=sys.stderr,
         )
     else:
@@ -221,7 +488,9 @@ def main() -> int:
         "typingPolicy": typing_policy,
         "intent": intent,
         "scope": scope,
+        "normalizerId": normalizer_id,
         "policyDigest": policy_digest,
+        "capabilityClaims": capability_claims,
         "requiredChecks": requested_checks,
         "executedChecks": executed_checks,
         "results": results,
@@ -232,6 +501,17 @@ def main() -> int:
         "runFinishedAt": finished_at.isoformat(),
         "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
     }
+    if proposal is not None:
+        witness["proposalIngest"] = {
+            "state": "typed",
+            "kind": f"proposal.{proposal['canonical']['proposalKind']}",
+            "proposalDigest": proposal["digest"],
+            "binding": proposal["canonical"]["binding"],
+            "targetCtxRef": proposal["canonical"]["targetCtxRef"],
+            "targetJudgment": proposal["canonical"]["targetJudgment"],
+            "obligations": proposal_obligations,
+            "discharge": proposal_discharge,
+        }
 
     out_dir = args.out_dir
     if not out_dir.is_absolute():

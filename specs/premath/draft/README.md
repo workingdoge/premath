@@ -13,10 +13,13 @@ Start here:
   (`DOCTRINE-SITE.json`).
 - `LLM-INSTRUCTION-DOCTRINE.md` — instruction typing/binding doctrine for
   LLM-driven control loops.
+- `LLM-PROPOSAL-CHECKING.md` — proposal ingestion contract binding LLM outputs
+  into checking/discharge (never self-authorizing).
 - `PREMATH-KERNEL.md` — semantic kernel contract.
 
 Related:
 
 - `../raw/` — experimental and informational specs not yet promoted.
+- `../profile/` — optional profile overlays (normative only when claimed).
 - `../../process/coss.md` — lifecycle/process policy.
 - `../../process/decision-log.md` — promotion and architectural decisions.

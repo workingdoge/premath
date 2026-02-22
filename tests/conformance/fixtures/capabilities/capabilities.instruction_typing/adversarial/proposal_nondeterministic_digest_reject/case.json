@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "adversarial/proposal_nondeterministic_digest_reject",
+  "description": "Proposal ingestion rejects when declared proposal digests are not canonical for fixed semantic content.",
+  "semanticScenarioId": "instruction_proposal_nondeterministic_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "policy": {
+      "allowUnknown": false
+    },
+    "classificationA": {
+      "state": "typed",
+      "kind": "proposal.value"
+    },
+    "classificationB": {
+      "state": "typed",
+      "kind": "proposal.value"
+    },
+    "proposalA": {
+      "proposalKind": "value",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "obj",
+        "shape": "obj:type"
+      },
+      "candidateRefs": ["ref:obj-1"],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      },
+      "proposalDigest": "prop1_not_canonical_a"
+    },
+    "proposalB": {
+      "proposalKind": "value",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "obj",
+        "shape": "obj:type"
+      },
+      "candidateRefs": ["ref:obj-1"],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      },
+      "proposalDigest": "prop1_not_canonical_b"
+    }
+  }
+}

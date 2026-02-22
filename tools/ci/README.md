@@ -116,8 +116,16 @@ It separates:
 - input: `instructions/<ts>-<id>.json`
 - classifies instruction as `typed(kind)` or `unknown(reason)` (doctrine-level)
 - rejects unroutable `unknown(reason)` unless `typingPolicy.allowUnknown=true`
+- carries optional `capabilityClaims` from envelope into witness artifacts for
+  downstream mutation-policy gating surfaces
 - executes requested gate checks through `run_gate.sh`
 - output: `artifacts/ciwitness/<ts>-<id>.json`
+  - for proposal-carrying instructions, witness includes deterministic
+    `proposalIngest.obligations[]` and normalized `proposalIngest.discharge`
+    payloads; check execution proceeds only when discharge outcome is accepted.
+  - envelope validation failures now emit a first-class reject witness
+    (`verdictClass=rejected`, `rejectStage=pre_execution`, deterministic
+    `failureClasses`) instead of only stderr/exit status.
 
 ## SqueakSite Profiles
 

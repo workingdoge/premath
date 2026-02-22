@@ -79,7 +79,8 @@ The site map MUST include at least:
 - doctrine root (`draft/DOCTRINE-INF`),
 - kernel/gate/conformance contract nodes (`draft/*`),
 - instruction doctrine nodes when instruction-envelope control loops are exposed
-  (for example `draft/LLM-INSTRUCTION-DOCTRINE`),
+  (for example `draft/LLM-INSTRUCTION-DOCTRINE` and
+  `draft/LLM-PROPOSAL-CHECKING`),
 - runtime transport/site nodes (`raw/TUSK-CORE`, `raw/SQUEAK-CORE`,
   `raw/SQUEAK-SITE`),
 - CI/projection nodes (`raw/PREMATH-CI`, `raw/CI-TOPOS`),

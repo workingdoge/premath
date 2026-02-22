@@ -197,7 +197,9 @@ CIInstructionEnvelope {
   scope
   instruction_type?   // optional explicit typed kind
   typing_policy?      // optional unknown-routing policy
+  normalizer_id
   policy_digest
+  capability_claims?  // optional action-surface capability claims
   requested_checks
 }
 ```
@@ -209,8 +211,19 @@ canonical envelope payload).
 For fixed envelope content and fixed policy bindings, verdict class and
 required/executed check sets SHOULD be stable.
 
+Requested checks SHOULD be validated as
+`requested_checks ⊆ allowed_checks(policy_digest, scope)` and rejected
+deterministically on violation.
+Implementations SHOULD bind `policy_digest` to canonical policy-artifact digests
+for reproducible allowlist provenance.
+
 Implementations exposing this flow SHOULD also emit instruction classification
 material (`typed(kind)` or `unknown(reason)`) in CI witness records.
+When proposal payloads are present, implementations SHOULD also emit
+`proposalIngest.obligations[]` and deterministic normalized `proposalIngest.discharge`
+records so acceptance is auditably discharge-determined.
+If envelope validation fails pre-execution, implementations SHOULD still emit a
+typed reject witness artifact with deterministic `failure_classes`.
 
 Doctrine typing/binding constraints for this flow are specified in
 `draft/LLM-INSTRUCTION-DOCTRINE`.

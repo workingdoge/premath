@@ -144,6 +144,7 @@ mod tests {
             issue_type: "task".to_string(),
             assignee: String::new(),
             owner: String::new(),
+            lease: None,
             created_at: now,
             updated_at: now,
             closed_at: None,

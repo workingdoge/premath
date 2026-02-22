@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "ci_witness_non_deterministic"
+  ],
+  "assertions": [
+    "reject witness failure classes must be deterministic for fixed instruction identity"
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/issue_ready_blocked_set_mismatch_reject",
+  "description": "Ready/blocked parity request is rejected when expected blocked IDs disagree with deterministic blocking semantics.",
+  "semanticScenarioId": "change_projection_issue_ready_blocked_03",
+  "artifacts": {
+    "request": {
+      "mode": "issue_ready_blocked",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "issues": [
+      {
+        "id": "bd-root-open",
+        "status": "open",
+        "dependencies": []
+      },
+      {
+        "id": "bd-child-open",
+        "status": "open",
+        "dependencies": [
+          {
+            "dependsOnId": "bd-root-open",
+            "type": "blocks"
+          }
+        ]
+      }
+    ],
+    "expectedReadyIds": [
+      "bd-root-open"
+    ],
+    "expectedBlockedIds": []
+  }
+}

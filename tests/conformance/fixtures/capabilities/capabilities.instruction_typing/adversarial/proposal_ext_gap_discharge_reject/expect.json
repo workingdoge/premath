@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "descent_failure"
+  ],
+  "assertions": [
+    "proposal discharge fails closed with descent_failure when no candidate transport path exists"
+  ]
+}

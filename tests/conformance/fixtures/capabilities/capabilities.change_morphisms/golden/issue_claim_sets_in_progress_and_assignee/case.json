@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_claim_sets_in_progress_and_assignee",
+  "description": "Claim flow deterministically sets assignee and in_progress status for non-closed work items.",
+  "semanticScenarioId": "change_projection_issue_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "issueBefore": {
+      "id": "bd-101",
+      "status": "open",
+      "assignee": ""
+    },
+    "claim": {
+      "assignee": "agent.alpha"
+    },
+    "expectedAfter": {
+      "status": "in_progress",
+      "assignee": "agent.alpha"
+    }
+  }
+}

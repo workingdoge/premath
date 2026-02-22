@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "adversarial/instruction_reject_witness_failure_class_mismatch_reject",
+  "description": "Reject witness is non-deterministic when failure class diverges for fixed instruction identity.",
+  "semanticScenarioId": "ci_instruction_reject_determinism_02",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.ci_witnesses"],
+    "instruction": {
+      "intent": "Run closure checks for repo changes.",
+      "scope": {
+        "kind": "repo",
+        "target": "premath"
+      },
+      "normalizerId": "normalizer.ci.v1",
+      "policyDigest": "pol1_4ba916ce38da5c5607eb7f41d963294b34b644deb1fa6d55e133b072ca001b39",
+      "requestedChecks": ["hk-check", "conformance-run"]
+    },
+    "witnessA": {
+      "instructionDigest": "instr1_6784cb2054539aaf9b55983eb2c42d84b68ebb474dde46b084ff5ec49c166f1a",
+      "verdictClass": "rejected",
+      "requiredChecks": ["hk-check", "conformance-run"],
+      "executedChecks": [],
+      "failureClasses": ["instruction_invalid_schema"]
+    },
+    "witnessB": {
+      "instructionDigest": "instr1_6784cb2054539aaf9b55983eb2c42d84b68ebb474dde46b084ff5ec49c166f1a",
+      "verdictClass": "rejected",
+      "requiredChecks": ["conformance-run", "hk-check"],
+      "executedChecks": [],
+      "failureClasses": ["instruction_check_not_allowed"]
+    }
+  }
+}

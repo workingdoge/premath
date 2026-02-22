@@ -8,6 +8,13 @@ import json
 from pathlib import Path
 from typing import Any, Dict, List
 
+from instruction_policy import (
+    PolicyValidationError,
+    validate_proposal_binding_matches_envelope,
+    validate_requested_checks,
+)
+from instruction_proposal import ProposalValidationError, validate_instruction_proposal
+
 
 DEFAULT_GLOBS = (
     "instructions/*.json",
@@ -46,13 +53,18 @@ def validate_envelope(path: Path, payload: Dict[str, Any]) -> None:
         raise ValueError("schema must be a positive integer")
 
     ensure_string(payload.get("intent"), "intent")
-    ensure_string(payload.get("policyDigest"), "policyDigest")
+    normalizer_id = ensure_string(payload.get("normalizerId"), "normalizerId")
+    policy_digest = ensure_string(payload.get("policyDigest"), "policyDigest")
     if "scope" not in payload:
         raise ValueError("scope is required")
     scope = payload.get("scope")
     if scope in (None, ""):
         raise ValueError("scope must be non-empty")
-    ensure_nonempty_string_list(payload.get("requestedChecks"), "requestedChecks")
+    requested_checks = ensure_nonempty_string_list(payload.get("requestedChecks"), "requestedChecks")
+    try:
+        validate_requested_checks(policy_digest, requested_checks, normalizer_id=normalizer_id)
+    except PolicyValidationError as exc:
+        raise ValueError(f"{exc.failure_class}: {exc}") from exc
 
     instruction_type = payload.get("instructionType")
     if instruction_type is not None:
@@ -65,6 +77,26 @@ def validate_envelope(path: Path, payload: Dict[str, Any]) -> None:
         allow_unknown = typing_policy.get("allowUnknown")
         if allow_unknown is not None and not isinstance(allow_unknown, bool):
             raise ValueError("typingPolicy.allowUnknown must be a boolean when provided")
+
+    capability_claims = payload.get("capabilityClaims")
+    if capability_claims is not None:
+        if not isinstance(capability_claims, list):
+            raise ValueError("capabilityClaims must be a list when provided")
+        normalized_claims: List[str] = []
+        for idx, claim in enumerate(capability_claims):
+            if not isinstance(claim, str) or not claim.strip():
+                raise ValueError(f"capabilityClaims[{idx}] must be a non-empty string")
+            normalized_claims.append(claim.strip())
+        if len(set(normalized_claims)) != len(normalized_claims):
+            raise ValueError("capabilityClaims must not contain duplicates")
+
+    try:
+        proposal = validate_instruction_proposal(payload)
+        validate_proposal_binding_matches_envelope(normalizer_id, policy_digest, proposal)
+    except ProposalValidationError as exc:
+        raise ValueError(f"{exc.failure_class}: {exc}") from exc
+    except PolicyValidationError as exc:
+        raise ValueError(f"{exc.failure_class}: {exc}") from exc
 
 
 def parse_args(default_root: Path) -> argparse.Namespace:

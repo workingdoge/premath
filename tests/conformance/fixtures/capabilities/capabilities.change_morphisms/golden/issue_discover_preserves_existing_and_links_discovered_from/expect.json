@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "discover flow preserves existing issue set and appends discovered work with discovered-from linkage"
+  ]
+}

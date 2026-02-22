@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "adversarial/proposal_ext_gap_discharge_reject",
+  "description": "Proposal discharge rejects deterministically when no candidate transport path exists.",
+  "semanticScenarioId": "instruction_proposal_ext_gap_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "policy": {
+      "allowUnknown": false
+    },
+    "classificationA": {
+      "state": "typed",
+      "kind": "proposal.value"
+    },
+    "classificationB": {
+      "state": "typed",
+      "kind": "proposal.value"
+    },
+    "proposalA": {
+      "proposalKind": "value",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "obj",
+        "shape": "obj:type"
+      },
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      }
+    },
+    "proposalB": {
+      "proposalKind": "value",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "obj",
+        "shape": "obj:type"
+      },
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_1ab3e7f398a472c2cf0f3fbd7ead7ece7bd74e836cbde924f1e33f02895d18ab"
+      }
+    }
+  }
+}

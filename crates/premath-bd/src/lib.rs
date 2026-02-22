@@ -25,5 +25,5 @@ pub mod jsonl;
 pub mod memory;
 
 pub use dependency::{DepType, Dependency};
-pub use issue::Issue;
+pub use issue::{Issue, IssueLease, IssueLeaseState};
 pub use memory::{MemoryStore, MemoryStoreError};

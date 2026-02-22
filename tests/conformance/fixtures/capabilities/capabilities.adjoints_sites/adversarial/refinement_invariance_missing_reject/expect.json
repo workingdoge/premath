@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "stability_failure"
+  ],
+  "assertions": [
+    "missing refinement invariance evidence rejects with stability_failure"
+  ]
+}

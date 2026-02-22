@@ -4,7 +4,13 @@
   "capabilityId": "capabilities.instruction_typing",
   "vectors": [
     "golden/instruction_typed_deterministic",
+    "golden/instruction_proposal_typed_deterministic",
     "adversarial/instruction_unknown_unroutable_reject",
+    "adversarial/proposal_unbound_policy_reject",
+    "adversarial/proposal_invalid_step_reject",
+    "adversarial/proposal_nondeterministic_digest_reject",
+    "adversarial/proposal_ext_gap_discharge_reject",
+    "adversarial/proposal_ext_ambiguous_discharge_reject",
     "adversarial/instruction_typing_requires_claim",
     "invariance/same_instruction_typing_local",
     "invariance/same_instruction_typing_external"

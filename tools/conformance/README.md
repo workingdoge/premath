@@ -32,15 +32,21 @@ Runs executable capability vectors (current set):
 - `capabilities.squeak_site`
 - `capabilities.ci_witnesses`
 - `capabilities.instruction_typing`
+- `capabilities.adjoints_sites`
 - `capabilities.change_morphisms`
 
 Checks include:
 
 - deterministic accept/reject outcomes for each vector,
+- optional deterministic rejection-class checks via
+  `expect.json.expectedFailureClasses`,
 - normalizer/policy binding behavior for normalized-mode vectors,
 - SqueakSite location descriptor/overlap/glue behavior,
 - instruction-envelope to CI witness determinism checks,
 - typed/unknown instruction classification determinism checks,
+- adjoint/site obligation compilation and discharge checks
+  (`adjoint_triangle`, `beck_chevalley_sigma`, `beck_chevalley_pi`,
+  `refinement_invariance`),
 - deterministic `Delta -> requiredChecks` projection behavior,
 - deterministic `ci.required` witness verification behavior,
 - strict delta-compare witness verification behavior,

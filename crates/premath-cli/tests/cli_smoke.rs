@@ -277,12 +277,17 @@ fn tusk_eval_json_smoke() {
 
 #[test]
 fn init_text_smoke() {
-    let output = run_premath(["init"]);
+    let tmp = TempDirGuard::new("init");
+    let repo_root = tmp.path().join("repo");
+
+    let output = run_premath([OsString::from("init"), repo_root.as_os_str().to_os_string()]);
     assert_success(&output);
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    assert!(stdout.contains("premath init ."));
-    assert!(stdout.contains("Creates local layout for adapter composition"));
+    assert!(stdout.contains("premath init"));
+    assert!(stdout.contains("premath dir:"));
+    assert!(stdout.contains("issues path:"));
+    assert!(repo_root.join(".premath/issues.jsonl").exists());
 }
 
 #[test]
@@ -377,6 +382,20 @@ fn issue_add_dep_ready_json_smoke() {
         OsString::from("--json"),
     ]);
     assert_success(&out_dep);
+
+    let out_blocked = run_premath([
+        OsString::from("issue"),
+        OsString::from("blocked"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_blocked);
+    let blocked = parse_json_stdout(&out_blocked);
+    assert_eq!(blocked["count"], 1);
+    assert_eq!(blocked["items"][0]["id"], "bd-child");
+    assert_eq!(blocked["items"][0]["blockers"][0]["dependsOnId"], "bd-root");
+    assert_eq!(blocked["items"][0]["blockers"][0]["type"], "blocks");
 
     let out_ready = run_premath([
         OsString::from("issue"),

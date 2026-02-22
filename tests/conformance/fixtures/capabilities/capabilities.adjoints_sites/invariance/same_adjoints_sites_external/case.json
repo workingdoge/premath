@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.adjoints_sites",
+  "vectorId": "invariance/same_adjoints_sites_external",
+  "profile": "external",
+  "semanticScenarioId": "adjoints_sites_invariance_01",
+  "description": "External adjoints/sites profile paired with local baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "overlay": "adjoints-sites"
+      }
+    },
+    "claimedCapabilities": ["capabilities.adjoints_sites"]
+  }
+}

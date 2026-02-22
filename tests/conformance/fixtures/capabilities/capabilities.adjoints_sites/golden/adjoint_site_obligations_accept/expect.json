@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "adjoint/site obligation compilation and discharge are deterministic for fixed refinement-plan input"
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "policyKind": "ci.instruction.policy.v1",
+  "policyId": "policy.ci.v1",
+  "allowedChecks": [
+    "baseline",
+    "build",
+    "ci-observation-check",
+    "ci-observation-test",
+    "ci-pipeline-check",
+    "ci-pipeline-test",
+    "ci-wiring-check",
+    "conformance-check",
+    "conformance-run",
+    "doctrine-check",
+    "hk-check",
+    "hk-pre-commit",
+    "hk-pre-push",
+    "test",
+    "test-kcir-toy",
+    "test-toy"
+  ],
+  "allowedNormalizers": [
+    "normalizer.ci.v1"
+  ],
+  "policyDigest": "pol1_4ba916ce38da5c5607eb7f41d963294b34b644deb1fa6d55e133b072ca001b39"
+}

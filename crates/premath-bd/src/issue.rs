@@ -7,6 +7,23 @@ use serde::{Deserialize, Serialize};
 
 use crate::dependency::Dependency;
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct IssueLease {
+    pub lease_id: String,
+    pub owner: String,
+    pub acquired_at: DateTime<Utc>,
+    pub expires_at: DateTime<Utc>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub renewed_at: Option<DateTime<Utc>>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IssueLeaseState {
+    Unleased,
+    Active,
+    Stale,
+}
+
 /// An issue: a trackable work item and the primary definable.
 ///
 /// Implements `Definable` from the Premath kernel, meaning it carries
@@ -44,6 +61,8 @@ pub struct Issue {
     pub assignee: String,
     #[serde(default, skip_serializing_if = "String::is_empty")]
     pub owner: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub lease: Option<IssueLease>,
 
     // ── Timestamps ──
     #[serde(default = "default_timestamp")]
@@ -104,6 +123,7 @@ impl Issue {
             issue_type: default_issue_type(),
             assignee: String::new(),
             owner: String::new(),
+            lease: None,
             created_at: now,
             updated_at: now,
             closed_at: None,
@@ -122,6 +142,7 @@ impl Issue {
         self.status = status.into();
         self.updated_at = Utc::now();
         if self.status == "closed" {
+            self.lease = None;
             if self.closed_at.is_none() {
                 self.closed_at = Some(Utc::now());
             }
@@ -133,6 +154,18 @@ impl Issue {
     /// Bump updated timestamp without changing semantic content fields.
     pub fn touch_updated_at(&mut self) {
         self.updated_at = Utc::now();
+    }
+
+    pub fn lease_state_at(&self, now: DateTime<Utc>) -> IssueLeaseState {
+        match self.lease.as_ref() {
+            None => IssueLeaseState::Unleased,
+            Some(lease) if lease.expires_at > now => IssueLeaseState::Active,
+            Some(_) => IssueLeaseState::Stale,
+        }
+    }
+
+    pub fn lease_owner(&self) -> Option<&str> {
+        self.lease.as_ref().map(|lease| lease.owner.as_str())
     }
 
     /// Compute the content hash of substantive fields.

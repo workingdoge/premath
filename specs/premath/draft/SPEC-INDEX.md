@@ -58,6 +58,10 @@ Claims are grouped into profiles:
 - **Interop Core**: deterministic, exchangeable artifacts (KCIR + NF + ref binding + wire/errors).
 - **Interop Full**: `Interop Core` + deterministic normalization, obligations, and gate enforcement.
 
+Implementations MAY additionally claim profile overlays published under
+`specs/premath/profile/`. Profile overlays are additive to base claims and are
+normative only when explicitly claimed.
+
 Details and required vectors are defined in `draft/CONFORMANCE` and `draft/CAPABILITY-VECTORS`.
 
 Interop profiles should be read as evidence/representation profiles over one kernel.
@@ -124,6 +128,7 @@ For capability identifiers and vectors defined in `draft/CAPABILITY-VECTORS`:
 - `capabilities.squeak_site`
 - `capabilities.ci_witnesses`
 - `capabilities.instruction_typing`
+- `capabilities.adjoints_sites`
 - `capabilities.change_morphisms`
 
 Capability-specific normative specs include:
@@ -131,6 +136,8 @@ Capability-specific normative specs include:
 - `raw/SQUEAK-SITE` (for `capabilities.squeak_site`)
 - `raw/PREMATH-CI` (for `capabilities.ci_witnesses`)
 - `draft/LLM-INSTRUCTION-DOCTRINE` (for `capabilities.instruction_typing`)
+- `draft/LLM-PROPOSAL-CHECKING` (for `capabilities.instruction_typing`)
+- `profile/ADJOINTS-AND-SITES` (for `capabilities.adjoints_sites`)
 - `draft/CHANGE-MORPHISMS` (for `capabilities.change_morphisms`)
 
 Normative requirements apply only when the corresponding capability is claimed.
@@ -141,6 +148,8 @@ Normative requirements apply only when the corresponding capability is claimed.
   (`draft/DOCTRINE-SITE.json`).
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
   instruction flows.
+- `draft/LLM-PROPOSAL-CHECKING` — proposal ingestion/checking contract for LLM
+  proposal artifacts.
 - `raw/SEMANTICS-INFTOPOS` — presentation-free model sketch (informational).
 - `raw/HYPERDESCENT` — optional strengthening: hyperdescent.
 - `raw/UNIVERSE` — optional extension: universe + comprehension (Tarski-style).
@@ -151,6 +160,12 @@ Normative requirements apply only when the corresponding capability is claimed.
 - `raw/PREMATH-CI` — higher-order CI/CD control-loop contract (informational/raw).
 - `raw/CI-TOPOS` — closure-style CI projection discipline (informational/raw).
 - `docs/foundations/` — explanatory notes (non-normative).
+
+### 5.6 Normative for profile overlays (only if claimed)
+
+- `profile/ADJOINTS-AND-SITES` — capability-scoped adjoint/site overlay:
+  admissible-map allowlist policy, Beck-Chevalley obligations, and deterministic
+  `(normalizerId, policyDigest)` discharge binding for profile claims.
 
 ## 6. Suggested reading order
 
@@ -178,10 +193,17 @@ If you are implementing higher-order CI/CD:
 1) `draft/DOCTRINE-INF`
 2) `draft/DOCTRINE-SITE` (+ `draft/DOCTRINE-SITE.json`)
 3) `draft/LLM-INSTRUCTION-DOCTRINE`
-4) `raw/PREMATH-CI`
-5) `raw/CI-TOPOS`
-6) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
-7) `raw/SQUEAK-SITE`
+4) `draft/LLM-PROPOSAL-CHECKING`
+5) `raw/PREMATH-CI`
+6) `raw/CI-TOPOS`
+7) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
+8) `raw/SQUEAK-SITE`
+
+If you are implementing the adjoints-and-sites overlay:
+1) `draft/PREMATH-KERNEL`
+2) `draft/GATE`
+3) `draft/BIDIR-DESCENT`
+4) `profile/ADJOINTS-AND-SITES`
 
 ## 7. Notes on restrictiveness
 

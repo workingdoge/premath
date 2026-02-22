@@ -125,42 +125,65 @@ If capability `capabilities.change_morphisms` is claimed, implementation MUST:
    required gate checks with stable projection digest identity,
 10. preserve projection/reference equivalence across provider wrapper mappings
     (local and mapped external env forms), and
-11. enforce paired invariance requirements (including kernel verdict/Gate class
+11. enforce deterministic issue mutation transitions for claim/discover flows,
+    including claim-lease lifecycle (`lease_id`, owner, expiry, renew/release)
+    and stale/contended lease projection classification,
+12. enforce paired invariance requirements (including kernel verdict/Gate class
     invariance claims) across local/external projection profiles.
 
 ### 3.5 Required behavior for SqueakSite capability
 
 If capability `capabilities.squeak_site` is claimed, implementation MUST:
 
-12. compute deterministic location descriptor identity material (`loc_id` or equivalent),
-13. reject overlap disagreement deterministically for mismatched required checks or policy/projection bindings, and
-14. preserve kernel verdict and Gate failure classes across paired runtime profiles in invariance vectors.
+13. compute deterministic location descriptor identity material (`loc_id` or equivalent),
+14. reject overlap disagreement deterministically for mismatched required checks or policy/projection bindings, and
+15. preserve kernel verdict and Gate failure classes across paired runtime profiles in invariance vectors.
 
 ### 3.6 Required behavior for CI witness capability
 
 If capability `capabilities.ci_witnesses` is claimed, implementation MUST:
 
-15. bind each CI witness deterministically to instruction identity material
+16. bind each CI witness deterministically to instruction identity material
     (instruction digest/ref),
-16. reject deterministic witness checks when the same instruction yields
+17. reject deterministic witness checks when the same instruction yields
     mismatched verdict class or required/executed check sets, and
-17. verify required-gate witness payloads deterministically against projection
+18. verify required-gate witness payloads deterministically against projection
     bindings (including gate witness refs and native required-check bindings),
-18. verify strict-delta and decision-attestation witness chains deterministically
+19. verify strict-delta and decision-attestation witness chains deterministically
     when those checks are requested, and
-19. preserve kernel verdict and Gate failure classes across paired local/external
+20. preserve kernel verdict and Gate failure classes across paired local/external
     CI witness-profile invariance vectors.
 
 ### 3.7 Required behavior for instruction typing capability
 
 If capability `capabilities.instruction_typing` is claimed, implementation MUST:
 
-20. classify instruction handling explicitly as `typed(kind)` or
+21. classify instruction handling explicitly as `typed(kind)` or
     `unknown(reason)`,
-21. reject `unknown(reason)` deterministically when no explicit policy route is
+22. reject `unknown(reason)` deterministically when no explicit policy route is
     permitted, and
-22. preserve kernel verdict and Gate failure classes across paired local/external
-    instruction-typing profile invariance vectors.
+23. preserve kernel verdict and Gate failure classes across paired local/external
+    instruction-typing profile invariance vectors,
+24. ingest typed LLM proposal payloads as checking-only inputs (never authored
+    synthesis inputs),
+25. reject proposal payloads that are unbound to
+    `(normalizerId, policyDigest)` deterministically, and
+26. reject non-canonical or nondeterministic proposal-digest material
+    deterministically.
+
+### 3.8 Required behavior for adjoints/sites capability overlay
+
+If capability `capabilities.adjoints_sites` is claimed, implementation MUST:
+
+27. compile claimed refinement-plan semantic material into deterministic
+    obligations including `adjoint_triangle`, `beck_chevalley_sigma`,
+    `beck_chevalley_pi`, and `refinement_invariance`,
+28. bind obligation discharge deterministically to
+    `(normalizerId, policyDigest)`,
+29. reject deterministically when required adjoint/site obligation evidence is
+    missing, and
+30. preserve kernel verdict and Gate failure classes across paired local/external
+    adjoints-sites profile invariance vectors.
 
 ## 4. Vectors (informative guidance)
 

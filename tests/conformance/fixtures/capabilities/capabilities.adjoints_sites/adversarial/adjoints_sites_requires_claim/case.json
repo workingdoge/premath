@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.adjoints_sites",
+  "vectorId": "adversarial/adjoints_sites_requires_claim",
+  "description": "Adjoints/sites obligation checks require explicit capability claim.",
+  "semanticScenarioId": "adjoints_sites_requires_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "adjoints_sites_obligations",
+      "claimedCapabilities": []
+    }
+  }
+}

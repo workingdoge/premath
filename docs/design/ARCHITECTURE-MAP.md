@@ -68,7 +68,36 @@ Deterministic rejection path:
 - `unknown(reason)` with `allowUnknown=false` rejects before check execution with
   `instruction_unknown_unroutable`.
 
-## 4. Conformance Closure
+## 4. Work-Memory Authority Loop
+
+```text
+WorkMemory (canonical JSONL substrate)
+  -> InstructionMorphisms (typed, policy-bound mutation requests)
+  -> Witnesses (instruction-bound + optional JJ snapshot linkage)
+  -> QueryProjection (rebuildable read/index layer; non-authoritative)
+```
+
+Repository default profile:
+- canonical memory: `.premath/issues.jsonl` (`premath-bd`)
+- MCP mutation policy: `instruction-linked`
+  - mutation authorization is policy-scoped and capability-scoped from accepted
+    instruction witnesses (`policyDigest` + `capabilityClaims`)
+- query backend default: `jsonl` (with optional `surreal` projection mode)
+
+## 5. Refinement Loop
+
+```text
+issue_ready -> issue_blocked -> issue_claim -> instruction_run -> witness
+  -> issue_lease_renew (long task) or issue_lease_release (handoff)
+  -> issue_discover (when new work is found) -> issue_ready
+```
+
+Loop intent:
+- keep sessions short and restartable,
+- prevent lost/discarded discovered work,
+- keep mutation authority instruction-mediated with auditable witnesses.
+
+## 6. Conformance Closure
 
 Baseline gate (`mise run baseline`) enforces:
 - build/test/toy suites,

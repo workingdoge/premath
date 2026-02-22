@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "proposal_nondeterministic"
+  ],
+  "assertions": [
+    "proposal ingestion rejects digest material that is not canonical for semantic content"
+  ]
+}

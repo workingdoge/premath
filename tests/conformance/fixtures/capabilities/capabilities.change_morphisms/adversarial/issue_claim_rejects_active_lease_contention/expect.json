@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_contention_active"
+  ],
+  "assertions": [
+    "active lease contention is rejected with deterministic classification"
+  ]
+}

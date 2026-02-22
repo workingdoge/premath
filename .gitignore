@@ -11,6 +11,7 @@ node_modules/
 .idea/
 .vscode/
 .claude/
+.serena/
 .venv/
 venv/
 .terraform/

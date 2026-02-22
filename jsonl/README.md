@@ -9,5 +9,5 @@ Rules:
 - Keep normative fixtures under `tests/` and specs under `specs/`.
 - Avoid checking in large transient runtime dumps.
 
-Canonical issue-memory input for CLI workflows remains `.beads/issues.jsonl`
+Canonical issue-memory input for CLI workflows remains `.premath/issues.jsonl`
 (or explicit `--issues <path>`).
