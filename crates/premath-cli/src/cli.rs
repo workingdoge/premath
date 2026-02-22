@@ -558,6 +558,21 @@ pub enum IssueCommands {
         json: bool,
     },
 
+    /// Check issue-graph contract invariants
+    Check {
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Warning threshold for notes length
+        #[arg(long, default_value_t = 2000)]
+        note_warn_threshold: usize,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Update an existing issue
     Update {
         /// Issue ID

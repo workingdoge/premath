@@ -1,5 +1,6 @@
 use crate::cli::IssueCommands;
 use crate::support::{backend_status_payload, collect_backend_status};
+use premath_bd::issue::{issue_type_variants, parse_issue_type};
 use premath_bd::{
     DepType, Issue, MemoryStore, event_stream_ref, migrate_store_to_events, read_events_from_path,
     replay_events, replay_events_from_path, store_snapshot_ref, stores_equivalent,
@@ -54,6 +55,12 @@ pub fn run(command: IssueCommands) {
         IssueCommands::Ready { issues, json } => run_ready(issues, json),
 
         IssueCommands::Blocked { issues, json } => run_blocked(issues, json),
+
+        IssueCommands::Check {
+            issues,
+            note_warn_threshold,
+            json,
+        } => run_check(issues, note_warn_threshold, json),
 
         IssueCommands::Update {
             id,
@@ -149,7 +156,14 @@ fn run_add(
     let mut issue = Issue::new(issue_id.clone(), title);
     issue.description = description;
     issue.priority = priority;
-    issue.issue_type = issue_type;
+    issue.issue_type = parse_issue_type(&issue_type).unwrap_or_else(|| {
+        eprintln!(
+            "error: invalid issue_type `{}` (expected one of: {})",
+            issue_type,
+            issue_type_variants().join(", ")
+        );
+        std::process::exit(1);
+    });
     issue.assignee = assignee;
     issue.owner = owner;
     issue.set_status(status);
@@ -428,6 +442,53 @@ fn run_blocked(issues: String, json_output: bool) {
     }
 }
 
+fn run_check(issues: String, note_warn_threshold: usize, json_output: bool) {
+    let (store, path) = load_store_existing_or_exit(&issues);
+    let report = store.check_issue_graph(note_warn_threshold);
+
+    if json_output {
+        let payload = json!({
+            "action": "issue.check",
+            "issuesPath": path.display().to_string(),
+            "checkKind": report.check_kind,
+            "result": report.result,
+            "failureClasses": report.failure_classes,
+            "warningClasses": report.warning_classes,
+            "errors": report.errors,
+            "warnings": report.warnings,
+            "summary": report.summary
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else {
+        println!(
+            "[issue-graph] {} (issues={}, errors={}, warnings={})",
+            if report.accepted() { "OK" } else { "FAIL" },
+            report.summary.issue_count,
+            report.summary.error_count,
+            report.summary.warning_count
+        );
+        for finding in &report.errors {
+            println!(
+                "  - {} {} ({})",
+                finding.issue_id, finding.class, finding.message
+            );
+        }
+        for finding in &report.warnings {
+            println!(
+                "  - WARN {} {} ({})",
+                finding.issue_id, finding.class, finding.message
+            );
+        }
+    }
+
+    if !report.accepted() {
+        std::process::exit(1);
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 fn run_update(
     id: String,
@@ -619,7 +680,14 @@ fn run_discover(
     let mut issue = Issue::new(issue_id.clone(), title);
     issue.description = description;
     issue.priority = priority;
-    issue.issue_type = issue_type;
+    issue.issue_type = parse_issue_type(&issue_type).unwrap_or_else(|| {
+        eprintln!(
+            "error: invalid issue_type `{}` (expected one of: {})",
+            issue_type,
+            issue_type_variants().join(", ")
+        );
+        std::process::exit(1);
+    });
     issue.assignee = assignee;
     issue.owner = owner;
     issue.set_status("open".to_string());

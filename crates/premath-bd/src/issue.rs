@@ -3,7 +3,7 @@
 use chrono::{DateTime, Utc};
 use premath_kernel::context::ContextId;
 use premath_kernel::definable::{ContentHash, Edge, FiberSignature, Phase};
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 
 use crate::dependency::Dependency;
 
@@ -22,6 +22,25 @@ pub enum IssueLeaseState {
     Unleased,
     Active,
     Stale,
+}
+
+pub const ISSUE_TYPE_EPIC: &str = "epic";
+pub const ISSUE_TYPE_TASK: &str = "task";
+
+pub fn issue_type_variants() -> &'static [&'static str] {
+    &[ISSUE_TYPE_EPIC, ISSUE_TYPE_TASK]
+}
+
+pub fn normalize_issue_type(value: &str) -> Option<&'static str> {
+    match value.trim().to_ascii_lowercase().as_str() {
+        ISSUE_TYPE_EPIC => Some(ISSUE_TYPE_EPIC),
+        ISSUE_TYPE_TASK => Some(ISSUE_TYPE_TASK),
+        _ => None,
+    }
+}
+
+pub fn parse_issue_type(value: &str) -> Option<String> {
+    normalize_issue_type(value).map(ToOwned::to_owned)
 }
 
 /// An issue: a trackable work item and the primary definable.
@@ -52,7 +71,9 @@ pub struct Issue {
     pub priority: i32,
     #[serde(
         default = "default_issue_type",
-        skip_serializing_if = "String::is_empty"
+        skip_serializing_if = "String::is_empty",
+        deserialize_with = "deserialize_issue_type",
+        serialize_with = "serialize_issue_type"
     )]
     pub issue_type: String,
 
@@ -100,7 +121,35 @@ fn default_priority() -> i32 {
 }
 
 fn default_issue_type() -> String {
-    "task".to_string()
+    ISSUE_TYPE_TASK.to_string()
+}
+
+fn deserialize_issue_type<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let raw = String::deserialize(deserializer)?;
+    parse_issue_type(&raw).ok_or_else(|| {
+        de::Error::custom(format!(
+            "invalid issue_type `{}` (expected one of: {})",
+            raw,
+            issue_type_variants().join(", ")
+        ))
+    })
+}
+
+fn serialize_issue_type<S>(issue_type: &String, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let normalized = parse_issue_type(issue_type).ok_or_else(|| {
+        ser::Error::custom(format!(
+            "invalid issue_type `{}` (expected one of: {})",
+            issue_type,
+            issue_type_variants().join(", ")
+        ))
+    })?;
+    serializer.serialize_str(&normalized)
 }
 
 fn default_timestamp() -> DateTime<Utc> {
@@ -156,6 +205,23 @@ impl Issue {
         self.updated_at = Utc::now();
     }
 
+    pub fn set_issue_type(&mut self, issue_type: impl AsRef<str>) -> Result<(), String> {
+        let raw = issue_type.as_ref();
+        let normalized = parse_issue_type(raw).ok_or_else(|| {
+            format!(
+                "invalid issue_type `{}` (expected one of: {})",
+                raw,
+                issue_type_variants().join(", ")
+            )
+        })?;
+        self.issue_type = normalized;
+        Ok(())
+    }
+
+    pub fn issue_type(&self) -> &str {
+        normalize_issue_type(&self.issue_type).unwrap_or(ISSUE_TYPE_TASK)
+    }
+
     pub fn lease_state_at(&self, now: DateTime<Utc>) -> IssueLeaseState {
         match self.lease.as_ref() {
             None => IssueLeaseState::Unleased,
@@ -182,7 +248,7 @@ impl Issue {
             .field("notes", &self.notes)
             .field("status", &self.status)
             .field_int("priority", self.priority as i64)
-            .field("issue_type", &self.issue_type)
+            .field("issue_type", self.issue_type())
             .field_bool("ephemeral", self.ephemeral)
             .field("mol_type", &self.mol_type)
             .finish()
@@ -229,7 +295,7 @@ impl Issue {
             structure_hash: self.structure_hash(),
             edges,
             phase: Phase {
-                kind: self.issue_type.clone(),
+                kind: self.issue_type().to_string(),
                 ephemeral: self.ephemeral,
                 status: self.status.clone(),
                 mol_type: if self.mol_type.is_empty() {

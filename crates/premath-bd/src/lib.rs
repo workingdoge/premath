@@ -22,6 +22,7 @@
 pub mod dependency;
 pub mod events;
 pub mod issue;
+pub mod issue_graph;
 pub mod jsonl;
 pub mod memory;
 
@@ -33,4 +34,9 @@ pub use events::{
     stores_equivalent, write_events, write_events_to_path,
 };
 pub use issue::{Issue, IssueLease, IssueLeaseState};
+pub use issue_graph::{
+    DEFAULT_NOTE_WARN_THRESHOLD, FAILURE_CLASS_ACCEPTANCE_MISSING, FAILURE_CLASS_EPIC_MISMATCH,
+    FAILURE_CLASS_VERIFICATION_COMMAND_MISSING, ISSUE_GRAPH_CHECK_KIND, IssueGraphCheckReport,
+    IssueGraphFinding, IssueGraphSummary, WARNING_CLASS_NOTES_LARGE, check_issue_graph,
+};
 pub use memory::{MemoryStore, MemoryStoreError};

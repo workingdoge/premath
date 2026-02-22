@@ -7,7 +7,8 @@
 
 use crate::dependency::DepType;
 use crate::dependency::Dependency;
-use crate::issue::Issue;
+use crate::issue::{Issue, parse_issue_type};
+use crate::issue_graph::{IssueGraphCheckReport, check_issue_graph};
 use crate::jsonl::{JsonlError, read_issues_from_path, write_issues_to_path};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
@@ -20,6 +21,12 @@ pub enum MemoryStoreError {
 
     #[error("issue not found: {0}")]
     IssueNotFound(String),
+
+    #[error("invalid issue_type for {issue_id}: {issue_type}")]
+    InvalidIssueType {
+        issue_id: String,
+        issue_type: String,
+    },
 
     #[error("dependency already exists: {issue_id} -> {depends_on_id} ({dep_type})")]
     DependencyAlreadyExists {
@@ -62,7 +69,14 @@ impl MemoryStore {
     /// matching append/overlay behavior in JSONL sync workflows.
     pub fn from_issues(issues: Vec<Issue>) -> Result<Self, MemoryStoreError> {
         let mut index = BTreeMap::new();
-        for issue in issues {
+        for mut issue in issues {
+            let issue_type = parse_issue_type(&issue.issue_type).ok_or_else(|| {
+                MemoryStoreError::InvalidIssueType {
+                    issue_id: issue.id.clone(),
+                    issue_type: issue.issue_type.clone(),
+                }
+            })?;
+            issue.issue_type = issue_type;
             let id = issue.id.clone();
             index.insert(id, issue);
         }
@@ -371,6 +385,11 @@ impl MemoryStore {
         }
 
         ready
+    }
+
+    /// Run deterministic issue-graph contract checks against this store.
+    pub fn check_issue_graph(&self, note_warn_threshold: usize) -> IssueGraphCheckReport {
+        check_issue_graph(self, note_warn_threshold)
     }
 }
 

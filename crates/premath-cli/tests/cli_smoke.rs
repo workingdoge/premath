@@ -1236,6 +1236,66 @@ fn issue_update_and_list_json_smoke() {
 }
 
 #[test]
+fn issue_check_json_smoke() {
+    let tmp = TempDirGuard::new("issue-check");
+    let issues_ok = tmp.path().join("issues-ok.jsonl");
+    let issues_bad = tmp.path().join("issues-bad.jsonl");
+
+    fs::write(
+        &issues_ok,
+        concat!(
+            "{\"id\":\"bd-ok\",\"title\":\"Issue ok\",\"status\":\"open\",\"issue_type\":\"task\",",
+            "\"description\":\"Acceptance:\\n- complete work\\n\\nVerification commands:\\n- `mise run baseline`\"}\n"
+        ),
+    )
+    .expect("valid issues should be written");
+
+    let out_ok = run_premath([
+        OsString::from("issue"),
+        OsString::from("check"),
+        OsString::from("--issues"),
+        issues_ok.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_ok);
+    let ok_payload = parse_json_stdout(&out_ok);
+    assert_eq!(ok_payload["action"], "issue.check");
+    assert_eq!(ok_payload["checkKind"], "premath.issue_graph.check.v1");
+    assert_eq!(ok_payload["result"], "accepted");
+    assert_eq!(ok_payload["summary"]["errorCount"], 0);
+
+    fs::write(
+        &issues_bad,
+        concat!(
+            "{\"id\":\"bd-epic\",\"title\":\"[EPIC] Broken\",\"status\":\"open\",\"issue_type\":\"task\",",
+            "\"description\":\"Acceptance:\\n- done\\n\\nVerification commands:\\n- `mise run baseline`\"}\n"
+        ),
+    )
+    .expect("invalid issues should be written");
+
+    let out_bad = run_premath([
+        OsString::from("issue"),
+        OsString::from("check"),
+        OsString::from("--issues"),
+        issues_bad.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_bad.status.success(),
+        "expected issue check to fail, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out_bad.stdout),
+        String::from_utf8_lossy(&out_bad.stderr)
+    );
+    let bad_payload = parse_json_stdout(&out_bad);
+    assert_eq!(bad_payload["action"], "issue.check");
+    assert_eq!(bad_payload["result"], "rejected");
+    assert_eq!(
+        bad_payload["failureClasses"],
+        serde_json::json!(["issue_graph.issue_type.epic_mismatch"])
+    );
+}
+
+#[test]
 fn issue_backend_status_json_smoke() {
     let tmp = TempDirGuard::new("issue-backend-status");
     let issues = tmp.path().join("issues.jsonl");

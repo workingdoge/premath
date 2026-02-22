@@ -81,8 +81,9 @@ private/local-only surfaces (for example `.claude/`, `.serena/`,
 `.premath/cache/`) and required ignore entries
 (`mise run ci-hygiene-check`).
 
-`tools/ci/check_issue_graph.py` validates issue-memory contract invariants
-(`.premath/issues.jsonl`) for machine-actionable planning surfaces:
+`tools/ci/check_issue_graph.py` is a thin wrapper over
+`premath issue check` and therefore uses core issue-memory semantics from
+`premath-bd` for machine-actionable planning surfaces:
 
 - `[EPIC]` title rows must use `issue_type=epic`,
 - active issues (`open`/`in_progress`) must carry an `Acceptance:` section,

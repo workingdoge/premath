@@ -6,6 +6,8 @@ use crate::support::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
+use premath_bd::DEFAULT_NOTE_WARN_THRESHOLD;
+use premath_bd::issue::{issue_type_variants, parse_issue_type};
 use premath_bd::{DepType, Issue, IssueLease, IssueLeaseState, MemoryStore, store_snapshot_ref};
 use premath_coherence::validate_instruction_envelope_payload;
 use premath_jj::JjClient;
@@ -211,6 +213,7 @@ impl ServerHandler for PremathMcpHandler {
         match tool_params {
             PremathTools::IssueReadyTool(tool) => call_issue_ready(&self.config, tool),
             PremathTools::IssueListTool(tool) => call_issue_list(&self.config, tool),
+            PremathTools::IssueCheckTool(tool) => call_issue_check(&self.config, tool),
             PremathTools::IssueBackendStatusTool(tool) => {
                 call_issue_backend_status(&self.config, tool)
             }
@@ -272,6 +275,20 @@ struct IssueListTool {
     assignee: Option<String>,
     #[serde(default)]
     issues_path: Option<String>,
+}
+
+#[mcp_tool(
+    name = "issue_check",
+    description = "Run deterministic issue-graph contract checks",
+    read_only_hint = true
+)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "camelCase")]
+struct IssueCheckTool {
+    #[serde(default)]
+    issues_path: Option<String>,
+    #[serde(default)]
+    note_warn_threshold: Option<u64>,
 }
 
 #[mcp_tool(
@@ -619,6 +636,7 @@ tool_box!(
     [
         IssueReadyTool,
         IssueListTool,
+        IssueCheckTool,
         IssueBackendStatusTool,
         IssueBlockedTool,
         IssueAddTool,
@@ -963,6 +981,39 @@ fn call_issue_list(
     }))
 }
 
+fn call_issue_check(
+    config: &PremathMcpConfig,
+    tool: IssueCheckTool,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    let path = resolve_path(tool.issues_path, &config.issues_path);
+    let store = load_store_existing(&path)?;
+    let note_warn_threshold = tool
+        .note_warn_threshold
+        .map(|value| {
+            usize::try_from(value).map_err(|_| {
+                call_tool_error(format!(
+                    "note_warn_threshold exceeds platform usize: {}",
+                    value
+                ))
+            })
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_NOTE_WARN_THRESHOLD);
+    let report = store.check_issue_graph(note_warn_threshold);
+
+    json_result(json!({
+        "action": "issue.check",
+        "issuesPath": path.display().to_string(),
+        "checkKind": report.check_kind,
+        "result": report.result,
+        "failureClasses": report.failure_classes,
+        "warningClasses": report.warning_classes,
+        "errors": report.errors,
+        "warnings": report.warnings,
+        "summary": report.summary
+    }))
+}
+
 fn call_issue_backend_status(
     config: &PremathMcpConfig,
     tool: IssueBackendStatusTool,
@@ -1053,7 +1104,14 @@ fn call_issue_add(
     let mut issue = Issue::new(issue_id.clone(), tool.title);
     issue.description = tool.description.unwrap_or_default();
     issue.priority = tool.priority.unwrap_or(2);
-    issue.issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    let raw_issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    issue.issue_type = parse_issue_type(&raw_issue_type).ok_or_else(|| {
+        call_tool_error(format!(
+            "invalid issue_type `{}` (expected one of: {})",
+            raw_issue_type,
+            issue_type_variants().join(", ")
+        ))
+    })?;
     issue.assignee = tool.assignee.unwrap_or_default();
     issue.owner = tool.owner.unwrap_or_default();
     issue.set_status(non_empty(tool.status).unwrap_or_else(|| "open".to_string()));
@@ -1506,7 +1564,14 @@ fn call_issue_discover(
     let mut issue = Issue::new(issue_id.clone(), tool.title);
     issue.description = tool.description.unwrap_or_default();
     issue.priority = tool.priority.unwrap_or(2);
-    issue.issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    let raw_issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    issue.issue_type = parse_issue_type(&raw_issue_type).ok_or_else(|| {
+        call_tool_error(format!(
+            "invalid issue_type `{}` (expected one of: {})",
+            raw_issue_type,
+            issue_type_variants().join(", ")
+        ))
+    })?;
     issue.assignee = tool.assignee.unwrap_or_default();
     issue.owner = tool.owner.unwrap_or_default();
     issue.set_status("open".to_string());
@@ -2611,6 +2676,50 @@ mod tests {
         assert_eq!(
             blocked_payload["items"][0]["blockers"][0]["dependsOnId"],
             "bd-root"
+        );
+    }
+
+    #[test]
+    fn issue_check_reports_core_invariants() {
+        let root = temp_dir("issue-check");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "[EPIC] Missing epic type".to_string(),
+                id: Some("bd-epic".to_string()),
+                description: Some(
+                    "Acceptance:\n- done\n\nVerification commands:\n- `mise run baseline`\n"
+                        .to_string(),
+                ),
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("issue add should succeed");
+
+        let check = call_issue_check(
+            &config,
+            IssueCheckTool {
+                issues_path: None,
+                note_warn_threshold: None,
+            },
+        )
+        .expect("issue check should execute");
+        let payload = parse_tool_json(check);
+        assert_eq!(payload["action"], "issue.check");
+        assert_eq!(payload["checkKind"], "premath.issue_graph.check.v1");
+        assert_eq!(payload["result"], "rejected");
+        assert_eq!(
+            payload["failureClasses"],
+            serde_json::json!(["issue_graph.issue_type.epic_mismatch"])
         );
     }
 

@@ -432,7 +432,7 @@ surface.
     (`capabilities.change_morphisms` + per-action claim or
     `capabilities.change_morphisms.all`).
   - data-plane tools: `init_tool`, `issue_ready`, `issue_list`,
-    `issue_backend_status`, `issue_blocked`, `issue_add`, `issue_claim`,
+    `issue_check`, `issue_backend_status`, `issue_blocked`, `issue_add`, `issue_claim`,
     `issue_lease_renew`, `issue_lease_release`, `issue_lease_projection`,
     `issue_discover`, `issue_update`, `dep_add`, `dep_remove`, `dep_replace`,
     `observe_latest`, `observe_needs_attention`, `observe_instruction`,
@@ -449,6 +449,8 @@ surface.
   - reports backend integration state (canonical JSONL refs/errors, surreal query projection provenance/freshness, and JJ availability/head metadata).
 - `premath issue list --issues .premath/issues.jsonl --json`
   - lists issues with optional status/assignee filters.
+- `premath issue check --issues .premath/issues.jsonl --json`
+  - runs deterministic issue-memory contract checks (`epic` typing, active acceptance/verification sections, note-size warnings).
 - `premath issue ready --issues .premath/issues.jsonl --json`
   - returns open issues with no unresolved blocking dependencies.
 - `premath issue blocked --issues .premath/issues.jsonl --json`
