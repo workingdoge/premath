@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "invariance/same_boundary_authority_external",
+  "profile": "external",
+  "semanticScenarioId": "ci_boundary_authority_invariance_01",
+  "description": "External boundary-authority profile paired with local baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "rejected",
+      "gateFailureClasses": [
+        "descent_failure"
+      ]
+    },
+    "obligationRegistry": {
+      "registryKind": "premath.obligation_gate_registry.v1",
+      "mappings": [
+        {
+          "obligationKind": "stability",
+          "failureClass": "stability_failure"
+        },
+        {
+          "obligationKind": "ext_gap",
+          "failureClass": "descent_failure"
+        }
+      ]
+    },
+    "proposal": {
+      "obligations": [
+        {
+          "kind": "stability"
+        },
+        {
+          "kind": "ext_gap"
+        }
+      ],
+      "discharge": {
+        "steps": [
+          {
+            "kind": "stability",
+            "status": "passed"
+          },
+          {
+            "kind": "ext_gap",
+            "status": "failed",
+            "failureClass": "descent_failure"
+          }
+        ],
+        "failureClasses": [
+          "descent_failure"
+        ]
+      }
+    },
+    "coherence": {
+      "obligationRegistryKind": "premath.obligation_gate_registry.v1",
+      "bidirCheckerObligations": [
+        "stability",
+        "ext_gap"
+      ]
+    },
+    "ciWitness": {
+      "semanticFailureClasses": [
+        "descent_failure"
+      ],
+      "operationalFailureClasses": [],
+      "failureClasses": [
+        "descent_failure"
+      ],
+      "proposalIngest": {
+        "obligations": [
+          {
+            "kind": "stability"
+          },
+          {
+            "kind": "ext_gap"
+          }
+        ],
+        "discharge": {
+          "failureClasses": [
+            "descent_failure"
+          ]
+        }
+      }
+    },
+    "doctrineSite": {
+      "trackedDigest": "c5191e4d586bdc758e41643546663b2b5ff4bd23230adb31266638bb37387564",
+      "generatedDigest": "c5191e4d586bdc758e41643546663b2b5ff4bd23230adb31266638bb37387564"
+    },
+    "claimedCapabilities": [
+      "capabilities.ci_witnesses"
+    ]
+  }
+}

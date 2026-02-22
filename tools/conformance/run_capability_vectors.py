@@ -1338,6 +1338,234 @@ def evaluate_ci_witness_invariance(case: Dict[str, Any]) -> VectorOutcome:
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_ci_boundary_authority_lineage(case: Dict[str, Any]) -> VectorOutcome:
+    profile = case.get("profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    if profile is not None:
+        profile_name = ensure_string(profile, "profile")
+        if profile_name != "local":
+            claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+            if CAPABILITY_CI_WITNESSES not in claimed:
+                return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    kernel_verdict = "accepted"
+    gate_failure_classes: List[str] = []
+    input_data = artifacts.get("input")
+    if input_data is not None:
+        if not isinstance(input_data, dict):
+            raise ValueError("artifacts.input must be an object when present")
+        kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+        if kernel_verdict not in {"accepted", "rejected"}:
+            raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+        gate_failure_classes = canonical_check_set(
+            input_data.get("gateFailureClasses", []),
+            "artifacts.input.gateFailureClasses",
+        )
+
+    failures: List[str] = []
+    registry_raw = artifacts.get("obligationRegistry")
+    if not isinstance(registry_raw, dict):
+        raise ValueError("artifacts.obligationRegistry must be an object")
+    registry_kind = ensure_string(
+        registry_raw.get("registryKind"),
+        "artifacts.obligationRegistry.registryKind",
+    )
+    mappings_raw = registry_raw.get("mappings")
+    if not isinstance(mappings_raw, list):
+        raise ValueError("artifacts.obligationRegistry.mappings must be a list")
+
+    obligation_to_failure: Dict[str, str] = {}
+    for idx, row in enumerate(mappings_raw):
+        if not isinstance(row, dict):
+            raise ValueError(f"artifacts.obligationRegistry.mappings[{idx}] must be an object")
+        obligation_kind = ensure_string(
+            row.get("obligationKind"),
+            f"artifacts.obligationRegistry.mappings[{idx}].obligationKind",
+        )
+        failure_class = ensure_string(
+            row.get("failureClass"),
+            f"artifacts.obligationRegistry.mappings[{idx}].failureClass",
+        )
+        existing = obligation_to_failure.get(obligation_kind)
+        if existing is not None and existing != failure_class:
+            failures.append("boundary_authority_registry_mismatch")
+            continue
+        obligation_to_failure[obligation_kind] = failure_class
+
+    if registry_kind != "premath.obligation_gate_registry.v1":
+        failures.append("boundary_authority_registry_mismatch")
+
+    proposal_raw = artifacts.get("proposal")
+    if not isinstance(proposal_raw, dict):
+        raise ValueError("artifacts.proposal must be an object")
+    proposal_obligations_raw = proposal_raw.get("obligations")
+    if not isinstance(proposal_obligations_raw, list):
+        raise ValueError("artifacts.proposal.obligations must be a list")
+    proposal_obligation_kinds: List[str] = []
+    for idx, row in enumerate(proposal_obligations_raw):
+        if not isinstance(row, dict):
+            raise ValueError(f"artifacts.proposal.obligations[{idx}] must be an object")
+        proposal_obligation_kinds.append(
+            ensure_string(
+                row.get("kind"),
+                f"artifacts.proposal.obligations[{idx}].kind",
+            )
+        )
+    proposal_obligation_kinds = sorted(set(proposal_obligation_kinds))
+
+    proposal_discharge_raw = proposal_raw.get("discharge")
+    if not isinstance(proposal_discharge_raw, dict):
+        raise ValueError("artifacts.proposal.discharge must be an object")
+    proposal_steps_raw = proposal_discharge_raw.get("steps")
+    if not isinstance(proposal_steps_raw, list):
+        raise ValueError("artifacts.proposal.discharge.steps must be a list")
+    failed_obligation_kinds: List[str] = []
+    for idx, row in enumerate(proposal_steps_raw):
+        if not isinstance(row, dict):
+            raise ValueError(f"artifacts.proposal.discharge.steps[{idx}] must be an object")
+        kind = ensure_string(
+            row.get("kind"),
+            f"artifacts.proposal.discharge.steps[{idx}].kind",
+        )
+        status = ensure_string(
+            row.get("status"),
+            f"artifacts.proposal.discharge.steps[{idx}].status",
+        )
+        if status not in {"passed", "failed"}:
+            raise ValueError(
+                f"artifacts.proposal.discharge.steps[{idx}].status must be 'passed' or 'failed'"
+            )
+        if status == "failed":
+            failed_obligation_kinds.append(kind)
+            step_failure_class = row.get("failureClass")
+            if step_failure_class is not None:
+                if not isinstance(step_failure_class, str) or not step_failure_class:
+                    raise ValueError(
+                        f"artifacts.proposal.discharge.steps[{idx}].failureClass must be a non-empty string when present"
+                    )
+                mapped_failure_class = obligation_to_failure.get(kind)
+                if mapped_failure_class is None or mapped_failure_class != step_failure_class:
+                    failures.append("boundary_authority_registry_mismatch")
+
+    expected_semantic_failure_classes: List[str] = []
+    if "boundary_authority_registry_mismatch" not in failures:
+        for kind in sorted(set(failed_obligation_kinds)):
+            mapped_failure_class = obligation_to_failure.get(kind)
+            if mapped_failure_class is None:
+                failures.append("boundary_authority_registry_mismatch")
+                break
+            expected_semantic_failure_classes.append(mapped_failure_class)
+    expected_semantic_failure_classes = sorted(set(expected_semantic_failure_classes))
+
+    coherence_raw = artifacts.get("coherence")
+    if not isinstance(coherence_raw, dict):
+        raise ValueError("artifacts.coherence must be an object")
+    coherence_registry_kind = ensure_string(
+        coherence_raw.get("obligationRegistryKind"),
+        "artifacts.coherence.obligationRegistryKind",
+    )
+    if coherence_registry_kind != registry_kind:
+        failures.append("boundary_authority_registry_mismatch")
+    coherence_bidir_obligations = set(
+        canonical_check_set(
+            coherence_raw.get("bidirCheckerObligations", []),
+            "artifacts.coherence.bidirCheckerObligations",
+        )
+    )
+
+    ci_witness_raw = artifacts.get("ciWitness")
+    if not isinstance(ci_witness_raw, dict):
+        raise ValueError("artifacts.ciWitness must be an object")
+    ci_semantic_failure_classes = canonical_check_set(
+        ci_witness_raw.get("semanticFailureClasses", []),
+        "artifacts.ciWitness.semanticFailureClasses",
+    )
+    ci_operational_failure_classes = canonical_check_set(
+        ci_witness_raw.get("operationalFailureClasses", []),
+        "artifacts.ciWitness.operationalFailureClasses",
+    )
+    ci_failure_classes = canonical_check_set(
+        ci_witness_raw.get("failureClasses", []),
+        "artifacts.ciWitness.failureClasses",
+    )
+
+    doctrine_site_raw = artifacts.get("doctrineSite")
+    if doctrine_site_raw is not None:
+        if not isinstance(doctrine_site_raw, dict):
+            raise ValueError("artifacts.doctrineSite must be an object when present")
+        tracked_digest = ensure_string(
+            doctrine_site_raw.get("trackedDigest"),
+            "artifacts.doctrineSite.trackedDigest",
+        )
+        generated_digest = ensure_string(
+            doctrine_site_raw.get("generatedDigest"),
+            "artifacts.doctrineSite.generatedDigest",
+        )
+        if tracked_digest != generated_digest:
+            failures.append("boundary_authority_stale_generated")
+
+    proposal_ingest_raw = ci_witness_raw.get("proposalIngest")
+    if proposal_ingest_raw is not None:
+        if not isinstance(proposal_ingest_raw, dict):
+            raise ValueError("artifacts.ciWitness.proposalIngest must be an object when present")
+        proposal_ingest_obligations_raw = proposal_ingest_raw.get("obligations", [])
+        if not isinstance(proposal_ingest_obligations_raw, list):
+            raise ValueError("artifacts.ciWitness.proposalIngest.obligations must be a list")
+        proposal_ingest_obligation_kinds: List[str] = []
+        for idx, row in enumerate(proposal_ingest_obligations_raw):
+            if not isinstance(row, dict):
+                raise ValueError(
+                    f"artifacts.ciWitness.proposalIngest.obligations[{idx}] must be an object"
+                )
+            proposal_ingest_obligation_kinds.append(
+                ensure_string(
+                    row.get("kind"),
+                    f"artifacts.ciWitness.proposalIngest.obligations[{idx}].kind",
+                )
+            )
+        if sorted(set(proposal_ingest_obligation_kinds)) != proposal_obligation_kinds:
+            failures.append("boundary_authority_lineage_mismatch")
+
+        proposal_ingest_discharge_raw = proposal_ingest_raw.get("discharge")
+        if not isinstance(proposal_ingest_discharge_raw, dict):
+            raise ValueError("artifacts.ciWitness.proposalIngest.discharge must be an object")
+        proposal_ingest_failure_classes = canonical_check_set(
+            proposal_ingest_discharge_raw.get("failureClasses", []),
+            "artifacts.ciWitness.proposalIngest.discharge.failureClasses",
+        )
+        if (
+            "boundary_authority_registry_mismatch" not in failures
+            and proposal_ingest_failure_classes != expected_semantic_failure_classes
+        ):
+            failures.append("boundary_authority_lineage_mismatch")
+
+    if "boundary_authority_registry_mismatch" not in failures:
+        proposal_discharge_failure_classes = canonical_check_set(
+            proposal_discharge_raw.get("failureClasses", []),
+            "artifacts.proposal.discharge.failureClasses",
+        )
+        if proposal_discharge_failure_classes != expected_semantic_failure_classes:
+            failures.append("boundary_authority_lineage_mismatch")
+        if ci_semantic_failure_classes != expected_semantic_failure_classes:
+            failures.append("boundary_authority_lineage_mismatch")
+        if not set(proposal_obligation_kinds).issubset(coherence_bidir_obligations):
+            failures.append("boundary_authority_lineage_mismatch")
+
+    expected_ci_failure_classes = sorted(
+        set(ci_operational_failure_classes + ci_semantic_failure_classes)
+    )
+    if ci_failure_classes != expected_ci_failure_classes:
+        failures.append("boundary_authority_lineage_mismatch")
+
+    failure_classes = sorted(set(failures))
+    if failure_classes:
+        return VectorOutcome("rejected", "rejected", failure_classes)
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/instruction_witness_deterministic",
@@ -1374,6 +1602,14 @@ def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOu
         return evaluate_ci_required_witness_decision_attestation(case)
     if vector_id == "golden/delta_snapshot_projection_decision_stable":
         return evaluate_ci_required_witness_delta_snapshot(case)
+    if vector_id in {
+        "golden/boundary_authority_lineage_accept",
+        "adversarial/boundary_authority_registry_mismatch_reject",
+        "adversarial/boundary_authority_stale_generated_reject",
+        "invariance/same_boundary_authority_local",
+        "invariance/same_boundary_authority_external",
+    }:
+        return evaluate_ci_boundary_authority_lineage(case)
     if vector_id in {
         "invariance/same_required_witness_local",
         "invariance/same_required_witness_external",

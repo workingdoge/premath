@@ -159,7 +159,9 @@ If capability `capabilities.ci_witnesses` is claimed, implementation MUST:
 19. verify strict-delta and decision-attestation witness chains deterministically
     when those checks are requested, and
 20. preserve kernel verdict and Gate failure classes across paired local/external
-    CI witness-profile invariance vectors.
+    CI witness-profile invariance vectors, including boundary-authority lineage
+    parity (kernel obligation registry -> proposal discharge -> coherence scope ->
+    CI semantic failure classes) and stale generated doctrine-site rejection.
 
 ### 3.7 Required behavior for instruction typing capability
 

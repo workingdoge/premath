@@ -155,6 +155,9 @@ Checks include:
 - deterministic `Delta -> requiredChecks` projection behavior,
 - deterministic `ci.required` witness verification behavior,
 - strict delta-compare witness verification behavior,
+- boundary-authority lineage parity checks (kernel obligation registry ->
+  proposal discharge -> coherence scope -> CI semantic witness classes),
+- stale generated doctrine-site digest rejection checks,
 - invariance pairing (`kernelVerdict` and Gate failure classes) across evidence profiles.
 
 Run:

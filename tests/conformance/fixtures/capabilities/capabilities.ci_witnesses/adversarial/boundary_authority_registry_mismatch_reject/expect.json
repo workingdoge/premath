@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "boundary_authority_registry_mismatch"
+  ],
+  "assertions": [
+    "mismatched obligation-to-Gate mapping rejects deterministically"
+  ]
+}

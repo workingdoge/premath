@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "descent_failure"
+  ],
+  "assertions": [
+    "kernel verdict matches paired external boundary-authority profile",
+    "Gate failure classes match paired external boundary-authority profile"
+  ]
+}

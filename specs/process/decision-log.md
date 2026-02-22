@@ -1531,3 +1531,44 @@ keeps operation ancestry auditable, and preserves one canonical projection path.
   - `tools/conformance/doctrine_site_contract.py`
   - `tools/conformance/generate_doctrine_site.py`
   - `tools/conformance/test_doctrine_site_contract.py`
+
+---
+
+## 2026-02-22 — Decision 0053: Add boundary-authority invariance vectors across kernel/coherence/CI witness surfaces
+
+### Decision
+Extend `capabilities.ci_witnesses` executable vectors with a boundary-authority
+lineage slice that validates one shared authority chain:
+
+- kernel obligation registry mapping (`obligationKind -> failureClass`),
+- proposal discharge failed-obligation classes,
+- coherence scope registry kind + bidir obligation surface,
+- CI witness semantic failure lineage (`semanticFailureClasses` plus union shape).
+
+Add adversarial vectors for:
+
+- obligation-registry mapping mismatch,
+- stale generated doctrine-site digest material.
+
+Add paired local/external invariance vectors for the same boundary-authority
+scenario.
+
+### Rationale
+`bd-61` requires proving that authority mappings remain invariant across the
+kernel/coherence/CI projection boundary, not just inside one witness format.
+This closes the remaining parity gap after typed registry and generation-first
+surfaces were introduced (`bd-57`, `bd-58`, `bd-59`, `bd-60`, `bd-63`).
+
+### Consequences
+- `tools/conformance/run_capability_vectors.py` now includes boundary-authority
+  lineage validation in the `capabilities.ci_witnesses` evaluator.
+- `tests/conformance/fixtures/capabilities/capabilities.ci_witnesses/` now
+  contains:
+  - `golden/boundary_authority_lineage_accept`,
+  - `adversarial/boundary_authority_registry_mismatch_reject`,
+  - `adversarial/boundary_authority_stale_generated_reject`,
+  - `invariance/same_boundary_authority_local`,
+  - `invariance/same_boundary_authority_external`.
+- capability/conformance docs now explicitly require boundary-authority lineage
+  parity and stale generated doctrine-site rejection under
+  `capabilities.ci_witnesses`.

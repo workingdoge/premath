@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "kernel obligation registry maps failed proposal obligations to CI semantic witness lineage",
+    "coherence scope binds to the same obligation registry kind and bidir checker obligation set"
+  ]
+}

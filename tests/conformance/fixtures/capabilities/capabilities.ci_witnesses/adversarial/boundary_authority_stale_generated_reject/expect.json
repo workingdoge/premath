@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "boundary_authority_stale_generated"
+  ],
+  "assertions": [
+    "stale generated doctrine-site artifacts reject deterministically"
+  ]
+}
