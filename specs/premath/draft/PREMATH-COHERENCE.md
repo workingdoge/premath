@@ -191,3 +191,55 @@ Not preserved:
 - `dm.refine.cover`
 - `dm.transport.location`
 - `dm.transport.world`
+
+## 10. Migration Profile: Python Adapters -> `premath-coherence` Core
+
+This section defines the phased migration contract for moving checker/gate
+semantics out of Python surfaces and into the Rust `premath-coherence` core.
+
+### 10.1 Authority boundary
+
+During and after migration:
+
+- semantic/check kernels MUST live in `premath-coherence` (or successor core
+  checker crates),
+- Python surfaces under `tools/ci/` MUST remain orchestration adapters
+  (argument/env binding, command dispatch, summary shaping),
+- adapters MUST NOT define parallel canonicalization/typing/discharge logic.
+
+### 10.2 Parity contract
+
+For identical input envelope + repository state + bindings, dual-path execution
+MUST preserve the same authoritative outcome class and checker lineage.
+
+Minimum parity keys:
+
+- `result` (`accepted|rejected`),
+- `failureClasses` (set equality),
+- checker binding fields (`normalizerId`, `policyDigest`),
+- required check ID set + deterministic ordering policy,
+- projection/check digests emitted by the control plane,
+- proposal identity keys (`proposalDigest`, `proposalKcirRef`) when present.
+
+### 10.3 Phased cutover
+
+Implementations SHOULD use this cutover sequence:
+
+1. `phase_0_inventory`: enumerate Python semantic/check logic and map each
+   boundary to target core APIs.
+2. `phase_1_shadow`: run core checker in parallel and emit parity comparison
+   witnesses without changing gate verdicts.
+3. `phase_2_gate_on_parity`: treat parity mismatch as deterministic reject.
+4. `phase_3_primary_cutover`: make core checker the primary authority path;
+   keep adapter fallback path available.
+5. `phase_4_deprecate_legacy`: remove duplicated legacy semantic paths once
+   parity has remained stable over sustained baseline runs.
+
+### 10.4 Rollback safety
+
+Rollback MUST preserve witness reproducibility:
+
+- rollback switches execution path only; it MUST NOT mutate instruction payload,
+  policy binding, or normalizer binding material,
+- parity-mismatch failures MUST emit typed witnesses before fallback use,
+- fallback mode MUST remain doctrine-gated and fail-closed.

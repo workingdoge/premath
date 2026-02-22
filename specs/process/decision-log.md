@@ -1113,3 +1113,29 @@ authority from raw text drift.
 - optional raw capability docs now have explicit retention/promotion criteria.
 - promotion work is queryable as first-class issue graph state, not implicit
   intent.
+
+---
+
+## 2026-02-22 — Decision 0039: Adopt phased parity migration contract for Python adapters -> premath-coherence core
+
+### Decision
+Add a normative migration profile in `draft/PREMATH-COHERENCE` defining how
+Python checker/gate surfaces move to `premath-coherence` core authority.
+
+The profile fixes:
+
+- authority boundary (Python as adapter only; no semantic duplication),
+- parity contract keys (result, failure classes, binding fields, projection
+  digests, proposal identity keys),
+- phased cutover (`phase_0_inventory` -> `phase_4_deprecate_legacy`),
+- rollback safety constraints (path switch only, witness-first fail-closed).
+
+### Rationale
+Without a concrete migration contract, the repo can drift into parallel
+authoritative semantics between Python and Rust paths. The phased parity rule
+keeps one authority boundary while preserving safe operational cutover.
+
+### Consequences
+- migration work for `bd-27`/`bd-34` now has explicit phase and parity targets.
+- future cutovers can be judged by deterministic witness parity rather than
+  narrative equivalence.
