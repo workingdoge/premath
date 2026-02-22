@@ -232,6 +232,11 @@ Checker input MUST also include semantic polarity coverage from `expect.result`:
 Missing either path polarity or semantic-result polarity MUST reject
 deterministically.
 
+`coherence-site/manifest.json` MUST provide `obligationVectors` mapping each
+site obligation id to the exact vector ids discharged by that obligation.
+Checkers MUST scope vector parsing/evaluation to that map so malformed vectors
+outside an obligation scope do not fail unrelated obligations.
+
 ## 5. Deterministic Failure Classes
 
 The checker MUST emit deterministic failure classes prefixed by:

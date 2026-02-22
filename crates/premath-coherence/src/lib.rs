@@ -302,6 +302,8 @@ struct SiteManifest {
     status: String,
     #[serde(default)]
     vectors: Vec<String>,
+    #[serde(default)]
+    obligation_vectors: BTreeMap<String, Vec<String>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1142,6 +1144,27 @@ fn check_site_obligation(
         failures.push(format!("coherence.{obligation_id}.manifest_empty"));
     }
 
+    let manifest_vector_set: BTreeSet<String> = manifest.vectors.iter().cloned().collect();
+    let scoped_vectors: Vec<String> = if manifest.obligation_vectors.is_empty() {
+        failures.push(format!(
+            "coherence.{obligation_id}.manifest_missing_obligation_vectors"
+        ));
+        manifest.vectors.clone()
+    } else {
+        manifest
+            .obligation_vectors
+            .get(obligation_id)
+            .cloned()
+            .unwrap_or_default()
+    };
+    for vector_id in &scoped_vectors {
+        if !manifest_vector_set.contains(vector_id) {
+            failures.push(format!(
+                "coherence.{obligation_id}.manifest_obligation_vector_not_declared"
+            ));
+        }
+    }
+
     let mut seen_vectors = BTreeSet::new();
     let mut vector_rows: Vec<Value> = Vec::new();
     let mut matched_count = 0usize;
@@ -1151,7 +1174,7 @@ fn check_site_obligation(
     let mut matched_expected_accepted_count = 0usize;
     let mut matched_expected_rejected_count = 0usize;
 
-    for vector_id in &manifest.vectors {
+    for vector_id in &scoped_vectors {
         if !seen_vectors.insert(vector_id.clone()) {
             failures.push(format!("coherence.{obligation_id}.duplicate_vector_id"));
         }
@@ -1189,6 +1212,9 @@ fn check_site_obligation(
         };
 
         if case_payload.obligation_id != obligation_id {
+            failures.push(format!(
+                "coherence.{obligation_id}.manifest_obligation_vector_mismatch"
+            ));
             continue;
         }
         matched_count += 1;
@@ -1326,6 +1352,8 @@ fn check_site_obligation(
         details: json!({
             "fixtureRoot": to_repo_relative_or_absolute(repo_root, &fixture_root),
             "manifestVectors": manifest.vectors,
+            "manifestObligationVectors": manifest.obligation_vectors,
+            "scopedVectors": scoped_vectors,
             "matchedVectors": matched_count,
             "matchedVectorKinds": {
                 "golden": matched_golden_count,
@@ -2722,13 +2750,16 @@ mod tests {
         fs::write(path, bytes).expect("json fixture should be writable");
     }
 
-    fn write_site_manifest(fixture_root: &Path, vectors: &[&str]) {
+    fn write_site_manifest(fixture_root: &Path, vectors: &[&str], obligation_vectors: &[&str]) {
         write_json_file(
             &fixture_root.join("manifest.json"),
             &json!({
                 "schema": 1,
                 "status": "executable",
                 "vectors": vectors,
+                "obligationVectors": {
+                    "span_square_commutation": obligation_vectors
+                }
             }),
         );
     }
@@ -3185,7 +3216,11 @@ mod tests {
     fn check_site_obligation_requires_golden_polarity_vector() {
         let temp = TempDirGuard::new("site-obligation-missing-golden");
         let fixture_root = temp.path().join("fixtures");
-        write_site_manifest(&fixture_root, &["adversarial/only_vector"]);
+        write_site_manifest(
+            &fixture_root,
+            &["adversarial/only_vector"],
+            &["adversarial/only_vector"],
+        );
         write_site_vector(
             &fixture_root,
             "adversarial/only_vector",
@@ -3212,7 +3247,11 @@ mod tests {
     fn check_site_obligation_requires_adversarial_polarity_vector() {
         let temp = TempDirGuard::new("site-obligation-missing-adversarial");
         let fixture_root = temp.path().join("fixtures");
-        write_site_manifest(&fixture_root, &["golden/only_vector"]);
+        write_site_manifest(
+            &fixture_root,
+            &["golden/only_vector"],
+            &["golden/only_vector"],
+        );
         write_site_vector(
             &fixture_root,
             "golden/only_vector",
@@ -3241,6 +3280,7 @@ mod tests {
         let fixture_root = temp.path().join("fixtures");
         write_site_manifest(
             &fixture_root,
+            &["golden/ok_vector", "adversarial/ok_vector"],
             &["golden/ok_vector", "adversarial/ok_vector"],
         );
         write_site_vector(
@@ -3273,6 +3313,7 @@ mod tests {
         let fixture_root = temp.path().join("fixtures");
         write_site_manifest(
             &fixture_root,
+            &["golden/reject_vector", "adversarial/reject_vector"],
             &["golden/reject_vector", "adversarial/reject_vector"],
         );
         write_site_vector(
@@ -3308,6 +3349,7 @@ mod tests {
         write_site_manifest(
             &fixture_root,
             &["golden/accept_vector", "adversarial/accept_vector"],
+            &["golden/accept_vector", "adversarial/accept_vector"],
         );
         write_site_vector(
             &fixture_root,
@@ -3333,6 +3375,49 @@ mod tests {
         assert!(evaluated.failure_classes.contains(
             &"coherence.span_square_commutation.missing_expected_rejected_vector".to_string()
         ));
+    }
+
+    #[test]
+    fn check_site_obligation_ignores_unscoped_malformed_vectors() {
+        let temp = TempDirGuard::new("site-obligation-scope-isolation");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(
+            &fixture_root,
+            &[
+                "golden/ok_vector",
+                "adversarial/ok_vector",
+                "golden/unscoped_bad_vector",
+            ],
+            &["golden/ok_vector", "adversarial/ok_vector"],
+        );
+        write_site_vector(
+            &fixture_root,
+            "golden/ok_vector",
+            "span_square_commutation",
+            "accepted",
+        );
+        write_site_vector(
+            &fixture_root,
+            "adversarial/ok_vector",
+            "span_square_commutation",
+            "rejected",
+        );
+        let bad_vector_root = fixture_root.join("golden/unscoped_bad_vector");
+        fs::create_dir_all(&bad_vector_root).expect("bad vector root should be creatable");
+        fs::write(bad_vector_root.join("case.json"), b"{not-json")
+            .expect("bad vector case should be writable");
+        fs::write(bad_vector_root.join("expect.json"), b"{not-json")
+            .expect("bad vector expect should be writable");
+
+        let contract = test_contract_with_site_fixture_root("fixtures");
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
     }
 
     #[test]

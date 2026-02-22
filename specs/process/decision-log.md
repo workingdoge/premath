@@ -2245,3 +2245,23 @@ look balanced while all vectors assert the same expected result.
   polarity for site obligations.
 - unit tests now cover missing-expected-accept, missing-expected-reject, and
   mixed semantic polarity pass cases.
+
+---
+
+## 2026-02-22 — Decision 0079: Scope coherence-site vector parsing by obligation map
+
+### Decision
+Require `coherence-site/manifest.json` to declare `obligationVectors` mapping
+from obligation id to vector ids. Update checker semantics so each obligation
+parses/evaluates only vectors in its mapped scope.
+
+### Rationale
+With one shared site manifest, malformed unrelated vectors could fail multiple
+obligations. Obligation-scoped vector parsing removes that blast radius while
+preserving one canonical fixture surface.
+
+### Consequences
+- coherence checker now emits deterministic manifest-scope failures when
+  obligation mappings are missing or inconsistent.
+- unscoped malformed vectors no longer fail untouched obligations.
+- regression test added for scope isolation behavior.
