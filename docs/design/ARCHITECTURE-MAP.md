@@ -161,12 +161,14 @@ work resolved dynamically via `premath issue ready`.
 
 Current follow-on work should remain focused on:
 
-- memory-lane hygiene and note compaction for long-running sessions,
-- governance/operations follow-ups that require human reviewer availability.
+- governance/operations follow-ups that require human reviewer availability
+  (current open item: `bd-67`).
 
 Operational rule:
 - treat this section as a pointer only; use `premath issue ready` /
   `premath issue list` for authoritative ordering.
+- for a compact status snapshot of `Ev`/coherence/issue posture, see
+  `docs/design/EV-COHERENCE-OVERVIEW.md`.
 
 Execution notes:
 - keep semantic authority in kernel/gate paths; do not move admissibility into

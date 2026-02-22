@@ -39,6 +39,8 @@ Authority rule:
 - `ARCHITECTURE-MAP.md`: doctrine-to-operation map + active execution order.
 - `CI-CLOSURE.md`: closure gate and change-projected entry minimization.
 - `CI-PROVIDER-BINDINGS.md`: provider bindings to canonical CI contract.
+- `EV-COHERENCE-OVERVIEW.md`: compact status snapshot for Unified Evidence
+  Plane contracts, coherence boundaries, and issue posture.
 - `LIFECYCLE-COHERENCE-FLOWS.md`: operator flow for schema lifecycle policy and
   coherence gate-chain enforcement.
 - `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move
