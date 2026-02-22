@@ -5,7 +5,7 @@ mod commands;
 mod support;
 
 use clap::Parser;
-use cli::{Cli, Commands, RefCommands};
+use cli::{Cli, Commands, HarnessSessionCommands, RefCommands};
 
 fn main() {
     let cli = Cli::parse();
@@ -220,6 +220,38 @@ fn main() {
         },
 
         Commands::Issue { command } => commands::issue::run(command),
+
+        Commands::HarnessSession { command } => match command {
+            HarnessSessionCommands::Read { path, json } => {
+                commands::harness_session::run_read(path, json)
+            }
+            HarnessSessionCommands::Write {
+                path,
+                session_id,
+                state,
+                issue_id,
+                summary,
+                next_step,
+                instruction_refs,
+                witness_refs,
+                issues,
+                json,
+            } => commands::harness_session::run_write(commands::harness_session::WriteArgs {
+                path,
+                session_id,
+                state,
+                issue_id,
+                summary,
+                next_step,
+                instruction_refs,
+                witness_refs,
+                issues,
+                json,
+            }),
+            HarnessSessionCommands::Bootstrap { path, json } => {
+                commands::harness_session::run_bootstrap(path, json)
+            }
+        },
 
         Commands::Dep { command } => commands::dep::run(command),
     }

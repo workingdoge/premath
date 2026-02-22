@@ -1847,3 +1847,141 @@ fn coherence_check_rejects_on_coherence_spec_obligation_drift() {
         "expected unknown-obligation failure class in top-level union"
     );
 }
+
+#[test]
+fn harness_session_write_read_bootstrap_json_smoke() {
+    let tmp = TempDirGuard::new("harness-session");
+    let session_path = tmp.path().join("harness-session.json");
+    let issues = tmp.path().join("issues.jsonl");
+    write_sample_issues(&issues);
+
+    let out_write_stopped = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--state"),
+        OsString::from("stopped"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-a"),
+        OsString::from("--summary"),
+        OsString::from("finished slice"),
+        OsString::from("--next-step"),
+        OsString::from("run ci-hygiene-check"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/i-2.json"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/i-1.json"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/i-2.json"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w-2.json"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w-1.json"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_stopped);
+    let write_stopped = parse_json_stdout(&out_write_stopped);
+    assert_eq!(write_stopped["action"], "harness-session.write");
+    let session = &write_stopped["session"];
+    assert_eq!(session["schema"], 1);
+    assert_eq!(session["sessionKind"], "premath.harness.session.v1");
+    assert_eq!(session["state"], "stopped");
+    assert_eq!(session["issueId"], "bd-a");
+    assert_eq!(session["summary"], "finished slice");
+    assert_eq!(session["nextStep"], "run ci-hygiene-check");
+    assert_eq!(
+        session["instructionRefs"],
+        serde_json::json!(["instructions/i-1.json", "instructions/i-2.json"])
+    );
+    assert_eq!(
+        session["witnessRefs"],
+        serde_json::json!([
+            "artifacts/ciwitness/w-1.json",
+            "artifacts/ciwitness/w-2.json"
+        ])
+    );
+    assert_eq!(session["issuesPath"], issues.display().to_string());
+    let session_id = session["sessionId"]
+        .as_str()
+        .expect("sessionId should be string")
+        .to_string();
+    assert!(session_id.starts_with("hs1_"));
+    assert!(
+        session["issuesSnapshotRef"]
+            .as_str()
+            .expect("issuesSnapshotRef should be string")
+            .starts_with("iss1_")
+    );
+
+    let out_bootstrap_resume = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("bootstrap"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_bootstrap_resume);
+    let bootstrap_resume = parse_json_stdout(&out_bootstrap_resume);
+    assert_eq!(bootstrap_resume["action"], "harness-session.bootstrap");
+    assert_eq!(
+        bootstrap_resume["bootstrapKind"],
+        "premath.harness.bootstrap.v1"
+    );
+    assert_eq!(bootstrap_resume["mode"], "resume");
+    assert_eq!(bootstrap_resume["resumeIssueId"], "bd-a");
+    assert_eq!(bootstrap_resume["sessionId"], session_id);
+    assert_eq!(
+        bootstrap_resume["sessionRef"],
+        session_path.display().to_string()
+    );
+
+    let out_write_active = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--state"),
+        OsString::from("active"),
+        OsString::from("--summary"),
+        OsString::from("continue work"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_active);
+    let write_active = parse_json_stdout(&out_write_active);
+    assert_eq!(write_active["session"]["sessionId"], session_id);
+    assert_eq!(write_active["session"]["state"], "active");
+    assert_eq!(write_active["session"]["stoppedAt"], Value::Null);
+    assert_eq!(write_active["session"]["summary"], "continue work");
+
+    let out_read = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("read"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_read);
+    let read = parse_json_stdout(&out_read);
+    assert_eq!(read["action"], "harness-session.read");
+    assert_eq!(read["session"]["sessionId"], session_id);
+    assert_eq!(read["session"]["state"], "active");
+    assert_eq!(read["session"]["issueId"], "bd-a");
+    assert_eq!(read["session"]["nextStep"], "run ci-hygiene-check");
+
+    let out_bootstrap_attach = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("bootstrap"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_bootstrap_attach);
+    let bootstrap_attach = parse_json_stdout(&out_bootstrap_attach);
+    assert_eq!(bootstrap_attach["mode"], "attach");
+    assert_eq!(bootstrap_attach["sessionId"], session_id);
+}

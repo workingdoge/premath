@@ -419,6 +419,12 @@ pub enum Commands {
         command: IssueCommands,
     },
 
+    /// Manage Tusk harness-session handoff artifacts
+    HarnessSession {
+        #[command(subcommand)]
+        command: HarnessSessionCommands,
+    },
+
     /// Manage dependencies between issues
     Dep {
         #[command(subcommand)]
@@ -845,6 +851,82 @@ pub enum DepViewArg {
     Gtd,
     #[value(name = "groupoid")]
     Groupoid,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum HarnessSessionCommands {
+    /// Read one harness-session artifact
+    Read {
+        /// Harness-session artifact path
+        #[arg(long, default_value = ".premath/harness_session.json")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Write/update one harness-session artifact
+    Write {
+        /// Harness-session artifact path
+        #[arg(long, default_value = ".premath/harness_session.json")]
+        path: String,
+
+        /// Explicit session id override
+        #[arg(long)]
+        session_id: Option<String>,
+
+        /// Session state
+        #[arg(long, default_value = "stopped")]
+        state: HarnessSessionStateArg,
+
+        /// Current or resumed issue id
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Compact handoff summary
+        #[arg(long)]
+        summary: Option<String>,
+
+        /// Next-step recommendation for bootstrap
+        #[arg(long)]
+        next_step: Option<String>,
+
+        /// Instruction witness references (repeatable)
+        #[arg(long = "instruction-ref")]
+        instruction_refs: Vec<String>,
+
+        /// Gate/CI witness references (repeatable)
+        #[arg(long = "witness-ref")]
+        witness_refs: Vec<String>,
+
+        /// Optional issues JSONL path for snapshot reference derivation
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Build one bootstrap payload from a harness-session artifact
+    Bootstrap {
+        /// Harness-session artifact path
+        #[arg(long, default_value = ".premath/harness_session.json")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum HarnessSessionStateArg {
+    #[value(name = "active")]
+    Active,
+    #[value(name = "stopped")]
+    Stopped,
 }
 
 #[derive(Subcommand, Clone, Debug)]

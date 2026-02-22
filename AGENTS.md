@@ -88,6 +88,9 @@
 - `cargo run --package premath-cli -- observe-build --repo-root . --json` — project Observation Surface v0 from canonical CI witness + issue memory substrates.
 - `cargo run --package premath-cli -- observe-serve --bind 127.0.0.1:43174` — serve Observation Surface v0 through the UX HTTP API.
 - `cargo run --package premath-cli -- mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root .` — run MCP tools over stdio (includes doctrine-gated `instruction_check` and `instruction_run`).
+- `cargo run --package premath-cli -- harness-session write --path .premath/harness_session.json --state stopped --issue-id <bd-id> --summary <text> --next-step <text> --instruction-ref <path-or-ref> --witness-ref <path-or-ref> --json` — write/update compact handoff state for fresh-context restartability.
+- `cargo run --package premath-cli -- harness-session read --path .premath/harness_session.json --json` — read one harness-session artifact.
+- `cargo run --package premath-cli -- harness-session bootstrap --path .premath/harness_session.json --json` — emit one bootstrap payload (`resume` or `attach`) from a harness-session artifact.
 - `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
 - `cargo run --package premath-cli -- issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json` — atomically claim work (`assignee` + `in_progress`).
 - `cargo run --package premath-cli -- issue discover <parent-issue-id> \"Title\" --issues .premath/issues.jsonl --json` — create discovered follow-up work linked by `discovered-from`.

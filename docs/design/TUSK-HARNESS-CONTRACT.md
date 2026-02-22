@@ -107,25 +107,22 @@ Trajectory records are an operational lane, not semantic authority.
 | `boot` memory roots | `premath mcp-serve`, `.premath/issues.jsonl`, `artifacts/observation/latest.json` | partial |
 | `step` mutation authority | `instruction-linked` mutation policy in MCP + instruction witness checks | present |
 | `step` deterministic verification | `ci-required-attested` (`run_required_checks` + verify/decide) | present |
-| `stop` lease + handoff | `issue_claim` / `issue_lease_renew` / `issue_lease_release` | partial |
+| `stop` lease + handoff | `harness-session` artifact + `issue_claim` / `issue_lease_renew` / `issue_lease_release` | partial |
 | trajectory projection | Observation Surface v0 (`observe-build` / `observe`) | partial |
 | replayable work-memory | issue/event replay + witness artifacts | present |
 
-## 8. Gaps (explicit)
+## 8. Gaps (remaining)
 
-1. No canonical session handoff artifact schema for `boot/stop`.
-2. No typed feature/progress ledger for strict one-feature session closure.
-3. No harness-specific trajectory row schema (step-level, witness-linked).
-4. No single documented retry-policy table bound to failure classes.
+1. No typed feature/progress ledger for strict one-feature session closure.
+2. No harness-specific trajectory row schema (step-level, witness-linked).
+3. No single documented retry-policy table bound to failure classes.
 
 ## 9. Implementation slice plan (no math generalization required)
 
-1. Add `HarnessSession` artifact schema + CLI helpers (`boot`/`stop` payload
-   read/write).
-2. Add `HarnessFeatureLedger` schema + check command (machine-verifiable
+1. Add `HarnessFeatureLedger` schema + check command (machine-verifiable
    progress state).
-3. Add step-trajectory append log + projection query (witness-ref linked).
-4. Add deterministic retry-policy table in control-plane docs + enforcement
+2. Add step-trajectory append log + projection query (witness-ref linked).
+3. Add deterministic retry-policy table in control-plane docs + enforcement
    hook in pipeline wrappers.
 
 Each slice should ship with:
@@ -138,6 +135,7 @@ Each slice should ship with:
 ## 10. Relation to existing docs/specs
 
 - Runtime shape: `docs/design/TUSK-ARCHITECTURE.md`
+- Harness handoff artifact: `docs/design/TUSK-HARNESS-SESSION.md`
 - Identity/refinement/witness details:
   - `docs/design/TUSK-IDENTITY.md`
   - `docs/design/TUSK-REFINEMENT.md`
