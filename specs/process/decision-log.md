@@ -1911,3 +1911,33 @@ surface while keeping proposal-domain error semantics explicit.
 - proposal-specific validation classes remain stable
   (`proposal_nondeterministic`, `proposal_kcir_ref_mismatch`,
   `proposal_invalid_step`).
+
+---
+
+## 2026-02-22 — Decision 0066: Route instruction-check/instruction-witness clients through shared core transport
+
+### Decision
+Adopt `tools/ci/core_cli_client.py` transport helpers in
+`tools/ci/instruction_check_client.py` for both:
+
+- `instruction-check` (path-input command),
+- `instruction-witness` (runtime payload-input command with optional
+  pre-execution flags).
+
+Extend shared transport helpers with:
+
+- path-input execution mode (`run_core_json_command_from_path`),
+- optional extra command args,
+- explicit invalid-json failure-class override.
+
+### Rationale
+Instruction clients still carried duplicated command transport logic after
+Decision 0064/0065. Moving them onto the shared helper removes another
+wrapper-level authority duplicate while preserving instruction-domain failure
+classes.
+
+### Consequences
+- instruction client wrappers now follow the same minimum-encoding transport
+  surface as required/proposal wrappers.
+- `instruction_envelope_invalid_shape` remains the parse/shape failure class for
+  instruction-check payload decoding failures.
