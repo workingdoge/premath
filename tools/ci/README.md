@@ -48,6 +48,11 @@ steps.
 `mise`-only and rejects legacy task-runner command/file references
 (`mise run ci-command-surface-check`).
 
+`tools/ci/check_repo_hygiene.py` validates repository hygiene guardrails for
+private/local-only surfaces (for example `.claude/`, `.serena/`,
+`.premath/cache/`) and required ignore entries
+(`mise run ci-hygiene-check`).
+
 `tools/ci/check_pipeline_wiring.py` validates provider-specific workflow files
 remain thin wrappers around provider-neutral pipeline entrypoints
 (`mise run ci-pipeline-check`).
@@ -191,6 +196,7 @@ mise run ci-required
 
 mise run ci-wiring-check
 mise run ci-command-surface-check
+mise run ci-hygiene-check
 mise run ci-pipeline-check
 mise run ci-pipeline-test
 mise run ci-observation-test

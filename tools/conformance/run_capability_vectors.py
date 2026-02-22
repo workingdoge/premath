@@ -1955,6 +1955,7 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         "golden/kernel_touch_runs_build_test_and_toys",
         "golden/conformance_touch_runs_conformance_and_toys",
         "golden/fallback_unknown_surface_runs_baseline",
+        "golden/mixed_known_unknown_surface_runs_baseline",
     }:
         return evaluate_change_projection_docs_and_code(case)
     if vector_id == "golden/issue_claim_sets_in_progress_and_assignee":

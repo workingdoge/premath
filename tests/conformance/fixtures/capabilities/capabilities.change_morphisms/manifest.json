@@ -7,6 +7,7 @@
     "golden/kernel_touch_runs_build_test_and_toys",
     "golden/conformance_touch_runs_conformance_and_toys",
     "golden/fallback_unknown_surface_runs_baseline",
+    "golden/mixed_known_unknown_surface_runs_baseline",
     "golden/issue_claim_sets_in_progress_and_assignee",
     "golden/issue_claim_assigns_active_lease",
     "golden/issue_discover_preserves_existing_and_links_discovered_from",

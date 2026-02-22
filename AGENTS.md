@@ -35,6 +35,7 @@
 - `mise run hk-pre-commit` / `mise run hk-pre-push` — run hk hook profiles manually.
 - `mise run hk-check` / `mise run hk-fix` — run hk baseline check or fast local fixes (`hk-fix` runs on all files with no auto-stage).
 - `mise run ci-command-surface-check` — enforce `mise`-only command-surface references (reject legacy task-runner command/file surfaces).
+- `mise run ci-hygiene-check` — enforce repository hygiene guardrails for private/local-only surfaces and required ignore entries.
 - `mise run ci-pipeline-check` — validate provider workflow wrappers call canonical provider-neutral pipeline entrypoints.
 - `mise run ci-pipeline-test` — run deterministic unit tests for provider-neutral pipeline summary/digest emission.
 - `mise run ci-observation-test` — run deterministic reducer/query tests for `Observation Surface v0`.
@@ -56,7 +57,7 @@
 - `mise run pf-start` / `mise run pf-status` / `mise run pf-stop` — optional pitchfork orchestration for local daemons in `pitchfork.toml` (`pf-start` starts both `docs-preview` and `observation-api`).
 - `mise run pf-gate-loop-start` / `mise run pf-gate-loop-stop` — optional background `ci-check` loop via pitchfork (`ci-check` every 30m).
 - `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
-- `mise run conformance-run` — run executable Interop Core + Gate vectors plus capability vectors (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.adjoints_sites`, `capabilities.change_morphisms`).
+- `mise run conformance-run` — run executable fixture suites (Interop Core + Gate + capability vectors) through the cached suite runner.
 - `mise run doctrine-check` — validate doctrine declarations and doctrine-to-operation site reachability (`specs/premath/draft/DOCTRINE-SITE.json`).
 - `mise run precommit` — same as baseline.
 - `python3 tools/conformance/check_stub_invariance.py` — validate capability fixture stubs/invariance pairs.

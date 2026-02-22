@@ -51,6 +51,7 @@ run = [
   "mise run conformance-check",
   "mise run doctrine-check",
   "mise run ci-command-surface-check",
+  "mise run ci-hygiene-check",
   "mise run ci-pipeline-check",
   "mise run ci-pipeline-test",
   "mise run ci-observation-test",
@@ -82,6 +83,9 @@ run = "python3 tools/ci/project_checks.py"
 [tasks.ci-command-surface-check]
 run = "python3 tools/ci/check_command_surface.py"
 
+[tasks.ci-hygiene-check]
+run = "python3 tools/ci/check_repo_hygiene.py"
+
 [tasks.ci-wiring-check]
 run = "python3 tools/ci/check_ci_wiring.py"
 
@@ -94,6 +98,7 @@ run = [
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_policy.py",
   "python3 tools/ci/test_instruction_reject_witness.py",
+  "python3 tools/ci/test_repo_hygiene.py",
 ]
 
 [tasks.ci-observation-build]

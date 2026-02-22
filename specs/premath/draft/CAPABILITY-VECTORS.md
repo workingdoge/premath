@@ -163,7 +163,8 @@ Required vectors when NOT claimed:
 Required vectors when claimed:
 
 - golden: deterministic required-check projection for representative deltas
-  (docs-only, kernel-touch, conformance-touch, unknown-surface fallback).
+  (docs-only, kernel-touch, conformance-touch, unknown-surface fallback,
+  mixed known+unknown fail-closed baseline fallback).
 - golden: provider env mapping (direct vs mapped GitHub env) yields equivalent
   projection/reference material.
 - golden: work-memory mutation morphisms preserve deterministic claim/discover

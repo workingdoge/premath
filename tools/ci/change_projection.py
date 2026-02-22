@@ -155,6 +155,15 @@ def is_conformance_path(path: str) -> bool:
     return _starts_with_any(path, CONFORMANCE_PREFIXES)
 
 
+def is_known_projection_surface(path: str) -> bool:
+    return (
+        is_doc_like_path(path)
+        or is_semantic_baseline_path(path)
+        or is_rust_path(path)
+        or is_conformance_path(path)
+    )
+
+
 def project_required_checks(changed_paths: Sequence[str]) -> ProjectionResult:
     paths = normalize_paths(changed_paths)
 
@@ -222,6 +231,13 @@ def project_required_checks(changed_paths: Sequence[str]) -> ProjectionResult:
         checks.add(CHECK_CONFORMANCE_RUN)
         checks.add(CHECK_TEST_TOY)
         checks.add(CHECK_TEST_KCIR_TOY)
+
+    unknown_non_doc_paths = [
+        path for path in paths if (not is_doc_like_path(path) and not is_known_projection_surface(path))
+    ]
+    if unknown_non_doc_paths:
+        reasons.add("non_doc_unknown_surface_fallback_baseline")
+        checks.add(CHECK_BASELINE)
 
     if docs_only:
         raw_docs_touched = any(_starts_with_any(path, RAW_DOC_TRIGGER_PREFIXES) for path in paths)

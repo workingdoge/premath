@@ -98,6 +98,8 @@ A v0 projection SHOULD include:
   - include toy and KCIR toy vectors when `crates/premath-kernel` is touched
 - conformance fixture/schema/tooling changes:
   - run conformance checker, executable conformance suites, and both toy vector suites
+- mixed known + unknown non-doc surfaces:
+  - fail closed to full baseline
 - profile/capability semantics changes:
   - run full baseline
 

@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/mixed_known_unknown_surface_runs_baseline",
+  "description": "Mixed known + unknown non-doc delta fails closed to baseline.",
+  "semanticScenarioId": "change_projection_mixed_unknown_01",
+  "artifacts": {
+    "changedPaths": [
+      "crates/premath-kernel/src/lib.rs",
+      ".claude/session.log"
+    ],
+    "expectedRequiredChecks": [
+      "baseline"
+    ]
+  }
+}
