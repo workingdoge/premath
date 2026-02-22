@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "vectorId": "invariance/permuted_payload_accept",
+  "semanticScenarioId": "transport_functoriality_invariance_01",
+  "artifacts": {
+    "binding": {
+      "policyDigest": "policy.coherence.v1",
+      "normalizerId": "normalizer.coherence.v1"
+    },
+    "base": {
+      "identity": { "components": ["x1", "x0", "x0"], "arrow": "id_x" },
+      "f": { "components": ["x1", "x0"], "arrow": "f" },
+      "g": { "components": ["x0", "x1"], "arrow": "g" },
+      "gAfterF": { "components": ["x0", "x1", "x1"], "arrow": "g_after_f" }
+    },
+    "fibre": {
+      "identity": { "terms": [{ "sym": "v" }, { "sym": "u" }, { "sym": "u" }], "arrow": "id_fx" },
+      "FIdentity": { "terms": [{ "sym": "u" }, { "sym": "v" }], "arrow": "id_fx" },
+      "FF": { "terms": [{ "sym": "v_to_v1" }, { "sym": "u_to_u1" }], "arrow": "f_f" },
+      "FG": { "terms": [{ "sym": "v1_to_z" }, { "sym": "u1_to_w" }], "arrow": "f_g" },
+      "FGAfterF": { "terms": [{ "sym": "v_to_z" }, { "sym": "u_to_w" }], "arrow": "transport_mor" },
+      "FGAfterFF": { "terms": [{ "sym": "u_to_w" }, { "sym": "v_to_z" }, { "sym": "u_to_w" }], "arrow": "transport_mor" }
+    },
+    "naturality": {
+      "left": {
+        "square": {
+          "bottom": "g_f",
+          "right": "eta_y",
+          "left": "eta_x",
+          "top": "f_f"
+        },
+        "witnesses": ["n2", "n1", "n1"]
+      },
+      "right": {
+        "witnesses": ["n1", "n2"],
+        "square": {
+          "top": "f_f",
+          "left": "eta_x",
+          "right": "eta_y",
+          "bottom": "g_f"
+        }
+      }
+    }
+  }
+}

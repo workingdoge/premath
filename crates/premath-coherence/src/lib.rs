@@ -19,7 +19,7 @@ pub use proposal::{
 
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use serde_json::{Value, json};
+use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
@@ -32,6 +32,7 @@ const REQUIRED_OBLIGATION_IDS: &[&str] = &[
     "gate_chain_parity",
     "operation_reachability",
     "overlay_traceability",
+    "transport_functoriality",
 ];
 
 const CAP_ASSIGN_PATTERN: &str =
@@ -117,6 +118,7 @@ pub struct CoherenceSurfaces {
     pub bidir_checker_path: String,
     pub bidir_checker_map_name: String,
     pub informative_clause_needle: String,
+    pub transport_fixture_root_path: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -194,6 +196,25 @@ struct DoctrineCover {
 struct DoctrineEdge {
     from: String,
     to: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TransportManifest {
+    schema: u32,
+    status: String,
+    #[serde(default)]
+    vectors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TransportExpect {
+    schema: u32,
+    status: String,
+    result: String,
+    #[serde(default)]
+    expected_failure_classes: Vec<String>,
 }
 
 #[derive(Debug)]
@@ -290,6 +311,7 @@ fn execute_obligation(
         "gate_chain_parity" => check_gate_chain_parity(repo_root, contract),
         "operation_reachability" => check_operation_reachability(repo_root, contract),
         "overlay_traceability" => check_overlay_traceability(repo_root, contract),
+        "transport_functoriality" => check_transport_functoriality(repo_root, contract),
         _ => Err(CoherenceError::Contract(format!(
             "unknown obligation id: {obligation_id}"
         ))),
@@ -608,6 +630,331 @@ fn check_overlay_traceability(
             "specIndexOverlaySectionFound": !section_56.is_empty(),
         }),
     })
+}
+
+fn check_transport_functoriality(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    let fixture_root = resolve_path(
+        repo_root,
+        contract.surfaces.transport_fixture_root_path.as_str(),
+    );
+    let manifest_path = fixture_root.join("manifest.json");
+    let manifest: TransportManifest = serde_json::from_slice(&read_bytes(&manifest_path)?)
+        .map_err(|source| CoherenceError::ParseJson {
+            path: display_path(&manifest_path),
+            source,
+        })?;
+
+    let mut failures = Vec::new();
+    if manifest.schema != 1 {
+        failures.push("coherence.transport_functoriality.manifest_invalid_schema".to_string());
+    }
+    if manifest.status != "executable" {
+        failures.push("coherence.transport_functoriality.manifest_invalid_status".to_string());
+    }
+    if manifest.vectors.is_empty() {
+        failures.push("coherence.transport_functoriality.manifest_empty".to_string());
+    }
+
+    let mut seen_vectors = BTreeSet::new();
+    let mut vector_rows: Vec<Value> = Vec::new();
+
+    for vector_id in &manifest.vectors {
+        if !seen_vectors.insert(vector_id.clone()) {
+            failures.push("coherence.transport_functoriality.duplicate_vector_id".to_string());
+        }
+
+        let vector_root = fixture_root.join(vector_id);
+        let case_path = vector_root.join("case.json");
+        let expect_path = vector_root.join("expect.json");
+
+        let case_payload = match read_json_value(&case_path) {
+            Ok(payload) => payload,
+            Err(err) => {
+                failures.push("coherence.transport_functoriality.vector_case_invalid".to_string());
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": err.to_string(),
+                }));
+                continue;
+            }
+        };
+        let expect_bytes = match read_bytes(&expect_path) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                failures
+                    .push("coherence.transport_functoriality.vector_expect_invalid".to_string());
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": err.to_string(),
+                }));
+                continue;
+            }
+        };
+        let expect_payload: TransportExpect = match serde_json::from_slice(&expect_bytes) {
+            Ok(payload) => payload,
+            Err(source) => {
+                failures
+                    .push("coherence.transport_functoriality.vector_expect_invalid".to_string());
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": CoherenceError::ParseJson {
+                        path: display_path(&expect_path),
+                        source,
+                    }.to_string(),
+                }));
+                continue;
+            }
+        };
+
+        let expected_result = expect_payload.result.as_str();
+        if expect_payload.schema != 1 {
+            failures
+                .push("coherence.transport_functoriality.vector_expect_invalid_schema".to_string());
+        }
+        if expect_payload.status != "executable" {
+            failures
+                .push("coherence.transport_functoriality.vector_expect_invalid_status".to_string());
+        }
+        if expected_result != "accepted" && expected_result != "rejected" {
+            failures
+                .push("coherence.transport_functoriality.vector_expect_invalid_result".to_string());
+        }
+        let expected_failure_classes =
+            dedupe_sorted(expect_payload.expected_failure_classes.clone());
+
+        let evaluated = match evaluate_transport_case(&case_payload, &case_path) {
+            Ok(ok) => ok,
+            Err(err) => {
+                failures.push("coherence.transport_functoriality.vector_invalid_shape".to_string());
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": err.to_string(),
+                }));
+                continue;
+            }
+        };
+
+        if expected_result == "accepted" || expected_result == "rejected" {
+            if evaluated.result != expected_result {
+                failures.push("coherence.transport_functoriality.result_mismatch".to_string());
+            }
+            if !expected_failure_classes.is_empty() {
+                let actual_failures = dedupe_sorted(evaluated.failure_classes.clone());
+                if expected_failure_classes != actual_failures {
+                    failures.push(
+                        "coherence.transport_functoriality.failure_class_mismatch".to_string(),
+                    );
+                }
+            }
+        }
+
+        vector_rows.push(json!({
+            "vectorId": vector_id,
+            "expectedResult": expected_result,
+            "actualResult": evaluated.result,
+            "expectedFailureClasses": expected_failure_classes,
+            "actualFailureClasses": evaluated.failure_classes,
+            "details": evaluated.details,
+        }));
+    }
+
+    Ok(ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details: json!({
+            "fixtureRoot": to_repo_relative_or_absolute(repo_root, &fixture_root),
+            "manifestVectors": manifest.vectors,
+            "vectors": vector_rows,
+        }),
+    })
+}
+
+#[derive(Debug)]
+struct TransportEvaluation {
+    result: String,
+    failure_classes: Vec<String>,
+    details: Value,
+}
+
+fn evaluate_transport_case(
+    case_payload: &Value,
+    case_path: &Path,
+) -> Result<TransportEvaluation, CoherenceError> {
+    let root = case_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: root must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let artifacts = require_object_field(root, "artifacts", case_path)?;
+    let binding = require_object_field(artifacts, "binding", case_path)?;
+    let base = require_object_field(artifacts, "base", case_path)?;
+    let fibre = require_object_field(artifacts, "fibre", case_path)?;
+    let naturality = require_object_field(artifacts, "naturality", case_path)?;
+
+    let normalizer_id = require_non_empty_string_field(binding, "normalizerId", case_path)?;
+    let policy_digest = require_non_empty_string_field(binding, "policyDigest", case_path)?;
+
+    let base_identity = require_value_field(base, "identity", case_path)?;
+    let base_f = require_value_field(base, "f", case_path)?;
+    let base_g = require_value_field(base, "g", case_path)?;
+    let base_g_after_f = require_value_field(base, "gAfterF", case_path)?;
+
+    let fibre_identity = require_value_field(fibre, "identity", case_path)?;
+    let fibre_f_identity = require_value_field(fibre, "FIdentity", case_path)?;
+    let fibre_f_f = require_value_field(fibre, "FF", case_path)?;
+    let fibre_f_g = require_value_field(fibre, "FG", case_path)?;
+    let fibre_f_g_after_f = require_value_field(fibre, "FGAfterF", case_path)?;
+    let fibre_f_g_after_f_f = require_value_field(fibre, "FGAfterFF", case_path)?;
+
+    let naturality_left = require_value_field(naturality, "left", case_path)?;
+    let naturality_right = require_value_field(naturality, "right", case_path)?;
+
+    let base_identity_digest = semantic_digest(base_identity);
+    let base_f_digest = semantic_digest(base_f);
+    let base_g_digest = semantic_digest(base_g);
+    let base_g_after_f_digest = semantic_digest(base_g_after_f);
+
+    let fibre_identity_digest = semantic_digest(fibre_identity);
+    let fibre_f_identity_digest = semantic_digest(fibre_f_identity);
+    let fibre_f_f_digest = semantic_digest(fibre_f_f);
+    let fibre_f_g_digest = semantic_digest(fibre_f_g);
+    let fibre_f_g_after_f_digest = semantic_digest(fibre_f_g_after_f);
+    let fibre_f_g_after_f_f_digest = semantic_digest(fibre_f_g_after_f_f);
+
+    let naturality_left_digest = semantic_digest(naturality_left);
+    let naturality_right_digest = semantic_digest(naturality_right);
+
+    let mut failure_classes = Vec::new();
+    if fibre_identity_digest != fibre_f_identity_digest {
+        failure_classes.push("coherence.transport_functoriality.identity_violation".to_string());
+    }
+    if fibre_f_g_after_f_digest != fibre_f_g_after_f_f_digest {
+        failure_classes.push("coherence.transport_functoriality.composition_violation".to_string());
+    }
+    if naturality_left_digest != naturality_right_digest {
+        failure_classes.push("coherence.transport_functoriality.naturality_violation".to_string());
+    }
+
+    Ok(TransportEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "binding": {
+                "normalizerId": normalizer_id,
+                "policyDigest": policy_digest,
+            },
+            "digests": {
+                "base": {
+                    "identity": base_identity_digest,
+                    "f": base_f_digest,
+                    "g": base_g_digest,
+                    "gAfterF": base_g_after_f_digest,
+                },
+                "fibre": {
+                    "identity": fibre_identity_digest,
+                    "FIdentity": fibre_f_identity_digest,
+                    "FF": fibre_f_f_digest,
+                    "FG": fibre_f_g_digest,
+                    "FGAfterF": fibre_f_g_after_f_digest,
+                    "FGAfterFF": fibre_f_g_after_f_f_digest,
+                },
+                "naturality": {
+                    "left": naturality_left_digest,
+                    "right": naturality_right_digest,
+                }
+            }
+        }),
+    })
+}
+
+fn normalize_semantics(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort_unstable();
+            let mut sorted = Map::new();
+            for key in keys {
+                if let Some(item) = map.get(key) {
+                    sorted.insert(key.clone(), normalize_semantics(item));
+                }
+            }
+            Value::Object(sorted)
+        }
+        Value::Array(items) => {
+            let mut by_key: BTreeMap<String, Value> = BTreeMap::new();
+            for item in items {
+                let normalized = normalize_semantics(item);
+                let key = serde_json::to_string(&normalized).expect("normalize semantics");
+                by_key.insert(key, normalized);
+            }
+            Value::Array(by_key.into_values().collect())
+        }
+        _ => value.clone(),
+    }
+}
+
+fn semantic_digest(value: &Value) -> String {
+    let normalized = normalize_semantics(value);
+    let canonical = serde_json::to_string(&normalized).expect("semantic digest serialization");
+    let mut hasher = Sha256::new();
+    hasher.update(canonical.as_bytes());
+    format!("sem1_{:x}", hasher.finalize())
+}
+
+fn require_object_field<'a>(
+    parent: &'a Map<String, Value>,
+    key: &str,
+    path: &Path,
+) -> Result<&'a Map<String, Value>, CoherenceError> {
+    parent.get(key).and_then(Value::as_object).ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts.{key} must be an object",
+            display_path(path)
+        ))
+    })
+}
+
+fn require_value_field<'a>(
+    parent: &'a Map<String, Value>,
+    key: &str,
+    path: &Path,
+) -> Result<&'a Value, CoherenceError> {
+    parent.get(key).ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: missing artifacts field {key:?}",
+            display_path(path)
+        ))
+    })
+}
+
+fn require_non_empty_string_field(
+    parent: &Map<String, Value>,
+    key: &str,
+    path: &Path,
+) -> Result<String, CoherenceError> {
+    let value = parent
+        .get(key)
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.binding.{key} must be a non-empty string",
+                display_path(path)
+            ))
+        })?;
+    Ok(value.to_string())
 }
 
 fn validate_contract_obligation_set(contract_ids: &[String]) -> Vec<String> {
@@ -980,6 +1327,13 @@ fn read_bytes(path: &Path) -> Result<Vec<u8>, CoherenceError> {
     })
 }
 
+fn read_json_value(path: &Path) -> Result<Value, CoherenceError> {
+    serde_json::from_slice(&read_bytes(path)?).map_err(|source| CoherenceError::ParseJson {
+        path: display_path(path),
+        source,
+    })
+}
+
 fn compile_regex(pattern: &str) -> Result<Regex, CoherenceError> {
     Regex::new(pattern).map_err(|source| {
         CoherenceError::Contract(format!("invalid regex pattern {pattern:?}: {source}"))
@@ -1085,5 +1439,56 @@ const OBLIGATION_TO_GATE_FAILURE: &[(&str, &str)] = &[
             .expect("map extraction should succeed");
         assert!(keys.contains("stability"));
         assert!(keys.contains("locality"));
+    }
+
+    #[test]
+    fn semantic_digest_is_order_invariant_for_transport_payloads() {
+        let a = json!({
+            "terms": [{"sym": "v"}, {"sym": "u"}, {"sym": "u"}],
+            "arrow": "id_fx",
+        });
+        let b = json!({
+            "arrow": "id_fx",
+            "terms": [{"sym": "u"}, {"sym": "v"}],
+        });
+        assert_eq!(semantic_digest(&a), semantic_digest(&b));
+    }
+
+    #[test]
+    fn evaluate_transport_case_detects_identity_violation() {
+        let case = json!({
+            "artifacts": {
+                "binding": {
+                    "normalizerId": "normalizer.coherence.v1",
+                    "policyDigest": "policy.coherence.v1",
+                },
+                "base": {
+                    "identity": {"arrow": "id_x"},
+                    "f": {"arrow": "f"},
+                    "g": {"arrow": "g"},
+                    "gAfterF": {"arrow": "g_after_f"},
+                },
+                "fibre": {
+                    "identity": {"arrow": "id_fx"},
+                    "FIdentity": {"arrow": "id_fx_bad"},
+                    "FF": {"arrow": "f_f"},
+                    "FG": {"arrow": "f_g"},
+                    "FGAfterF": {"arrow": "f_g_after_f"},
+                    "FGAfterFF": {"arrow": "f_g_after_f"},
+                },
+                "naturality": {
+                    "left": {"square": {"bottom": "g_f"}},
+                    "right": {"square": {"bottom": "g_f"}},
+                },
+            }
+        });
+        let evaluated = evaluate_transport_case(&case, Path::new("transport-case.json"))
+            .expect("transport case should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.transport_functoriality.identity_violation".to_string())
+        );
     }
 }

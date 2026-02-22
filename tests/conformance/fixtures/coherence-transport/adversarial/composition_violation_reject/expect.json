@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "coherence.transport_functoriality.composition_violation"
+  ],
+  "assertions": [
+    "fibre image of base composition must equal fibre composition of images"
+  ]
+}

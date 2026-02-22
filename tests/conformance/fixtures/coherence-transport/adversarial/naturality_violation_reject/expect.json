@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "coherence.transport_functoriality.naturality_violation"
+  ],
+  "assertions": [
+    "naturality square must commute under transport"
+  ]
+}

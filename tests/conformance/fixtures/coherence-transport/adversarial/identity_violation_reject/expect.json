@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "coherence.transport_functoriality.identity_violation"
+  ],
+  "assertions": [
+    "fibre identity image must equal fibre identity"
+  ]
+}

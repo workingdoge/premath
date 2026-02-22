@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "canonicalized transport semantics are invariant to payload ordering and duplication noise"
+  ]
+}

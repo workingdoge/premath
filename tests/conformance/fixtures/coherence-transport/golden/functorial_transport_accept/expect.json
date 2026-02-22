@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "fibre transport preserves identity, composition, and naturality"
+  ]
+}

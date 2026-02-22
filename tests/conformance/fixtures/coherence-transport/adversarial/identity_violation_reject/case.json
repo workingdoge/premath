@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "vectorId": "adversarial/identity_violation_reject",
+  "semanticScenarioId": "transport_functoriality_identity_violation_01",
+  "artifacts": {
+    "binding": {
+      "normalizerId": "normalizer.coherence.v1",
+      "policyDigest": "policy.coherence.v1"
+    },
+    "base": {
+      "identity": { "arrow": "id_x", "components": ["x0", "x1"] },
+      "f": { "arrow": "f", "components": ["x0", "x1"] },
+      "g": { "arrow": "g", "components": ["x0", "x1"] },
+      "gAfterF": { "arrow": "g_after_f", "components": ["x0", "x1"] }
+    },
+    "fibre": {
+      "identity": {
+        "arrow": "id_fx",
+        "terms": [{ "sym": "u" }, { "sym": "v" }]
+      },
+      "FIdentity": {
+        "arrow": "id_fx_bad",
+        "terms": [{ "sym": "u" }, { "sym": "v" }]
+      },
+      "FF": { "arrow": "f_f", "terms": [{ "sym": "u_to_u1" }, { "sym": "v_to_v1" }] },
+      "FG": { "arrow": "f_g", "terms": [{ "sym": "u1_to_w" }, { "sym": "v1_to_z" }] },
+      "FGAfterF": { "arrow": "transport_mor", "terms": [{ "sym": "u_to_w" }, { "sym": "v_to_z" }] },
+      "FGAfterFF": { "arrow": "transport_mor", "terms": [{ "sym": "u_to_w" }, { "sym": "v_to_z" }] }
+    },
+    "naturality": {
+      "left": { "square": { "top": "f_f", "left": "eta_x", "right": "eta_y", "bottom": "g_f" } },
+      "right": { "square": { "top": "f_f", "left": "eta_x", "right": "eta_y", "bottom": "g_f" } }
+    }
+  }
+}

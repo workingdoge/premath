@@ -26,6 +26,10 @@
     {
       "id": "overlay_traceability",
       "description": "Ensure declared profile overlays are present and indexed coherently."
+    },
+    {
+      "id": "transport_functoriality",
+      "description": "Ensure base/fibre transport fixtures satisfy identity, composition, and naturality equalities under deterministic canonicalization."
     }
   ],
   "conditionalCapabilityDocs": [
@@ -95,6 +99,7 @@
     "bidirSpecSectionEnd": "### 6.1 Obligation record format (required)",
     "bidirCheckerPath": "crates/premath-coherence/src/proposal.rs",
     "bidirCheckerMapName": "OBLIGATION_TO_GATE_FAILURE",
-    "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6"
+    "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6",
+    "transportFixtureRootPath": "tests/conformance/fixtures/coherence-transport"
   }
 }
