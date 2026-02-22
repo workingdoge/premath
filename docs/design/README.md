@@ -31,6 +31,8 @@ Authority rule:
 - `CI-PROVIDER-BINDINGS.md`: provider bindings to canonical CI contract.
 - `LIFECYCLE-COHERENCE-FLOWS.md`: operator flow for schema lifecycle policy and
   coherence gate-chain enforcement.
+- `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move
+  issue-graph invariants from CI wrappers into `premath-bd` core.
 - `CONTROL-PLANE-THREAT-MODEL.md`: threat/hardening matrix for control-plane
   mutation, witness, and projection surfaces.
 - `HIGHER-ORDER-CI-CD.md`: control-loop framing inside coding environment.
