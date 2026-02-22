@@ -78,6 +78,25 @@ Run:
 python3 tools/conformance/run_interop_core_vectors.py
 ```
 
+## `run_gate_vectors.py`
+
+Runs executable Gate vectors in:
+
+- `tests/conformance/fixtures/gate/`
+
+Checks include deterministic Gate witness behavior for:
+
+- `stability_failure`
+- `locality_failure`
+- `descent_failure`
+- `glue_non_contractible`
+
+Run:
+
+```bash
+python3 tools/conformance/run_gate_vectors.py
+```
+
 ## `check_doctrine_site.py`
 
 Validates doctrine-to-operation site coherence using:

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "witnessSchema": 1,
+  "result": "rejected",
+  "profile": "toy",
+  "failures": [
+    {
+      "class": "stability_failure",
+      "context": {
+        "mask": 1
+      },
+      "lawRef": "GATE-3.1",
+      "message": "composition law failed: (f o g)* != g*(f*)",
+      "tokenPath": null,
+      "witnessId": "w1_l1v24u75j3sudbdnhflh4l6sb29ii02vosfj2cm5m3qh0rg8ab30"
+    }
+  ]
+}

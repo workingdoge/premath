@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "suiteId": "gate",
+  "vectorId": "adversarial/locality_failure_partial_restrict_reject",
+  "world": "partial_restrict",
+  "check": {
+    "kind": "locality",
+    "gammaMask": 3,
+    "a": 1,
+    "legs": [
+      1,
+      2
+    ],
+    "tokenPath": null
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "witnessSchema": 1,
+  "result": "rejected",
+  "profile": "toy",
+  "failures": [
+    {
+      "class": "locality_failure",
+      "context": {
+        "mask": 1
+      },
+      "lawRef": "GATE-3.2",
+      "message": "restriction along a cover leg is undefined or ill-typed",
+      "tokenPath": null,
+      "witnessId": "w1_v9grre901frguq5nv7g8i8dtlf3uujt05i2lkmh8i5bdfdod4q90"
+    }
+  ]
+}

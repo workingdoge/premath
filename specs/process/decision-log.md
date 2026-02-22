@@ -613,3 +613,32 @@ deterministic vectored surface in merge-gated conformance runs.
   `WIRE-FORMATS`, and `ERROR-CODES` move to `covered`.
 - Remaining open coverage upgrades continue under `T-GATE-01`, `T-WID-01`,
   `T-DINF-01`, `T-KERNEL-01`, and `T-INDEX-01`.
+
+---
+
+## 2026-02-22 — Decision 0022: Execute T-GATE-01 with canonical gate vectors
+
+### Decision
+Implement and merge executable Gate vectors under
+`tests/conformance/fixtures/gate/` with deterministic runner
+`tools/conformance/run_gate_vectors.py`, and wire it into
+`mise run conformance-run`.
+
+Covered gate-law classes:
+
+- `stability_failure` (`GATE-3.1`)
+- `locality_failure` (`GATE-3.2`)
+- `descent_failure` (`GATE-3.3`)
+- `glue_non_contractible` (`GATE-3.4`)
+
+### Rationale
+`GATE` coverage previously depended on unit/toy paths without a canonical
+conformance fixture suite in `tests/conformance/fixtures/gate/`. This made the
+traceability target `T-GATE-01` an explicit open gap.
+
+### Consequences
+- `mise run conformance-run` now executes gate vectors in addition to interop
+  and capability vectors.
+- `draft/SPEC-TRACEABILITY` marks `GATE.md` as `covered`.
+- Open traceability upgrades now continue under `T-WID-01`, `T-DINF-01`,
+  `T-KERNEL-01`, and `T-INDEX-01`.

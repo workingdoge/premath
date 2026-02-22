@@ -56,7 +56,7 @@
 - `mise run pf-start` / `mise run pf-status` / `mise run pf-stop` — optional pitchfork orchestration for local daemons in `pitchfork.toml` (`pf-start` starts both `docs-preview` and `observation-api`).
 - `mise run pf-gate-loop-start` / `mise run pf-gate-loop-stop` — optional background `ci-check` loop via pitchfork (`ci-check` every 30m).
 - `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
-- `mise run conformance-run` — run executable Interop Core vectors plus capability vectors (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.adjoints_sites`, `capabilities.change_morphisms`).
+- `mise run conformance-run` — run executable Interop Core + Gate vectors plus capability vectors (`capabilities.normal_forms`, `capabilities.kcir_witnesses`, `capabilities.commitment_checkpoints`, `capabilities.squeak_site`, `capabilities.ci_witnesses`, `capabilities.instruction_typing`, `capabilities.adjoints_sites`, `capabilities.change_morphisms`).
 - `mise run doctrine-check` — validate doctrine declarations and doctrine-to-operation site reachability (`specs/premath/draft/DOCTRINE-SITE.json`).
 - `mise run precommit` — same as baseline.
 - `python3 tools/conformance/check_stub_invariance.py` — validate capability fixture stubs/invariance pairs.
@@ -100,6 +100,7 @@
 - If using `hk`, keep `pre-push`/`check` mapped to the same baseline closure gate.
 - For spec/conformance fixture edits, run `python3 tools/conformance/check_stub_invariance.py`.
 - For executable interop-core vectors, run `python3 tools/conformance/run_interop_core_vectors.py`.
+- For executable gate vectors, run `python3 tools/conformance/run_gate_vectors.py`.
 - For executable capability vectors, run `python3 tools/conformance/run_capability_vectors.py`.
 - For kernel/gate edits, run:
   - `cargo test --workspace`

@@ -55,7 +55,7 @@ Purpose:
 | `ERROR-CODES.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`error_code_registry_*`) | covered | - |
 | `WITNESS-ID.md` | `premath-kernel` witness-id unit tests | instrumented | `T-WID-01` |
 | `BIDIR-DESCENT.md` | `capabilities.instruction_typing`; `capabilities.adjoints_sites` | covered | - |
-| `GATE.md` | `premath-kernel` gate tests + toy vectors | instrumented | `T-GATE-01` |
+| `GATE.md` | `python3 tools/conformance/run_gate_vectors.py` + `premath-kernel` gate tests + toy vectors | covered | - |
 | `CONFORMANCE.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_interop_core_vectors.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
 | `CAPABILITY-VECTORS.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
 | `CHANGE-MORPHISMS.md` | `capabilities.change_morphisms` vectors | covered | - |
@@ -66,15 +66,6 @@ Purpose:
 | `SPEC-INDEX.md` | index/reference contract; validated indirectly by doc updates and doctrine-site references | instrumented | `T-INDEX-01` |
 
 ## 4. Coverage Targets (Open Gaps/Upgrades)
-
-### `T-GATE-01` Canonical Gate Vectors
-
-Promote `tests/conformance/fixtures/gate/` from placeholder to executable suite.
-
-Minimum acceptance:
-
-- deterministic gate vectors for admissibility/rejection-class outcomes,
-- runner integration into merge-gated conformance command surface.
 
 ### `T-WID-01` Witness-ID Conformance Vectors
 

@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "suiteId": "gate",
+  "vectorId": "golden/descent_sheaf_bits_accept",
+  "world": "sheaf_bits",
+  "check": {
+    "kind": "descent",
+    "baseMask": 7,
+    "legs": [
+      3,
+      6
+    ],
+    "locals": [
+      {
+        "0": 1,
+        "1": 0
+      },
+      {
+        "1": 0,
+        "2": 1
+      }
+    ],
+    "tokenPath": null
+  }
+}

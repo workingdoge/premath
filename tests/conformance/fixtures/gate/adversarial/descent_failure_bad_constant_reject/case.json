@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "suiteId": "gate",
+  "vectorId": "adversarial/descent_failure_bad_constant_reject",
+  "world": "bad_constant",
+  "check": {
+    "kind": "descent",
+    "baseMask": 3,
+    "legs": [
+      1,
+      2
+    ],
+    "locals": [
+      0,
+      1
+    ],
+    "tokenPath": null
+  }
+}

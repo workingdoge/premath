@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "witnessSchema": 1,
+  "result": "rejected",
+  "profile": "toy",
+  "failures": [
+    {
+      "class": "glue_non_contractible",
+      "context": {
+        "mask": 3
+      },
+      "lawRef": "GATE-3.4",
+      "message": "multiple global glues exist for the same descent datum",
+      "tokenPath": null,
+      "witnessId": "w1_c0kubjophjuo3h5cr03elvc75606hoba3v4ksii3ktvpgr0enh9g"
+    }
+  ]
+}
