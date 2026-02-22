@@ -226,7 +226,7 @@ pub fn collect_backend_status(
                 } else {
                     if let Some(source_path) = projection_source_issues_path.as_deref() {
                         projection_source_path_matches_authority =
-                            Some(paths_match(source_path, &issues_path));
+                            Some(paths_equivalent(Path::new(source_path), &issues_path));
                     }
                     if let (Some(source_ref), Some(authority_ref)) = (
                         projection_source_snapshot_ref.as_deref(),
@@ -364,12 +364,11 @@ fn read_projection_header(path: &Path) -> Result<ProjectionHeader, String> {
         .map_err(|e| format!("failed to parse {}: {e}", path.display()))
 }
 
-fn paths_match(source_path: &str, authority_path: &Path) -> bool {
-    let source = PathBuf::from(source_path);
-    if source == authority_path {
+pub fn paths_equivalent(left: &Path, right: &Path) -> bool {
+    if left == right {
         return true;
     }
-    normalize_path(&source) == normalize_path(authority_path)
+    normalize_path(left) == normalize_path(right)
 }
 
 fn normalize_path(path: &Path) -> PathBuf {

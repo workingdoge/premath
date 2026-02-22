@@ -1,7 +1,7 @@
 use super::init::{InitOutcome, init_layout};
 use crate::support::{
     ISSUE_QUERY_PROJECTION_KIND, ISSUE_QUERY_PROJECTION_SCHEMA, backend_status_payload,
-    collect_backend_status,
+    collect_backend_status, paths_equivalent,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -2240,8 +2240,8 @@ fn load_store_from_projection(
             payload.kind
         )));
     }
-    let source_path_matches_authority = projection_source_path_matches_authority(
-        &payload.source_issues_path,
+    let source_path_matches_authority = paths_equivalent(
+        Path::new(&payload.source_issues_path),
         authority_issues_path,
     );
     let store = MemoryStore::from_issues(payload.issues).map_err(|e| {
@@ -2251,27 +2251,6 @@ fn load_store_from_projection(
         ))
     })?;
     Ok((store, source_path_matches_authority))
-}
-
-fn projection_source_path_matches_authority(
-    projection_source_path: &str,
-    authority_issues_path: &Path,
-) -> bool {
-    let source = PathBuf::from(projection_source_path);
-    if source == authority_issues_path {
-        return true;
-    }
-    normalize_projection_path(&source) == normalize_projection_path(authority_issues_path)
-}
-
-fn normalize_projection_path(path: &Path) -> PathBuf {
-    if path.is_absolute() {
-        return fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
-    }
-    let joined = std::env::current_dir()
-        .unwrap_or_else(|_| PathBuf::from("."))
-        .join(path);
-    fs::canonicalize(&joined).unwrap_or(joined)
 }
 
 fn write_issue_query_projection(
