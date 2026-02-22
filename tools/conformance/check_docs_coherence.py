@@ -35,6 +35,10 @@ ROADMAP_AUTHORITY_MARKERS: Tuple[str, ...] = (
     "`.premath/issues.jsonl`",
     "`specs/process/decision-log.md`",
 )
+EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
+    "python3 tools/conformance/check_doctrine_site.py",
+    "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -282,6 +286,13 @@ def main() -> int:
             f"expected=[{sorted_csv(projection_checks)}], got=[{sorted_csv(ci_projection_checks)}]"
         )
 
+    doctrine_check_commands = parse_mise_task_commands(mise_text, "doctrine-check")
+    if doctrine_check_commands != list(EXPECTED_DOCTRINE_CHECK_COMMANDS):
+        errors.append(
+            "doctrine-check command surface mismatch: "
+            f"expected={list(EXPECTED_DOCTRINE_CHECK_COMMANDS)!r}, got={doctrine_check_commands!r}"
+        )
+
     roadmap_text = load_text(roadmap)
     missing_roadmap_markers = find_missing_markers(roadmap_text, ROADMAP_AUTHORITY_MARKERS)
     for marker in missing_roadmap_markers:
@@ -296,7 +307,7 @@ def main() -> int:
     print(
         "[docs-coherence-check] OK "
         f"(capabilities={len(executable_capabilities)}, baselineTasks={len(baseline_task_ids)}, "
-        f"projectionChecks={len(projection_checks)})"
+        f"projectionChecks={len(projection_checks)}, doctrineChecks={len(doctrine_check_commands)})"
     )
     return 0
 

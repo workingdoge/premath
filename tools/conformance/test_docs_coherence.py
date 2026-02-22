@@ -49,6 +49,17 @@ run = "echo ok"
         task_ids = check_docs_coherence.parse_baseline_task_ids_from_commands(commands)
         self.assertEqual(task_ids, ["fmt", "test"])
 
+    def test_parse_doctrine_check_commands(self) -> None:
+        text = """
+[tasks.doctrine-check]
+run = [
+  "python3 tools/conformance/check_doctrine_site.py",
+  "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
+]
+"""
+        commands = check_docs_coherence.parse_mise_task_commands(text, "doctrine-check")
+        self.assertEqual(commands, list(check_docs_coherence.EXPECTED_DOCTRINE_CHECK_COMMANDS))
+
     def test_conditional_normative_entry(self) -> None:
         section = """
 - `raw/SQUEAK-SITE` — runtime-location site contracts
