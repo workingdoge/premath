@@ -89,6 +89,7 @@
 - `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
 - `cargo run --package premath-cli -- issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json` — atomically claim work (`assignee` + `in_progress`).
 - `cargo run --package premath-cli -- issue discover <parent-issue-id> \"Title\" --issues .premath/issues.jsonl --json` — create discovered follow-up work linked by `discovered-from`.
+- `cargo run --package premath-cli -- issue backend-status --issues .premath/issues.jsonl --repo . --projection .premath/surreal_issue_cache.json --json` — report backend integration state (JSONL authority, surreal projection presence, JJ availability/head metadata).
 - `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json` — list issues with optional filters.
 - `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json` — return unblocked open issues.
 - `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues blocked by unresolved dependencies.

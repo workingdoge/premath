@@ -490,6 +490,25 @@ pub enum IssueCommands {
         json: bool,
     },
 
+    /// Report issue backend integration state (JSONL authority, projection cache, JJ)
+    BackendStatus {
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Repository root used for JJ discovery
+        #[arg(long, default_value = ".")]
+        repo: String,
+
+        /// Path to surreal issue-query projection cache
+        #[arg(long, default_value = ".premath/surreal_issue_cache.json")]
+        projection: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Show ready open work (unblocked issues)
     Ready {
         /// Path to issues JSONL

@@ -440,6 +440,8 @@ surface.
   - atomically claims work by setting assignee and `in_progress` status.
 - `premath issue discover <parent-issue-id> "Title" --issues .premath/issues.jsonl --json`
   - records discovered follow-up work and links it with `discovered-from`.
+- `premath issue backend-status --issues .premath/issues.jsonl --repo . --projection .premath/surreal_issue_cache.json --json`
+  - reports backend integration state (canonical JSONL memory, surreal query projection presence, and JJ availability/head metadata).
 - `premath issue list --issues .premath/issues.jsonl --json`
   - lists issues with optional status/assignee filters.
 - `premath issue ready --issues .premath/issues.jsonl --json`

@@ -1137,6 +1137,44 @@ fn issue_update_and_list_json_smoke() {
 }
 
 #[test]
+fn issue_backend_status_json_smoke() {
+    let tmp = TempDirGuard::new("issue-backend-status");
+    let issues = tmp.path().join("issues.jsonl");
+    let projection = tmp.path().join("surreal_issue_cache.json");
+
+    write_sample_issues(&issues);
+    fs::write(&projection, "{}").expect("projection cache should write");
+
+    let out_status = run_premath([
+        OsString::from("issue"),
+        OsString::from("backend-status"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--repo"),
+        tmp.path().as_os_str().to_os_string(),
+        OsString::from("--projection"),
+        projection.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_status);
+
+    let payload = parse_json_stdout(&out_status);
+    assert_eq!(payload["action"], "issue.backend-status");
+    assert_eq!(payload["canonicalMemory"]["kind"], "jsonl");
+    assert_eq!(payload["canonicalMemory"]["exists"], true);
+    assert_eq!(
+        payload["queryProjection"]["kind"],
+        "premath.surreal.issue_projection.v0"
+    );
+    assert_eq!(payload["queryProjection"]["exists"], true);
+    assert!(payload["jj"]["available"].is_boolean());
+    let jj_state = payload["jj"]["state"]
+        .as_str()
+        .expect("jj.state should be a string");
+    assert!(jj_state == "ready" || jj_state == "error" || jj_state == "unavailable");
+}
+
+#[test]
 fn issue_migrate_events_json_smoke() {
     let tmp = TempDirGuard::new("issue-migrate-events");
     let issues = tmp.path().join("issues.jsonl");
