@@ -3,7 +3,7 @@
   "status": "executable",
   "obligationId": "glue_or_witness_contractibility",
   "semanticScenarioId": "glue_or_witness_permuted_glue_accept",
-  "profile": "local",
+  "profile": "external",
   "artifacts": {
     "descent": {
       "locals": [

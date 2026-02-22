@@ -237,6 +237,18 @@ site obligation id to the exact vector ids discharged by that obligation.
 Checkers MUST scope vector parsing/evaluation to that map so malformed vectors
 outside an obligation scope do not fail unrelated obligations.
 
+For vectors with `invariance/` prefix, case payloads MUST include non-empty:
+
+- `semanticScenarioId`
+- `profile`
+
+For each obligation id and each `semanticScenarioId`, checker input MUST include
+exactly two invariance vectors with distinct `profile` values. Those two vectors
+MUST evaluate to the same `actualResult` and the same
+`actualFailureClasses` set.
+
+Violations of this invariance-pair contract MUST reject deterministically.
+
 ## 5. Deterministic Failure Classes
 
 The checker MUST emit deterministic failure classes prefixed by:

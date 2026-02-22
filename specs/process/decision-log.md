@@ -2265,3 +2265,30 @@ preserving one canonical fixture surface.
   obligation mappings are missing or inconsistent.
 - unscoped malformed vectors no longer fail untouched obligations.
 - regression test added for scope isolation behavior.
+
+---
+
+## 2026-02-22 — Decision 0080: Enforce invariance-pair contract for coherence-site vectors
+
+### Decision
+Require `invariance/` site vectors to carry scenario/profile metadata and to be
+validated as deterministic profile pairs:
+
+- each invariance vector case MUST declare non-empty
+  `semanticScenarioId` and `profile`,
+- for each obligation id + `semanticScenarioId`, checker input MUST include
+  exactly two invariance vectors with distinct profiles,
+- paired vectors MUST evaluate to the same result and failure-class set.
+
+### Rationale
+Invariance vectors existed but were not structurally constrained as profile
+pairs. Enforcing pair shape prevents drift where invariance is nominally present
+but not actually tested across profile choices.
+
+### Consequences
+- coherence checker now emits deterministic invariance failures for missing
+  metadata, missing/extra pairs, non-distinct profiles, or semantic mismatch.
+- coherence-site fixtures now include explicit local/external pair vectors for
+  invariance scenarios.
+- unit tests now cover pair-count mismatch, pair-result mismatch, and passing
+  invariance pairs.

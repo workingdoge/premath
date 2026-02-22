@@ -10,6 +10,7 @@
     "golden/glue_or_witness_obstruction_accept",
     "adversarial/glue_or_witness_missing_reject",
     "invariance/glue_or_witness_permuted_glue_accept",
+    "invariance/glue_or_witness_permuted_glue_accept_external",
     "golden/cwf_substitution_identity_accept",
     "adversarial/cwf_substitution_identity_reject",
     "golden/cwf_substitution_composition_accept",
@@ -21,7 +22,8 @@
     "golden/span_square_commutation_accept",
     "adversarial/span_square_commutation_reject",
     "adversarial/span_square_commutation_digest_mismatch_reject",
-    "invariance/span_square_commutation_permuted_accept"
+    "invariance/span_square_commutation_permuted_accept",
+    "invariance/span_square_commutation_permuted_accept_external"
   ],
   "obligationVectors": {
     "coverage_base_change": [
@@ -36,7 +38,8 @@
       "golden/glue_or_witness_glue_accept",
       "golden/glue_or_witness_obstruction_accept",
       "adversarial/glue_or_witness_missing_reject",
-      "invariance/glue_or_witness_permuted_glue_accept"
+      "invariance/glue_or_witness_permuted_glue_accept",
+      "invariance/glue_or_witness_permuted_glue_accept_external"
     ],
     "cwf_substitution_identity": [
       "golden/cwf_substitution_identity_accept",
@@ -58,7 +61,8 @@
       "golden/span_square_commutation_accept",
       "adversarial/span_square_commutation_reject",
       "adversarial/span_square_commutation_digest_mismatch_reject",
-      "invariance/span_square_commutation_permuted_accept"
+      "invariance/span_square_commutation_permuted_accept",
+      "invariance/span_square_commutation_permuted_accept_external"
     ]
   }
 }

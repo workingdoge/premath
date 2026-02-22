@@ -3,7 +3,7 @@
   "status": "executable",
   "obligationId": "span_square_commutation",
   "semanticScenarioId": "span_square_commutation_permuted_accept",
-  "profile": "local",
+  "profile": "external",
   "artifacts": {
     "spanSquare": {
       "spans": [

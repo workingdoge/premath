@@ -312,6 +312,10 @@ struct SiteCase {
     schema: u32,
     status: String,
     obligation_id: String,
+    #[serde(default)]
+    semantic_scenario_id: Option<String>,
+    #[serde(default)]
+    profile: Option<String>,
     artifacts: Value,
 }
 
@@ -330,6 +334,9 @@ struct ObligationCheck {
     failure_classes: Vec<String>,
     details: Value,
 }
+
+type InvarianceRow = (String, String, String, Vec<String>);
+type InvarianceGroups = BTreeMap<String, Vec<InvarianceRow>>;
 
 pub fn run_coherence_check(
     repo_root: impl AsRef<Path>,
@@ -1173,6 +1180,7 @@ fn check_site_obligation(
     let mut matched_invariance_count = 0usize;
     let mut matched_expected_accepted_count = 0usize;
     let mut matched_expected_rejected_count = 0usize;
+    let mut invariance_groups: InvarianceGroups = BTreeMap::new();
 
     for vector_id in &scoped_vectors {
         if !seen_vectors.insert(vector_id.clone()) {
@@ -1312,13 +1320,92 @@ fn check_site_obligation(
             }
         }
 
+        if vector_id.starts_with("invariance/") {
+            let semantic_scenario_id = case_payload
+                .semantic_scenario_id
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty());
+            let profile = case_payload
+                .profile
+                .as_deref()
+                .map(str::trim)
+                .filter(|value| !value.is_empty());
+
+            if semantic_scenario_id.is_none() {
+                failures.push(format!(
+                    "coherence.{obligation_id}.invariance_missing_semantic_scenario"
+                ));
+            }
+            if profile.is_none() {
+                failures.push(format!(
+                    "coherence.{obligation_id}.invariance_missing_profile"
+                ));
+            }
+            if let (Some(scenario_id), Some(profile)) = (semantic_scenario_id, profile) {
+                invariance_groups
+                    .entry(scenario_id.to_string())
+                    .or_default()
+                    .push((
+                        vector_id.clone(),
+                        profile.to_string(),
+                        evaluated.result.clone(),
+                        dedupe_sorted(evaluated.failure_classes.clone()),
+                    ));
+            }
+        }
+
         vector_rows.push(json!({
             "vectorId": vector_id,
+            "semanticScenarioId": case_payload.semantic_scenario_id,
+            "profile": case_payload.profile,
             "expectedResult": expected_result,
             "actualResult": evaluated.result,
             "expectedFailureClasses": expected_failure_classes,
             "actualFailureClasses": evaluated.failure_classes,
             "details": evaluated.details,
+        }));
+    }
+
+    let mut invariance_rows: Vec<Value> = Vec::new();
+    for (scenario_id, rows) in &invariance_groups {
+        if rows.len() != 2 {
+            failures.push(format!(
+                "coherence.{obligation_id}.invariance_pair_count_mismatch"
+            ));
+        } else {
+            let profile_set: BTreeSet<String> = rows.iter().map(|row| row.1.clone()).collect();
+            if profile_set.len() < 2 {
+                failures.push(format!(
+                    "coherence.{obligation_id}.invariance_profile_not_distinct"
+                ));
+            }
+            let result_set: BTreeSet<String> = rows.iter().map(|row| row.2.clone()).collect();
+            if result_set.len() != 1 {
+                failures.push(format!(
+                    "coherence.{obligation_id}.invariance_result_mismatch"
+                ));
+            }
+            let failure_class_set: BTreeSet<Vec<String>> =
+                rows.iter().map(|row| row.3.clone()).collect();
+            if failure_class_set.len() != 1 {
+                failures.push(format!(
+                    "coherence.{obligation_id}.invariance_failure_class_mismatch"
+                ));
+            }
+        }
+        invariance_rows.push(json!({
+            "semanticScenarioId": scenario_id,
+            "rowCount": rows.len(),
+            "rows": rows
+                .iter()
+                .map(|(vector_id, profile, result, failure_classes)| json!({
+                    "vectorId": vector_id,
+                    "profile": profile,
+                    "result": result,
+                    "failureClasses": failure_classes,
+                }))
+                .collect::<Vec<Value>>(),
         }));
     }
 
@@ -1364,6 +1451,7 @@ fn check_site_obligation(
                 "accepted": matched_expected_accepted_count,
                 "rejected": matched_expected_rejected_count,
             },
+            "invariance": invariance_rows,
             "vectors": vector_rows,
         }),
     })
@@ -2831,11 +2919,13 @@ mod tests {
         })
     }
 
-    fn write_site_vector(
+    fn write_site_vector_with_metadata(
         fixture_root: &Path,
         vector_id: &str,
         obligation_id: &str,
         expected_result: &str,
+        semantic_scenario_id: Option<&str>,
+        profile: Option<&str>,
     ) {
         let (artifacts, expected_failure_classes) = if expected_result == "accepted" {
             (
@@ -2851,15 +2941,18 @@ mod tests {
             panic!("unsupported expected_result in write_site_vector: {expected_result}");
         };
         let vector_root = fixture_root.join(vector_id);
-        write_json_file(
-            &vector_root.join("case.json"),
-            &json!({
-                "schema": 1,
-                "status": "executable",
-                "obligationId": obligation_id,
-                "artifacts": artifacts,
-            }),
-        );
+        let mut case_payload = serde_json::Map::new();
+        case_payload.insert("schema".to_string(), json!(1));
+        case_payload.insert("status".to_string(), json!("executable"));
+        case_payload.insert("obligationId".to_string(), json!(obligation_id));
+        case_payload.insert("artifacts".to_string(), artifacts);
+        if let Some(value) = semantic_scenario_id {
+            case_payload.insert("semanticScenarioId".to_string(), json!(value));
+        }
+        if let Some(value) = profile {
+            case_payload.insert("profile".to_string(), json!(value));
+        }
+        write_json_file(&vector_root.join("case.json"), &Value::Object(case_payload));
         write_json_file(
             &vector_root.join("expect.json"),
             &json!({
@@ -2868,6 +2961,22 @@ mod tests {
                 "result": expected_result,
                 "expectedFailureClasses": expected_failure_classes,
             }),
+        );
+    }
+
+    fn write_site_vector(
+        fixture_root: &Path,
+        vector_id: &str,
+        obligation_id: &str,
+        expected_result: &str,
+    ) {
+        write_site_vector_with_metadata(
+            fixture_root,
+            vector_id,
+            obligation_id,
+            expected_result,
+            None,
+            None,
         );
     }
 
@@ -3408,6 +3517,179 @@ mod tests {
             .expect("bad vector case should be writable");
         fs::write(bad_vector_root.join("expect.json"), b"{not-json")
             .expect("bad vector expect should be writable");
+
+        let contract = test_contract_with_site_fixture_root("fixtures");
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
+    }
+
+    #[test]
+    fn check_site_obligation_requires_invariance_pair_count() {
+        let temp = TempDirGuard::new("site-obligation-invariance-pair-count");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(
+            &fixture_root,
+            &[
+                "golden/ok_vector",
+                "adversarial/reject_vector",
+                "invariance/only_local_accept",
+            ],
+            &[
+                "golden/ok_vector",
+                "adversarial/reject_vector",
+                "invariance/only_local_accept",
+            ],
+        );
+        write_site_vector(
+            &fixture_root,
+            "golden/ok_vector",
+            "span_square_commutation",
+            "accepted",
+        );
+        write_site_vector(
+            &fixture_root,
+            "adversarial/reject_vector",
+            "span_square_commutation",
+            "rejected",
+        );
+        write_site_vector_with_metadata(
+            &fixture_root,
+            "invariance/only_local_accept",
+            "span_square_commutation",
+            "accepted",
+            Some("span_square_equiv"),
+            Some("local"),
+        );
+
+        let contract = test_contract_with_site_fixture_root("fixtures");
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(evaluated.failure_classes.contains(
+            &"coherence.span_square_commutation.invariance_pair_count_mismatch".to_string()
+        ));
+    }
+
+    #[test]
+    fn check_site_obligation_requires_invariance_pair_result_match() {
+        let temp = TempDirGuard::new("site-obligation-invariance-result-mismatch");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(
+            &fixture_root,
+            &[
+                "golden/ok_vector",
+                "adversarial/reject_vector",
+                "invariance/local_accept",
+                "invariance/external_reject",
+            ],
+            &[
+                "golden/ok_vector",
+                "adversarial/reject_vector",
+                "invariance/local_accept",
+                "invariance/external_reject",
+            ],
+        );
+        write_site_vector(
+            &fixture_root,
+            "golden/ok_vector",
+            "span_square_commutation",
+            "accepted",
+        );
+        write_site_vector(
+            &fixture_root,
+            "adversarial/reject_vector",
+            "span_square_commutation",
+            "rejected",
+        );
+        write_site_vector_with_metadata(
+            &fixture_root,
+            "invariance/local_accept",
+            "span_square_commutation",
+            "accepted",
+            Some("span_square_equiv"),
+            Some("local"),
+        );
+        write_site_vector_with_metadata(
+            &fixture_root,
+            "invariance/external_reject",
+            "span_square_commutation",
+            "rejected",
+            Some("span_square_equiv"),
+            Some("external"),
+        );
+
+        let contract = test_contract_with_site_fixture_root("fixtures");
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(
+            evaluated.failure_classes.contains(
+                &"coherence.span_square_commutation.invariance_result_mismatch".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn check_site_obligation_accepts_with_invariance_pair() {
+        let temp = TempDirGuard::new("site-obligation-invariance-pair-pass");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(
+            &fixture_root,
+            &[
+                "golden/ok_vector",
+                "adversarial/reject_vector",
+                "invariance/local_accept",
+                "invariance/external_accept",
+            ],
+            &[
+                "golden/ok_vector",
+                "adversarial/reject_vector",
+                "invariance/local_accept",
+                "invariance/external_accept",
+            ],
+        );
+        write_site_vector(
+            &fixture_root,
+            "golden/ok_vector",
+            "span_square_commutation",
+            "accepted",
+        );
+        write_site_vector(
+            &fixture_root,
+            "adversarial/reject_vector",
+            "span_square_commutation",
+            "rejected",
+        );
+        write_site_vector_with_metadata(
+            &fixture_root,
+            "invariance/local_accept",
+            "span_square_commutation",
+            "accepted",
+            Some("span_square_equiv"),
+            Some("local"),
+        );
+        write_site_vector_with_metadata(
+            &fixture_root,
+            "invariance/external_accept",
+            "span_square_commutation",
+            "accepted",
+            Some("span_square_equiv"),
+            Some("external"),
+        );
 
         let contract = test_contract_with_site_fixture_root("fixtures");
         let evaluated = check_site_obligation(
