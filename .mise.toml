@@ -44,7 +44,7 @@ run = "cargo run --package premath-cli -- coherence-check --contract specs/prema
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
-  "python3 tools/conformance/run_doctrine_inf_vectors.py",
+  "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
 
 [tasks.conformance-run]
