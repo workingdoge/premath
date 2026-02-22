@@ -2533,6 +2533,10 @@ mod tests {
             payload["queryProjection"]["snapshotRefMatchesAuthority"],
             true
         );
+        assert_eq!(
+            payload["queryProjection"]["snapshotRefMatchesProjection"],
+            true
+        );
         assert!(payload["canonicalMemory"]["snapshotRef"].is_string());
         assert!(payload["queryProjection"]["sourceSnapshotRef"].is_string());
         assert!(payload["jj"]["available"].is_boolean());
@@ -2599,6 +2603,74 @@ mod tests {
         assert_eq!(
             payload["queryProjection"]["snapshotRefMatchesAuthority"],
             false
+        );
+        assert_eq!(
+            payload["queryProjection"]["snapshotRefMatchesProjection"],
+            true
+        );
+    }
+
+    #[test]
+    fn issue_backend_status_marks_invalid_when_projection_payload_snapshot_mismatches() {
+        let root = temp_dir("issue-backend-status-payload-mismatch");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Root".to_string(),
+                id: Some("bd-root".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+
+        let projection_path = root.join(".premath").join("surreal_issue_cache.json");
+        let store = load_store_existing(&issues).expect("issues should load");
+        let projection_issues: Vec<Issue> = store.issues().cloned().collect();
+        let invalid_payload = IssueQueryProjection {
+            schema: ISSUE_QUERY_PROJECTION_SCHEMA,
+            kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
+            source_issues_path: issues.display().to_string(),
+            source_snapshot_ref: Some("iss1_invalid_projection_ref".to_string()),
+            generated_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            issue_count: projection_issues.len(),
+            issues: projection_issues,
+        };
+        if let Some(parent) = projection_path.parent() {
+            fs::create_dir_all(parent).expect("projection parent should exist");
+        }
+        fs::write(
+            &projection_path,
+            serde_json::to_vec_pretty(&invalid_payload).expect("projection should serialize"),
+        )
+        .expect("invalid projection should write");
+
+        let result =
+            call_issue_backend_status(&config, IssueBackendStatusTool { issues_path: None })
+                .expect("backend status should succeed");
+        let payload = parse_tool_json(result);
+        assert_eq!(payload["queryProjection"]["state"], "invalid");
+        assert_eq!(
+            payload["queryProjection"]["snapshotRefMatchesProjection"],
+            false
+        );
+        assert!(
+            payload["queryProjection"]["error"]
+                .as_str()
+                .expect("projection error should be present")
+                .contains("payload snapshot mismatch")
         );
     }
 

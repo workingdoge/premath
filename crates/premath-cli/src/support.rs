@@ -1,4 +1,4 @@
-use premath_bd::{DepType, MemoryStore, store_snapshot_ref};
+use premath_bd::{DepType, Issue, MemoryStore, store_snapshot_ref};
 use premath_jj::JjClient;
 use premath_kernel::{CoherenceLevel, ContextId, FiberSignature};
 use premath_surreal::QueryCache;
@@ -31,6 +31,7 @@ pub struct BackendStatus {
     pub projection_source_issues_path: Option<String>,
     pub projection_source_path_matches_authority: Option<bool>,
     pub projection_source_snapshot_ref: Option<String>,
+    pub projection_snapshot_matches_payload: Option<bool>,
     pub projection_snapshot_matches_authority: Option<bool>,
     pub projection_error: Option<String>,
     pub jj_state: &'static str,
@@ -42,7 +43,7 @@ pub struct BackendStatus {
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ProjectionHeader {
+struct ProjectionPayload {
     #[serde(default)]
     schema: Option<u64>,
     #[serde(default)]
@@ -51,6 +52,8 @@ struct ProjectionHeader {
     source_issues_path: Option<String>,
     #[serde(default)]
     source_snapshot_ref: Option<String>,
+    #[serde(default)]
+    issues: Vec<Issue>,
 }
 
 pub fn parse_level_or_exit(level: &str) -> CoherenceLevel {
@@ -201,16 +204,17 @@ pub fn collect_backend_status(
     let mut projection_source_issues_path: Option<String> = None;
     let mut projection_source_path_matches_authority: Option<bool> = None;
     let mut projection_source_snapshot_ref: Option<String> = None;
+    let mut projection_snapshot_matches_payload: Option<bool> = None;
     let mut projection_snapshot_matches_authority: Option<bool> = None;
     let mut projection_error: Option<String> = None;
 
     if projection_exists {
-        match read_projection_header(&projection_path) {
-            Ok(header) => {
-                projection_schema = header.schema;
-                projection_kind = header.kind.clone();
-                projection_source_issues_path = header.source_issues_path.clone();
-                projection_source_snapshot_ref = header.source_snapshot_ref.clone();
+        match read_projection_payload(&projection_path) {
+            Ok(payload) => {
+                projection_schema = payload.schema;
+                projection_kind = payload.kind.clone();
+                projection_source_issues_path = payload.source_issues_path.clone();
+                projection_source_snapshot_ref = payload.source_snapshot_ref.clone();
 
                 let schema_ok = projection_schema == Some(ISSUE_QUERY_PROJECTION_SCHEMA);
                 let kind_ok = projection_kind.as_deref() == Some(ISSUE_QUERY_PROJECTION_KIND);
@@ -224,25 +228,48 @@ pub fn collect_backend_status(
                         projection_kind
                     ));
                 } else {
-                    if let Some(source_path) = projection_source_issues_path.as_deref() {
-                        projection_source_path_matches_authority =
-                            Some(paths_equivalent(Path::new(source_path), &issues_path));
-                    }
-                    if let (Some(source_ref), Some(authority_ref)) = (
-                        projection_source_snapshot_ref.as_deref(),
-                        authority_snapshot_ref.as_deref(),
-                    ) {
-                        projection_snapshot_matches_authority = Some(source_ref == authority_ref);
+                    if let Some(source_ref) = projection_source_snapshot_ref.as_deref() {
+                        match projection_payload_snapshot_ref(&payload.issues) {
+                            Ok(payload_ref) => {
+                                let matches_payload = source_ref == payload_ref;
+                                projection_snapshot_matches_payload = Some(matches_payload);
+                                if !matches_payload {
+                                    projection_state = "invalid";
+                                    projection_error = Some(format!(
+                                        "projection payload snapshot mismatch (sourceSnapshotRef={}, payloadSnapshotRef={})",
+                                        source_ref, payload_ref
+                                    ));
+                                }
+                            }
+                            Err(err) => {
+                                projection_state = "invalid";
+                                projection_error = Some(err);
+                            }
+                        }
                     }
 
-                    projection_state = match (
-                        projection_source_path_matches_authority,
-                        projection_snapshot_matches_authority,
-                    ) {
-                        (Some(false), _) | (_, Some(false)) => "stale",
-                        (Some(true), Some(true)) => "fresh",
-                        _ => "unknown",
-                    };
+                    if projection_state != "invalid" {
+                        if let Some(source_path) = projection_source_issues_path.as_deref() {
+                            projection_source_path_matches_authority =
+                                Some(paths_equivalent(Path::new(source_path), &issues_path));
+                        }
+                        if let (Some(source_ref), Some(authority_ref)) = (
+                            projection_source_snapshot_ref.as_deref(),
+                            authority_snapshot_ref.as_deref(),
+                        ) {
+                            projection_snapshot_matches_authority =
+                                Some(source_ref == authority_ref);
+                        }
+
+                        projection_state = match (
+                            projection_source_path_matches_authority,
+                            projection_snapshot_matches_authority,
+                        ) {
+                            (Some(false), _) | (_, Some(false)) => "stale",
+                            (Some(true), Some(true)) => "fresh",
+                            _ => "unknown",
+                        };
+                    }
                 }
             }
             Err(err) => {
@@ -298,6 +325,7 @@ pub fn collect_backend_status(
         projection_source_issues_path,
         projection_source_path_matches_authority,
         projection_source_snapshot_ref,
+        projection_snapshot_matches_payload,
         projection_snapshot_matches_authority,
         projection_error,
         jj_state,
@@ -334,6 +362,7 @@ pub fn backend_status_payload(
             "sourceIssuesPath": status.projection_source_issues_path.clone(),
             "sourcePathMatchesAuthority": status.projection_source_path_matches_authority,
             "sourceSnapshotRef": status.projection_source_snapshot_ref.clone(),
+            "snapshotRefMatchesProjection": status.projection_snapshot_matches_payload,
             "snapshotRefMatchesAuthority": status.projection_snapshot_matches_authority,
             "error": status.projection_error.clone()
         },
@@ -358,10 +387,16 @@ pub fn backend_status_payload(
     payload
 }
 
-fn read_projection_header(path: &Path) -> Result<ProjectionHeader, String> {
+fn read_projection_payload(path: &Path) -> Result<ProjectionPayload, String> {
     let bytes = fs::read(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
-    serde_json::from_slice::<ProjectionHeader>(&bytes)
+    serde_json::from_slice::<ProjectionPayload>(&bytes)
         .map_err(|e| format!("failed to parse {}: {e}", path.display()))
+}
+
+fn projection_payload_snapshot_ref(issues: &[Issue]) -> Result<String, String> {
+    let store = MemoryStore::from_issues(issues.to_vec())
+        .map_err(|e| format!("failed to hydrate projection payload issues: {e}"))?;
+    Ok(store_snapshot_ref(&store))
 }
 
 pub fn paths_equivalent(left: &Path, right: &Path) -> bool {
