@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "contractKind": "premath.coherence.contract.v1",
+  "contractId": "coherence.default.v1",
+  "binding": {
+    "normalizerId": "normalizer.coherence.v1",
+    "policyDigest": "policy.coherence.v1"
+  },
+  "obligations": [
+    {
+      "id": "scope_noncontradiction",
+      "description": "Ensure normative/informative scope and bidir checker obligation vocabulary remain non-contradictory."
+    },
+    {
+      "id": "capability_parity",
+      "description": "Ensure capability IDs match across executable surfaces, manifests, and indexed docs."
+    },
+    {
+      "id": "gate_chain_parity",
+      "description": "Ensure baseline and projected gate-chain documentation matches executable command surfaces."
+    },
+    {
+      "id": "operation_reachability",
+      "description": "Ensure required operation surfaces exist and are reachable from doctrine root."
+    },
+    {
+      "id": "overlay_traceability",
+      "description": "Ensure declared profile overlays are present and indexed coherently."
+    }
+  ],
+  "conditionalCapabilityDocs": [
+    {
+      "docRef": "draft/LLM-INSTRUCTION-DOCTRINE",
+      "capabilityId": "capabilities.instruction_typing"
+    },
+    {
+      "docRef": "draft/LLM-PROPOSAL-CHECKING",
+      "capabilityId": "capabilities.instruction_typing"
+    },
+    {
+      "docRef": "raw/SQUEAK-SITE",
+      "capabilityId": "capabilities.squeak_site"
+    },
+    {
+      "docRef": "raw/PREMATH-CI",
+      "capabilityId": "capabilities.ci_witnesses"
+    }
+  ],
+  "expectedOperationPaths": [
+    "tools/ci/run_gate.sh",
+    "tools/ci/run_instruction.sh",
+    "tools/ci/verify_required_witness.py",
+    "tools/ci/decide_required.py",
+    "tools/conformance/check_stub_invariance.py",
+    "tools/conformance/run_capability_vectors.py",
+    "tools/conformance/check_doctrine_site.py",
+    "tools/conformance/run_doctrine_inf_vectors.py"
+  ],
+  "overlayDocs": [
+    "profile/ADJOINTS-AND-SITES"
+  ],
+  "requiredBidirObligations": [
+    "stability",
+    "locality",
+    "descent_exists",
+    "descent_contractible",
+    "adjoint_triple",
+    "ext_gap",
+    "ext_ambiguous"
+  ],
+  "surfaces": {
+    "capabilitySourcePath": "tools/conformance/run_capability_vectors.py",
+    "capabilityTuple": "DEFAULT_EXECUTABLE_CAPABILITIES",
+    "capabilityManifestRoot": "tests/conformance/fixtures/capabilities",
+    "readmePath": "README.md",
+    "conformanceReadmePath": "tools/conformance/README.md",
+    "specIndexPath": "specs/premath/draft/SPEC-INDEX.md",
+    "specIndexCapabilityHeading": "5.4",
+    "specIndexInformativeHeading": "5.5",
+    "specIndexOverlayHeading": "5.6",
+    "ciClosurePath": "docs/design/CI-CLOSURE.md",
+    "ciClosureBaselineStart": "Current full baseline gate (`mise run baseline`) includes:",
+    "ciClosureBaselineEnd": "Local command:",
+    "ciClosureProjectionStart": "Current deterministic projected check IDs include:",
+    "ciClosureProjectionEnd": "## 5. Variants and capability projection",
+    "misePath": ".mise.toml",
+    "miseBaselineTask": "baseline",
+    "projectionSourcePath": "tools/ci/change_projection.py",
+    "projectionTuple": "CHECK_ORDER",
+    "doctrineSitePath": "specs/premath/draft/DOCTRINE-SITE.json",
+    "doctrineRootNodeId": "draft/DOCTRINE-INF",
+    "profileReadmePath": "specs/premath/profile/README.md",
+    "bidirSpecPath": "specs/premath/draft/BIDIR-DESCENT.md",
+    "bidirSpecSectionStart": "## 6. Obligation kinds (normative)",
+    "bidirSpecSectionEnd": "### 6.1 Obligation record format (required)",
+    "bidirCheckerPath": "tools/ci/instruction_proposal.py",
+    "bidirCheckerMapName": "OBLIGATION_TO_GATE_FAILURE",
+    "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6"
+  }
+}

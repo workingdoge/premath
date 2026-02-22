@@ -35,6 +35,7 @@ Current full baseline gate (`mise run baseline`) includes:
 3. conformance/docs closure
    - `conformance-check`
    - `traceability-check`
+   - `coherence-check`
    - `docs-coherence-check`
    - `doctrine-check` (site coherence + doctrine-inf vectors)
    - `conformance-run` (cached fixture suite runner)

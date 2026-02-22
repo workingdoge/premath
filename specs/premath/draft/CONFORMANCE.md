@@ -204,6 +204,7 @@ A repository SHOULD organize vectors as:
 This repository's merge-gated conformance surface executes:
 
 - `python3 tools/conformance/run_fixture_suites.py`
+- `premath coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root .`
 
 The fixture-suite runner executes the executable suites:
 

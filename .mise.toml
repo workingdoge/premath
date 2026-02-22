@@ -38,6 +38,9 @@ run = "python3 tools/conformance/check_spec_traceability.py"
 [tasks.docs-coherence-check]
 run = "python3 tools/conformance/check_docs_coherence.py"
 
+[tasks.coherence-check]
+run = "cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json"
+
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
@@ -59,6 +62,7 @@ run = [
   "mise run test-kcir-toy",
   "mise run conformance-check",
   "mise run traceability-check",
+  "mise run coherence-check",
   "mise run docs-coherence-check",
   "mise run doctrine-check",
   "mise run ci-command-surface-check",

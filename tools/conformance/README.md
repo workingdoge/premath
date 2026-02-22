@@ -98,6 +98,25 @@ Run:
 python3 tools/conformance/check_docs_coherence.py
 ```
 
+## `premath coherence-check`
+
+Runs the typed coherence contract checker surface (`draft/PREMATH-COHERENCE`)
+using machine artifact `specs/premath/draft/COHERENCE-CONTRACT.json`.
+
+Checks include:
+
+- scope non-contradiction (including bidir checker vocabulary alignment),
+- capability parity across executable/docs/manifest surfaces,
+- baseline and projected gate-chain parity,
+- doctrine operation reachability for required operation paths,
+- profile overlay traceability.
+
+Run via task:
+
+```bash
+mise run coherence-check
+```
+
 ## `run_capability_vectors.py`
 
 Runs executable capability vectors (current set):

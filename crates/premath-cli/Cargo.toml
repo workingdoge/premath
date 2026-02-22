@@ -14,6 +14,7 @@ premath-kernel = { workspace = true }
 premath-tusk = { workspace = true }
 premath-bd = { workspace = true }
 premath-jj = { workspace = true }
+premath-coherence = { workspace = true }
 premath-surreal = { workspace = true }
 premath-ux = { workspace = true }
 clap = { workspace = true }

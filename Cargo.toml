@@ -5,6 +5,7 @@ members = [
     "crates/premath-tusk",
     "crates/premath-bd",
     "crates/premath-jj",
+    "crates/premath-coherence",
     "crates/premath-surreal",
     "crates/premath-ux",
     "crates/premath-cli",
@@ -23,6 +24,7 @@ premath-kernel = { path = "crates/premath-kernel" }
 premath-tusk = { path = "crates/premath-tusk" }
 premath-bd = { path = "crates/premath-bd" }
 premath-jj = { path = "crates/premath-jj" }
+premath-coherence = { path = "crates/premath-coherence" }
 premath-surreal = { path = "crates/premath-surreal" }
 premath-ux = { path = "crates/premath-ux" }
 
@@ -34,6 +36,8 @@ thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 chrono = { version = "0.4", features = ["serde"] }
 uuid = { version = "1", features = ["v4", "serde"] }
+regex = "1"
+toml = "0.8"
 
 # Database
 surrealdb = { version = "2", features = ["kv-mem", "kv-rocksdb"] }

@@ -84,6 +84,19 @@ class InstructionRejectWitnessTests(unittest.TestCase):
             self.assertEqual(witness["rejectStage"], "pre_execution")
             self.assertEqual(witness["failureClasses"], ["instruction_check_not_allowed"])
 
+    def test_whitespace_normalizer_rejects_pre_execution(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-instr-reject-") as tmp:
+            root = Path(tmp)
+            envelope = _base_envelope()
+            envelope["normalizerId"] = "normalizer.ci.v1 "
+            result = _run_instruction(root, envelope, "20260222T000002Z-whitespace-normalizer")
+
+            proc = result["proc"]
+            self.assertEqual(proc.returncode, 2)
+            witness = result["witness"]
+            self.assertEqual(witness["rejectStage"], "pre_execution")
+            self.assertEqual(witness["failureClasses"], ["instruction_invalid_normalizer"])
+
     def test_proposal_binding_mismatch_emits_typed_failure_class(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-instr-reject-") as tmp:
             root = Path(tmp)

@@ -117,6 +117,12 @@ fn main() {
             server_version,
         }),
 
+        Commands::CoherenceCheck {
+            contract,
+            repo_root,
+            json,
+        } => commands::coherence_check::run(contract, repo_root, json),
+
         Commands::Issue { command } => commands::issue::run(command),
 
         Commands::Dep { command } => commands::dep::run(command),

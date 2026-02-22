@@ -24,6 +24,8 @@ Scope: design-level, non-normative
 `CI/Control` (closure and attestation):
 - `specs/premath/raw/PREMATH-CI.md`
 - `specs/premath/raw/CI-TOPOS.md`
+- `specs/premath/draft/PREMATH-COHERENCE.md`
+- `specs/premath/draft/COHERENCE-CONTRACT.json`
 
 `Operational surfaces` (scripts/tasks):
 - `tools/ci/pipeline_required.py`
@@ -34,6 +36,7 @@ Scope: design-level, non-normative
 - `tools/ci/run_gate.sh`
 - `tools/conformance/check_doctrine_site.py`
 - `tools/conformance/run_doctrine_inf_vectors.py`
+- `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
 - `hk.pkl`, `.mise.toml`
 
 ## 2. Doctrine to Operation Path
@@ -44,10 +47,12 @@ DOCTRINE-INF
   -> LLM-INSTRUCTION-DOCTRINE
   -> LLM-PROPOSAL-CHECKING
   -> PREMATH-CI / CI-TOPOS
+  -> PREMATH-COHERENCE / COHERENCE-CONTRACT
   -> tools/ci/pipeline_required.py / tools/ci/pipeline_instruction.py
   -> tools/ci/run_required_checks.py
   -> tools/ci/verify_required_witness.py
   -> tools/ci/run_gate.sh
+  -> premath coherence-check
   -> tools/conformance/check_doctrine_site.py / run_doctrine_inf_vectors.py
   -> hk/mise tasks (.mise baseline + ci-required-attested)
   -> CIWitness artifacts
@@ -107,7 +112,7 @@ Loop intent:
 
 Baseline gate (`mise run baseline`) enforces:
 - setup/lint/build/test/toy suites,
-- conformance + traceability + docs-coherence + doctrine closure,
+- conformance + traceability + coherence-check + docs-coherence + doctrine closure,
 - CI/control-plane wiring, pipeline, observation, and instruction checks,
 - executable fixture-suite closure (`mise run conformance-run`).
 

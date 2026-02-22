@@ -228,6 +228,21 @@ pub enum Commands {
         server_version: String,
     },
 
+    /// Evaluate Premath coherence contract obligations against repository surfaces
+    CoherenceCheck {
+        /// Coherence contract JSON path
+        #[arg(long, default_value = "specs/premath/draft/COHERENCE-CONTRACT.json")]
+        contract: String,
+
+        /// Repository root used to resolve contract-relative surfaces
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Manage issues in premath-bd JSONL memory
     Issue {
         #[command(subcommand)]

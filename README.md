@@ -169,6 +169,7 @@ This enforces the current invariant gate:
 - toy semantic vectors,
 - KCIR toy vectors,
 - conformance capability invariance-stub validation,
+- coherence-contract obligation discharge validation,
 - docs-to-executable coherence validation,
 - doctrine-to-operation site coherence validation,
 - executable capability conformance vectors
@@ -209,6 +210,7 @@ mise run ci-verify-decision
 mise run ci-required-verified
 mise run ci-required-attested
 mise run ci-pipeline-required
+mise run coherence-check
 mise run ci-check
 mise run ci-instruction-check
 mise run ci-instruction-smoke

@@ -151,6 +151,10 @@ explicitly claimed under §5.4 or §5.6.
   (`draft/DOCTRINE-SITE.json`).
 - `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
   explicit gap targets.
+- `draft/PREMATH-COHERENCE` — typed coherence-contract checker/witness model
+  for repository control-plane surfaces (`draft/COHERENCE-CONTRACT.json`).
+- `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
+  deterministic checker execution.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
   instruction flows (normative only when `capabilities.instruction_typing` is
   claimed).
@@ -206,8 +210,9 @@ If you are implementing higher-order CI/CD:
 4) `draft/LLM-PROPOSAL-CHECKING`
 5) `raw/PREMATH-CI`
 6) `raw/CI-TOPOS`
-7) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
-8) `raw/SQUEAK-SITE`
+7) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+8) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
+9) `raw/SQUEAK-SITE`
 
 If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`

@@ -15,6 +15,10 @@ Start here:
   LLM-driven control loops.
 - `LLM-PROPOSAL-CHECKING.md` — proposal ingestion contract binding LLM outputs
   into checking/discharge (never self-authorizing).
+- `PREMATH-COHERENCE.md` — typed coherence contract + checker witness model for
+  repository control-plane consistency.
+- `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
+  `premath coherence-check`.
 - `PREMATH-KERNEL.md` — semantic kernel contract.
 - `SPEC-TRACEABILITY.md` — spec-to-check/vector coverage matrix with explicit
   gap targets.

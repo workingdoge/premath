@@ -1,4 +1,5 @@
 pub mod check;
+pub mod coherence_check;
 pub mod dep;
 pub mod init;
 pub mod issue;

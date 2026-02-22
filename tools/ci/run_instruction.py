@@ -76,7 +76,10 @@ def parse_args() -> argparse.Namespace:
 def ensure_string(value: Any, label: str) -> str:
     if not isinstance(value, str) or not value.strip():
         raise ValueError(f"{label} must be a non-empty string")
-    return value
+    trimmed = value.strip()
+    if trimmed != value:
+        raise ValueError(f"{label} must not include leading/trailing whitespace")
+    return trimmed
 
 
 def ensure_string_list(value: Any, label: str) -> List[str]:

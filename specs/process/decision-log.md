@@ -825,3 +825,41 @@ the audited doctrine-to-operation graph.
   `tools/conformance/run_doctrine_inf_vectors.py`.
 - `draft/DOCTRINE-SITE.md` repository notes now enumerate both doctrine
   conformance operation nodes.
+
+---
+
+## 2026-02-22 — Decision 0029: Add coherence contract checker and unify bidir proposal canonicalization
+
+### Decision
+Introduce a typed coherence-contract execution surface with deterministic
+witnesses:
+
+- new contract/checker crate: `crates/premath-coherence/`
+- new CLI command: `premath coherence-check`
+- canonical contract artifact: `specs/premath/draft/COHERENCE-CONTRACT.json`
+- normative draft doc: `specs/premath/draft/PREMATH-COHERENCE.md`
+- baseline gate integration: `mise run baseline` now includes
+  `mise run coherence-check`.
+
+For instruction proposal checking, remove duplicated conformance
+canonicalization logic and require conformance vectors to use
+`tools/ci/instruction_proposal.py` as the single source of canonical proposal
+typing/digest behavior.
+
+Additionally tighten envelope binding hygiene by rejecting leading/trailing
+whitespace in top-level `normalizerId` and `policyDigest`.
+
+### Rationale
+The doctrine/checker split requires one deterministic control-plane coherence
+surface that can reject contradictory docs/capability/gate/operation mappings
+as typed obligations, and one canonical checker implementation for LLM proposal
+canonicalization/discharge semantics. Duplicated canonicalizers create silent
+drift risk between executable conformance and runtime instruction checking.
+
+### Consequences
+- Coherence is now executable and witness-producing through a merge-gated
+  command surface (`coherence-check`).
+- Bidir proposal typing/discharge semantics are now anchored to one Python
+  checker implementation for both instruction execution and conformance vectors.
+- Reject witnesses now fail closed on whitespace-bound binding fields that would
+  otherwise bypass canonical policy/normalizer matching.

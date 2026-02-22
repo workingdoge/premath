@@ -32,7 +32,10 @@ from instruction_policy import (  # type: ignore  # noqa: E402
     validate_requested_checks,
 )
 from instruction_proposal import (  # type: ignore  # noqa: E402
+    ProposalValidationError,
+    canonicalize_proposal,
     compile_proposal_obligations,
+    compute_proposal_digest,
     discharge_proposal_obligations,
 )
 from provider_env import map_github_to_premath_env, resolve_premath_ci_refs  # type: ignore  # noqa: E402
@@ -46,7 +49,6 @@ CAPABILITY_CI_WITNESSES = "capabilities.ci_witnesses"
 CAPABILITY_INSTRUCTION_TYPING = "capabilities.instruction_typing"
 CAPABILITY_ADJOINTS_SITES = "capabilities.adjoints_sites"
 CAPABILITY_CHANGE_MORPHISMS = "capabilities.change_morphisms"
-PROPOSAL_KINDS = {"value", "derivation", "refinementPlan"}
 BLOCKING_DEP_TYPES = {
     "blocks",
     "parent-child",
@@ -861,106 +863,10 @@ def compute_instruction_digest(instruction: Dict[str, Any]) -> str:
 
 
 def canonical_llm_proposal(proposal: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
-    proposal_kind = proposal.get("proposalKind")
-    if not isinstance(proposal_kind, str) or proposal_kind not in PROPOSAL_KINDS:
-        return None, "proposal_invalid_kind"
-
-    target_ctx_ref = proposal.get("targetCtxRef")
-    if not isinstance(target_ctx_ref, str) or not target_ctx_ref:
-        return None, "proposal_invalid_target"
-
-    target_judgment = proposal.get("targetJudgment")
-    if not isinstance(target_judgment, dict):
-        return None, "proposal_invalid_target_judgment"
-    target_kind = target_judgment.get("kind")
-    if target_kind not in {"obj", "mor"}:
-        return None, "proposal_invalid_target_judgment"
-    target_shape = target_judgment.get("shape")
-    if not isinstance(target_shape, str) or not target_shape:
-        return None, "proposal_invalid_target_judgment"
-
-    binding = proposal.get("binding")
-    if not isinstance(binding, dict):
-        return None, "proposal_unbound_policy"
-    normalizer_id = binding.get("normalizerId")
-    policy_digest = binding.get("policyDigest")
-    if (
-        not isinstance(normalizer_id, str)
-        or not normalizer_id
-        or not isinstance(policy_digest, str)
-        or not policy_digest
-    ):
-        return None, "proposal_unbound_policy"
-
-    candidate_refs_raw = proposal.get("candidateRefs", [])
-    if not isinstance(candidate_refs_raw, list):
-        return None, "proposal_invalid_step"
-    candidate_refs: List[str] = []
-    for item in candidate_refs_raw:
-        if not isinstance(item, str) or not item:
-            return None, "proposal_invalid_step"
-        candidate_refs.append(item)
-    candidate_refs = sorted(set(candidate_refs))
-
-    steps_raw = proposal.get("steps", [])
-    if not isinstance(steps_raw, list):
-        return None, "proposal_invalid_step"
-    if proposal_kind == "derivation" and not steps_raw:
-        return None, "proposal_invalid_step"
-    if proposal_kind != "derivation" and steps_raw:
-        return None, "proposal_invalid_step"
-
-    steps: List[Dict[str, Any]] = []
-    for step in steps_raw:
-        if not isinstance(step, dict):
-            return None, "proposal_invalid_step"
-        rule_id = step.get("ruleId")
-        claim = step.get("claim")
-        inputs = step.get("inputs", [])
-        outputs = step.get("outputs", [])
-        if (
-            not isinstance(rule_id, str)
-            or not rule_id
-            or not isinstance(claim, str)
-            or not claim
-            or not isinstance(inputs, list)
-            or not isinstance(outputs, list)
-        ):
-            return None, "proposal_invalid_step"
-        if any(not isinstance(item, str) or not item for item in inputs):
-            return None, "proposal_invalid_step"
-        if any(not isinstance(item, str) or not item for item in outputs):
-            return None, "proposal_invalid_step"
-        steps.append(
-            {
-                "ruleId": rule_id,
-                "inputs": list(inputs),
-                "outputs": list(outputs),
-                "claim": claim,
-            }
-        )
-
-    canonical: Dict[str, Any] = {
-        "proposalKind": proposal_kind,
-        "targetCtxRef": target_ctx_ref,
-        "targetJudgment": {
-            "kind": target_kind,
-            "shape": target_shape,
-        },
-        "candidateRefs": candidate_refs,
-        "binding": {
-            "normalizerId": normalizer_id,
-            "policyDigest": policy_digest,
-        },
-    }
-    if steps:
-        canonical["steps"] = steps
-
-    return canonical, None
-
-
-def compute_proposal_digest(proposal: Dict[str, Any]) -> str:
-    return "prop1_" + stable_hash(proposal)
+    try:
+        return canonicalize_proposal(proposal), None
+    except ProposalValidationError as exc:
+        return None, exc.failure_class
 
 
 def canonical_instruction_classification(classification: Dict[str, Any], label: str) -> Dict[str, str]:
