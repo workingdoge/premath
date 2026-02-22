@@ -215,6 +215,12 @@ Current tracked promotion queue:
   admissible-map allowlist policy, Beck-Chevalley obligations, and deterministic
   `(normalizerId, policyDigest)` discharge binding for profile claims.
 
+Joint capability note:
+
+- Implementations MAY jointly claim `capabilities.adjoints_sites` and
+  `capabilities.squeak_site`; such compositions SHOULD follow lane separation
+  and single-authority encoding rules in `draft/UNIFICATION-DOCTRINE` §9.
+
 ## 6. Suggested reading order
 
 If you are proving semantics:
@@ -257,6 +263,15 @@ If you are implementing the adjoints-and-sites overlay:
 2) `draft/GATE`
 3) `draft/BIDIR-DESCENT`
 4) `profile/ADJOINTS-AND-SITES`
+
+If you are integrating Sig/Pi + Squeak in one system:
+1) `draft/PREMATH-KERNEL`
+2) `draft/BIDIR-DESCENT` + `draft/GATE`
+3) `profile/ADJOINTS-AND-SITES`
+4) `raw/SQUEAK-CORE` + `raw/SQUEAK-SITE`
+5) `draft/SPAN-SQUARE-CHECKING`
+6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+7) `draft/UNIFICATION-DOCTRINE` (§9 lane separation)
 
 ## 7. Notes on restrictiveness
 

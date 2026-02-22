@@ -174,3 +174,40 @@ When multiple code paths validate proposal identity:
 3. compatibility identities (`proposalDigest`) MAY remain while migration is in
    progress, but MUST stay bound to the same canonical proposal payload as
    `proposalKcirRef`.
+
+## 9. Lane Separation Contract (v0)
+
+To preserve minimum encoding with maximum expressiveness, implementations MUST
+keep the following lane split explicit and non-overlapping:
+
+| Lane | Primary role | Canonical references | Non-authority constraints |
+| --- | --- | --- | --- |
+| Semantic doctrine lane | semantic meaning and obligation authority | `draft/PREMATH-KERNEL`, `draft/BIDIR-DESCENT`, `draft/GATE`, `profile/ADJOINTS-AND-SITES` | MAY compile to obligations; MUST NOT be bypassed by planner/projection outputs |
+| Strict checker lane | strict operational equalities (`≡`) for deterministic checking | `draft/PREMATH-COHERENCE`, `draft/COHERENCE-CONTRACT.json` | validates control-plane consistency only; MUST NOT redefine kernel admissibility |
+| Witness commutation lane | typed pipeline/base-change commutation artifacts | `draft/SPAN-SQUARE-CHECKING` | checker-facing evidence only; MUST NOT self-authorize acceptance |
+| Runtime transport lane | runtime location/world transport surfaces | `raw/SQUEAK-CORE`, `raw/SQUEAK-SITE` | transport/site checks are capability-scoped; MUST remain bound to canonical witness lineage |
+
+### 9.1 Sig/Pi (adjoint) lane rule
+
+When `capabilities.adjoints_sites` is claimed, `Sigma_f -| f* -| Pi_f` and
+Beck-Chevalley obligations remain in the semantic doctrine lane and MUST
+discharge under deterministic bindings (`normalizerId`, `policyDigest`) without
+introducing a parallel authority encoding.
+
+### 9.2 Squeak lane rule
+
+When `capabilities.squeak_site` is claimed, Squeak transport/site witnesses MAY
+extend expressiveness, but MUST project into the same canonical authority chain
+as other evidence surfaces (no side-channel acceptance path).
+
+### 9.3 Composition rule
+
+When Sig/Pi adjoint obligations and Squeak transport obligations are composed in
+one implementation profile:
+
+1. composition MUST occur via obligation and witness routing, not by creating a
+   second semantic authority schema,
+2. composed checks MUST remain deterministic and fail closed on unknown/unbound
+   lane or capability material,
+3. derived projections MAY vary by workflow, but MUST remain replayable to one
+   canonical authority artifact.

@@ -2349,3 +2349,37 @@ without adding new surface types.
   counters.
 - unit tests now cover all four missing-polarity modes and one passing mixed
   polarity case.
+
+---
+
+## 2026-02-22 — Decision 0083: Clarify lane separation for Sig/Pi, CwF, spans, and Squeak
+
+### Decision
+Adopt an explicit lane-separation contract for architectural composition:
+
+1. semantic doctrine lane: kernel + Gate + bidirectional obligation authority,
+2. strict checker lane: coherence/CwF strict-equality control-plane checks,
+3. witness commutation lane: span/square typed commutation artifacts,
+4. runtime transport lane: Squeak world/location transport and site checks.
+
+Sig/Pi (`Sigma_f -| f* -| Pi_f`) obligations remain semantic-lane authority.
+Squeak transport/site evidence remains capability-scoped transport lane.
+Composition between these lanes MUST route through one canonical obligation and
+witness authority boundary; no second semantic authority schema is allowed.
+
+### Rationale
+Recent capability growth (adjoints-sites + Squeak + span/square + CwF
+obligations) increases expressiveness but risks architectural duplication if lane
+ownership is implicit.
+
+Making lane boundaries explicit preserves the doctrine rule:
+minimum canonical encoding, maximum derived expressiveness.
+
+### Consequences
+- `draft/UNIFICATION-DOCTRINE` now includes a normative lane map and composition
+  constraints for Sig/Pi + Squeak integration.
+- `draft/SPEC-INDEX` now documents joint capability guidance and reading order
+  for composed Sig/Pi + Squeak systems.
+- Future composed profiles should add vectors/contracts by routing through
+  existing obligation/witness authority, not by adding parallel semantic
+  encodings.
