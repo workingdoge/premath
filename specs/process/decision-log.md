@@ -1287,3 +1287,35 @@ semantic authority path.
   hits.
 - docs/fixture entrypoints now expose `coherence-contract` as a first-class
   executable suite in the conformance surface.
+
+---
+
+## 2026-02-22 — Decision 0045: Add raw site/sheaf/torsor semantics lane with foundations companion
+
+### Decision
+Add a new informational semantics lane for site/topos abstractions:
+
+- `raw/CTX-SITE`
+- `raw/SHEAF-STACK`
+- `raw/TORSOR-EXT`
+
+and add a foundations companion note:
+
+- `docs/foundations/SITE-AND-TORSOR-NOTES.md`
+
+without changing checker authority or conformance claims.
+
+### Rationale
+We need a compact expression of base/fibre, coverage, descent, and extension
+ideas to guide coherence evolution, but we do not want to recreate Premath as a
+parallel architecture. This lane provides semantic compression while preserving
+the existing acceptance boundary (`checker -> obligations -> discharge ->
+witness`).
+
+### Consequences
+- site/sheaf/stack/torsor vocabulary is now available as a shared design
+  language for future coherence obligations.
+- no new normative claim is introduced; all additions are lifecycle-raw or
+  foundations notes.
+- `draft/SPEC-INDEX` and `raw/README` now reference this lane explicitly so the
+  abstraction path remains discoverable and coherent.

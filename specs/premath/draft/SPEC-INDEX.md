@@ -163,6 +163,12 @@ explicitly claimed under §5.4 or §5.6.
   `capabilities.instruction_typing` is claimed).
 - `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries and deterministic projections.
+- `raw/CTX-SITE` — informational site base (`Ctx`) + coverage (`J`) model for
+  context/refinement decomposition.
+- `raw/SHEAF-STACK` — informational presheaf/sheaf/stack rendering of
+  transport/descent obligations.
+- `raw/TORSOR-EXT` — informational torsor/extension/twist-class model for
+  non-canonical split behavior.
 - `raw/SEMANTICS-INFTOPOS` — presentation-free model sketch (informational).
 - `raw/HYPERDESCENT` — optional strengthening: hyperdescent.
 - `raw/UNIVERSE` — optional extension: universe + comprehension (Tarski-style).

@@ -15,6 +15,7 @@ Current raw tracks include:
 
 - kernel-oriented extensions (`DSL`, `OPCODES`, `HYPERDESCENT`, `UNIVERSE`),
 - operational runtime stack (`TUSK-CORE`, `SQUEAK-CORE`, `SQUEAK-SITE`, `PREMATH-CI`, `CI-TOPOS`),
+- site/semantic geometry notes (`CTX-SITE`, `SHEAF-STACK`, `TORSOR-EXT`),
 - explanatory semantics/presentation notes (`SEMANTICS-INFTOPOS`, `SPLIT-PRESENTATION`).
 
 Recent promotion: `NORMALIZER` moved to `../draft/NORMALIZER.md`.
