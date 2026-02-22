@@ -31,11 +31,9 @@ from instruction_policy import (  # type: ignore  # noqa: E402
     PolicyValidationError,
     validate_requested_checks,
 )
-from instruction_proposal import (  # type: ignore  # noqa: E402
-    ProposalValidationError,
-    compile_proposal_obligations,
-    discharge_proposal_obligations,
-    validate_proposal_payload,
+from proposal_check_client import (  # type: ignore  # noqa: E402
+    ProposalCheckError,
+    run_proposal_check,
 )
 from provider_env import map_github_to_premath_env, resolve_premath_ci_refs  # type: ignore  # noqa: E402
 from required_witness import verify_required_witness_payload  # type: ignore  # noqa: E402
@@ -909,10 +907,10 @@ def compute_instruction_digest(instruction: Dict[str, Any]) -> str:
     return "instr1_" + stable_hash(canonical_instruction_envelope(instruction))
 
 
-def validated_llm_proposal(proposal: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def checked_llm_proposal(proposal: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     try:
-        return validate_proposal_payload(proposal), None
-    except ProposalValidationError as exc:
+        return run_proposal_check(ROOT, proposal), None
+    except ProposalCheckError as exc:
         return None, exc.failure_class
 
 
@@ -1044,10 +1042,10 @@ def evaluate_instruction_proposal_checking(case: Dict[str, Any]) -> VectorOutcom
     if left["state"] == "unknown" and not allow_unknown:
         return VectorOutcome("rejected", "rejected", ["instruction_unknown_unroutable"])
 
-    proposal_view_a, err_a = validated_llm_proposal(proposal_a)
+    proposal_view_a, err_a = checked_llm_proposal(proposal_a)
     if err_a is not None:
         return VectorOutcome("rejected", "rejected", [err_a])
-    proposal_view_b, err_b = validated_llm_proposal(proposal_b)
+    proposal_view_b, err_b = checked_llm_proposal(proposal_b)
     if err_b is not None:
         return VectorOutcome("rejected", "rejected", [err_b])
 
@@ -1067,13 +1065,13 @@ def evaluate_instruction_proposal_checking(case: Dict[str, Any]) -> VectorOutcom
     if computed_kcir_a != computed_kcir_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 
-    obligations_a = compile_proposal_obligations(canonical_a)
-    obligations_b = compile_proposal_obligations(canonical_b)
+    obligations_a = proposal_view_a["obligations"]
+    obligations_b = proposal_view_b["obligations"]
     if obligations_a != obligations_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 
-    discharge_a = discharge_proposal_obligations(canonical_a, obligations_a)
-    discharge_b = discharge_proposal_obligations(canonical_b, obligations_b)
+    discharge_a = proposal_view_a["discharge"]
+    discharge_b = proposal_view_b["discharge"]
     if discharge_a != discharge_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
     if discharge_a.get("outcome") == "rejected":
@@ -1149,10 +1147,10 @@ def evaluate_adjoints_sites_proposal(case: Dict[str, Any]) -> VectorOutcome:
     if not isinstance(proposal_a, dict) or not isinstance(proposal_b, dict):
         return VectorOutcome("rejected", "rejected", ["proposal_invalid_shape"])
 
-    proposal_view_a, err_a = validated_llm_proposal(proposal_a)
+    proposal_view_a, err_a = checked_llm_proposal(proposal_a)
     if err_a is not None:
         return VectorOutcome("rejected", "rejected", [err_a])
-    proposal_view_b, err_b = validated_llm_proposal(proposal_b)
+    proposal_view_b, err_b = checked_llm_proposal(proposal_b)
     if err_b is not None:
         return VectorOutcome("rejected", "rejected", [err_b])
 
@@ -1165,8 +1163,8 @@ def evaluate_adjoints_sites_proposal(case: Dict[str, Any]) -> VectorOutcome:
     if canonical_a != canonical_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 
-    obligations_a = compile_proposal_obligations(canonical_a)
-    obligations_b = compile_proposal_obligations(canonical_b)
+    obligations_a = proposal_view_a["obligations"]
+    obligations_b = proposal_view_b["obligations"]
     if obligations_a != obligations_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 
@@ -1179,8 +1177,8 @@ def evaluate_adjoints_sites_proposal(case: Dict[str, Any]) -> VectorOutcome:
     if missing:
         return VectorOutcome("rejected", "rejected", ["adjoints_sites_obligation_missing"])
 
-    discharge_a = discharge_proposal_obligations(canonical_a, obligations_a)
-    discharge_b = discharge_proposal_obligations(canonical_b, obligations_b)
+    discharge_a = proposal_view_a["discharge"]
+    discharge_b = proposal_view_b["discharge"]
     if discharge_a != discharge_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 

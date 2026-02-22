@@ -10,7 +10,6 @@ import os
 import re
 import subprocess
 import sys
-import tempfile
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +21,7 @@ from instruction_policy import (
     validate_requested_checks,
 )
 from instruction_proposal import extract_instruction_proposal
+from proposal_check_client import run_proposal_check as run_core_proposal_check
 
 
 SUPPORTED_INSTRUCTION_TYPES = {
@@ -342,83 +342,20 @@ def run_check(root: Path, check_id: str) -> Dict[str, Any]:
     }
 
 
-def resolve_premath_cli(root: Path) -> List[str]:
-    premath_bin = root / "target" / "debug" / "premath"
-    if premath_bin.exists() and os.access(premath_bin, os.X_OK):
-        return [str(premath_bin)]
-    return ["cargo", "run", "--package", "premath-cli", "--"]
-
-
-def run_proposal_check(root: Path, envelope: Dict[str, Any]) -> tuple[Dict[str, Any] | None, List[Dict[str, Any]], Dict[str, Any] | None]:
+def run_instruction_proposal_check(
+    root: Path, envelope: Dict[str, Any]
+) -> tuple[Dict[str, Any] | None, List[Dict[str, Any]], Dict[str, Any] | None]:
     raw_proposal = extract_instruction_proposal(envelope)
     if raw_proposal is None:
         return None, [], None
 
-    with tempfile.TemporaryDirectory(prefix="premath-proposal-check-") as tmp:
-        proposal_path = Path(tmp) / "proposal.json"
-        proposal_path.write_text(
-            json.dumps(raw_proposal, ensure_ascii=False),
-            encoding="utf-8",
-        )
-        cmd = [
-            *resolve_premath_cli(root),
-            "proposal-check",
-            "--proposal",
-            str(proposal_path),
-            "--json",
-        ]
-        completed = subprocess.run(
-            cmd,
-            cwd=root,
-            capture_output=True,
-            text=True,
-        )
-
-    if completed.returncode != 0:
-        stderr_lines = [line.strip() for line in completed.stderr.splitlines() if line.strip()]
-        stdout_lines = [line.strip() for line in completed.stdout.splitlines() if line.strip()]
-        message: str | None = None
-        for line in reversed(stderr_lines):
-            if re.match(r"^[a-z0-9_]+:\s+.+$", line):
-                message = line
-                break
-        if message is None and stderr_lines:
-            message = stderr_lines[-1]
-        if message is None and stdout_lines:
-            message = stdout_lines[-1]
-        if message is None:
-            message = "proposal_invalid_shape: proposal-check failed"
-        raise ValueError(message)
-
-    try:
-        payload = json.loads(completed.stdout)
-    except json.JSONDecodeError as exc:
-        raise ValueError("proposal_invalid_shape: proposal-check returned invalid JSON") from exc
-    if not isinstance(payload, dict):
-        raise ValueError("proposal_invalid_shape: proposal-check payload must be an object")
-
-    canonical = payload.get("canonical")
-    digest = payload.get("digest")
-    kcir_ref = payload.get("kcirRef")
-    obligations = payload.get("obligations", [])
-    discharge = payload.get("discharge")
-
-    if not isinstance(canonical, dict):
-        raise ValueError("proposal_invalid_shape: proposal-check canonical payload must be an object")
-    if not isinstance(digest, str) or not digest:
-        raise ValueError("proposal_nondeterministic: proposal-check digest is missing")
-    if not isinstance(kcir_ref, str) or not kcir_ref:
-        raise ValueError("proposal_kcir_ref_mismatch: proposal-check kcirRef is missing")
-    if not isinstance(obligations, list):
-        raise ValueError("proposal_invalid_step: proposal-check obligations must be a list")
-    if discharge is not None and not isinstance(discharge, dict):
-        raise ValueError("proposal_invalid_step: proposal-check discharge payload must be an object")
+    payload = run_core_proposal_check(root, raw_proposal)
 
     return {
-        "canonical": canonical,
-        "digest": digest,
-        "kcirRef": kcir_ref,
-    }, obligations, discharge
+        "canonical": payload["canonical"],
+        "digest": payload["digest"],
+        "kcirRef": payload["kcirRef"],
+    }, payload["obligations"], payload["discharge"]
 
 
 def main() -> int:
@@ -465,7 +402,9 @@ def main() -> int:
         typing_policy = parse_typing_policy(envelope)
         capability_claims = parse_capability_claims(envelope)
         instruction_classification = classify_instruction(envelope, requested_checks)
-        proposal, proposal_obligations, proposal_discharge = run_proposal_check(root, envelope)
+        proposal, proposal_obligations, proposal_discharge = run_instruction_proposal_check(
+            root, envelope
+        )
         try:
             validate_proposal_binding_matches_envelope(normalizer_id, policy_digest, proposal)
         except PolicyValidationError as exc:
