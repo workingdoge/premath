@@ -181,7 +181,9 @@ def _base_payload() -> dict:
                 "role": "projection_only",
                 "supportUntilEpoch": "2026-06",
             },
-            "kernelComplianceSentinel": {
+            "bidirEvidenceRoute": {
+                "routeKind": "direct_checker_discharge",
+                "obligationFieldRef": "bidirCheckerObligations",
                 "requiredObligations": [
                     "stability",
                     "locality",
@@ -312,9 +314,7 @@ class ControlPlaneContractTests(unittest.TestCase):
         )
         self.assertIn(
             "stability",
-            loaded["evidenceStage2Authority"]["kernelComplianceSentinel"][
-                "requiredObligations"
-            ],
+            loaded["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"],
         )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
@@ -416,11 +416,11 @@ class ControlPlaneContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "canonical Stage 2 classes"):
             self._load(payload)
 
-    def test_load_rejects_stage2_kernel_sentinel_obligation_mismatch(self) -> None:
+    def test_load_rejects_stage2_bidir_route_obligation_mismatch(self) -> None:
         payload = _base_payload()
-        payload["evidenceStage2Authority"]["kernelComplianceSentinel"][
-            "requiredObligations"
-        ] = ["stability"]
+        payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"] = [
+            "stability"
+        ]
         with self.assertRaisesRegex(ValueError, "canonical Stage 2 kernel obligations"):
             self._load(payload)
 

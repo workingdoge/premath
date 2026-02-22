@@ -88,7 +88,14 @@
           "role": "authority",
           "supportUntilEpoch": "2026-06"
         },
-        "kernelComplianceSentinel": {
+        "failureClasses": {
+          "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+          "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+          "unbound": "unification.evidence_stage2.unbound"
+        },
+        "bidirEvidenceRoute": {
+          "routeKind": "direct_checker_discharge",
+          "obligationFieldRef": "bidirCheckerObligations",
           "requiredObligations": [
             "stability",
             "locality",
@@ -102,11 +109,6 @@
             "missing": "unification.evidence_stage2.kernel_compliance_missing",
             "drift": "unification.evidence_stage2.kernel_compliance_drift"
           }
-        },
-        "failureClasses": {
-          "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
-          "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
-          "unbound": "unification.evidence_stage2.unbound"
         }
       },
       "evidenceLanes": {
@@ -151,6 +153,11 @@
         "lane_ownership_violation",
         "lane_route_missing"
       ]
+    }
+  },
+  "inputs": {
+    "controlPlaneContract": {
+      "evidenceStage2Authority": null
     }
   }
 }

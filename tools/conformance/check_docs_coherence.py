@@ -484,44 +484,89 @@ def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[s
                 f"{contract_path}: evidenceStage2Authority.compatibilityAlias.supportUntilEpoch must align with lifecycle rollover epoch"
             )
 
-        kernel_sentinel = stage2_authority.get("kernelComplianceSentinel")
-        if not isinstance(kernel_sentinel, dict):
+        bidir_route = stage2_authority.get("bidirEvidenceRoute")
+        if not isinstance(bidir_route, dict):
             raise ValueError(
-                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel must be an object"
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute must be an object"
             )
-        required_obligations = kernel_sentinel.get("requiredObligations")
+        route_kind = bidir_route.get("routeKind")
+        if route_kind != "direct_checker_discharge":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.routeKind must be `direct_checker_discharge`"
+            )
+        obligation_field_ref = bidir_route.get("obligationFieldRef")
+        if obligation_field_ref != "bidirCheckerObligations":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.obligationFieldRef must be `bidirCheckerObligations`"
+            )
+        required_obligations = bidir_route.get("requiredObligations")
         if not isinstance(required_obligations, list) or not required_obligations:
             raise ValueError(
-                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must be a non-empty list"
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must be a non-empty list"
             )
         parsed_required_obligations: List[str] = []
         for idx, item in enumerate(required_obligations):
             if not isinstance(item, str) or not item.strip():
                 raise ValueError(
-                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations[{idx}] must be a non-empty string"
+                    f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations[{idx}] must be a non-empty string"
                 )
             parsed_required_obligations.append(item.strip())
         if len(set(parsed_required_obligations)) != len(parsed_required_obligations):
             raise ValueError(
-                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must not contain duplicates"
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must not contain duplicates"
             )
         if set(parsed_required_obligations) != set(STAGE2_REQUIRED_KERNEL_OBLIGATIONS):
             raise ValueError(
-                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match canonical Stage 2 kernel obligations"
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must match canonical Stage 2 kernel obligations"
             )
-        kernel_sentinel_failure_classes = kernel_sentinel.get("failureClasses")
-        if not isinstance(kernel_sentinel_failure_classes, dict):
+        bidir_failure_classes = bidir_route.get("failureClasses")
+        if not isinstance(bidir_failure_classes, dict):
             raise ValueError(
-                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must be an object"
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.failureClasses must be an object"
             )
-        parsed_kernel_sentinel_classes = (
-            kernel_sentinel_failure_classes.get("missing"),
-            kernel_sentinel_failure_classes.get("drift"),
+        parsed_bidir_classes = (
+            bidir_failure_classes.get("missing"),
+            bidir_failure_classes.get("drift"),
         )
-        if parsed_kernel_sentinel_classes != STAGE2_KERNEL_COMPLIANCE_CANONICAL_CLASSES:
+        if parsed_bidir_classes != STAGE2_KERNEL_COMPLIANCE_CANONICAL_CLASSES:
             raise ValueError(
-                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must map to canonical Stage 2 kernel-compliance classes"
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.failureClasses must map to canonical Stage 2 kernel-compliance classes"
             )
+        kernel_sentinel = stage2_authority.get("kernelComplianceSentinel")
+        if kernel_sentinel is not None:
+            if not isinstance(kernel_sentinel, dict):
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel must be an object when present"
+                )
+            sentinel_required_obligations = kernel_sentinel.get("requiredObligations")
+            if not isinstance(sentinel_required_obligations, list) or not sentinel_required_obligations:
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must be a non-empty list when present"
+                )
+            parsed_sentinel_required: List[str] = []
+            for idx, item in enumerate(sentinel_required_obligations):
+                if not isinstance(item, str) or not item.strip():
+                    raise ValueError(
+                        f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations[{idx}] must be a non-empty string"
+                    )
+                parsed_sentinel_required.append(item.strip())
+            if set(parsed_sentinel_required) != set(parsed_required_obligations):
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match evidenceStage2Authority.bidirEvidenceRoute.requiredObligations"
+                )
+            sentinel_failure_classes = kernel_sentinel.get("failureClasses")
+            if not isinstance(sentinel_failure_classes, dict):
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must be an object"
+                )
+            parsed_sentinel_classes = (
+                sentinel_failure_classes.get("missing"),
+                sentinel_failure_classes.get("drift"),
+            )
+            if parsed_sentinel_classes != parsed_bidir_classes:
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must match evidenceStage2Authority.bidirEvidenceRoute.failureClasses"
+                )
 
         stage2_failure_classes = stage2_authority.get("failureClasses")
         if not isinstance(stage2_failure_classes, dict):
@@ -540,9 +585,11 @@ def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[s
         out["stage2"] = {
             "profileKind": stage2_profile_kind.strip(),
             "activeStage": "stage2",
+            "routeKind": route_kind,
+            "obligationFieldRef": obligation_field_ref,
             "requiredObligations": parsed_required_obligations,
             "failureClasses": parsed_stage2_classes,
-            "kernelComplianceFailureClasses": parsed_kernel_sentinel_classes,
+            "bidirFailureClasses": parsed_bidir_classes,
         }
 
     return out

@@ -376,17 +376,17 @@ def check_control_plane_lane_bindings(
     if not isinstance(contract_stage2_classes_obj, dict):
         contract_stage2_classes_obj = {}
     contract_stage2_failure_classes = as_sorted_strings(contract_stage2_classes_obj.values())
-    contract_stage2_kernel = contract_stage2_authority.get("kernelComplianceSentinel", {})
-    if not isinstance(contract_stage2_kernel, dict):
-        contract_stage2_kernel = {}
-    contract_stage2_kernel_required_obligations = as_sorted_strings(
-        contract_stage2_kernel.get("requiredObligations", ())
+    contract_stage2_bidir_route = contract_stage2_authority.get("bidirEvidenceRoute", {})
+    if not isinstance(contract_stage2_bidir_route, dict):
+        contract_stage2_bidir_route = {}
+    contract_stage2_bidir_required_obligations = as_sorted_strings(
+        contract_stage2_bidir_route.get("requiredObligations", ())
     )
-    contract_stage2_kernel_classes_obj = contract_stage2_kernel.get("failureClasses", {})
-    if not isinstance(contract_stage2_kernel_classes_obj, dict):
-        contract_stage2_kernel_classes_obj = {}
-    contract_stage2_kernel_failure_classes = as_sorted_strings(
-        contract_stage2_kernel_classes_obj.values()
+    contract_stage2_bidir_classes_obj = contract_stage2_bidir_route.get("failureClasses", {})
+    if not isinstance(contract_stage2_bidir_classes_obj, dict):
+        contract_stage2_bidir_classes_obj = {}
+    contract_stage2_bidir_failure_classes = as_sorted_strings(
+        contract_stage2_bidir_classes_obj.values()
     )
 
     checker_expected_core = as_sorted_strings(
@@ -437,19 +437,33 @@ def check_control_plane_lane_bindings(
     checker_stage2_required_classes = as_sorted_strings(
         checker_stage2_required_classes_obj.values()
     )
-    checker_stage2_kernel_sentinel = checker_stage2_authority.get("kernelComplianceSentinel", {})
-    if not isinstance(checker_stage2_kernel_sentinel, dict):
-        checker_stage2_kernel_sentinel = {}
-    checker_stage2_kernel_required_obligations = as_sorted_strings(
-        checker_stage2_kernel_sentinel.get("requiredObligations", ())
+    checker_stage2_bidir_route = checker_stage2_authority.get("bidirEvidenceRoute", {})
+    if not isinstance(checker_stage2_bidir_route, dict):
+        checker_stage2_bidir_route = {}
+    checker_stage2_bidir_required_obligations = as_sorted_strings(
+        checker_stage2_bidir_route.get("requiredObligations", ())
     )
-    checker_stage2_kernel_required_classes_obj = checker_stage2_authority.get(
-        "requiredKernelComplianceFailureClasses", {}
+    if not checker_stage2_bidir_required_obligations:
+        checker_stage2_kernel_sentinel = checker_stage2_authority.get(
+            "kernelComplianceSentinel", {}
+        )
+        if isinstance(checker_stage2_kernel_sentinel, dict):
+            checker_stage2_bidir_required_obligations = as_sorted_strings(
+                checker_stage2_kernel_sentinel.get("requiredObligations", ())
+            )
+    checker_stage2_bidir_required_classes_obj = checker_stage2_authority.get(
+        "requiredBidirEvidenceFailureClasses", {}
     )
-    if not isinstance(checker_stage2_kernel_required_classes_obj, dict):
-        checker_stage2_kernel_required_classes_obj = {}
-    checker_stage2_kernel_required_classes = as_sorted_strings(
-        checker_stage2_kernel_required_classes_obj.values()
+    if not isinstance(checker_stage2_bidir_required_classes_obj, dict):
+        checker_stage2_bidir_required_classes_obj = {}
+    if not checker_stage2_bidir_required_classes_obj:
+        kernel_classes_fallback = checker_stage2_authority.get(
+            "requiredKernelComplianceFailureClasses", {}
+        )
+        if isinstance(kernel_classes_fallback, dict):
+            checker_stage2_bidir_required_classes_obj = kernel_classes_fallback
+    checker_stage2_bidir_required_classes = as_sorted_strings(
+        checker_stage2_bidir_required_classes_obj.values()
     )
     checker_lane_values = lane_registry.get("evidenceLanes")
     if isinstance(checker_lane_values, dict) and checker_lane_values != contract_evidence_lanes:
@@ -495,19 +509,19 @@ def check_control_plane_lane_bindings(
         reasons.append(
             "CONTROL-PLANE-CONTRACT evidenceStage2Authority.failureClasses differ from checker-required classes"
         )
-    if checker_stage2_kernel_required_obligations and (
-        checker_stage2_kernel_required_obligations
-        != contract_stage2_kernel_required_obligations
+    if checker_stage2_bidir_required_obligations and (
+        checker_stage2_bidir_required_obligations
+        != contract_stage2_bidir_required_obligations
     ):
         reasons.append(
-            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.kernelComplianceSentinel.requiredObligations differ from checker-observed values"
+            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.bidirEvidenceRoute.requiredObligations differ from checker-observed values"
         )
-    if checker_stage2_kernel_required_classes and (
-        checker_stage2_kernel_required_classes
-        != contract_stage2_kernel_failure_classes
+    if checker_stage2_bidir_required_classes and (
+        checker_stage2_bidir_required_classes
+        != contract_stage2_bidir_failure_classes
     ):
         reasons.append(
-            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.kernelComplianceSentinel.failureClasses differ from checker-required classes"
+            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.bidirEvidenceRoute.failureClasses differ from checker-required classes"
         )
 
     loader_evidence_lanes = dict(getattr(control_plane_module, "EVIDENCE_LANES", {}))
@@ -592,11 +606,11 @@ def check_control_plane_lane_bindings(
     loader_stage2_alias_support_until_epoch = str(
         getattr(control_plane_module, "EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH", "")
     )
-    loader_stage2_kernel_required_obligations = as_sorted_strings(
-        getattr(control_plane_module, "EVIDENCE_STAGE2_KERNEL_REQUIRED_OBLIGATIONS", ())
+    loader_stage2_bidir_required_obligations = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS", ())
     )
-    loader_stage2_kernel_failure_classes = as_sorted_strings(
-        getattr(control_plane_module, "EVIDENCE_STAGE2_KERNEL_FAILURE_CLASSES", ())
+    loader_stage2_bidir_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES", ())
     )
 
     if loader_evidence_lanes != contract_evidence_lanes:
@@ -714,19 +728,18 @@ def check_control_plane_lane_bindings(
             "control_plane_contract.py EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH drift from contract payload"
         )
     if (
-        contract_stage2_kernel_required_obligations
-        and loader_stage2_kernel_required_obligations
-        != contract_stage2_kernel_required_obligations
+        contract_stage2_bidir_required_obligations
+        and loader_stage2_bidir_required_obligations != contract_stage2_bidir_required_obligations
     ):
         reasons.append(
-            "control_plane_contract.py EVIDENCE_STAGE2_KERNEL_REQUIRED_OBLIGATIONS drift from contract payload"
+            "control_plane_contract.py EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS drift from contract payload"
         )
     if (
-        contract_stage2_kernel_failure_classes
-        and loader_stage2_kernel_failure_classes != contract_stage2_kernel_failure_classes
+        contract_stage2_bidir_failure_classes
+        and loader_stage2_bidir_failure_classes != contract_stage2_bidir_failure_classes
     ):
         reasons.append(
-            "control_plane_contract.py EVIDENCE_STAGE2_KERNEL_FAILURE_CLASSES drift from contract payload"
+            "control_plane_contract.py EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES drift from contract payload"
         )
 
     details = {
@@ -768,8 +781,8 @@ def check_control_plane_lane_bindings(
                 "aliasRole": contract_stage2_alias_role,
                 "aliasSupportUntilEpoch": contract_stage2_alias_support_until_epoch,
                 "authorityFailureClasses": contract_stage2_failure_classes,
-                "kernelRequiredObligations": contract_stage2_kernel_required_obligations,
-                "kernelFailureClasses": contract_stage2_kernel_failure_classes,
+                "bidirRequiredObligations": contract_stage2_bidir_required_obligations,
+                "bidirFailureClasses": contract_stage2_bidir_failure_classes,
             },
         },
         "checker": {
@@ -785,8 +798,8 @@ def check_control_plane_lane_bindings(
             },
             "stage2": {
                 "authorityRequiredFailureClasses": checker_stage2_required_classes,
-                "kernelRequiredObligations": checker_stage2_kernel_required_obligations,
-                "kernelRequiredFailureClasses": checker_stage2_kernel_required_classes,
+                "bidirRequiredObligations": checker_stage2_bidir_required_obligations,
+                "bidirRequiredFailureClasses": checker_stage2_bidir_required_classes,
             },
         },
         "loader": {
@@ -825,8 +838,8 @@ def check_control_plane_lane_bindings(
                 "aliasRole": loader_stage2_alias_role,
                 "aliasSupportUntilEpoch": loader_stage2_alias_support_until_epoch,
                 "authorityFailureClasses": loader_stage2_failure_classes,
-                "kernelRequiredObligations": loader_stage2_kernel_required_obligations,
-                "kernelFailureClasses": loader_stage2_kernel_failure_classes,
+                "bidirRequiredObligations": loader_stage2_bidir_required_obligations,
+                "bidirFailureClasses": loader_stage2_bidir_failure_classes,
             },
         },
     }

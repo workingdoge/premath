@@ -226,7 +226,9 @@
       "role": "projection_only",
       "supportUntilEpoch": "2026-06"
     },
-    "kernelComplianceSentinel": {
+    "bidirEvidenceRoute": {
+      "routeKind": "direct_checker_discharge",
+      "obligationFieldRef": "bidirCheckerObligations",
       "requiredObligations": [
         "stability",
         "locality",
@@ -239,6 +241,10 @@
       "failureClasses": {
         "missing": "unification.evidence_stage2.kernel_compliance_missing",
         "drift": "unification.evidence_stage2.kernel_compliance_drift"
+      },
+      "fallback": {
+        "mode": "profile_gated_sentinel",
+        "profileKinds": []
       }
     },
     "failureClasses": {

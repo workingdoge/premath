@@ -134,7 +134,9 @@ run = "echo ok"
                     "role": "projection_only",
                     "supportUntilEpoch": "2026-06",
                 },
-                "kernelComplianceSentinel": {
+                "bidirEvidenceRoute": {
+                    "routeKind": "direct_checker_discharge",
+                    "obligationFieldRef": "bidirCheckerObligations",
                     "requiredObligations": [
                         "stability",
                         "locality",
@@ -293,7 +295,9 @@ run = "echo ok"
                     "role": "projection_only",
                     "supportUntilEpoch": "2026-07",
                 },
-                "kernelComplianceSentinel": {
+                "bidirEvidenceRoute": {
+                    "routeKind": "direct_checker_discharge",
+                    "obligationFieldRef": "bidirCheckerObligations",
                     "requiredObligations": [
                         "stability",
                         "locality",
@@ -321,7 +325,7 @@ run = "echo ok"
             with self.assertRaisesRegex(ValueError, "supportUntilEpoch must align"):
                 check_docs_coherence.parse_control_plane_stage1_contract(path)
 
-    def test_parse_control_plane_stage1_contract_rejects_stage2_kernel_sentinel_mismatch(self) -> None:
+    def test_parse_control_plane_stage1_contract_rejects_stage2_bidir_route_mismatch(self) -> None:
         payload = {
             "schema": 1,
             "contractKind": "premath.control_plane.contract.v1",
@@ -390,7 +394,9 @@ run = "echo ok"
                     "role": "projection_only",
                     "supportUntilEpoch": "2026-06",
                 },
-                "kernelComplianceSentinel": {
+                "bidirEvidenceRoute": {
+                    "routeKind": "direct_checker_discharge",
+                    "obligationFieldRef": "bidirCheckerObligations",
                     "requiredObligations": ["stability"],
                     "failureClasses": {
                         "missing": "unification.evidence_stage2.kernel_compliance_missing",
@@ -404,7 +410,7 @@ run = "echo ok"
                 },
             },
         }
-        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-stage2-sentinel-invalid-") as tmp:
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-stage2-bidir-invalid-") as tmp:
             path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
             path.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "canonical Stage 2 kernel obligations"):

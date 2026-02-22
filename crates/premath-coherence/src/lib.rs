@@ -129,6 +129,9 @@ const STAGE2_AUTHORITY_CLASS_UNBOUND: &str = "unification.evidence_stage2.unboun
 const STAGE2_KERNEL_CLASS_MISSING: &str = "unification.evidence_stage2.kernel_compliance_missing";
 const STAGE2_KERNEL_CLASS_DRIFT: &str = "unification.evidence_stage2.kernel_compliance_drift";
 const STAGE2_AUTHORITY_ALIAS_ROLE: &str = "projection_only";
+const STAGE2_BIDIR_ROUTE_KIND: &str = "direct_checker_discharge";
+const STAGE2_BIDIR_OBLIGATION_FIELD_REF: &str = "bidirCheckerObligations";
+const STAGE2_BIDIR_FALLBACK_MODE: &str = "profile_gated_sentinel";
 const STAGE2_REQUIRED_KERNEL_OBLIGATIONS: &[&str] = &[
     "stability",
     "locality",
@@ -441,7 +444,9 @@ struct ControlPlaneStage2Authority {
     #[serde(default)]
     compatibility_alias: ControlPlaneStage2CompatibilityAlias,
     #[serde(default)]
-    kernel_compliance_sentinel: ControlPlaneStage2KernelComplianceSentinel,
+    bidir_evidence_route: ControlPlaneStage2BidirEvidenceRoute,
+    #[serde(default)]
+    kernel_compliance_sentinel: Option<ControlPlaneStage2KernelComplianceSentinel>,
     #[serde(default)]
     failure_classes: ControlPlaneStage2FailureClasses,
 }
@@ -485,20 +490,44 @@ struct ControlPlaneStage2FailureClasses {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct ControlPlaneStage2KernelComplianceSentinel {
+struct ControlPlaneStage2BidirEvidenceRoute {
+    #[serde(default)]
+    route_kind: String,
+    #[serde(default)]
+    obligation_field_ref: String,
     #[serde(default)]
     required_obligations: Vec<String>,
     #[serde(default)]
-    failure_classes: ControlPlaneStage2KernelComplianceFailureClasses,
+    failure_classes: ControlPlaneStage2BidirEvidenceFailureClasses,
+    #[serde(default)]
+    fallback: Option<ControlPlaneStage2BidirEvidenceFallback>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct ControlPlaneStage2KernelComplianceFailureClasses {
+struct ControlPlaneStage2BidirEvidenceFailureClasses {
     #[serde(default)]
     missing: String,
     #[serde(default)]
     drift: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2BidirEvidenceFallback {
+    #[serde(default)]
+    mode: String,
+    #[serde(default)]
+    profile_kinds: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2KernelComplianceSentinel {
+    #[serde(default)]
+    required_obligations: Vec<String>,
+    #[serde(default)]
+    failure_classes: ControlPlaneStage2BidirEvidenceFailureClasses,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1887,7 +1916,7 @@ fn evaluate_control_plane_stage2_authority(
         "aliasWindowViolation": STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION,
         "unbound": STAGE2_AUTHORITY_CLASS_UNBOUND,
     });
-    let required_kernel_failure_classes = json!({
+    let required_bidir_failure_classes = json!({
         "missing": STAGE2_KERNEL_CLASS_MISSING,
         "drift": STAGE2_KERNEL_CLASS_DRIFT,
     });
@@ -1922,12 +1951,13 @@ fn evaluate_control_plane_stage2_authority(
         "activeStage": null,
         "typedAuthority": null,
         "compatibilityAlias": null,
+        "bidirEvidenceRoute": null,
         "failureClasses": null,
         "kernelComplianceSentinel": null,
         "lifecycleActiveEpoch": active_epoch,
         "lifecycleRolloverEpoch": lifecycle_rollover_epoch,
         "requiredFailureClasses": required_failure_classes,
-        "requiredKernelComplianceFailureClasses": required_kernel_failure_classes,
+        "requiredBidirEvidenceFailureClasses": required_bidir_failure_classes,
         "requiredBidirObligations": required_bidir_obligations,
         "canonicalKernelObligations": canonical_kernel_obligations,
         "kernelRegistryObligations": sorted_vec_from_set(&kernel_registry_obligations),
@@ -1945,8 +1975,11 @@ fn evaluate_control_plane_stage2_authority(
     details["activeStage"] = json!(&stage2.active_stage);
     details["typedAuthority"] = json!(&stage2.typed_authority);
     details["compatibilityAlias"] = json!(&stage2.compatibility_alias);
+    details["bidirEvidenceRoute"] = json!(&stage2.bidir_evidence_route);
     details["failureClasses"] = json!(&stage2.failure_classes);
-    details["kernelComplianceSentinel"] = json!(&stage2.kernel_compliance_sentinel);
+    if let Some(sentinel) = &stage2.kernel_compliance_sentinel {
+        details["kernelComplianceSentinel"] = json!(sentinel);
+    }
 
     let mut failures = Vec::new();
     let mut reasons = Vec::new();
@@ -2095,72 +2128,129 @@ fn evaluate_control_plane_stage2_authority(
         ));
     }
 
-    let sentinel_required = dedupe_sorted(
+    if stage2.bidir_evidence_route.route_kind.trim() != STAGE2_BIDIR_ROUTE_KIND {
+        failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceStage2Authority.bidirEvidenceRoute.routeKind must be `{STAGE2_BIDIR_ROUTE_KIND}`"
+        ));
+    }
+    if stage2.bidir_evidence_route.obligation_field_ref.trim() != STAGE2_BIDIR_OBLIGATION_FIELD_REF
+    {
+        failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceStage2Authority.bidirEvidenceRoute.obligationFieldRef must be `{STAGE2_BIDIR_OBLIGATION_FIELD_REF}`"
+        ));
+    }
+
+    let bidir_required = dedupe_sorted(
         stage2
-            .kernel_compliance_sentinel
+            .bidir_evidence_route
             .required_obligations
             .iter()
             .map(|obligation| obligation.trim().to_string())
             .filter(|obligation| !obligation.is_empty())
             .collect(),
     );
-    let sentinel_required_set: BTreeSet<String> = sentinel_required.iter().cloned().collect();
-    if sentinel_required.is_empty() {
+    let bidir_required_set: BTreeSet<String> = bidir_required.iter().cloned().collect();
+    if bidir_required.is_empty() {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE.to_string());
         reasons.push(
-            "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must be non-empty"
+            "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must be non-empty"
                 .to_string(),
         );
     } else {
         for required in &required_bidir_obligations {
-            if !sentinel_required_set.contains(required) {
+            if !bidir_required_set.contains(required) {
                 failures.push(GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE.to_string());
                 reasons.push(format!(
-                    "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations missing required BIDIR obligation `{required}`"
+                    "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations missing required BIDIR obligation `{required}`"
                 ));
             }
         }
     }
-    if sentinel_required_set != required_bidir_set {
+    if bidir_required_set != required_bidir_set {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(
-            "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match requiredBidirObligations"
+            "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must match requiredBidirObligations"
                 .to_string(),
         );
     }
-    if sentinel_required_set != canonical_kernel_set {
+    if bidir_required_set != canonical_kernel_set {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(
-            "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match canonical Stage 2 kernel obligations"
+            "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must match canonical Stage 2 kernel obligations"
                 .to_string(),
         );
     }
-    for obligation in &sentinel_required {
+    for obligation in &bidir_required {
         if !kernel_registry_obligations.contains(obligation) {
             failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
             reasons.push(format!(
-                "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations contains unknown kernel obligation `{obligation}`"
+                "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations contains unknown kernel obligation `{obligation}`"
             ));
         }
     }
 
-    let sentinel_missing_class = stage2
-        .kernel_compliance_sentinel
-        .failure_classes
-        .missing
-        .trim();
-    let sentinel_drift_class = stage2
-        .kernel_compliance_sentinel
-        .failure_classes
-        .drift
-        .trim();
-    if sentinel_missing_class != STAGE2_KERNEL_CLASS_MISSING
-        || sentinel_drift_class != STAGE2_KERNEL_CLASS_DRIFT
+    let bidir_missing_class = stage2.bidir_evidence_route.failure_classes.missing.trim();
+    let bidir_drift_class = stage2.bidir_evidence_route.failure_classes.drift.trim();
+    if bidir_missing_class != STAGE2_KERNEL_CLASS_MISSING
+        || bidir_drift_class != STAGE2_KERNEL_CLASS_DRIFT
     {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(format!(
-            "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must map to canonical classes ({STAGE2_KERNEL_CLASS_MISSING}, {STAGE2_KERNEL_CLASS_DRIFT})"
+            "evidenceStage2Authority.bidirEvidenceRoute.failureClasses must map to canonical classes ({STAGE2_KERNEL_CLASS_MISSING}, {STAGE2_KERNEL_CLASS_DRIFT})"
         ));
+    }
+
+    if let Some(sentinel) = &stage2.kernel_compliance_sentinel {
+        let fallback = stage2.bidir_evidence_route.fallback.as_ref();
+        let fallback_mode = fallback.map(|value| value.mode.trim()).unwrap_or_default();
+        let fallback_profile_kinds: BTreeSet<String> = fallback
+            .map(|value| {
+                value
+                    .profile_kinds
+                    .iter()
+                    .map(|item| item.trim().to_string())
+                    .filter(|item| !item.is_empty())
+                    .collect()
+            })
+            .unwrap_or_default();
+        if fallback_mode != STAGE2_BIDIR_FALLBACK_MODE
+            || !fallback_profile_kinds.contains(stage2.profile_kind.trim())
+        {
+            failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+            reasons.push(
+                "evidenceStage2Authority.kernelComplianceSentinel requires bidirEvidenceRoute.fallback.mode=`profile_gated_sentinel` with current profileKind included in fallback.profileKinds"
+                    .to_string(),
+            );
+        }
+        let sentinel_required = dedupe_sorted(
+            sentinel
+                .required_obligations
+                .iter()
+                .map(|obligation| obligation.trim().to_string())
+                .filter(|obligation| !obligation.is_empty())
+                .collect(),
+        );
+        let sentinel_required_set: BTreeSet<String> = sentinel_required.iter().cloned().collect();
+        if sentinel_required_set != bidir_required_set {
+            failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+            reasons.push(
+                "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match evidenceStage2Authority.bidirEvidenceRoute.requiredObligations"
+                    .to_string(),
+            );
+        }
+        let sentinel_missing_class = sentinel.failure_classes.missing.trim();
+        let sentinel_drift_class = sentinel.failure_classes.drift.trim();
+        if sentinel_missing_class != bidir_missing_class
+            || sentinel_drift_class != bidir_drift_class
+        {
+            failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+            reasons.push(
+                "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must match evidenceStage2Authority.bidirEvidenceRoute.failureClasses"
+                    .to_string(),
+            );
+        }
     }
 
     details["reasons"] = json!(dedupe_sorted(reasons));
@@ -5148,7 +5238,9 @@ Current deterministic projected check IDs include:
                     "role": "projection_only",
                     "supportUntilEpoch": "2026-06"
                 },
-                "kernelComplianceSentinel": {
+                "bidirEvidenceRoute": {
+                    "routeKind": "direct_checker_discharge",
+                    "obligationFieldRef": "bidirCheckerObligations",
                     "requiredObligations": [
                         "stability",
                         "locality",
@@ -6039,12 +6131,12 @@ Current deterministic projected check IDs include:
     }
 
     #[test]
-    fn check_gate_chain_parity_rejects_stage2_kernel_sentinel_obligation_mismatch() {
-        let temp = TempDirGuard::new("gate-chain-stage2-kernel-sentinel-obligation-mismatch");
+    fn check_gate_chain_parity_rejects_stage2_bidir_route_obligation_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-bidir-route-obligation-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
-        payload["evidenceStage2Authority"]["kernelComplianceSentinel"]["requiredObligations"] =
+        payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"] =
             json!(["stability"]);
         write_json_file(
             &temp
@@ -6065,12 +6157,12 @@ Current deterministic projected check IDs include:
     }
 
     #[test]
-    fn check_gate_chain_parity_rejects_stage2_kernel_sentinel_failure_class_mismatch() {
-        let temp = TempDirGuard::new("gate-chain-stage2-kernel-sentinel-class-mismatch");
+    fn check_gate_chain_parity_rejects_stage2_bidir_route_failure_class_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-bidir-route-class-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
-        payload["evidenceStage2Authority"]["kernelComplianceSentinel"]["failureClasses"]["drift"] =
+        payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["failureClasses"]["drift"] =
             json!("unification.evidence_stage2.kernel_drift");
         write_json_file(
             &temp
