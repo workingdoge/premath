@@ -13,8 +13,9 @@ from proposal_check_client import ProposalCheckError, run_proposal_check
 
 
 class ProposalCheckClientTests(unittest.TestCase):
-    def test_run_proposal_check_accepts_valid_payload(self) -> None:
-        payload = {
+    @staticmethod
+    def _valid_payload() -> dict:
+        return {
             "canonical": {
                 "proposalKind": "value",
                 "targetCtxRef": "ctx/demo",
@@ -39,6 +40,9 @@ class ProposalCheckClientTests(unittest.TestCase):
                 "failureClasses": [],
             },
         }
+
+    def test_run_proposal_check_accepts_valid_payload(self) -> None:
+        payload = self._valid_payload()
         completed = subprocess.CompletedProcess(
             args=["premath", "proposal-check"],
             returncode=0,
@@ -80,30 +84,8 @@ class ProposalCheckClientTests(unittest.TestCase):
         self.assertEqual(exc.exception.failure_class, "proposal_invalid_shape")
 
     def test_run_proposal_check_rejects_missing_kcir_ref(self) -> None:
-        payload = {
-            "canonical": {
-                "proposalKind": "value",
-                "targetCtxRef": "ctx/demo",
-                "targetJudgment": {"kind": "obj", "shape": "Type"},
-                "candidateRefs": [],
-                "binding": {
-                    "normalizerId": "normalizer.ci.v1",
-                    "policyDigest": "pol1_demo",
-                },
-            },
-            "digest": "prop1_demo",
-            "obligations": [],
-            "discharge": {
-                "mode": "normalized",
-                "binding": {
-                    "normalizerId": "normalizer.ci.v1",
-                    "policyDigest": "pol1_demo",
-                },
-                "outcome": "accepted",
-                "steps": [],
-                "failureClasses": [],
-            },
-        }
+        payload = self._valid_payload()
+        payload.pop("kcirRef", None)
         completed = subprocess.CompletedProcess(
             args=["premath", "proposal-check"],
             returncode=0,
@@ -116,6 +98,33 @@ class ProposalCheckClientTests(unittest.TestCase):
                 run_proposal_check(Path("."), {"proposalKind": "value"})
 
         self.assertEqual(exc.exception.failure_class, "proposal_kcir_ref_mismatch")
+
+    def test_run_proposal_check_retries_on_stale_local_payload_shape(self) -> None:
+        stale_payload = self._valid_payload()
+        stale_payload.pop("kcirRef", None)
+        first = subprocess.CompletedProcess(
+            args=["premath", "proposal-check"],
+            returncode=0,
+            stdout=json.dumps(stale_payload),
+            stderr="",
+        )
+        second_payload = self._valid_payload()
+        second = subprocess.CompletedProcess(
+            args=["cargo", "run", "--package", "premath-cli", "--", "proposal-check"],
+            returncode=0,
+            stdout=json.dumps(second_payload),
+            stderr="",
+        )
+
+        with patch("proposal_check_client.resolve_premath_cli", return_value=["/tmp/premath"]):
+            with patch(
+                "proposal_check_client.subprocess.run",
+                side_effect=[first, second],
+            ) as run_mock:
+                checked = run_proposal_check(Path("."), {"proposalKind": "value"})
+
+        self.assertEqual(checked, second_payload)
+        self.assertEqual(run_mock.call_count, 2)
 
 
 if __name__ == "__main__":

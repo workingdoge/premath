@@ -78,25 +78,35 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
 
 
 def run_proposal_check(root: Path, proposal: Dict[str, Any]) -> Dict[str, Any]:
+    def run_check(cli_prefix: List[str], proposal_path: Path) -> subprocess.CompletedProcess[str]:
+        cmd = [
+            *cli_prefix,
+            "proposal-check",
+            "--proposal",
+            str(proposal_path),
+            "--json",
+        ]
+        return subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+
     with tempfile.TemporaryDirectory(prefix="premath-proposal-check-") as tmp:
         proposal_path = Path(tmp) / "proposal.json"
         proposal_path.write_text(
             json.dumps(proposal, ensure_ascii=False),
             encoding="utf-8",
         )
-        cmd = [
-            *resolve_premath_cli(root),
-            "proposal-check",
-            "--proposal",
-            str(proposal_path),
-            "--json",
-        ]
-        completed = subprocess.run(
-            cmd,
-            cwd=root,
-            capture_output=True,
-            text=True,
-        )
+        cli_prefix = resolve_premath_cli(root)
+        completed = run_check(cli_prefix, proposal_path)
+
+        # If a stale local `target/debug/premath` lacks this subcommand, retry through cargo.
+        if completed.returncode != 0 and cli_prefix and Path(cli_prefix[0]).name == "premath":
+            stderr = completed.stderr + "\n" + completed.stdout
+            if "unrecognized subcommand 'proposal-check'" in stderr:
+                completed = run_check(["cargo", "run", "--package", "premath-cli", "--"], proposal_path)
 
     if completed.returncode != 0:
         message = _extract_failure_message(completed)
@@ -115,4 +125,35 @@ def run_proposal_check(root: Path, proposal: Dict[str, Any]) -> Dict[str, Any]:
             "proposal-check returned invalid JSON",
         ) from exc
 
-    return _validate_payload(payload)
+    try:
+        return _validate_payload(payload)
+    except ProposalCheckError as exc:
+        # If a stale local binary emits an older payload shape, retry through cargo.
+        if cli_prefix and Path(cli_prefix[0]).name == "premath":
+            with tempfile.TemporaryDirectory(prefix="premath-proposal-check-") as tmp:
+                proposal_path = Path(tmp) / "proposal.json"
+                proposal_path.write_text(
+                    json.dumps(proposal, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                completed = run_check(
+                    ["cargo", "run", "--package", "premath-cli", "--"],
+                    proposal_path,
+                )
+            if completed.returncode != 0:
+                message = _extract_failure_message(completed)
+                match = re.match(r"^(?P<class>[a-z0-9_]+):\s*(?P<reason>.*)$", message)
+                if match:
+                    failure_class = match.group("class")
+                    reason = match.group("reason").strip() or message
+                    raise ProposalCheckError(failure_class, reason) from exc
+                raise ProposalCheckError("proposal_invalid_shape", message) from exc
+            try:
+                payload = json.loads(completed.stdout)
+            except json.JSONDecodeError as json_exc:
+                raise ProposalCheckError(
+                    "proposal_invalid_shape",
+                    "proposal-check returned invalid JSON",
+                ) from json_exc
+            return _validate_payload(payload)
+        raise
