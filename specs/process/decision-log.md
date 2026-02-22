@@ -1605,3 +1605,32 @@ reduces duplicate encoding.
 - CLI smoke coverage includes `ref project` and `ref verify` JSON surfaces.
 - M1 reference verifier milestone criteria are satisfied at command surface +
   conformance levels.
+
+---
+
+## 2026-02-22 — Decision 0055: Retire legacy Python instruction-policy shim authority
+
+### Decision
+Remove `tools/ci/instruction_policy.py` and its dedicated unit surface
+`tools/ci/test_instruction_policy.py`.
+
+Keep instruction policy/allowlist/binding authority exclusively on the core
+`premath instruction-check` path consumed via:
+
+- `tools/ci/instruction_check_client.py`,
+- `tools/ci/run_instruction.py`,
+- `tools/ci/test_instruction_reject_witness.py`.
+
+Update pipeline and traceability surfaces to reference core-backed tests only.
+
+### Rationale
+The Python instruction-policy module had become an unreferenced duplicate
+semantic surface after instruction envelope validation moved into
+`premath-coherence` and `premath-cli`. Keeping it introduced avoidable encoding
+drift risk.
+
+### Consequences
+- `mise run ci-pipeline-test` no longer executes `test_instruction_policy.py`.
+- traceability for `draft/LLM-PROPOSAL-CHECKING` now points to
+  `test_instruction_check_client.py` + `test_instruction_reject_witness.py`.
+- instruction policy semantics remain single-path and checker-owned.
