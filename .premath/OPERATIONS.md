@@ -31,3 +31,4 @@ This file captures repeatable operational conventions and rollout evidence.
 | 2026-02-22 | First `branch-policy` workflow run failed on pre-fix commit. | https://github.com/workingdoge/premath/actions/runs/22272316140 |
 | 2026-02-22 | Fix branch and PR created for checker fallback/admin-bypass hardening. | https://github.com/workingdoge/premath/pull/8 |
 | 2026-02-22 | `branch-policy` workflow passed after checker fix on PR branch. | https://github.com/workingdoge/premath/actions/runs/22272381740 |
+| 2026-02-22 | `branch-policy` workflow passed on latest PR head (`658b72f`). | https://github.com/workingdoge/premath/actions/runs/22272407035 |
