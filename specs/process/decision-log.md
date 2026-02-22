@@ -1890,3 +1890,24 @@ transport keeps wrappers thinner while preserving command-specific validation.
   shape validation.
 - behavior parity remains covered by existing required-client tests and
   `ci-pipeline-test`.
+
+---
+
+## 2026-02-22 — Decision 0065: Route proposal-check Python client through shared core transport
+
+### Decision
+Adopt `tools/ci/core_cli_client.py` in
+`tools/ci/proposal_check_client.py` and keep only proposal payload validation
+plus proposal-specific failure-class mapping in the proposal client.
+
+### Rationale
+After Decision 0064, `proposal_check_client.py` still carried duplicate command
+transport behavior. Reusing the shared helper removes another parallel wrapper
+surface while keeping proposal-domain error semantics explicit.
+
+### Consequences
+- `proposal_check_client.py` now shares command transport behavior with
+  required-gate clients.
+- proposal-specific validation classes remain stable
+  (`proposal_nondeterministic`, `proposal_kcir_ref_mismatch`,
+  `proposal_invalid_step`).

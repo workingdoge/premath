@@ -79,6 +79,14 @@ def run_core_json_command(
 ) -> Dict[str, Any]:
     """Run one core command with JSON input/output and deterministic retries."""
 
+    def validate_or_raise(payload: Any) -> Dict[str, Any]:
+        try:
+            return validate_payload(payload)
+        except ValueError as exc:
+            if isinstance(exc, CoreCliClientError):
+                raise exc
+            raise CoreCliClientError(default_failure_class, str(exc)) from exc
+
     def run_cmd(cli_prefix: List[str], input_path: Path) -> subprocess.CompletedProcess[str]:
         cmd = [
             *cli_prefix,
@@ -126,8 +134,8 @@ def run_core_json_command(
             raise CoreCliClientError(default_failure_class, invalid_json_message) from exc
 
         try:
-            return validate_payload(payload)
-        except ValueError as exc:
+            return validate_or_raise(payload)
+        except CoreCliClientError:
             if _is_local_premath_binary(cli_prefix):
                 completed = run_cmd(
                     ["cargo", "run", "--package", "premath-cli", "--"],
@@ -143,8 +151,8 @@ def run_core_json_command(
                     payload = json.loads(completed.stdout)
                 except json.JSONDecodeError as json_exc:
                     raise CoreCliClientError(default_failure_class, invalid_json_message) from json_exc
-                return validate_payload(payload)
-            raise CoreCliClientError(default_failure_class, str(exc)) from exc
+                return validate_or_raise(payload)
+            raise
     finally:
         try:
             input_path.unlink()
