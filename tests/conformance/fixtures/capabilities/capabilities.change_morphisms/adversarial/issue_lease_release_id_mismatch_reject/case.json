@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/issue_lease_release_id_mismatch_reject",
+  "description": "Lease release rejects deterministically when requested lease id does not match.",
+  "semanticScenarioId": "change_projection_issue_lease_release_03",
+  "artifacts": {
+    "request": {
+      "mode": "issue_lease_release",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "issueBefore": {
+      "id": "bd-release-203",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-release-203_agent.alpha",
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 4600000
+      }
+    },
+    "release": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-release-203_agent.beta"
+    }
+  }
+}

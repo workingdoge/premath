@@ -20,6 +20,7 @@
     "adversarial/issue_claim_rejects_active_lease_contention",
     "adversarial/issue_lease_renew_stale_reject",
     "adversarial/issue_lease_release_owner_mismatch_reject",
+    "adversarial/issue_lease_release_id_mismatch_reject",
     "adversarial/issue_ready_blocked_partition_mismatch_reject",
     "adversarial/issue_ready_blocked_set_mismatch_reject",
     "adversarial/issue_lease_projection_mismatch_reject",

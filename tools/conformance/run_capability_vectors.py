@@ -2187,6 +2187,8 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_lease_renew(case)
     if vector_id == "adversarial/issue_lease_release_owner_mismatch_reject":
         return evaluate_change_projection_issue_lease_release(case)
+    if vector_id == "adversarial/issue_lease_release_id_mismatch_reject":
+        return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "adversarial/issue_lease_projection_mismatch_reject":
         return evaluate_change_projection_issue_lease_projection(case)
     if vector_id.startswith("invariance/"):

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_id_mismatch"
+  ],
+  "assertions": [
+    "lease release id mismatches reject with deterministic classification"
+  ]
+}
