@@ -37,6 +37,19 @@ class RequiredProjectionClientTests(unittest.TestCase):
         self.assertEqual(payload["projectionDigest"], "proj1_demo")
         self.assertEqual(payload["requiredChecks"], ["doctrine-check"])
 
+    def test_run_required_projection_accepts_legacy_alias_policy(self) -> None:
+        payload = self._payload()
+        payload["projectionPolicy"] = "ci-topos-v0-preview"
+        completed = subprocess.CompletedProcess(
+            args=["premath", "required-projection"],
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+        with patch("required_projection_client.subprocess.run", return_value=completed):
+            out = run_required_projection(Path("."), {"changedPaths": ["README.md"]})
+        self.assertEqual(out["projectionPolicy"], "ci-topos-v0")
+
     def test_run_required_projection_propagates_failure_class(self) -> None:
         completed = subprocess.CompletedProcess(
             args=["premath", "required-projection"],

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -15,6 +16,16 @@ CONTROL_PLANE_CONTRACT_PATH = (
     / "premath"
     / "draft"
     / "CONTROL-PLANE-CONTRACT.json"
+)
+_EPOCH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
+_REQUIRED_SCHEMA_KIND_FAMILIES = (
+    "controlPlaneContractKind",
+    "requiredWitnessKind",
+    "requiredDecisionKind",
+    "instructionWitnessKind",
+    "instructionPolicyKind",
+    "requiredProjectionPolicy",
+    "requiredDeltaKind",
 )
 
 
@@ -47,6 +58,86 @@ def _require_optional_string_list(value: Any, label: str) -> Tuple[str, ...]:
     return _require_string_list(value, label)
 
 
+def _require_epoch(value: Any, label: str) -> str:
+    epoch = _require_non_empty_string(value, label)
+    if _EPOCH_RE.fullmatch(epoch) is None:
+        raise ValueError(f"{label} must use YYYY-MM with zero-padded month")
+    return epoch
+
+
+def _require_schema_kind_family(value: Any, label: str) -> Dict[str, Any]:
+    family = _require_object(value, label)
+    canonical_kind = _require_non_empty_string(
+        family.get("canonicalKind"), f"{label}.canonicalKind"
+    )
+    aliases_raw = family.get("compatibilityAliases", [])
+    if not isinstance(aliases_raw, list):
+        raise ValueError(f"{label}.compatibilityAliases must be a list")
+    aliases: Dict[str, Dict[str, str]] = {}
+    for idx, alias_row_raw in enumerate(aliases_raw):
+        alias_row = _require_object(
+            alias_row_raw, f"{label}.compatibilityAliases[{idx}]"
+        )
+        alias_kind = _require_non_empty_string(
+            alias_row.get("aliasKind"),
+            f"{label}.compatibilityAliases[{idx}].aliasKind",
+        )
+        support_until_epoch = _require_epoch(
+            alias_row.get("supportUntilEpoch"),
+            f"{label}.compatibilityAliases[{idx}].supportUntilEpoch",
+        )
+        replacement_kind = _require_non_empty_string(
+            alias_row.get("replacementKind"),
+            f"{label}.compatibilityAliases[{idx}].replacementKind",
+        )
+        if alias_kind == canonical_kind:
+            raise ValueError(
+                f"{label}.compatibilityAliases[{idx}].aliasKind must differ from canonicalKind"
+            )
+        if replacement_kind != canonical_kind:
+            raise ValueError(
+                f"{label}.compatibilityAliases[{idx}].replacementKind must match canonicalKind"
+            )
+        if alias_kind in aliases:
+            raise ValueError(f"{label}.compatibilityAliases aliasKind values must be unique")
+        aliases[alias_kind] = {
+            "supportUntilEpoch": support_until_epoch,
+            "replacementKind": replacement_kind,
+        }
+    return {
+        "canonicalKind": canonical_kind,
+        "compatibilityAliases": aliases,
+    }
+
+
+def _resolve_kind_in_family(
+    family_id: str,
+    *,
+    family: Dict[str, Any],
+    kind: str,
+    active_epoch: str,
+    label: str,
+) -> str:
+    canonical_kind = family["canonicalKind"]
+    if kind == canonical_kind:
+        return canonical_kind
+    aliases = family.get("compatibilityAliases", {})
+    alias_row = aliases.get(kind)
+    if alias_row is None:
+        raise ValueError(
+            f"{label} kind {kind!r} is not supported for schemaLifecycle.kindFamilies.{family_id} "
+            f"(canonicalKind={canonical_kind!r})"
+        )
+    support_until_epoch = alias_row["supportUntilEpoch"]
+    if active_epoch > support_until_epoch:
+        raise ValueError(
+            f"{label} kind {kind!r} expired at supportUntilEpoch={support_until_epoch!r} "
+            f"for schemaLifecycle.kindFamilies.{family_id} (activeEpoch={active_epoch!r}, "
+            f"canonicalKind={canonical_kind!r})"
+        )
+    return canonical_kind
+
+
 def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -60,10 +151,39 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     if schema != 1:
         raise ValueError("control-plane contract schema must be 1")
 
-    contract_kind = _require_non_empty_string(root.get("contractKind"), "contractKind")
+    schema_lifecycle = _require_object(root.get("schemaLifecycle"), "schemaLifecycle")
+    active_epoch = _require_epoch(
+        schema_lifecycle.get("activeEpoch"), "schemaLifecycle.activeEpoch"
+    )
+    kind_families_raw = _require_object(
+        schema_lifecycle.get("kindFamilies"), "schemaLifecycle.kindFamilies"
+    )
+    unknown_kind_families = sorted(
+        set(kind_families_raw) - set(_REQUIRED_SCHEMA_KIND_FAMILIES)
+    )
+    if unknown_kind_families:
+        raise ValueError(
+            "schemaLifecycle.kindFamilies includes unknown families: "
+            + ", ".join(unknown_kind_families)
+        )
+    kind_families: Dict[str, Dict[str, Any]] = {}
+    for family_id in _REQUIRED_SCHEMA_KIND_FAMILIES:
+        kind_families[family_id] = _require_schema_kind_family(
+            kind_families_raw.get(family_id),
+            f"schemaLifecycle.kindFamilies.{family_id}",
+        )
+
+    contract_kind_declared = _require_non_empty_string(root.get("contractKind"), "contractKind")
+    contract_kind = _resolve_kind_in_family(
+        "controlPlaneContractKind",
+        family=kind_families["controlPlaneContractKind"],
+        kind=contract_kind_declared,
+        active_epoch=active_epoch,
+        label="contractKind",
+    )
     if contract_kind != CONTROL_PLANE_CONTRACT_KIND:
         raise ValueError(
-            f"control-plane contract kind must be {CONTROL_PLANE_CONTRACT_KIND!r}"
+            f"control-plane contract kind must resolve to {CONTROL_PLANE_CONTRACT_KIND!r}"
         )
 
     evidence_lanes: Dict[str, str] = {}
@@ -129,9 +249,15 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     required_gate_projection = _require_object(
         root.get("requiredGateProjection"), "requiredGateProjection"
     )
-    projection_policy = _require_non_empty_string(
-        required_gate_projection.get("projectionPolicy"),
-        "requiredGateProjection.projectionPolicy",
+    projection_policy = _resolve_kind_in_family(
+        "requiredProjectionPolicy",
+        family=kind_families["requiredProjectionPolicy"],
+        kind=_require_non_empty_string(
+            required_gate_projection.get("projectionPolicy"),
+            "requiredGateProjection.projectionPolicy",
+        ),
+        active_epoch=active_epoch,
+        label="requiredGateProjection.projectionPolicy",
     )
     check_ids_raw = _require_object(
         required_gate_projection.get("checkIds"),
@@ -164,26 +290,50 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         )
 
     required_witness = _require_object(root.get("requiredWitness"), "requiredWitness")
-    required_witness_kind = _require_non_empty_string(
-        required_witness.get("witnessKind"),
-        "requiredWitness.witnessKind",
+    required_witness_kind = _resolve_kind_in_family(
+        "requiredWitnessKind",
+        family=kind_families["requiredWitnessKind"],
+        kind=_require_non_empty_string(
+            required_witness.get("witnessKind"),
+            "requiredWitness.witnessKind",
+        ),
+        active_epoch=active_epoch,
+        label="requiredWitness.witnessKind",
     )
-    required_decision_kind = _require_non_empty_string(
-        required_witness.get("decisionKind"),
-        "requiredWitness.decisionKind",
+    required_decision_kind = _resolve_kind_in_family(
+        "requiredDecisionKind",
+        family=kind_families["requiredDecisionKind"],
+        kind=_require_non_empty_string(
+            required_witness.get("decisionKind"),
+            "requiredWitness.decisionKind",
+        ),
+        active_epoch=active_epoch,
+        label="requiredWitness.decisionKind",
     )
 
     instruction_witness = _require_object(
         root.get("instructionWitness"),
         "instructionWitness",
     )
-    instruction_witness_kind = _require_non_empty_string(
-        instruction_witness.get("witnessKind"),
-        "instructionWitness.witnessKind",
+    instruction_witness_kind = _resolve_kind_in_family(
+        "instructionWitnessKind",
+        family=kind_families["instructionWitnessKind"],
+        kind=_require_non_empty_string(
+            instruction_witness.get("witnessKind"),
+            "instructionWitness.witnessKind",
+        ),
+        active_epoch=active_epoch,
+        label="instructionWitness.witnessKind",
     )
-    instruction_policy_kind = _require_non_empty_string(
-        instruction_witness.get("policyKind"),
-        "instructionWitness.policyKind",
+    instruction_policy_kind = _resolve_kind_in_family(
+        "instructionPolicyKind",
+        family=kind_families["instructionPolicyKind"],
+        kind=_require_non_empty_string(
+            instruction_witness.get("policyKind"),
+            "instructionWitness.policyKind",
+        ),
+        active_epoch=active_epoch,
+        label="instructionWitness.policyKind",
     )
     instruction_policy_digest_prefix = _require_non_empty_string(
         instruction_witness.get("policyDigestPrefix"),
@@ -193,6 +343,10 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     return {
         "schema": schema,
         "contractKind": contract_kind,
+        "schemaLifecycle": {
+            "activeEpoch": active_epoch,
+            "kindFamilies": kind_families,
+        },
         "evidenceLanes": evidence_lanes,
         "laneArtifactKinds": lane_artifact_kinds,
         "laneOwnership": {
@@ -218,18 +372,65 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
 
 
 _CONTRACT = load_control_plane_contract()
+SCHEMA_LIFECYCLE_ACTIVE_EPOCH: str = _CONTRACT["schemaLifecycle"]["activeEpoch"]
+SCHEMA_KIND_FAMILIES: Dict[str, Dict[str, Any]] = dict(
+    _CONTRACT["schemaLifecycle"]["kindFamilies"]
+)
 
-REQUIRED_PROJECTION_POLICY: str = _CONTRACT["requiredGateProjection"]["projectionPolicy"]
+
+def canonical_schema_kind(family_id: str) -> str:
+    family = SCHEMA_KIND_FAMILIES.get(family_id)
+    if not isinstance(family, dict):
+        raise ValueError(
+            f"unknown schemaLifecycle kind family: {family_id!r}"
+        )
+    canonical_kind = family.get("canonicalKind")
+    if not isinstance(canonical_kind, str) or not canonical_kind:
+        raise ValueError(
+            f"schemaLifecycle.kindFamilies.{family_id} missing canonicalKind"
+        )
+    return canonical_kind
+
+
+def resolve_schema_kind(
+    family_id: str,
+    kind: Any,
+    *,
+    active_epoch: str | None = None,
+    label: str | None = None,
+) -> str:
+    family = SCHEMA_KIND_FAMILIES.get(family_id)
+    if not isinstance(family, dict):
+        raise ValueError(
+            f"unknown schemaLifecycle kind family: {family_id!r}"
+        )
+    effective_epoch = _require_epoch(
+        active_epoch if active_epoch is not None else SCHEMA_LIFECYCLE_ACTIVE_EPOCH,
+        "schemaLifecycle.activeEpoch",
+    )
+    kind_label = label or f"schemaLifecycle.kindFamilies.{family_id}"
+    kind_value = _require_non_empty_string(kind, kind_label)
+    return _resolve_kind_in_family(
+        family_id,
+        family=family,
+        kind=kind_value,
+        active_epoch=effective_epoch,
+        label=kind_label,
+    )
+
+
+REQUIRED_PROJECTION_POLICY: str = canonical_schema_kind("requiredProjectionPolicy")
 REQUIRED_CHECK_IDS: Dict[str, str] = dict(_CONTRACT["requiredGateProjection"]["checkIds"])
 REQUIRED_CHECK_ORDER: Tuple[str, ...] = tuple(
     _CONTRACT["requiredGateProjection"]["checkOrder"]
 )
 
-REQUIRED_WITNESS_KIND: str = _CONTRACT["requiredWitness"]["witnessKind"]
-REQUIRED_DECISION_KIND: str = _CONTRACT["requiredWitness"]["decisionKind"]
+REQUIRED_WITNESS_KIND: str = canonical_schema_kind("requiredWitnessKind")
+REQUIRED_DECISION_KIND: str = canonical_schema_kind("requiredDecisionKind")
+REQUIRED_DELTA_KIND: str = canonical_schema_kind("requiredDeltaKind")
 
-INSTRUCTION_WITNESS_KIND: str = _CONTRACT["instructionWitness"]["witnessKind"]
-INSTRUCTION_POLICY_KIND: str = _CONTRACT["instructionWitness"]["policyKind"]
+INSTRUCTION_WITNESS_KIND: str = canonical_schema_kind("instructionWitnessKind")
+INSTRUCTION_POLICY_KIND: str = canonical_schema_kind("instructionPolicyKind")
 INSTRUCTION_POLICY_DIGEST_PREFIX: str = _CONTRACT["instructionWitness"][
     "policyDigestPrefix"
 ]

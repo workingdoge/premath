@@ -16,6 +16,81 @@ def _base_payload() -> dict:
         "schema": 1,
         "contractKind": "premath.control_plane.contract.v1",
         "contractId": "control-plane.default.v1",
+        "schemaLifecycle": {
+            "activeEpoch": "2026-02",
+            "kindFamilies": {
+                "controlPlaneContractKind": {
+                    "canonicalKind": "premath.control_plane.contract.v1",
+                    "compatibilityAliases": [
+                        {
+                            "aliasKind": "premath.control_plane.contract.v0",
+                            "supportUntilEpoch": "2026-06",
+                            "replacementKind": "premath.control_plane.contract.v1",
+                        }
+                    ],
+                },
+                "requiredWitnessKind": {
+                    "canonicalKind": "ci.required.v1",
+                    "compatibilityAliases": [
+                        {
+                            "aliasKind": "ci.required.v0",
+                            "supportUntilEpoch": "2026-06",
+                            "replacementKind": "ci.required.v1",
+                        }
+                    ],
+                },
+                "requiredDecisionKind": {
+                    "canonicalKind": "ci.required.decision.v1",
+                    "compatibilityAliases": [
+                        {
+                            "aliasKind": "ci.required.decision.v0",
+                            "supportUntilEpoch": "2026-06",
+                            "replacementKind": "ci.required.decision.v1",
+                        }
+                    ],
+                },
+                "instructionWitnessKind": {
+                    "canonicalKind": "ci.instruction.v1",
+                    "compatibilityAliases": [
+                        {
+                            "aliasKind": "ci.instruction.v0",
+                            "supportUntilEpoch": "2026-06",
+                            "replacementKind": "ci.instruction.v1",
+                        }
+                    ],
+                },
+                "instructionPolicyKind": {
+                    "canonicalKind": "ci.instruction.policy.v1",
+                    "compatibilityAliases": [
+                        {
+                            "aliasKind": "ci.instruction.policy.v0",
+                            "supportUntilEpoch": "2026-06",
+                            "replacementKind": "ci.instruction.policy.v1",
+                        }
+                    ],
+                },
+                "requiredProjectionPolicy": {
+                    "canonicalKind": "ci-topos-v0",
+                    "compatibilityAliases": [
+                        {
+                            "aliasKind": "ci-topos-v0-preview",
+                            "supportUntilEpoch": "2026-06",
+                            "replacementKind": "ci-topos-v0",
+                        }
+                    ],
+                },
+                "requiredDeltaKind": {
+                    "canonicalKind": "ci.required.delta.v1",
+                    "compatibilityAliases": [
+                        {
+                            "aliasKind": "ci.delta.v1",
+                            "supportUntilEpoch": "2026-06",
+                            "replacementKind": "ci.required.delta.v1",
+                        }
+                    ],
+                },
+            },
+        },
         "requiredGateProjection": {
             "projectionPolicy": "ci-topos-v0",
             "checkIds": {
@@ -111,7 +186,24 @@ class ControlPlaneContractTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             self._load(payload)
 
+    def test_resolve_schema_kind_accepts_alias_within_support_window(self) -> None:
+        self.assertEqual(
+            control_plane_contract.resolve_schema_kind(
+                "requiredWitnessKind",
+                "ci.required.v0",
+                active_epoch="2026-06",
+            ),
+            "ci.required.v1",
+        )
+
+    def test_resolve_schema_kind_rejects_expired_alias(self) -> None:
+        with self.assertRaisesRegex(ValueError, "expired"):
+            control_plane_contract.resolve_schema_kind(
+                "requiredWitnessKind",
+                "ci.required.v0",
+                active_epoch="2026-07",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
-

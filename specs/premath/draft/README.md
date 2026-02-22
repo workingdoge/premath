@@ -29,7 +29,8 @@ Additive control-plane overlays (only when needed):
 - `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
   `premath coherence-check`.
 - `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
-  by CI projection and coherence parity checks.
+  by CI projection and coherence parity checks (including schema lifecycle
+  alias-window policy for contract/witness/projection kinds).
 - `CAPABILITY-REGISTRY.json` — shared typed executable-capability registry
   consumed by conformance/docs/coherence parity checks.
 - `UNIFICATION-DOCTRINE.md` — minimum-encoding/maximum-expressiveness

@@ -14,7 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from control_plane_contract import INSTRUCTION_WITNESS_KIND
+from control_plane_contract import resolve_schema_kind
 from instruction_check_client import (
     InstructionCheckError,
     InstructionWitnessError,
@@ -282,8 +282,14 @@ def main() -> int:
 
     print(f"[instruction] witness written: {out_path}")
 
-    if witness.get("witnessKind") != INSTRUCTION_WITNESS_KIND:
-        print("[error] instruction witness kind mismatch", file=sys.stderr)
+    try:
+        resolve_schema_kind(
+            "instructionWitnessKind",
+            witness.get("witnessKind"),
+            label="instruction witness kind",
+        )
+    except ValueError as exc:
+        print(f"[error] instruction witness kind mismatch: {exc}", file=sys.stderr)
         return 2
     if witness.get("verdictClass") == "rejected" and not args.allow_failure:
         return 1

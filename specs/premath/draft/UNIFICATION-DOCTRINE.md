@@ -108,6 +108,29 @@ When replacing or tightening a boundary representation:
 Compatibility fields (for example digest aliases) MUST stay bound to the same
 canonical payload while they coexist.
 
+### 5.1 Schema lifecycle policy (contract/witness/projection kinds)
+
+Control-plane implementations MUST publish one deterministic lifecycle table for
+schema/versioned kind families (for example `*.contract.v*`, witness kinds, and
+projection kinds).
+
+For each kind family:
+
+1. exactly one canonical kind MUST be declared,
+2. compatibility aliases MAY be declared with an explicit `supportUntilEpoch`,
+3. each alias MUST declare a canonical replacement kind,
+4. checkers MUST resolve accepted aliases to canonical kind before downstream
+   comparison.
+
+When a breaking shape change is introduced:
+
+- migration MUST emit witness evidence that the old payload was replayed or
+  projected into the canonical replacement,
+- the compatibility window MUST be explicit in the lifecycle table.
+
+After `supportUntilEpoch`, checkers MUST reject the alias deterministically
+(fail closed) and report the canonical replacement kind.
+
 ## 6. Conformance Expectations
 
 Implementations following this doctrine SHOULD:

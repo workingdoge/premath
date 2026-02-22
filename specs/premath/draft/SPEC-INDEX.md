@@ -157,8 +157,10 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
-  (projection policy/check order + CI witness kinds) consumed by CI/coherence
-  adapter surfaces.
+  (projection policy/check order + CI witness kinds + schema lifecycle table
+  for contract/witness/projection kind families) consumed by CI/coherence
+  adapter surfaces; lifecycle semantics follow
+  `draft/UNIFICATION-DOCTRINE` §5.1.
 - `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability
   registry consumed by conformance/docs/coherence parity surfaces.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM

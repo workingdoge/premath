@@ -39,6 +39,19 @@ class RequiredWitnessDecideClientTests(unittest.TestCase):
         self.assertEqual(payload["decision"], "accept")
         self.assertEqual(payload["projectionDigest"], "proj1_demo")
 
+    def test_run_required_witness_decide_accepts_legacy_alias_kind(self) -> None:
+        payload = self._payload()
+        payload["decisionKind"] = "ci.required.decision.v0"
+        completed = subprocess.CompletedProcess(
+            args=["premath", "required-witness-decide"],
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+        with patch("required_witness_decide_client.subprocess.run", return_value=completed):
+            out = run_required_witness_decide(Path("."), {"witness": {}})
+        self.assertEqual(out["decisionKind"], "ci.required.decision.v1")
+
     def test_run_required_witness_decide_propagates_failure_class(self) -> None:
         completed = subprocess.CompletedProcess(
             args=["premath", "required-witness-decide"],

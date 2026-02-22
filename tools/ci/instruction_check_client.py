@@ -13,6 +13,7 @@ from core_cli_client import (
     run_core_json_command,
     run_core_json_command_from_path,
 )
+from control_plane_contract import resolve_schema_kind
 
 
 class InstructionCheckError(ValueError):
@@ -130,12 +131,16 @@ def _validate_witness_payload(payload: Any) -> Dict[str, Any]:
         "instructionId",
         "instructionRef",
         "instructionDigest",
-        "witnessKind",
         "verdictClass",
     )
     for key in required_string_fields:
         if not isinstance(payload.get(key), str) or not payload.get(key):
             raise ValueError(f"instruction-witness payload missing {key}")
+    payload["witnessKind"] = resolve_schema_kind(
+        "instructionWitnessKind",
+        payload.get("witnessKind"),
+        label="instruction-witness payload witnessKind",
+    )
     for key in ("normalizerId", "policyDigest"):
         value = payload.get(key)
         if value is not None and (not isinstance(value, str) or not value):

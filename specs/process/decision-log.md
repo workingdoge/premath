@@ -2650,3 +2650,43 @@ unification execution and gives one deterministic summary for CI consumption.
 - CI tooling docs and command surfaces include the new gate,
 - added deterministic unit tests (`tools/ci/test_drift_budget.py`) covering each
   drift class and cache-closure input scope expectations.
+
+---
+
+## 2026-02-22 — Decision 0093: Add control-plane schema lifecycle contract and alias-window enforcement
+
+### Decision
+Adopt one typed schema lifecycle table in
+`draft/CONTROL-PLANE-CONTRACT.json` and route client-side kind validation
+through it.
+
+Implemented scope:
+
+1. add `schemaLifecycle` with canonical kind families for:
+   - `*.contract.v*` control-plane kind,
+   - required/instruction witness kinds,
+   - required decision kind,
+   - required projection policy kind,
+   - required delta kind;
+2. allow compatibility aliases only with explicit `supportUntilEpoch` and
+   canonical `replacementKind`,
+3. resolve accepted aliases to canonical kind during validation,
+4. fail closed deterministically when alias windows are expired or kinds are
+   unsupported.
+
+### Rationale
+Version and alias handling existed as ad-hoc string checks across CI clients.
+That made compatibility policy implicit and harder to audit. A single lifecycle
+table keeps minimum encoding while preserving controlled compatibility windows.
+
+### Consequences
+- `tools/ci/control_plane_contract.py` is now the canonical lifecycle resolver
+  for schema kind families.
+- required witness/decision/projection/delta and instruction witness client
+  validators now consume the shared resolver.
+- tests now cover:
+  - accepted legacy alias behavior inside support window,
+  - deterministic rejection past support window (`expired` failure path).
+- `draft/UNIFICATION-DOCTRINE` now states normative lifecycle/deprecation rules
+  for contract/witness/projection kind families and migration witness
+  expectations.
