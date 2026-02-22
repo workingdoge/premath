@@ -12,4 +12,4 @@ tokio = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 chrono = { workspace = true }
-# surrealdb = { workspace = true }  # TODO: enable when wiring up
+# Optional integration placeholder (surrealdb dependency intentionally not enabled yet).

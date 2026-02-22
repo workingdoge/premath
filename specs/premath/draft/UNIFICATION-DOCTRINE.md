@@ -187,9 +187,10 @@ keep the following lane split explicit and non-overlapping:
 | Witness commutation lane | typed pipeline/base-change commutation artifacts | `draft/SPAN-SQUARE-CHECKING` | checker-facing evidence only; MUST NOT self-authorize acceptance |
 | Runtime transport lane | runtime location/world transport surfaces | `raw/SQUEAK-CORE`, `raw/SQUEAK-SITE` | transport/site checks are capability-scoped; MUST remain bound to canonical witness lineage |
 
-### 9.1 Sig/Pi (adjoint) lane rule
+### 9.1 SigPi (adjoint) lane rule
 
-When `capabilities.adjoints_sites` is claimed, `Sigma_f -| f* -| Pi_f` and
+When `capabilities.adjoints_sites` is claimed, the SigPi adjoint triple
+(`\Sigma_f -| f* -| \Pi_f`, shorthand `sig\Pi`) and
 Beck-Chevalley obligations remain in the semantic doctrine lane and MUST
 discharge under deterministic bindings (`normalizerId`, `policyDigest`) without
 introducing a parallel authority encoding.
@@ -202,12 +203,61 @@ as other evidence surfaces (no side-channel acceptance path).
 
 ### 9.3 Composition rule
 
-When Sig/Pi adjoint obligations and Squeak transport obligations are composed in
-one implementation profile:
+When SigPi adjoint obligations, span/square commutation obligations, and Squeak
+transport obligations are composed in one implementation profile:
 
 1. composition MUST occur via obligation and witness routing, not by creating a
    second semantic authority schema,
 2. composed checks MUST remain deterministic and fail closed on unknown/unbound
    lane or capability material,
-3. derived projections MAY vary by workflow, but MUST remain replayable to one
+3. cross-lane pullback/base-change claims MUST project through typed
+   span/square witnesses (`draft/SPAN-SQUARE-CHECKING`),
+4. derived projections MAY vary by workflow, but MUST remain replayable to one
    canonical authority artifact.
+
+## 10. Unified Evidence Plane Contract (v0)
+
+To keep one authority surface while increasing expressiveness, implementations
+SHOULD model attested evidence as one context-indexed family:
+
+- `Ev : Ctx^op -> V`
+
+where `V` is the selected witness universe (`Set`, `Groupoid`, or `Spaces`).
+
+### 10.1 Canonical evidence object
+
+`Ev` is the canonical attested evidence surface for control-plane outputs.
+
+`Ev` does not replace kernel or Gate authority. Kernel/Gate decide admissibility;
+`Ev` is the deterministic attestation/projection surface for accepted/rejected
+checker outcomes.
+
+### 10.2 Universal factoring rule
+
+For every control-plane artifact family `F : Ctx^op -> V` that carries
+attestable output (instruction/proposal/coherence/CI/observation projections),
+there SHOULD be a deterministic natural transformation:
+
+- `eta_F : F => Ev`
+
+so artifact meaning factors through one evidence surface instead of parallel
+authority schemas.
+
+### 10.3 Required law set
+
+A conforming `Ev` route MUST satisfy:
+
+1. Transport law (naturality): reindexing commutes with evidence projection.
+2. Descent law: cover-local evidence either glues deterministically or emits
+   deterministic obstruction witnesses.
+3. Determinism law: equality/comparison claims are bound to
+   `normalizerId + policyDigest`.
+4. Authority-boundary law: proposals/projections MAY suggest, but MUST NOT
+   self-authorize admissibility without checker discharge.
+
+### 10.4 Cross-lane commutation requirement
+
+When cross-lane pullback/base-change claims are surfaced in `Ev`, implementations
+MUST route commutation through typed span/square witnesses
+(`draft/SPAN-SQUARE-CHECKING`) so lane composition remains explicit and
+replayable.

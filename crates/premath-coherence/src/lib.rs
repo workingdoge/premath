@@ -75,6 +75,15 @@ const REQUIRED_OBLIGATION_IDS: &[&str] = &[
     "cwf_comprehension_eta",
 ];
 
+const REQUIRED_LANE_FAILURE_CLASSES: &[&str] = &[
+    "lane_unknown",
+    "lane_kind_unbound",
+    "lane_ownership_violation",
+    "lane_route_missing",
+];
+
+const REQUIRED_PULLBACK_ROUTE: &str = "span_square_commutation";
+
 #[derive(Debug, Error)]
 pub enum CoherenceError {
     #[error("failed to read file: {path}: {source}")]
@@ -172,9 +181,41 @@ struct CapabilityRegistry {
 struct ControlPlaneProjectionContract {
     schema: u32,
     contract_kind: String,
+    #[serde(default)]
+    evidence_lanes: Option<ControlPlaneEvidenceLanes>,
+    #[serde(default)]
+    lane_artifact_kinds: Option<BTreeMap<String, Vec<String>>>,
+    #[serde(default)]
+    lane_ownership: Option<ControlPlaneLaneOwnership>,
+    #[serde(default)]
+    lane_failure_classes: Option<Vec<String>>,
     required_gate_projection: RequiredGateProjection,
     required_witness: ControlPlaneRequiredWitness,
     instruction_witness: ControlPlaneInstructionWitness,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneEvidenceLanes {
+    semantic_doctrine: String,
+    strict_checker: String,
+    witness_commutation: String,
+    runtime_transport: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneLaneOwnership {
+    #[serde(default)]
+    checker_core_only_obligations: Vec<String>,
+    #[serde(default)]
+    required_cross_lane_witness_route: Option<ControlPlaneCrossLaneWitnessRoute>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneCrossLaneWitnessRoute {
+    pullback_base_change: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -833,6 +874,28 @@ fn check_gate_chain_parity(
         failures.push("coherence.gate_chain_parity.projection_set_mismatch".to_string());
     }
 
+    let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
+    failures.extend(lane_registry_check.failure_classes.clone());
+
+    let lane_vectors_check = if contract.surfaces.site_fixture_root_path.trim().is_empty() {
+        None
+    } else {
+        let fixture_root =
+            resolve_path(repo_root, contract.surfaces.site_fixture_root_path.as_str());
+        if fixture_root.join("manifest.json").exists() {
+            let check = check_site_obligation(
+                repo_root,
+                contract,
+                "gate_chain_parity",
+                evaluate_site_case_gate_chain_parity,
+            )?;
+            failures.extend(check.failure_classes.clone());
+            Some(check)
+        } else {
+            None
+        }
+    };
+
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
         details: json!({
@@ -846,6 +909,212 @@ fn check_gate_chain_parity(
             "instructionWitnessKind": control_plane_contract.instruction_witness.witness_kind,
             "instructionPolicyKind": control_plane_contract.instruction_witness.policy_kind,
             "instructionPolicyDigestPrefix": control_plane_contract.instruction_witness.policy_digest_prefix,
+            "laneRegistry": lane_registry_check.details,
+            "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
+        }),
+    })
+}
+
+fn evaluate_gate_chain_lane_registry(
+    control_plane_contract: &ControlPlaneProjectionContract,
+) -> ObligationCheck {
+    let lane_registry_present = control_plane_contract.evidence_lanes.is_some()
+        || control_plane_contract.lane_artifact_kinds.is_some()
+        || control_plane_contract.lane_ownership.is_some()
+        || control_plane_contract.lane_failure_classes.is_some();
+
+    let expected_checker_core_only: Vec<String> = REQUIRED_OBLIGATION_IDS
+        .iter()
+        .filter(|id| id.starts_with("cwf_"))
+        .map(|id| (*id).to_string())
+        .collect();
+    let mut lane_details = json!({
+        "registryPresent": lane_registry_present,
+        "evidenceLanes": null,
+        "laneArtifactKinds": null,
+        "laneOwnership": null,
+        "laneFailureClasses": null,
+        "expectedCheckerCoreOnlyObligations": expected_checker_core_only,
+        "requiredCrossLaneWitnessRoute": REQUIRED_PULLBACK_ROUTE,
+        "requiredLaneFailureClasses": REQUIRED_LANE_FAILURE_CLASSES,
+    });
+
+    if !lane_registry_present {
+        return ObligationCheck {
+            failure_classes: Vec::new(),
+            details: lane_details,
+        };
+    }
+
+    let mut failures = Vec::new();
+    let expected_checker_core: BTreeSet<String> = REQUIRED_OBLIGATION_IDS
+        .iter()
+        .filter(|id| id.starts_with("cwf_"))
+        .map(|id| (*id).to_string())
+        .collect();
+
+    let Some(evidence_lanes) = &control_plane_contract.evidence_lanes else {
+        failures.push("coherence.gate_chain_parity.lane_unknown".to_string());
+        lane_details["registryPresent"] = json!(true);
+        lane_details["error"] =
+            json!("evidenceLanes missing while lane registry fields are present");
+        return ObligationCheck {
+            failure_classes: dedupe_sorted(failures),
+            details: lane_details,
+        };
+    };
+
+    let lane_ids = vec![
+        evidence_lanes.semantic_doctrine.trim().to_string(),
+        evidence_lanes.strict_checker.trim().to_string(),
+        evidence_lanes.witness_commutation.trim().to_string(),
+        evidence_lanes.runtime_transport.trim().to_string(),
+    ];
+    lane_details["evidenceLanes"] = json!({
+        "semanticDoctrine": &evidence_lanes.semantic_doctrine,
+        "strictChecker": &evidence_lanes.strict_checker,
+        "witnessCommutation": &evidence_lanes.witness_commutation,
+        "runtimeTransport": &evidence_lanes.runtime_transport,
+    });
+    if lane_ids.iter().any(|id| id.is_empty()) {
+        failures.push("coherence.gate_chain_parity.lane_unknown".to_string());
+    }
+    let lane_id_set: BTreeSet<String> = lane_ids.into_iter().collect();
+    if lane_id_set.len() != 4 {
+        failures.push("coherence.gate_chain_parity.lane_unknown".to_string());
+    }
+
+    let lane_artifact_kinds = control_plane_contract
+        .lane_artifact_kinds
+        .as_ref()
+        .cloned()
+        .unwrap_or_default();
+    lane_details["laneArtifactKinds"] = json!(&lane_artifact_kinds);
+    if lane_artifact_kinds.is_empty() {
+        failures.push("coherence.gate_chain_parity.lane_kind_unbound".to_string());
+    }
+    for (lane_id, kinds) in &lane_artifact_kinds {
+        if !lane_id_set.contains(lane_id) {
+            failures.push("coherence.gate_chain_parity.lane_kind_unbound".to_string());
+        }
+        let mut seen = BTreeSet::new();
+        for kind in kinds {
+            if kind.trim().is_empty() || !seen.insert(kind.trim().to_string()) {
+                failures.push("coherence.gate_chain_parity.lane_kind_unbound".to_string());
+            }
+        }
+        if kinds.is_empty() {
+            failures.push("coherence.gate_chain_parity.lane_kind_unbound".to_string());
+        }
+    }
+
+    let lane_ownership = control_plane_contract.lane_ownership.clone();
+    lane_details["laneOwnership"] = json!(&lane_ownership);
+    match lane_ownership {
+        Some(ownership) => {
+            let checker_core_only: BTreeSet<String> = ownership
+                .checker_core_only_obligations
+                .iter()
+                .map(|obligation| obligation.trim().to_string())
+                .collect();
+            if checker_core_only.is_empty()
+                || checker_core_only
+                    .iter()
+                    .any(|obligation| obligation.is_empty() || !obligation.starts_with("cwf_"))
+                || checker_core_only != expected_checker_core
+            {
+                failures.push("coherence.gate_chain_parity.lane_ownership_violation".to_string());
+            }
+            match ownership.required_cross_lane_witness_route {
+                Some(route) if route.pullback_base_change.trim() == REQUIRED_PULLBACK_ROUTE => {}
+                _ => failures.push("coherence.gate_chain_parity.lane_route_missing".to_string()),
+            }
+        }
+        None => failures.push("coherence.gate_chain_parity.lane_ownership_violation".to_string()),
+    }
+
+    let lane_failure_classes = control_plane_contract
+        .lane_failure_classes
+        .clone()
+        .unwrap_or_default();
+    lane_details["laneFailureClasses"] = json!(&lane_failure_classes);
+    if lane_failure_classes.is_empty() {
+        failures.push("coherence.gate_chain_parity.lane_failure_class_mismatch".to_string());
+    } else {
+        let lane_failure_set: BTreeSet<String> = lane_failure_classes
+            .iter()
+            .map(|class_id| class_id.trim().to_string())
+            .collect();
+        if lane_failure_set.len() != lane_failure_classes.len()
+            || lane_failure_set.iter().any(|class_id| class_id.is_empty())
+        {
+            failures.push("coherence.gate_chain_parity.lane_failure_class_mismatch".to_string());
+        }
+        for required in REQUIRED_LANE_FAILURE_CLASSES {
+            if !lane_failure_set.contains(*required) {
+                failures
+                    .push("coherence.gate_chain_parity.lane_failure_class_mismatch".to_string());
+            }
+        }
+    }
+
+    ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details: lane_details,
+    }
+}
+
+fn evaluate_site_case_gate_chain_parity(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+
+    let control_plane_contract_value = artifacts.get("controlPlaneContract").ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts.controlPlaneContract must be present",
+            display_path(case_path)
+        ))
+    })?;
+    let control_plane_contract: ControlPlaneProjectionContract =
+        serde_json::from_value(control_plane_contract_value.clone()).map_err(|source| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.controlPlaneContract invalid: {}",
+                display_path(case_path),
+                source
+            ))
+        })?;
+
+    if control_plane_contract.schema != 1 {
+        return Err(CoherenceError::Contract(format!(
+            "{}: artifacts.controlPlaneContract.schema must be 1",
+            display_path(case_path)
+        )));
+    }
+    if control_plane_contract.contract_kind != "premath.control_plane.contract.v1" {
+        return Err(CoherenceError::Contract(format!(
+            "{}: artifacts.controlPlaneContract.contractKind mismatch: {:?}",
+            display_path(case_path),
+            control_plane_contract.contract_kind
+        )));
+    }
+
+    let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
+    let result = if lane_registry_check.failure_classes.is_empty() {
+        "accepted"
+    } else {
+        "rejected"
+    };
+    Ok(SiteEvaluation {
+        result: result.to_string(),
+        failure_classes: lane_registry_check.failure_classes,
+        details: json!({
+            "laneRegistry": lane_registry_check.details,
         }),
     })
 }
@@ -2937,6 +3206,109 @@ mod tests {
         fs::write(path, bytes).expect("json fixture should be writable");
     }
 
+    fn write_text_file(path: &Path, content: &str) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("parent directories should be creatable");
+        }
+        fs::write(path, content).expect("text fixture should be writable");
+    }
+
+    fn write_gate_chain_mise(path: &Path) {
+        write_text_file(
+            path,
+            r#"[tasks.baseline]
+run = [
+  "mise run baseline",
+  "mise run build",
+  "mise run test",
+]
+"#,
+        );
+    }
+
+    fn write_gate_chain_ci_closure(path: &Path) {
+        write_text_file(
+            path,
+            r#"Current full baseline gate (`mise run baseline`) includes:
+- `baseline`
+- `build`
+- `test`
+Local command:
+
+Current deterministic projected check IDs include:
+- `baseline`
+- `build`
+- `test`
+## 5. Variants and capability projection
+"#,
+        );
+    }
+
+    fn base_control_plane_contract_payload() -> Value {
+        json!({
+            "schema": 1,
+            "contractKind": "premath.control_plane.contract.v1",
+            "requiredGateProjection": {
+                "projectionPolicy": "ci-topos-v0",
+                "checkOrder": ["baseline", "build", "test"]
+            },
+            "requiredWitness": {
+                "witnessKind": "ci.required.v1",
+                "decisionKind": "ci.required.decision.v1"
+            },
+            "instructionWitness": {
+                "witnessKind": "ci.instruction.v1",
+                "policyKind": "ci.instruction.policy.v1",
+                "policyDigestPrefix": "pol1_"
+            },
+            "evidenceLanes": {
+                "semanticDoctrine": "semantic_doctrine",
+                "strictChecker": "strict_checker",
+                "witnessCommutation": "witness_commutation",
+                "runtimeTransport": "runtime_transport"
+            },
+            "laneArtifactKinds": {
+                "semantic_doctrine": ["kernel_obligation"],
+                "strict_checker": ["coherence_obligation"],
+                "witness_commutation": ["square_witness"],
+                "runtime_transport": ["squeak_site_witness"]
+            },
+            "laneOwnership": {
+                "checkerCoreOnlyObligations": [
+                    "cwf_substitution_identity",
+                    "cwf_substitution_composition",
+                    "cwf_comprehension_beta",
+                    "cwf_comprehension_eta"
+                ],
+                "requiredCrossLaneWitnessRoute": {
+                    "pullbackBaseChange": "span_square_commutation"
+                }
+            },
+            "laneFailureClasses": [
+                "lane_unknown",
+                "lane_kind_unbound",
+                "lane_ownership_violation",
+                "lane_route_missing"
+            ]
+        })
+    }
+
+    fn test_contract_for_gate_chain(control_plane_contract_path: &str) -> CoherenceContract {
+        let mut contract = test_contract_with_fixture_roots("", "");
+        contract.surfaces.mise_path = ".mise.toml".to_string();
+        contract.surfaces.mise_baseline_task = "baseline".to_string();
+        contract.surfaces.ci_closure_path = "docs/design/CI-CLOSURE.md".to_string();
+        contract.surfaces.ci_closure_baseline_start =
+            "Current full baseline gate (`mise run baseline`) includes:".to_string();
+        contract.surfaces.ci_closure_baseline_end = "Local command:".to_string();
+        contract.surfaces.ci_closure_projection_start =
+            "Current deterministic projected check IDs include:".to_string();
+        contract.surfaces.ci_closure_projection_end =
+            "## 5. Variants and capability projection".to_string();
+        contract.surfaces.control_plane_contract_path = control_plane_contract_path.to_string();
+        contract
+    }
+
     fn write_transport_manifest(fixture_root: &Path, vectors: &[&str]) {
         write_json_file(
             &fixture_root.join("manifest.json"),
@@ -3230,6 +3602,126 @@ mod tests {
         let section =
             extract_section_between(text, "START", "END").expect("section extraction should work");
         assert_eq!(section.trim(), "body");
+    }
+
+    #[test]
+    fn check_gate_chain_parity_accepts_valid_lane_registry() {
+        let temp = TempDirGuard::new("gate-chain-lane-registry-valid");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &base_control_plane_contract_payload(),
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_duplicate_lane_ids() {
+        let temp = TempDirGuard::new("gate-chain-lane-registry-duplicate-ids");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceLanes"]["runtimeTransport"] = json!("strict_checker");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.gate_chain_parity.lane_unknown".to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_unknown_lane_artifact_kind_mapping() {
+        let temp = TempDirGuard::new("gate-chain-lane-registry-unknown-lane-kind");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["laneArtifactKinds"]["unknown_lane"] = json!(["opaque_kind"]);
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.gate_chain_parity.lane_kind_unbound".to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_missing_cross_lane_route() {
+        let temp = TempDirGuard::new("gate-chain-lane-registry-missing-route");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["laneOwnership"]["requiredCrossLaneWitnessRoute"] = Value::Null;
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.gate_chain_parity.lane_route_missing".to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_checker_core_ownership_violation() {
+        let temp = TempDirGuard::new("gate-chain-lane-registry-ownership-violation");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["laneOwnership"]["checkerCoreOnlyObligations"] =
+            json!(["cwf_substitution_identity", "span_square_commutation"]);
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.gate_chain_parity.lane_ownership_violation".to_string())
+        );
     }
 
     #[test]

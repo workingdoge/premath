@@ -30,7 +30,7 @@
 
 - `cargo build --workspace` — build all crates.
 - `cargo test --workspace` — run Rust tests.
-- `mise run baseline` — full local closure gate (`py-setup` + fmt + clippy + build/tests + toy + KCIR toy + conformance checks + traceability matrix check + coherence-check + docs-coherence check + doctrine-site check; includes `rust-setup` for `rustfmt`/`clippy` components).
+- `mise run baseline` — full local closure gate (`py-setup` + fmt + clippy + build/tests + toy + KCIR toy + conformance checks + traceability matrix check + coherence-check + docs-coherence check + drift-budget check + doctrine-site check; includes `rust-setup` for `rustfmt`/`clippy` components).
 - `mise run hk-install` — install optional `hk`-managed git hooks using `hk.pkl`.
 - `mise run hk-pre-commit` / `mise run hk-pre-push` — run hk hook profiles manually.
 - `mise run hk-check` / `mise run hk-fix` — run hk baseline check or fast local fixes (`hk-fix` runs on all files with no auto-stage).
@@ -45,6 +45,7 @@
 - `mise run ci-observation-query` — query the latest observation surface (`latest`, `needs_attention`, `instruction`, `projection`).
 - `mise run ci-observation-serve` — run a tiny HTTP read API over Observation Surface v0 (`GET /latest`, `/needs-attention`, `/instruction`, `/projection`).
 - `mise run ci-observation-check` — enforce semantic projection invariance (observation output must equal deterministic reducer output from CI witness artifacts).
+- `mise run ci-drift-budget-check` — enforce deterministic drift-budget sentinels across SPEC-INDEX/CAPABILITY-REGISTRY maps, control-plane lane bindings, coherence required obligation sets, SigPi notation, and coherence-cache input closure.
 - `python3 -m http.server 43173 --directory docs` — serve docs locally (includes `docs/observation/index.html` dashboard).
 - `mise run ci-pipeline-required` — run provider-neutral required-gate pipeline (`tools/ci/pipeline_required.py`).
 - `mise run ci-pipeline-instruction` — run provider-neutral instruction pipeline (`INSTRUCTION=instructions/<ts>-<id>.json`).
@@ -84,6 +85,7 @@
 - `cargo run --package premath-cli -- ref project --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --json` — project deterministic backend refs via profile-bound `project_ref`.
 - `cargo run --package premath-cli -- ref verify --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --evidence-hex <hex> --ref-scheme-id <id> --ref-params-hash <hash> --ref-domain <domain> --ref-digest <digest> --json` — verify provided refs via profile-bound `verify_ref`.
 - `cargo run --package premath-cli -- observe --mode latest --json` — query Observation Surface v0 through the UX composition layer.
+- `cargo run --package premath-cli -- observe-build --repo-root . --json` — project Observation Surface v0 from canonical CI witness + issue memory substrates.
 - `cargo run --package premath-cli -- observe-serve --bind 127.0.0.1:43174` — serve Observation Surface v0 through the UX HTTP API.
 - `cargo run --package premath-cli -- mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root .` — run MCP tools over stdio (includes doctrine-gated `instruction_check` and `instruction_run`).
 - `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
@@ -95,6 +97,9 @@
 - `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues blocked by unresolved dependencies.
 - `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .premath/issues.jsonl --json` — update issue fields.
 - `cargo run --package premath-cli -- dep add <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — add a dependency edge.
+- `cargo run --package premath-cli -- dep remove <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — remove a dependency edge.
+- `cargo run --package premath-cli -- dep replace <issue-id> <depends-on-id> --from-type blocks --to-type related --issues .premath/issues.jsonl --json` — replace one dependency edge type.
+- `cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --json` — report dependency graph integrity status (cycle detection).
 
 ## CI Workflow Instructions
 

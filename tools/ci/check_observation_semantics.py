@@ -5,11 +5,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import subprocess
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Dict
 
-import observation_surface
+OBSERVATION_SCHEMA = 1
+OBSERVATION_KIND = "ci.observation.surface.v0"
 
 
 def canonical_json(value: Any) -> str:
@@ -42,6 +45,12 @@ def parse_args(default_root: Path) -> argparse.Namespace:
         type=Path,
         default=None,
         help="Observation surface JSON path (default: <repo-root>/artifacts/observation/latest.json).",
+    )
+    parser.add_argument(
+        "--issues-path",
+        type=Path,
+        default=None,
+        help="Issue memory path (default: <repo-root>/.premath/issues.jsonl).",
     )
     return parser.parse_args()
 
@@ -87,11 +96,13 @@ def validate_summary(surface: Dict[str, Any]) -> None:
 
 
 def main() -> int:
-    repo_root = Path(__file__).resolve().parents[2]
+    tool_root = Path(__file__).resolve().parents[2]
+    repo_root = tool_root
     args = parse_args(repo_root)
     root = args.repo_root.resolve()
     ciwitness_dir = _resolve(root, args.ciwitness_dir, "artifacts/ciwitness")
     surface_path = _resolve(root, args.surface, "artifacts/observation/latest.json")
+    issues_path = _resolve(root, args.issues_path, ".premath/issues.jsonl")
 
     if not surface_path.exists():
         print(f"[observation-semantics] FAIL (missing surface: {surface_path})")
@@ -99,7 +110,43 @@ def main() -> int:
 
     try:
         actual = load_json(surface_path)
-        expected = observation_surface.build_surface(root, ciwitness_dir)
+        with tempfile.TemporaryDirectory(prefix="premath-observe-build-check-") as tmp:
+            tmp_root = Path(tmp)
+            out_json = tmp_root / "latest.json"
+            out_jsonl = tmp_root / "events.jsonl"
+            cmd = [
+                "cargo",
+                "run",
+                "--package",
+                "premath-cli",
+                "--",
+                "observe-build",
+                "--repo-root",
+                str(root),
+                "--ciwitness-dir",
+                str(ciwitness_dir),
+                "--issues-path",
+                str(issues_path),
+                "--out-json",
+                str(out_json),
+                "--out-jsonl",
+                str(out_jsonl),
+                "--json",
+            ]
+            completed = subprocess.run(
+                cmd,
+                cwd=tool_root,
+                capture_output=True,
+                text=True,
+            )
+            if completed.returncode != 0:
+                raise ValueError(
+                    "observe-build command failed: "
+                    + (completed.stderr.strip() or completed.stdout.strip() or "unknown error")
+                )
+            expected = json.loads(completed.stdout)
+            if not isinstance(expected, dict):
+                raise ValueError("observe-build JSON output must be an object")
 
         if canonical_json(actual) != canonical_json(expected):
             raise ValueError(
@@ -107,14 +154,14 @@ def main() -> int:
                 "of current CI witness artifacts"
             )
 
-        if actual.get("schema") != observation_surface.SCHEMA:
+        if actual.get("schema") != OBSERVATION_SCHEMA:
             raise ValueError(
-                f"surface.schema mismatch (expected={observation_surface.SCHEMA}, actual={actual.get('schema')})"
+                f"surface.schema mismatch (expected={OBSERVATION_SCHEMA}, actual={actual.get('schema')})"
             )
-        if actual.get("surfaceKind") != observation_surface.SURFACE_KIND:
+        if actual.get("surfaceKind") != OBSERVATION_KIND:
             raise ValueError(
                 "surface.surfaceKind mismatch "
-                f"(expected={observation_surface.SURFACE_KIND!r}, actual={actual.get('surfaceKind')!r})"
+                f"(expected={OBSERVATION_KIND!r}, actual={actual.get('surfaceKind')!r})"
             )
 
         validate_summary(actual)

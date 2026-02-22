@@ -54,6 +54,7 @@ ADJOINTS_SITES_REQUIRED_OBLIGATIONS = {
     "beck_chevalley_pi",
     "refinement_invariance",
 }
+REQUIRED_CROSS_LANE_ROUTE = "span_square_commutation"
 
 
 @dataclass(frozen=True)
@@ -1201,6 +1202,57 @@ def evaluate_adjoints_sites_proposal(case: Dict[str, Any]) -> VectorOutcome:
     return VectorOutcome("accepted", "accepted", [])
 
 
+def evaluate_adjoints_sites_cross_lane_contract(
+    artifacts: Dict[str, Any],
+    label_prefix: str = "artifacts",
+) -> Optional[VectorOutcome]:
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_ADJOINTS_SITES not in claimed or CAPABILITY_SQUEAK_SITE not in claimed:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_capability_missing"])
+
+    route_obj = artifacts.get("crossLaneRoute")
+    if not isinstance(route_obj, dict):
+        raise ValueError(f"{label_prefix}.crossLaneRoute must be an object")
+    route = ensure_string(route_obj.get("pullbackBaseChange"), f"{label_prefix}.crossLaneRoute.pullbackBaseChange")
+    if route != REQUIRED_CROSS_LANE_ROUTE:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_route_missing"])
+
+    witness_obj = artifacts.get("spanSquareWitness")
+    if not isinstance(witness_obj, dict):
+        raise ValueError(f"{label_prefix}.spanSquareWitness must be an object")
+    square_id = ensure_string(witness_obj.get("squareId"), f"{label_prefix}.spanSquareWitness.squareId")
+    witness_route = ensure_string(witness_obj.get("route"), f"{label_prefix}.spanSquareWitness.route")
+    witness_digest = ensure_string(witness_obj.get("digest"), f"{label_prefix}.spanSquareWitness.digest")
+    expected_witness_digest = "sqw1_" + stable_hash({"squareId": square_id, "route": witness_route})
+    if witness_route != REQUIRED_CROSS_LANE_ROUTE or witness_digest != expected_witness_digest:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_witness_mismatch"])
+
+    location_descriptor = artifacts.get("locationDescriptor")
+    if not isinstance(location_descriptor, dict):
+        raise ValueError(f"{label_prefix}.locationDescriptor must be an object")
+    expected_loc_ref = ensure_string(artifacts.get("expectedLocRef"), f"{label_prefix}.expectedLocRef")
+    actual_loc_ref = compute_site_loc_ref(location_descriptor, f"{label_prefix}.locationDescriptor")
+    if actual_loc_ref != expected_loc_ref:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_transport_mismatch"])
+
+    return None
+
+
+def evaluate_adjoints_sites_composed(case: Dict[str, Any]) -> VectorOutcome:
+    base_outcome = evaluate_adjoints_sites_proposal(case)
+    if base_outcome.result != "accepted":
+        return base_outcome
+
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    contract_outcome = evaluate_adjoints_sites_cross_lane_contract(artifacts)
+    if contract_outcome is not None:
+        return contract_outcome
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def evaluate_adjoints_sites_invariance(case: Dict[str, Any]) -> VectorOutcome:
     profile = ensure_string(case.get("profile"), "profile")
     artifacts = case.get("artifacts")
@@ -1225,9 +1277,41 @@ def evaluate_adjoints_sites_invariance(case: Dict[str, Any]) -> VectorOutcome:
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_adjoints_sites_composed_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    profile = ensure_string(case.get("profile"), "profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = ensure_string_list(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+
+    contract_outcome = evaluate_adjoints_sites_cross_lane_contract(artifacts)
+    if contract_outcome is not None:
+        return contract_outcome
+
+    location_descriptor = artifacts.get("locationDescriptor")
+    if not isinstance(location_descriptor, dict):
+        raise ValueError("artifacts.locationDescriptor must be an object")
+    runtime_profile = ensure_string(location_descriptor.get("runtimeProfile"), "artifacts.locationDescriptor.runtimeProfile")
+    if profile != runtime_profile:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_profile_mismatch"])
+
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_adjoints_sites_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id == "golden/adjoint_site_obligations_accept":
         return evaluate_adjoints_sites_proposal(case)
+    if vector_id == "golden/composed_sigpi_squeak_span_accept":
+        return evaluate_adjoints_sites_composed(case)
     if vector_id == "adversarial/adjoint_triangle_missing_reject":
         return evaluate_adjoints_sites_proposal(case)
     if vector_id == "adversarial/beck_chevalley_sigma_missing_reject":
@@ -1236,8 +1320,17 @@ def evaluate_adjoints_sites_vector(vector_id: str, case: Dict[str, Any]) -> Vect
         return evaluate_adjoints_sites_proposal(case)
     if vector_id == "adversarial/refinement_invariance_missing_reject":
         return evaluate_adjoints_sites_proposal(case)
+    if vector_id == "adversarial/composed_sigpi_squeak_span_route_missing_reject":
+        return evaluate_adjoints_sites_composed(case)
+    if vector_id == "adversarial/composed_sigpi_squeak_transport_ref_mismatch_reject":
+        return evaluate_adjoints_sites_composed(case)
     if vector_id == "adversarial/adjoints_sites_requires_claim":
         return evaluate_adjoints_sites_requires_claim(case)
+    if vector_id in {
+        "invariance/same_composed_sigpi_squeak_span_local",
+        "invariance/same_composed_sigpi_squeak_span_external",
+    }:
+        return evaluate_adjoints_sites_composed_invariance(case)
     if vector_id.startswith("invariance/"):
         return evaluate_adjoints_sites_invariance(case)
     raise ValueError(f"unsupported adjoints_sites vector id: {vector_id}")

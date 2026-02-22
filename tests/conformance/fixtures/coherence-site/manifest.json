@@ -19,6 +19,11 @@
     "adversarial/cwf_comprehension_beta_reject",
     "golden/cwf_comprehension_eta_accept",
     "adversarial/cwf_comprehension_eta_reject",
+    "golden/gate_chain_parity_lane_ownership_accept",
+    "adversarial/gate_chain_parity_lane_ownership_violation_reject",
+    "adversarial/gate_chain_parity_lane_route_missing_reject",
+    "invariance/gate_chain_parity_lane_ownership_permuted_accept",
+    "invariance/gate_chain_parity_lane_ownership_permuted_accept_external",
     "golden/span_square_commutation_accept",
     "adversarial/span_square_commutation_reject",
     "adversarial/span_square_commutation_digest_mismatch_reject",
@@ -56,6 +61,13 @@
     "cwf_comprehension_eta": [
       "golden/cwf_comprehension_eta_accept",
       "adversarial/cwf_comprehension_eta_reject"
+    ],
+    "gate_chain_parity": [
+      "golden/gate_chain_parity_lane_ownership_accept",
+      "adversarial/gate_chain_parity_lane_ownership_violation_reject",
+      "adversarial/gate_chain_parity_lane_route_missing_reject",
+      "invariance/gate_chain_parity_lane_ownership_permuted_accept",
+      "invariance/gate_chain_parity_lane_ownership_permuted_accept_external"
     ],
     "span_square_commutation": [
       "golden/span_square_commutation_accept",

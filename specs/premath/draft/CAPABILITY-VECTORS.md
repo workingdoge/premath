@@ -318,6 +318,15 @@ Required vectors when claimed:
 - adversarial: missing `refinement_invariance` evidence rejects deterministically.
 - invariance: local/external adjoints-sites execution profiles preserve kernel
   verdict and Gate failure classes for paired scenarios.
+- when composed with `capabilities.squeak_site`, golden vectors MUST show
+  cross-lane pullback/base-change routing through `span_square_commutation` and
+  deterministic runtime location binding.
+- when composed with `capabilities.squeak_site`, adversarial vectors MUST reject
+  missing cross-lane route binding and transport reference mismatches
+  deterministically.
+- when composed with `capabilities.squeak_site`, invariance vectors MUST
+  preserve kernel verdict and Gate failure classes across local/external
+  profiles for the same composed semantic scenario.
 
 ## 3. Fixture naming guidance (informative)
 

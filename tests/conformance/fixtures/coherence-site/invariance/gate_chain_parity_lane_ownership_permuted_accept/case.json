@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "gate_chain_parity",
+  "semanticScenarioId": "gate_chain_parity_lane_ownership_permuted",
+  "profile": "local",
+  "artifacts": {
+    "controlPlaneContract": {
+      "schema": 1,
+      "contractKind": "premath.control_plane.contract.v1",
+      "evidenceLanes": {
+        "semanticDoctrine": "semantic_doctrine",
+        "strictChecker": "strict_checker",
+        "witnessCommutation": "witness_commutation",
+        "runtimeTransport": "runtime_transport"
+      },
+      "laneArtifactKinds": {
+        "witness_commutation": [
+          "square_witness",
+          "span_ref"
+        ],
+        "runtime_transport": [
+          "squeak_site_witness",
+          "squeak_transport_witness"
+        ],
+        "strict_checker": [
+          "cwf_strict_equality",
+          "coherence_obligation"
+        ],
+        "semantic_doctrine": [
+          "adjoint_site_obligation",
+          "gate_failure_class",
+          "kernel_obligation"
+        ]
+      },
+      "laneOwnership": {
+        "checkerCoreOnlyObligations": [
+          "cwf_comprehension_eta",
+          "cwf_substitution_composition",
+          "cwf_substitution_identity",
+          "cwf_comprehension_beta"
+        ],
+        "requiredCrossLaneWitnessRoute": {
+          "pullbackBaseChange": "span_square_commutation"
+        }
+      },
+      "laneFailureClasses": [
+        "lane_route_missing",
+        "lane_kind_unbound",
+        "lane_unknown",
+        "lane_ownership_violation"
+      ],
+      "requiredGateProjection": {
+        "projectionPolicy": "ci-topos-v0",
+        "checkOrder": [
+          "baseline"
+        ]
+      },
+      "requiredWitness": {
+        "witnessKind": "ci.required.v1",
+        "decisionKind": "ci.required.decision.v1"
+      },
+      "instructionWitness": {
+        "witnessKind": "ci.instruction.v1",
+        "policyKind": "ci.instruction.policy.v1",
+        "policyDigestPrefix": "pol1_"
+      }
+    }
+  }
+}

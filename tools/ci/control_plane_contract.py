@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 
 CONTROL_PLANE_CONTRACT_KIND = "premath.control_plane.contract.v1"
@@ -41,6 +41,12 @@ def _require_string_list(value: Any, label: str) -> Tuple[str, ...]:
     return tuple(out)
 
 
+def _require_optional_string_list(value: Any, label: str) -> Tuple[str, ...]:
+    if value is None:
+        return tuple()
+    return _require_string_list(value, label)
+
+
 def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -59,6 +65,66 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         raise ValueError(
             f"control-plane contract kind must be {CONTROL_PLANE_CONTRACT_KIND!r}"
         )
+
+    evidence_lanes: Dict[str, str] = {}
+    evidence_lanes_raw = root.get("evidenceLanes")
+    if evidence_lanes_raw is not None:
+        evidence_lanes_obj = _require_object(evidence_lanes_raw, "evidenceLanes")
+        required_lane_keys = (
+            "semanticDoctrine",
+            "strictChecker",
+            "witnessCommutation",
+            "runtimeTransport",
+        )
+        for key in required_lane_keys:
+            evidence_lanes[key] = _require_non_empty_string(
+                evidence_lanes_obj.get(key), f"evidenceLanes.{key}"
+            )
+        if len(set(evidence_lanes.values())) != len(evidence_lanes):
+            raise ValueError("evidenceLanes values must not contain duplicates")
+
+    lane_artifact_kinds: Dict[str, Tuple[str, ...]] = {}
+    lane_artifact_kinds_raw = root.get("laneArtifactKinds")
+    if lane_artifact_kinds_raw is not None:
+        lane_artifact_kinds_obj = _require_object(
+            lane_artifact_kinds_raw, "laneArtifactKinds"
+        )
+        for lane_id, kinds_raw in lane_artifact_kinds_obj.items():
+            lane_id_norm = _require_non_empty_string(
+                lane_id, "laneArtifactKinds.<laneId>"
+            )
+            lane_artifact_kinds[lane_id_norm] = _require_string_list(
+                kinds_raw, f"laneArtifactKinds.{lane_id_norm}"
+            )
+        if evidence_lanes and not set(lane_artifact_kinds).issubset(
+            set(evidence_lanes.values())
+        ):
+            raise ValueError(
+                "laneArtifactKinds keys must be subset of evidenceLanes values"
+            )
+
+    checker_core_only_obligations: Tuple[str, ...] = tuple()
+    required_cross_lane_witness_route: Optional[str] = None
+    lane_ownership_raw = root.get("laneOwnership")
+    if lane_ownership_raw is not None:
+        lane_ownership = _require_object(lane_ownership_raw, "laneOwnership")
+        checker_core_only_obligations = _require_optional_string_list(
+            lane_ownership.get("checkerCoreOnlyObligations"),
+            "laneOwnership.checkerCoreOnlyObligations",
+        )
+        required_route_obj = lane_ownership.get("requiredCrossLaneWitnessRoute")
+        if required_route_obj is not None:
+            required_route = _require_object(
+                required_route_obj, "laneOwnership.requiredCrossLaneWitnessRoute"
+            )
+            required_cross_lane_witness_route = _require_non_empty_string(
+                required_route.get("pullbackBaseChange"),
+                "laneOwnership.requiredCrossLaneWitnessRoute.pullbackBaseChange",
+            )
+
+    lane_failure_classes = _require_optional_string_list(
+        root.get("laneFailureClasses"), "laneFailureClasses"
+    )
 
     required_gate_projection = _require_object(
         root.get("requiredGateProjection"), "requiredGateProjection"
@@ -127,6 +193,13 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     return {
         "schema": schema,
         "contractKind": contract_kind,
+        "evidenceLanes": evidence_lanes,
+        "laneArtifactKinds": lane_artifact_kinds,
+        "laneOwnership": {
+            "checkerCoreOnlyObligations": checker_core_only_obligations,
+            "requiredCrossLaneWitnessRoute": required_cross_lane_witness_route,
+        },
+        "laneFailureClasses": lane_failure_classes,
         "requiredGateProjection": {
             "projectionPolicy": projection_policy,
             "checkIds": check_ids,
@@ -160,3 +233,15 @@ INSTRUCTION_POLICY_KIND: str = _CONTRACT["instructionWitness"]["policyKind"]
 INSTRUCTION_POLICY_DIGEST_PREFIX: str = _CONTRACT["instructionWitness"][
     "policyDigestPrefix"
 ]
+
+EVIDENCE_LANES: Dict[str, str] = dict(_CONTRACT.get("evidenceLanes", {}))
+LANE_ARTIFACT_KINDS: Dict[str, Tuple[str, ...]] = dict(
+    _CONTRACT.get("laneArtifactKinds", {})
+)
+CHECKER_CORE_ONLY_OBLIGATIONS: Tuple[str, ...] = tuple(
+    _CONTRACT.get("laneOwnership", {}).get("checkerCoreOnlyObligations", ())
+)
+REQUIRED_CROSS_LANE_WITNESS_ROUTE: Optional[str] = _CONTRACT.get(
+    "laneOwnership", {}
+).get("requiredCrossLaneWitnessRoute")
+LANE_FAILURE_CLASSES: Tuple[str, ...] = tuple(_CONTRACT.get("laneFailureClasses", ()))

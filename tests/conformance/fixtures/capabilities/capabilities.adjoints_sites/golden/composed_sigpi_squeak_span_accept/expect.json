@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "composed SigPi + Squeak claims route pullback/base-change through span_square_commutation",
+    "cross-lane span witness digest and runtime transport binding are deterministic"
+  ]
+}

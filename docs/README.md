@@ -2,13 +2,19 @@
 
 This directory contains non-normative documentation and implementation notes.
 
-- `design/README.md` — architecture and runtime design notes (Tusk/SigPi, identity, witnessing, CI closure, higher-order CI/CD loop).
+- `design/README.md` — lane-grouped design notes (Tusk runtime, Squeak/SigPi
+  transport/placement, control/CI composition).
 - `design/CI-PROVIDER-BINDINGS.md` — provider-specific CI check bindings (GitHub example; canonical gate contract remains provider-agnostic).
 - `design/ARCHITECTURE-MAP.md` — one-page doctrine-to-operation architecture map.
 - `design/GLOSSARY.md` — shared terminology used across design docs.
 - `foundations/` — explanatory background notes for kernel and SigPi concepts.
 - `observation/index.html` — lightweight local dashboard for Observation Surface v0.
 - `../specs/premath/draft/SPEC-INDEX.md` — normative spec entrypoint and claim/profile map.
+
+Boundary rule:
+
+- `docs/` is explanatory only.
+- Normative authority is always under `specs/`.
 
 For process/governance, see `../specs/process/README.md`.
 

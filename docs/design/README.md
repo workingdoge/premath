@@ -1,41 +1,46 @@
-# Tusk Design Docs
+# Design Docs (Runtime + Control)
 
-These documents are implementation-facing and non-normative.
+These docs are implementation-facing and non-normative.
 
-Tusk is the recursive unit model for building Premath-first systems where:
+Authority rule:
 
-- the kernel provides semantic laws,
-- a generic memory substrate provides replayable state,
-- domain adapters (for example Beads, accounting) project domain meaning,
-- control policies orchestrate execution without mutating projections directly.
+- normative contracts live under `specs/`,
+- `docs/design/` explains implementation shape, boundaries, and operational
+  composition.
 
-Boundary:
+## Lanes
 
-- Tusk realizes execution inside a Premath world.
-- SigPi (separate layer) handles composition/transport between worlds.
+### Tusk runtime (inside one world)
 
-## Documents
+- `TUSK-ARCHITECTURE.md`: recursive unit contract and runtime surfaces.
+- `TUSK-DOMAIN-ADAPTERS.md`: domain adapter model over generic substrate.
+- `TUSK-DESCENT-PACKS.md`: local/overlap/glue package shape.
+- `TUSK-REFINEMENT.md`: refinement taxonomy and activation rules.
+- `TUSK-IDENTITY.md`: run identity and deterministic bindings.
+- `TUSK-WITNESSING.md`: Gate vs transport witnessing split.
 
-- `TUSK-ARCHITECTURE.md`: Premath-first architecture and recursive unit contract.
-- `TUSK-DOMAIN-ADAPTERS.md`: domain adapter model over the generic substrate.
-- `TUSK-DESCENT-PACKS.md`: presheaf-like local/overlap/glue package shape across domains.
-- `TUSK-REFINEMENT.md`: refinement taxonomy, witnesses, and activation rules.
-- `TUSK-IDENTITY.md`: run identity, deterministic IDs, and semantic policy bindings.
-- `TUSK-WITNESSING.md`: Gate vs transport witnessing model and failure mappings.
-- `TUSK-SIGPI.md`: inter-world transport/composition boundary and contracts.
-- `GLOSSARY.md`: shared terms for architecture and implementation docs.
-- `ARCHITECTURE-MAP.md`: one-page doctrine-to-operation architecture map.
-- `CI-CLOSURE.md`: CI/pre-commit closure gate and change-projected entry minimization.
-- `HIGHER-ORDER-CI-CD.md`: DevOps/control-loop framing for CI/CD inside the coding environment.
-- `CI-PROVIDER-BINDINGS.md`: provider-specific required-check bindings to the canonical CI gate contract.
+### Squeak/SigPi transport + runtime placement (between worlds)
+
+- `SQUEAK-DESIGN.md`: canonical design guidance for transport/placement.
+- `TUSK-SIGPI.md`: compatibility alias path that points to `SQUEAK-DESIGN.md`.
+
+### Control/CI and architecture composition
+
+- `ARCHITECTURE-MAP.md`: doctrine-to-operation map + active execution order.
+- `CI-CLOSURE.md`: closure gate and change-projected entry minimization.
+- `CI-PROVIDER-BINDINGS.md`: provider bindings to canonical CI contract.
+- `CONTROL-PLANE-THREAT-MODEL.md`: threat/hardening matrix for control-plane
+  mutation, witness, and projection surfaces.
+- `HIGHER-ORDER-CI-CD.md`: control-loop framing inside coding environment.
+- `GLOSSARY.md`: shared terms across runtime/control docs.
 
 ## Relationship To Specs
 
-These docs do not replace the normative raw specs.
+Design docs do not replace normative specs.
 
-- Kernel laws remain in `specs/premath/draft/PREMATH-KERNEL.md` and `specs/premath/draft/GATE.md`.
-- Operational obligation framing remains in `specs/premath/draft/BIDIR-DESCENT.md`.
-- Raw operational spec candidates live in:
+- Semantic authority: `specs/premath/draft/PREMATH-KERNEL.md`,
+  `specs/premath/draft/GATE.md`, `specs/premath/draft/BIDIR-DESCENT.md`.
+- Runtime/transport normative candidates:
   - `specs/premath/raw/TUSK-CORE.md`
   - `specs/premath/raw/SQUEAK-CORE.md`
   - `specs/premath/raw/SQUEAK-SITE.md`

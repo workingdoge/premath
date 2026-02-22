@@ -46,6 +46,12 @@ This profile is an additive overlay on `draft/PREMATH-KERNEL`,
 `draft/GATE`, and `draft/BIDIR-DESCENT`. It does not change the kernel
 accept/reject criterion or Gate failure-class vocabulary.
 
+### 0.1 Naming and notation
+
+- Use `SigPi` in prose/identifier surfaces.
+- Render the adjoint triple as `\Sigma_f -| f* -| \Pi_f` (or shorthand
+  `sig\Pi` when compact notation is needed).
+
 ## 1. Base site of contexts
 
 ### 1.1 Context category
@@ -102,25 +108,25 @@ for `f`.
 
 ### 3.2 Adjoint triple
 
-For `Admissible(f : Gamma'->Gamma)`, provide:
+For `Admissible(f : Gamma'->Gamma)`, provide a SigPi triple:
 
-- `Sigma_f -| f* -| Pi_f`
+- `\Sigma_f -| f* -| \Pi_f`
 
 Operational meaning:
 
 - `f*` = transport/restriction
-- `Sigma_f` = aggregation/dependent sum
-- `Pi_f` = quantification/dependent product
+- `\Sigma_f` = aggregation/dependent sum
+- `\Pi_f` = quantification/dependent product
 
 ### 3.3 Laws (unit/counit)
 
 For each admissible `f`, the checker MUST be able to demand evidence of triangle
 identities in the chosen equality notion:
 
-- `Sigma_f -| f*`: unit `eta : id -> f*Sigma_f`, counit
-  `epsilon : Sigma_f f* -> id`
-- `f* -| Pi_f`: unit `eta' : id -> Pi_f f*`, counit
-  `epsilon' : f*Pi_f -> id`
+- `\Sigma_f -| f*`: unit `eta : id -> f*\Sigma_f`, counit
+  `epsilon : \Sigma_f f* -> id`
+- `f* -| \Pi_f`: unit `eta' : id -> \Pi_f f*`, counit
+  `epsilon' : f*\Pi_f -> id`
 
 Evidence is not required to be an explicit proof object. Evidence MAY be
 discharged by deterministic normalization to `cmpRef` (Section 7).
@@ -141,13 +147,22 @@ Delta  --g-->   Gamma
 with `f` and `f'` admissible (and required structure existing), the checker MUST
 support Beck-Chevalley obligations:
 
-- `Sigma-BC`: `Sigma_f' o (g')*  ~=  g* o Sigma_f`
-- `Pi-BC`: `Pi_f' o (g')*  ~=  g* o Pi_f`
+- `Sigma-BC`: `\Sigma_f' o (g')*  ~=  g* o \Sigma_f`
+- `Pi-BC`: `\Pi_f' o (g')*  ~=  g* o \Pi_f`
 
 where `~=` is this profile's equality, discharged via `cmpRef`.
 
 Optional and off by default extensions include Frobenius reciprocity and
 monoidal coherence.
+
+### 4.1 Span/square projection boundary
+
+When SigPi pullback/base-change obligations are surfaced in control-plane or
+coherence artifacts, implementations MUST preserve square lineage through typed
+span/square witnesses (`draft/SPAN-SQUARE-CHECKING`).
+
+These witness projections are checker-facing evidence and MUST NOT introduce a
+parallel acceptance authority.
 
 ## 5. Descent and contractibility (site laws as obligations)
 
@@ -180,7 +195,7 @@ Minimum obligation kinds:
 - `locality`
 - `descent_exists`
 - `descent_contractible`
-- `adjoint_triangle` (Sigma/f*/Pi units and counits)
+- `adjoint_triangle` (`\Sigma`/`f*`/`\Pi` units and counits)
 - `beck_chevalley_sigma`
 - `beck_chevalley_pi`
 - `refinement_invariance`
@@ -240,3 +255,53 @@ LLM proposals live entirely in checking mode.
 - Implement deterministic normalizer producing `cmpRef` bound to
   `(normalizerId, policyDigest)`.
 - Standardize witness schema for all failed obligations.
+
+## 10. Composed Overlay Contract (SigPi + spans + Squeak)
+
+This section applies when implementations compose:
+
+- `capabilities.adjoints_sites`,
+- `capabilities.squeak_site`,
+- typed span/square commutation routing (`draft/SPAN-SQUARE-CHECKING`).
+
+### 10.1 Capability and required-check routing
+
+Composed systems SHOULD run the following merge-gated checks:
+
+- `coherence-check` for checker-core and cross-lane witness obligations,
+- `conformance-run` for capability vectors (including adjoint/site and Squeak
+  vectors, including composed cross-lane route/transport invariance vectors),
+- `doctrine-check` for doctrine-to-operation site reachability.
+
+### 10.2 Composed obligation boundary
+
+For composed overlays:
+
+- SigPi adjoint/site obligations remain semantic-lane obligations owned by this
+  profile.
+- Span/square commutation remains a typed witness route
+  (`draft/SPAN-SQUARE-CHECKING`), not a second semantic authority.
+- Runtime transport/site obligations remain capability-scoped under
+  `raw/SQUEAK-SITE`.
+- CwF strict substitution/comprehension equalities remain checker-core
+  (`draft/PREMATH-COHERENCE`) and MUST NOT be re-owned by profile overlays.
+
+### 10.3 Authority mapping table
+
+| Surface | Owns admissibility? | Primary role |
+| --- | --- | --- |
+| Kernel + Gate (`draft/PREMATH-KERNEL`, `draft/GATE`, `draft/BIDIR-DESCENT`) | Yes | semantic obligation/discharge authority |
+| Coherence checker (`draft/PREMATH-COHERENCE`) | No | deterministic control-plane parity and strict checker obligations |
+| Span/square layer (`draft/SPAN-SQUARE-CHECKING`) | No | typed commutation evidence for cross-lane pullback/base-change claims |
+| Profile overlay (`profile/ADJOINTS-AND-SITES`) | No | capability-scoped SigPi adjoint/site obligations routed to checker discharge |
+| Runtime transport (`raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`) | No | runtime/world transport and site obligations bound to canonical witness lineage |
+
+### 10.4 Deterministic witness lineage
+
+Any composed overlay witness surface MUST preserve:
+
+- obligation identity (`obligationId` or equivalent typed key),
+- deterministic binding (`normalizerId`, `policyDigest`),
+- failure-class lineage bound to canonical checker/gate vocabularies.
+
+Unknown/unbound lane or capability material MUST fail closed.

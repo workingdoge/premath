@@ -98,13 +98,16 @@ For this repo policy, bypass actors are fail-closed.
 remain thin wrappers around provider-neutral pipeline entrypoints
 (`mise run ci-pipeline-check`).
 
-`tools/ci/test_pipeline_required.py` and `tools/ci/test_pipeline_instruction.py`
-are deterministic unit tests for provider-neutral pipeline summary/digest logic
+`tools/ci/test_pipeline_required.py`,
+`tools/ci/test_pipeline_instruction.py`, and
+`tools/ci/test_drift_budget.py` are deterministic unit tests for
+provider-neutral pipeline summary/digest logic and drift-budget sentinels
 (`mise run ci-pipeline-test`).
 
-`tools/ci/observation_surface.py` builds and queries `Observation Surface v0`
-from CI witness artifacts plus issue-memory projection state
-(`mise run ci-observation-build`, `mise run ci-observation-query`).
+Observation projection now routes through one core command surface:
+`premath observe-build` (`mise run ci-observation-build`).
+`tools/ci/observation_surface.py` remains as a thin compatibility wrapper for
+tests/scripts, while `mise run ci-observation-query` uses `premath observe`.
 The summary includes explicit coherence projections for:
 
 - policy drift,
@@ -121,8 +124,11 @@ It writes:
 `tools/ci/test_observation_surface.py` validates deterministic reducer/query
 behavior (`mise run ci-observation-test`).
 `tools/ci/check_observation_semantics.py` enforces projection invariance:
-observation output must match deterministic reducer output from CI witness and
-issue-memory artifacts (`mise run ci-observation-check`).
+observation output must match a fresh `premath observe-build` projection from
+current CI witness and issue-memory artifacts (`mise run ci-observation-check`).
+`tools/ci/check_drift_budget.py` enforces fail-closed drift-budget sentinels
+across docs/contracts/checkers/cache-closure surfaces and emits deterministic
+`driftClasses` summary output (`mise run ci-drift-budget-check`).
 
 `premath observe-serve` (from `premath-cli`) exposes the same observation query
 contract as a tiny HTTP read API for frontend clients:

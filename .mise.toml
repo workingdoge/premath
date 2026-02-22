@@ -38,6 +38,9 @@ run = "python3 tools/conformance/check_spec_traceability.py"
 [tasks.docs-coherence-check]
 run = "python3 tools/conformance/check_docs_coherence.py"
 
+[tasks.ci-drift-budget-check]
+run = "python3 tools/ci/check_drift_budget.py --json"
+
 [tasks.coherence-check]
 run = "cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json"
 
@@ -64,6 +67,7 @@ run = [
   "mise run traceability-check",
   "mise run coherence-check",
   "mise run docs-coherence-check",
+  "mise run ci-drift-budget-check",
   "mise run doctrine-check",
   "mise run ci-command-surface-check",
   "mise run ci-hygiene-check",
@@ -129,6 +133,8 @@ run = [
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_proposal.py",
+  "python3 tools/ci/test_control_plane_contract.py",
+  "python3 tools/ci/test_drift_budget.py",
   "python3 tools/ci/test_instruction_check_client.py",
   "python3 tools/ci/test_proposal_check_client.py",
   "python3 tools/ci/test_client_transport_parity.py",
@@ -141,10 +147,10 @@ run = [
 ]
 
 [tasks.ci-observation-build]
-run = "python3 tools/ci/observation_surface.py build"
+run = "cargo run --package premath-cli -- observe-build --repo-root ."
 
 [tasks.ci-observation-query]
-run = "python3 tools/ci/observation_surface.py query --mode latest"
+run = "cargo run --package premath-cli -- observe --surface artifacts/observation/latest.json --mode latest --json"
 
 [tasks.ci-observation-test]
 run = "python3 tools/ci/test_observation_surface.py"
