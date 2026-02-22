@@ -53,6 +53,57 @@ class SuitePlan:
     files_hashed: int
 
 
+def resolve_rooted_path(path_text: str) -> Path:
+    candidate = Path(path_text)
+    if candidate.is_absolute():
+        return candidate
+    return ROOT / candidate
+
+
+def unique_paths(paths: Sequence[Path]) -> Tuple[Path, ...]:
+    out: List[Path] = []
+    seen: set[str] = set()
+    for path in paths:
+        key = path.as_posix()
+        if key in seen:
+            continue
+        seen.add(key)
+        out.append(path)
+    return tuple(out)
+
+
+def load_coherence_contract_input_paths() -> Tuple[Path, ...]:
+    contract_path = ROOT / "specs" / "premath" / "draft" / "COHERENCE-CONTRACT.json"
+    base_paths: List[Path] = [
+        ROOT / "tools" / "conformance" / "run_fixture_suites.py",
+        contract_path,
+        ROOT / "tests" / "conformance" / "fixtures" / "coherence-transport",
+        ROOT / "tests" / "conformance" / "fixtures" / "coherence-site",
+        ROOT / "crates" / "premath-coherence" / "src",
+        ROOT / "crates" / "premath-cli" / "src" / "commands" / "coherence_check.rs",
+    ]
+    try:
+        contract_payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return unique_paths(base_paths)
+
+    surfaces = contract_payload.get("surfaces", {})
+    if isinstance(surfaces, dict):
+        for key, value in surfaces.items():
+            if not isinstance(value, str):
+                continue
+            if key.endswith("Path") or key.endswith("Root"):
+                base_paths.append(resolve_rooted_path(value))
+
+    expected_operation_paths = contract_payload.get("expectedOperationPaths", [])
+    if isinstance(expected_operation_paths, list):
+        for value in expected_operation_paths:
+            if isinstance(value, str):
+                base_paths.append(resolve_rooted_path(value))
+
+    return unique_paths(base_paths)
+
+
 SUITES: Tuple[Suite, ...] = (
     Suite(
         suite_id="interop-core",
@@ -126,14 +177,7 @@ SUITES: Tuple[Suite, ...] = (
             ".",
             "--json",
         ),
-        input_paths=(
-            ROOT / "tools" / "conformance" / "run_fixture_suites.py",
-            ROOT / "specs" / "premath" / "draft" / "COHERENCE-CONTRACT.json",
-            ROOT / "tests" / "conformance" / "fixtures" / "coherence-transport",
-            ROOT / "tests" / "conformance" / "fixtures" / "coherence-site",
-            ROOT / "crates" / "premath-coherence" / "src",
-            ROOT / "crates" / "premath-cli" / "src" / "commands" / "coherence_check.rs",
-        ),
+        input_paths=load_coherence_contract_input_paths(),
     ),
     Suite(
         suite_id="tusk-core",

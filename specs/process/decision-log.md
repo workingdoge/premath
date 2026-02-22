@@ -2017,3 +2017,31 @@ surface.
   witness layers.
 - bd-33 parity scope gains executable E2E regression protection for this drift
   class.
+
+---
+
+## 2026-02-22 — Decision 0070: Close coherence-contract cache bindings over contract-declared surfaces
+
+### Decision
+Update `tools/conformance/run_fixture_suites.py` so the `coherence-contract`
+suite cache-input closure is derived from `draft/COHERENCE-CONTRACT.json`:
+
+- include all `surfaces.*Path` and `surfaces.*Root` entries,
+- include top-level `expectedOperationPaths[]`,
+- keep baseline fallback inputs for deterministic behavior if contract parsing
+  fails.
+
+Add `tools/conformance/test_run_fixture_suites.py` and gate it in
+`ci-pipeline-test`.
+
+### Rationale
+The prior cache binding for `coherence-contract` omitted several files read by
+`coherence-check` (for example `PREMATH-COHERENCE`, `SPEC-INDEX`, capability
+manifests, and operation paths). That allowed stale cache hits when those
+surfaces changed.
+
+### Consequences
+- conformance cache validity for `coherence-contract` now tracks the full
+  checker-read surface declared by contract.
+- cache hits cannot bypass coherence-check execution after relevant doc/surface
+  edits.

@@ -136,6 +136,7 @@ run = [
   "python3 tools/ci/test_branch_policy.py",
   "python3 tools/ci/test_repo_hygiene.py",
   "python3 tools/conformance/test_docs_coherence.py",
+  "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
 ]
 
