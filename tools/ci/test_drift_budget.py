@@ -46,6 +46,9 @@ class DriftBudgetChecksTests(unittest.TestCase):
                     "PREMATH_ISSUE_ID",
                 ),
                 "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+                "sessionPathEnvKey": "PREMATH_HARNESS_SESSION_PATH",
+                "sessionPathDefault": ".premath/harness_session.json",
+                "sessionIssueField": "issueId",
             },
         }
         control_plane_module = SimpleNamespace(
@@ -66,6 +69,15 @@ class DriftBudgetChecksTests(unittest.TestCase):
             ],
             HARNESS_ISSUES_PATH_ENV_KEY=loaded_contract["harnessRetry"][
                 "issuesPathEnvKey"
+            ],
+            HARNESS_SESSION_PATH_ENV_KEY=loaded_contract["harnessRetry"][
+                "sessionPathEnvKey"
+            ],
+            HARNESS_SESSION_PATH_DEFAULT=loaded_contract["harnessRetry"][
+                "sessionPathDefault"
+            ],
+            HARNESS_SESSION_ISSUE_FIELD=loaded_contract["harnessRetry"][
+                "sessionIssueField"
             ],
         )
         gate_chain_details = {

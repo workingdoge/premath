@@ -36,7 +36,8 @@ This intentionally avoids introducing a parallel semantic schema.
 Required effects:
 
 - resolve canonical memory roots (`.premath/issues.jsonl`,
-  `artifacts/ciwitness/*`, `artifacts/observation/latest.json`),
+  `.premath/harness_session.json`, `artifacts/ciwitness/*`,
+  `artifacts/observation/latest.json`),
 - load previous session handoff summary (if present),
 - compute next actionable target from issue graph + policy bindings,
 - run baseline startup verification for current working scope.
@@ -114,16 +115,16 @@ Trajectory records are an operational lane, not semantic authority.
 
 ## 8. Gaps (remaining)
 
-1. Escalation mutation wiring is active for terminal retry decisions, but
-   adoption still depends on active issue context env (`PREMATH_ACTIVE_ISSUE_ID`
-   / `PREMATH_ISSUE_ID`) in each harness execution environment.
+1. Expand failure-class coverage from observed CI/harness runs while preserving
+   policy digest discipline.
 
 ## 9. Implementation slice plan (no math generalization required)
 
 1. Expand failure-class coverage from observed CI/harness runs while preserving
    policy digest discipline.
-2. Promote active issue-context provisioning into harness bootstrap defaults so
-   escalation mutation paths are always available during long-run execution.
+2. Keep issue-context bootstrap deterministic across env + session fallback
+   paths (`PREMATH_ACTIVE_ISSUE_ID` / `PREMATH_ISSUE_ID` /
+   `PREMATH_HARNESS_SESSION_PATH` -> `.premath/harness_session.json`).
 
 Each slice should ship with:
 

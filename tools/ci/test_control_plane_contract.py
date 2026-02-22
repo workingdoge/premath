@@ -136,6 +136,9 @@ def _base_payload() -> dict:
                 "PREMATH_ISSUE_ID",
             ],
             "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+            "sessionPathEnvKey": "PREMATH_HARNESS_SESSION_PATH",
+            "sessionPathDefault": ".premath/harness_session.json",
+            "sessionIssueField": "issueId",
         },
     }
 
@@ -200,6 +203,10 @@ class ControlPlaneContractTests(unittest.TestCase):
             "ci.harness.retry.policy.v1",
         )
         self.assertIn("mark_blocked", loaded["harnessRetry"]["escalationActions"])
+        self.assertEqual(
+            loaded["harnessRetry"]["sessionPathEnvKey"],
+            "PREMATH_HARNESS_SESSION_PATH",
+        )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())

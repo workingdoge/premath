@@ -313,6 +313,15 @@ def check_control_plane_lane_bindings(
     contract_harness_issues_path_env_key = str(
         contract_harness_retry.get("issuesPathEnvKey", "")
     )
+    contract_harness_session_path_env_key = str(
+        contract_harness_retry.get("sessionPathEnvKey", "")
+    )
+    contract_harness_session_path_default = str(
+        contract_harness_retry.get("sessionPathDefault", "")
+    )
+    contract_harness_session_issue_field = str(
+        contract_harness_retry.get("sessionIssueField", "")
+    )
 
     checker_expected_core = as_sorted_strings(
         lane_registry.get("expectedCheckerCoreOnlyObligations", ())
@@ -370,6 +379,15 @@ def check_control_plane_lane_bindings(
     loader_harness_issues_path_env_key = str(
         getattr(control_plane_module, "HARNESS_ISSUES_PATH_ENV_KEY", "")
     )
+    loader_harness_session_path_env_key = str(
+        getattr(control_plane_module, "HARNESS_SESSION_PATH_ENV_KEY", "")
+    )
+    loader_harness_session_path_default = str(
+        getattr(control_plane_module, "HARNESS_SESSION_PATH_DEFAULT", "")
+    )
+    loader_harness_session_issue_field = str(
+        getattr(control_plane_module, "HARNESS_SESSION_ISSUE_FIELD", "")
+    )
 
     if loader_evidence_lanes != contract_evidence_lanes:
         reasons.append("control_plane_contract.py EVIDENCE_LANES drift from contract payload")
@@ -410,6 +428,18 @@ def check_control_plane_lane_bindings(
         reasons.append(
             "control_plane_contract.py HARNESS_ISSUES_PATH_ENV_KEY drift from contract payload"
         )
+    if loader_harness_session_path_env_key != contract_harness_session_path_env_key:
+        reasons.append(
+            "control_plane_contract.py HARNESS_SESSION_PATH_ENV_KEY drift from contract payload"
+        )
+    if loader_harness_session_path_default != contract_harness_session_path_default:
+        reasons.append(
+            "control_plane_contract.py HARNESS_SESSION_PATH_DEFAULT drift from contract payload"
+        )
+    if loader_harness_session_issue_field != contract_harness_session_issue_field:
+        reasons.append(
+            "control_plane_contract.py HARNESS_SESSION_ISSUE_FIELD drift from contract payload"
+        )
 
     details = {
         "reasons": reasons,
@@ -425,6 +455,9 @@ def check_control_plane_lane_bindings(
                 "escalationActions": contract_harness_escalation_actions,
                 "activeIssueEnvKeys": contract_harness_active_issue_env_keys,
                 "issuesPathEnvKey": contract_harness_issues_path_env_key,
+                "sessionPathEnvKey": contract_harness_session_path_env_key,
+                "sessionPathDefault": contract_harness_session_path_default,
+                "sessionIssueField": contract_harness_session_issue_field,
             },
         },
         "checker": {
@@ -446,6 +479,9 @@ def check_control_plane_lane_bindings(
                 "escalationActions": loader_harness_escalation_actions,
                 "activeIssueEnvKeys": loader_harness_active_issue_env_keys,
                 "issuesPathEnvKey": loader_harness_issues_path_env_key,
+                "sessionPathEnvKey": loader_harness_session_path_env_key,
+                "sessionPathDefault": loader_harness_session_path_default,
+                "sessionIssueField": loader_harness_session_issue_field,
             },
         },
     }

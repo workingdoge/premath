@@ -332,6 +332,18 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         harness_retry_obj.get("issuesPathEnvKey"),
         "harnessRetry.issuesPathEnvKey",
     )
+    harness_retry_session_path_env_key = _require_non_empty_string(
+        harness_retry_obj.get("sessionPathEnvKey"),
+        "harnessRetry.sessionPathEnvKey",
+    )
+    harness_retry_session_path_default = _require_non_empty_string(
+        harness_retry_obj.get("sessionPathDefault"),
+        "harnessRetry.sessionPathDefault",
+    )
+    harness_retry_session_issue_field = _require_non_empty_string(
+        harness_retry_obj.get("sessionIssueField"),
+        "harnessRetry.sessionIssueField",
+    )
 
     required_gate_projection = _require_object(
         root.get("requiredGateProjection"), "requiredGateProjection"
@@ -448,6 +460,9 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
             "escalationActions": harness_retry_escalation_actions,
             "activeIssueEnvKeys": harness_retry_active_issue_env_keys,
             "issuesPathEnvKey": harness_retry_issues_path_env_key,
+            "sessionPathEnvKey": harness_retry_session_path_env_key,
+            "sessionPathDefault": harness_retry_session_path_default,
+            "sessionIssueField": harness_retry_session_issue_field,
         },
         "requiredGateProjection": {
             "projectionPolicy": projection_policy,
@@ -564,5 +579,17 @@ HARNESS_ACTIVE_ISSUE_ENV_KEYS: Tuple[str, ...] = tuple(
 )
 HARNESS_ISSUES_PATH_ENV_KEY: str = _CONTRACT.get("harnessRetry", {}).get(
     "issuesPathEnvKey",
+    "",
+)
+HARNESS_SESSION_PATH_ENV_KEY: str = _CONTRACT.get("harnessRetry", {}).get(
+    "sessionPathEnvKey",
+    "",
+)
+HARNESS_SESSION_PATH_DEFAULT: str = _CONTRACT.get("harnessRetry", {}).get(
+    "sessionPathDefault",
+    "",
+)
+HARNESS_SESSION_ISSUE_FIELD: str = _CONTRACT.get("harnessRetry", {}).get(
+    "sessionIssueField",
     "",
 )

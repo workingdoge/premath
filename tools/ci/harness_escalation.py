@@ -17,6 +17,9 @@ from harness_retry_policy import RetryDecision
 
 ACTIVE_ISSUE_ENV_KEYS = ("PREMATH_ACTIVE_ISSUE_ID", "PREMATH_ISSUE_ID")
 DEFAULT_ISSUES_REL_PATH = Path(".premath/issues.jsonl")
+HARNESS_SESSION_ENV_KEY = "PREMATH_HARNESS_SESSION_PATH"
+DEFAULT_HARNESS_SESSION_REL_PATH = Path(".premath/harness_session.json")
+HARNESS_SESSION_KIND = "premath.harness.session.v1"
 
 
 class EscalationError(ValueError):
@@ -56,6 +59,73 @@ def resolve_active_issue_id(env: Mapping[str, str] | None = None) -> str | None:
         if isinstance(value, str) and value.strip():
             return value.strip()
     return None
+
+
+def resolve_harness_session_path(
+    repo_root: Path,
+    env: Mapping[str, str] | None = None,
+) -> Path:
+    source = env if env is not None else os.environ
+    raw = source.get(HARNESS_SESSION_ENV_KEY)
+    path = Path(raw) if isinstance(raw, str) and raw.strip() else DEFAULT_HARNESS_SESSION_REL_PATH
+    if not path.is_absolute():
+        path = (repo_root / path).resolve()
+    return path
+
+
+def _resolve_active_issue_from_harness_session(
+    session_path: Path,
+) -> str | None:
+    if not session_path.exists():
+        return None
+    try:
+        payload = json.loads(session_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise EscalationError(
+            "escalation_session_invalid",
+            f"invalid harness-session JSON at {session_path}: {exc}",
+        ) from exc
+    except OSError as exc:
+        raise EscalationError(
+            "escalation_session_read_failed",
+            f"failed reading harness-session artifact {session_path}: {exc}",
+        ) from exc
+
+    if not isinstance(payload, dict):
+        raise EscalationError(
+            "escalation_session_invalid",
+            f"harness-session payload at {session_path} must be an object",
+        )
+    session_kind = payload.get("sessionKind")
+    if not isinstance(session_kind, str) or session_kind != HARNESS_SESSION_KIND:
+        raise EscalationError(
+            "escalation_session_invalid",
+            (
+                "invalid harness-session kind at "
+                f"{session_path} (expected {HARNESS_SESSION_KIND})"
+            ),
+        )
+    issue_id = payload.get("issueId")
+    if isinstance(issue_id, str) and issue_id.strip():
+        return issue_id.strip()
+    return None
+
+
+def resolve_active_issue_context(
+    repo_root: Path,
+    env: Mapping[str, str] | None = None,
+) -> tuple[str | None, str]:
+    source = env if env is not None else os.environ
+    for key in ACTIVE_ISSUE_ENV_KEYS:
+        value = source.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip(), f"env:{key}"
+
+    session_path = resolve_harness_session_path(repo_root, source)
+    issue_from_session = _resolve_active_issue_from_harness_session(session_path)
+    if issue_from_session:
+        return issue_from_session, f"session:{session_path}"
+    return None, f"none(session:{session_path})"
 
 
 def resolve_issues_path(
@@ -227,7 +297,7 @@ def apply_terminal_escalation(
             details="terminal stop with no mutation",
         )
 
-    active_issue_id = resolve_active_issue_id(env)
+    active_issue_id, issue_source = resolve_active_issue_context(repo_root, env)
     if not active_issue_id:
         return EscalationResult(
             action=action,
@@ -236,7 +306,10 @@ def apply_terminal_escalation(
             created_issue_id=None,
             note_digest=None,
             witness_ref=witness_ref,
-            details=f"set one of: {', '.join(ACTIVE_ISSUE_ENV_KEYS)}",
+            details=(
+                f"source={issue_source}; set one of: {', '.join(ACTIVE_ISSUE_ENV_KEYS)} "
+                f"or provide harness session at {HARNESS_SESSION_ENV_KEY}"
+            ),
         )
 
     resolved_issues_path = resolve_issues_path(repo_root, env, issues_path)
@@ -274,7 +347,7 @@ def apply_terminal_escalation(
             created_issue_id=created_issue_id,
             note_digest=note_digest,
             witness_ref=witness_ref,
-            details=f"issuesPath={resolved_issues_path}",
+            details=f"issuesPath={resolved_issues_path}; issueSource={issue_source}",
         )
 
     if action == "mark_blocked":
@@ -301,7 +374,7 @@ def apply_terminal_escalation(
             created_issue_id=None,
             note_digest=note_digest,
             witness_ref=witness_ref,
-            details=f"issuesPath={resolved_issues_path}",
+            details=f"issuesPath={resolved_issues_path}; issueSource={issue_source}",
         )
 
     raise EscalationError("escalation_unknown_action", f"unsupported escalation action: {action}")

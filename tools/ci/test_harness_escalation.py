@@ -153,6 +153,73 @@ class HarnessEscalationTests(unittest.TestCase):
         self.assertEqual(result.outcome, "skipped_missing_issue_context")
         self.assertIsNone(result.issue_id)
 
+    def test_active_issue_falls_back_to_harness_session(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-session-") as tmp:
+            root = Path(tmp)
+            witness = root / "artifacts/ciwitness/latest-required.json"
+            witness.parent.mkdir(parents=True, exist_ok=True)
+            witness.write_text("{}", encoding="utf-8")
+            issues = root / ".premath/issues.jsonl"
+            issues.parent.mkdir(parents=True, exist_ok=True)
+            issues.write_text(
+                json.dumps({"id": "bd-parent", "title": "Parent", "notes": ""}) + "\n",
+                encoding="utf-8",
+            )
+            session = root / ".premath/harness_session.json"
+            session.write_text(
+                json.dumps(
+                    {
+                        "schema": 1,
+                        "sessionKind": "premath.harness.session.v1",
+                        "sessionId": "sess1",
+                        "state": "active",
+                        "issueId": "bd-parent",
+                        "startedAt": "2026-02-22T00:00:00Z",
+                        "updatedAt": "2026-02-22T00:00:00Z",
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            recorder = _RunRecorder(
+                {
+                    "action": "issue.update",
+                    "issue": {"id": "bd-parent", "status": "blocked"},
+                }
+            )
+            result = harness_escalation.apply_terminal_escalation(
+                root,
+                scope="instruction",
+                decision=_decision("mark_blocked"),
+                policy={"policyId": "policy.harness.retry.v1", "policyDigest": "pol1_x"},
+                witness_path=witness,
+                env={},
+                run_process=recorder,
+                issues_path=issues,
+            )
+            self.assertEqual(result.outcome, "applied")
+            self.assertEqual(result.issue_id, "bd-parent")
+            self.assertIn("issueSource=session:", result.details or "")
+
+    def test_malformed_harness_session_is_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-session-invalid-") as tmp:
+            root = Path(tmp)
+            witness = root / "artifacts/ciwitness/latest-required.json"
+            witness.parent.mkdir(parents=True, exist_ok=True)
+            witness.write_text("{}", encoding="utf-8")
+            session = root / ".premath/harness_session.json"
+            session.parent.mkdir(parents=True, exist_ok=True)
+            session.write_text("{bad json", encoding="utf-8")
+            with self.assertRaises(harness_escalation.EscalationError):
+                harness_escalation.apply_terminal_escalation(
+                    root,
+                    scope="required",
+                    decision=_decision("issue_discover"),
+                    policy={"policyId": "policy.harness.retry.v1", "policyDigest": "pol1_x"},
+                    witness_path=witness,
+                    env={},
+                )
+
     def test_issue_command_failure_raises(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-fail-") as tmp:
             root = Path(tmp)

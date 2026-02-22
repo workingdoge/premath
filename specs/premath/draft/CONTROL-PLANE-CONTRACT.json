@@ -131,7 +131,10 @@
       "PREMATH_ACTIVE_ISSUE_ID",
       "PREMATH_ISSUE_ID"
     ],
-    "issuesPathEnvKey": "PREMATH_ISSUES_PATH"
+    "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+    "sessionPathEnvKey": "PREMATH_HARNESS_SESSION_PATH",
+    "sessionPathDefault": ".premath/harness_session.json",
+    "sessionIssueField": "issueId"
   },
   "requiredGateProjection": {
     "projectionPolicy": "ci-topos-v0",

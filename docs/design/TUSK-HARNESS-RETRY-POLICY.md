@@ -114,9 +114,19 @@ Active issue context:
 
 - primary env: `PREMATH_ACTIVE_ISSUE_ID`
 - fallback env: `PREMATH_ISSUE_ID`
+- fallback session artifact:
+  - path override env: `PREMATH_HARNESS_SESSION_PATH`
+  - default path: `.premath/harness_session.json`
+  - field: `issueId`
 - optional issues path override: `PREMATH_ISSUES_PATH`
 
-If active issue context is missing, wrappers emit deterministic
+Resolution order is deterministic:
+
+1. `PREMATH_ACTIVE_ISSUE_ID`
+2. `PREMATH_ISSUE_ID`
+3. harness-session artifact (`issueId`)
+
+If active issue context is still missing, wrappers emit deterministic
 `skipped_missing_issue_context` escalation output and still fail the pipeline
 with the underlying check failure code.
 
@@ -124,6 +134,9 @@ Mutation command failures are fail-closed:
 
 - wrappers return non-success (`2`) with typed escalation error surface in
   summary output.
+- malformed/unreadable harness-session artifacts fail closed with typed
+  escalation errors (`escalation_session_invalid`,
+  `escalation_session_read_failed`).
 
 ## 6. Verification commands
 

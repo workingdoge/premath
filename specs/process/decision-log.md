@@ -3015,3 +3015,46 @@ fail-closed on schema divergence.
 - Harness retry/escalation contract is now machine-bound in typed spec payloads.
 - Drift checks enforce loader/contract parity for retry/escalation fields.
 - Control-plane semantics remain non-authoritative for kernel admissibility.
+
+---
+
+## 2026-02-22 — Decision 0103: Resolve retry escalation issue context via harness-session fallback
+
+### Decision
+Extend terminal retry escalation issue-context resolution with a deterministic
+fallback to harness-session artifacts, and bind that fallback into control-plane
+contract checks.
+
+Implemented scope:
+
+1. escalation issue-context resolution order in `tools/ci/harness_escalation.py`:
+   - `PREMATH_ACTIVE_ISSUE_ID`,
+   - `PREMATH_ISSUE_ID`,
+   - harness-session artifact `issueId` from:
+     - `PREMATH_HARNESS_SESSION_PATH` (override),
+     - `.premath/harness_session.json` (default).
+2. fail-closed behavior for malformed/unreadable harness-session artifacts:
+   - `escalation_session_invalid`,
+   - `escalation_session_read_failed`.
+3. contract + loader + drift-budget bindings:
+   - `draft/CONTROL-PLANE-CONTRACT.json` `harnessRetry` adds:
+     `sessionPathEnvKey`, `sessionPathDefault`, `sessionIssueField`,
+   - `tools/ci/control_plane_contract.py` exports corresponding constants,
+   - `tools/ci/check_drift_budget.py` enforces parity.
+4. tests/docs/spec updates:
+   - escalation fallback + fail-closed tests,
+   - design docs now document env+session fallback as canonical path,
+   - `draft/PREMATH-COHERENCE` parity text includes harness-session bindings.
+
+### Rationale
+Retry escalation mutation paths were wired but depended on explicit env setup in
+every run context. Harness-session artifacts already carry active issue identity
+for long-run continuity, so they should participate in deterministic fallback
+resolution to reduce skipped escalations without adding parallel semantics.
+
+### Consequences
+- Escalation mutation paths are available in more harness executions by default.
+- Missing issue context remains explicit (`skipped_missing_issue_context`) only
+  after env+session resolution fails.
+- Control-plane drift checks now fail closed if harness-session contract fields
+  drift between spec payload and loader/checker surfaces.
