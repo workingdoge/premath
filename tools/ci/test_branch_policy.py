@@ -14,6 +14,9 @@ import check_branch_policy
 ROOT = Path(__file__).resolve().parents[2]
 POLICY_PATH = ROOT / "specs" / "process" / "GITHUB-BRANCH-POLICY.json"
 GOLDEN_RULES_PATH = ROOT / "tests" / "ci" / "fixtures" / "branch-policy" / "effective-main-rules-golden.json"
+GOLDEN_PROTECTION_PATH = (
+    ROOT / "tests" / "ci" / "fixtures" / "branch-policy" / "main-protection-golden.json"
+)
 
 
 class BranchPolicyTests(unittest.TestCase):
@@ -34,6 +37,17 @@ class BranchPolicyTests(unittest.TestCase):
         self.assertTrue(details["strictStatusChecks"])
         self.assertEqual(details["bypassActors"], [])
 
+    def test_evaluate_policy_accepts_classic_branch_protection_fixture(self) -> None:
+        policy = check_branch_policy.parse_policy(POLICY_PATH)
+        payload = check_branch_policy.load_json(GOLDEN_PROTECTION_PATH)
+        errors, details = check_branch_policy.evaluate_policy(policy, payload)
+        self.assertEqual(errors, [])
+        self.assertIn("pull_request", details["ruleTypes"])
+        self.assertIn("required_status_checks", details["ruleTypes"])
+        self.assertIn("ci-required", details["requiredStatusChecks"])
+        self.assertTrue(details["strictStatusChecks"])
+        self.assertEqual(details["adminBypassEnabled"], False)
+
     def test_evaluate_policy_rejects_missing_required_status_check(self) -> None:
         policy = check_branch_policy.parse_policy(POLICY_PATH)
         payload = check_branch_policy.load_json(GOLDEN_RULES_PATH)
@@ -44,6 +58,15 @@ class BranchPolicyTests(unittest.TestCase):
                 rule["parameters"]["required_status_checks"] = [{"context": "other-check"}]
         errors, _details = check_branch_policy.evaluate_policy(policy, broken)
         self.assertIn("missing required status check context: ci-required", errors)
+
+    def test_evaluate_policy_rejects_admin_bypass_when_enforce_admins_false(self) -> None:
+        policy = check_branch_policy.parse_policy(POLICY_PATH)
+        payload = check_branch_policy.load_json(GOLDEN_PROTECTION_PATH)
+        broken = copy.deepcopy(payload)
+        broken["enforce_admins"] = {"enabled": False}
+        errors, details = check_branch_policy.evaluate_policy(policy, broken)
+        self.assertIn("admin bypass path enabled: enforce_admins=false", errors)
+        self.assertEqual(details["adminBypassEnabled"], True)
 
     def test_collect_bypass_actors_detects_nested_surfaces(self) -> None:
         payload = {
