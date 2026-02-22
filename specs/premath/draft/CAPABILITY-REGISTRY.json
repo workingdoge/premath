@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "registryKind": "premath.capability_registry.v1",
+  "registryId": "capability.default.v1",
+  "executableCapabilities": [
+    "capabilities.normal_forms",
+    "capabilities.kcir_witnesses",
+    "capabilities.commitment_checkpoints",
+    "capabilities.squeak_site",
+    "capabilities.ci_witnesses",
+    "capabilities.instruction_typing",
+    "capabilities.adjoints_sites",
+    "capabilities.change_morphisms"
+  ]
+}

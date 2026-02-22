@@ -158,6 +158,8 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds) consumed by CI/coherence
   adapter surfaces.
+- `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability
+  registry consumed by conformance/docs/coherence parity surfaces.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
   instruction flows (normative only when `capabilities.instruction_typing` is
   claimed).

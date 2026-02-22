@@ -1436,3 +1436,34 @@ lineage preservation across kernel/coherence/CI boundaries.
   compatibility.
 - verification/decision paths now reject lineage-shape mismatches instead of
   accepting collapsed failure-class summaries when semantic lineage is present.
+
+---
+
+## 2026-02-22 — Decision 0050: Make capability parity generation-first via typed registry artifact
+
+### Decision
+Introduce `draft/CAPABILITY-REGISTRY.json` as the canonical typed executable
+capability registry and consume it across parity surfaces:
+
+- `tools/conformance/run_capability_vectors.py` default capability selection,
+- `tools/conformance/check_docs_coherence.py` docs parity checks,
+- `premath coherence-check` (`capability_parity` obligation).
+
+Also replace coherence bidirectional checker source parsing with kernel-owned
+typed obligation registry APIs (`obligation_gate_registry`,
+`obligation_gate_registry_json`).
+
+### Rationale
+Capability and obligation parity checks still depended on language-specific
+source scraping (`DEFAULT_EXECUTABLE_CAPABILITIES` tuple and map parsing).
+That made parity fragile and duplicated authority across implementation files.
+Typed registry artifacts/API exports preserve one authority path and reduce
+hidden drift.
+
+### Consequences
+- capability parity now binds to a machine artifact (`CAPABILITY-REGISTRY.json`)
+  instead of source constants.
+- conformance/docs/coherence surfaces now share the same executable capability
+  authority input.
+- coherence scope checks now bind to kernel registry kind + obligation set via
+  typed API export rather than parsing source text maps.

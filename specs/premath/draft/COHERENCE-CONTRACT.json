@@ -85,8 +85,8 @@
     "ext_ambiguous"
   ],
   "surfaces": {
-    "capabilitySourcePath": "tools/conformance/run_capability_vectors.py",
-    "capabilityTuple": "DEFAULT_EXECUTABLE_CAPABILITIES",
+    "capabilityRegistryPath": "specs/premath/draft/CAPABILITY-REGISTRY.json",
+    "capabilityRegistryKind": "premath.capability_registry.v1",
     "capabilityManifestRoot": "tests/conformance/fixtures/capabilities",
     "readmePath": "README.md",
     "conformanceReadmePath": "tools/conformance/README.md",
@@ -108,8 +108,7 @@
     "bidirSpecPath": "specs/premath/draft/BIDIR-DESCENT.md",
     "bidirSpecSectionStart": "## 6. Obligation kinds (normative)",
     "bidirSpecSectionEnd": "### 6.1 Obligation record format (required)",
-    "bidirCheckerPath": "crates/premath-kernel/src/obligation_registry.rs",
-    "bidirCheckerMapName": "OBLIGATION_TO_GATE_FAILURE",
+    "obligationRegistryKind": "premath.obligation_gate_registry.v1",
     "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6",
     "transportFixtureRootPath": "tests/conformance/fixtures/coherence-transport",
     "siteFixtureRootPath": "tests/conformance/fixtures/coherence-site"

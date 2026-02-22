@@ -12,22 +12,20 @@ import check_docs_coherence
 
 
 class DocsCoherenceParserTests(unittest.TestCase):
-    def test_parse_symbol_tuple_values(self) -> None:
-        text = """
-CAPABILITY_A = "capabilities.alpha"
-CAPABILITY_B = "capabilities.beta"
-
-DEFAULT_EXECUTABLE_CAPABILITIES = (
-    CAPABILITY_A,
-    CAPABILITY_B,
-)
-"""
-        values = check_docs_coherence.parse_symbol_tuple_values(
-            text,
-            check_docs_coherence.CAP_ASSIGN_RE,
-            "DEFAULT_EXECUTABLE_CAPABILITIES",
-        )
-        self.assertEqual(values, ["capabilities.alpha", "capabilities.beta"])
+    def test_parse_capability_registry(self) -> None:
+        payload = {
+            "schema": 1,
+            "registryKind": "premath.capability_registry.v1",
+            "executableCapabilities": [
+                "capabilities.alpha",
+                "capabilities.beta",
+            ],
+        }
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-cap-registry-") as tmp:
+            path = Path(tmp) / "CAPABILITY-REGISTRY.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            values = check_docs_coherence.parse_capability_registry(path)
+            self.assertEqual(values, ["capabilities.alpha", "capabilities.beta"])
 
     def test_extract_section_between(self) -> None:
         text = "prefix START body END suffix"

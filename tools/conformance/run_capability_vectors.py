@@ -2,15 +2,8 @@
 """
 Execute capability conformance vectors.
 
-Current executable capability:
-- capabilities.normal_forms
-- capabilities.kcir_witnesses
-- capabilities.commitment_checkpoints
-- capabilities.squeak_site
-- capabilities.ci_witnesses
-- capabilities.instruction_typing
-- capabilities.adjoints_sites
-- capabilities.change_morphisms
+Executable capability defaults are loaded from:
+- specs/premath/draft/CAPABILITY-REGISTRY.json
 """
 
 from __future__ import annotations
@@ -22,7 +15,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Sequence, Tuple
+from typing import Any, Callable, Dict, List, Optional, Sequence, Tuple
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "ci"))
@@ -44,6 +37,8 @@ CAPABILITY_CI_WITNESSES = "capabilities.ci_witnesses"
 CAPABILITY_INSTRUCTION_TYPING = "capabilities.instruction_typing"
 CAPABILITY_ADJOINTS_SITES = "capabilities.adjoints_sites"
 CAPABILITY_CHANGE_MORPHISMS = "capabilities.change_morphisms"
+CAPABILITY_REGISTRY_KIND = "premath.capability_registry.v1"
+CAPABILITY_REGISTRY_PATH = ROOT / "specs" / "premath" / "draft" / "CAPABILITY-REGISTRY.json"
 BLOCKING_DEP_TYPES = {
     "blocks",
     "parent-child",
@@ -59,16 +54,6 @@ ADJOINTS_SITES_REQUIRED_OBLIGATIONS = {
     "beck_chevalley_pi",
     "refinement_invariance",
 }
-DEFAULT_EXECUTABLE_CAPABILITIES: Sequence[str] = (
-    CAPABILITY_NORMAL_FORMS,
-    CAPABILITY_KCIR_WITNESSES,
-    CAPABILITY_COMMITMENT_CHECKPOINTS,
-    CAPABILITY_SQUEAK_SITE,
-    CAPABILITY_CI_WITNESSES,
-    CAPABILITY_INSTRUCTION_TYPING,
-    CAPABILITY_ADJOINTS_SITES,
-    CAPABILITY_CHANGE_MORPHISMS,
-)
 
 
 @dataclass(frozen=True)
@@ -179,6 +164,35 @@ def ensure_gate_witness_payloads(
         if not isinstance(payload, dict):
             raise ValueError(f"{label}[{key!r}] must be an object")
         out[key] = payload
+    return out
+
+
+def load_executable_capabilities(registry_path: Path) -> List[str]:
+    payload = load_json(registry_path)
+    if payload.get("schema") != 1:
+        raise ValueError(f"{registry_path}: schema must be 1")
+    kind = payload.get("registryKind")
+    if not isinstance(kind, str) or kind != CAPABILITY_REGISTRY_KIND:
+        raise ValueError(
+            f"{registry_path}: registryKind must be {CAPABILITY_REGISTRY_KIND!r}, got {kind!r}"
+        )
+    raw = payload.get("executableCapabilities")
+    if not isinstance(raw, list) or not raw:
+        raise ValueError(f"{registry_path}: executableCapabilities must be a non-empty list")
+    out: List[str] = []
+    seen: set[str] = set()
+    for idx, item in enumerate(raw):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(
+                f"{registry_path}: executableCapabilities[{idx}] must be a non-empty string"
+            )
+        capability_id = item.strip()
+        if capability_id in seen:
+            raise ValueError(
+                f"{registry_path}: executableCapabilities contains duplicate {capability_id!r}"
+            )
+        seen.add(capability_id)
+        out.append(capability_id)
     return out
 
 
@@ -2495,6 +2509,12 @@ def parse_args() -> argparse.Namespace:
     default_fixtures = ROOT / "tests" / "conformance" / "fixtures" / "capabilities"
     parser = argparse.ArgumentParser(description="Run executable capability conformance vectors.")
     parser.add_argument(
+        "--registry",
+        type=Path,
+        default=CAPABILITY_REGISTRY_PATH,
+        help=f"Path to capability registry artifact (default: {CAPABILITY_REGISTRY_PATH})",
+    )
+    parser.add_argument(
         "--fixtures",
         type=Path,
         default=default_fixtures,
@@ -2504,18 +2524,54 @@ def parse_args() -> argparse.Namespace:
         "--capability",
         action="append",
         default=None,
-        help=(
-            "Capability ID to run. Repeatable. "
-            f"Default: {', '.join(DEFAULT_EXECUTABLE_CAPABILITIES)}"
-        ),
+        help="Capability ID to run. Repeatable. Default: executableCapabilities from registry.",
     )
     return parser.parse_args()
 
 
+CapabilityRunner = Callable[[Path, List[str]], Tuple[int, int]]
+
+
+def capability_runners() -> Dict[str, CapabilityRunner]:
+    return {
+        CAPABILITY_NORMAL_FORMS: run_normal_forms,
+        CAPABILITY_KCIR_WITNESSES: run_kcir_witnesses,
+        CAPABILITY_COMMITMENT_CHECKPOINTS: run_commitment_checkpoints,
+        CAPABILITY_SQUEAK_SITE: run_squeak_site,
+        CAPABILITY_CI_WITNESSES: run_ci_witnesses,
+        CAPABILITY_INSTRUCTION_TYPING: run_instruction_typing,
+        CAPABILITY_ADJOINTS_SITES: run_adjoints_sites,
+        CAPABILITY_CHANGE_MORPHISMS: run_change_projection,
+    }
+
+
 def main() -> int:
     args = parse_args()
+    registry_path = args.registry
     fixtures_root = args.fixtures
-    capability_ids: Sequence[str] = args.capability or list(DEFAULT_EXECUTABLE_CAPABILITIES)
+
+    try:
+        executable_capabilities = load_executable_capabilities(registry_path)
+    except ValueError as err:
+        print(f"[error] {err}")
+        return 2
+
+    runners = capability_runners()
+    runner_capability_ids = set(runners.keys())
+    executable_capability_ids = set(executable_capabilities)
+    missing_runners = sorted(executable_capability_ids - runner_capability_ids)
+    undeclared_runners = sorted(runner_capability_ids - executable_capability_ids)
+    if missing_runners:
+        print(f"[error] capability registry contains unsupported capability handlers: {missing_runners}")
+        return 2
+    if undeclared_runners:
+        print(
+            "[error] capability runner table contains undeclared executable capabilities: "
+            f"{undeclared_runners}"
+        )
+        return 2
+
+    capability_ids: Sequence[str] = args.capability or list(executable_capabilities)
 
     if not fixtures_root.exists():
         print(f"[error] fixtures path does not exist: {fixtures_root}")
@@ -2533,25 +2589,11 @@ def main() -> int:
         if not capability_dir.exists():
             errors.append(f"missing capability directory: {capability_dir}")
             continue
-        if capability_id == CAPABILITY_NORMAL_FORMS:
-            count, checked = run_normal_forms(capability_dir, errors)
-        elif capability_id == CAPABILITY_KCIR_WITNESSES:
-            count, checked = run_kcir_witnesses(capability_dir, errors)
-        elif capability_id == CAPABILITY_COMMITMENT_CHECKPOINTS:
-            count, checked = run_commitment_checkpoints(capability_dir, errors)
-        elif capability_id == CAPABILITY_SQUEAK_SITE:
-            count, checked = run_squeak_site(capability_dir, errors)
-        elif capability_id == CAPABILITY_CI_WITNESSES:
-            count, checked = run_ci_witnesses(capability_dir, errors)
-        elif capability_id == CAPABILITY_INSTRUCTION_TYPING:
-            count, checked = run_instruction_typing(capability_dir, errors)
-        elif capability_id == CAPABILITY_ADJOINTS_SITES:
-            count, checked = run_adjoints_sites(capability_dir, errors)
-        elif capability_id == CAPABILITY_CHANGE_MORPHISMS:
-            count, checked = run_change_projection(capability_dir, errors)
-        else:
+        runner = runners.get(capability_id)
+        if runner is None:
             errors.append(f"unsupported executable capability: {capability_id}")
             continue
+        count, checked = runner(capability_dir, errors)
         capability_count += count
         checked_vectors += checked
 

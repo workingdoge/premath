@@ -91,7 +91,7 @@ Minimum checks:
 - informative fallback clause remains present,
 - bidirectional checker surface stays aligned with `draft/BIDIR-DESCENT`
   obligation vocabulary for the required set declared in the contract, sourced
-  from kernel authority export (`crates/premath-kernel/src/obligation_registry.rs`).
+  from kernel authority registry export (`premath obligation-registry --json`).
 
 The bidirectional checker alignment is a parity check over obligation kinds; it
 does not authorize or alter discharge semantics.
@@ -102,7 +102,8 @@ MUST reject when executable capability IDs and documented capability IDs drift.
 
 Minimum parity set includes:
 
-- executable source capability tuple,
+- typed executable capability registry
+  (`draft/CAPABILITY-REGISTRY.json`),
 - capability manifest set,
 - primary docs surfaces listed in the contract (including `README` and
   `SPEC-INDEX` capability section).

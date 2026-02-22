@@ -10,10 +10,9 @@ from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
 
-CAP_ASSIGN_RE = re.compile(r"^(CAPABILITY_[A-Z0-9_]+)\s*=\s*\"(capabilities\.[a-z0-9_]+)\"$", re.MULTILINE)
-SYMBOL_RE = re.compile(r"\b([A-Z][A-Z0-9_]+)\b")
 BACKTICK_CAP_RE = re.compile(r"`(capabilities\.[a-z0-9_]+)`")
 BACKTICK_TASK_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
+CAPABILITY_REGISTRY_KIND = "premath.capability_registry.v1"
 
 
 EXPECTED_CONDITIONAL_CAPABILITY_DOCS: Tuple[Tuple[str, str], ...] = (
@@ -82,31 +81,6 @@ def extract_heading_section(text: str, heading_prefix: str) -> str:
     return tail[: next_heading.start()]
 
 
-def parse_symbol_tuple_values(
-    text: str,
-    assign_pattern: re.Pattern[str],
-    tuple_name: str,
-) -> List[str]:
-    symbol_map: Dict[str, str] = {symbol: value for symbol, value in assign_pattern.findall(text)}
-    tuple_re = re.compile(rf"{re.escape(tuple_name)}[^\n]*=\s*\((.*?)\)", re.DOTALL)
-    tuple_match = tuple_re.search(text)
-    if tuple_match is None:
-        raise ValueError(f"missing tuple definition: {tuple_name}")
-    tuple_body = tuple_match.group(1)
-    ordered_symbols: List[str] = []
-    for symbol in SYMBOL_RE.findall(tuple_body):
-        if symbol in symbol_map and symbol not in ordered_symbols:
-            ordered_symbols.append(symbol)
-    if not ordered_symbols:
-        raise ValueError(f"tuple {tuple_name} does not reference known symbols")
-    values: List[str] = []
-    for symbol in ordered_symbols:
-        if symbol not in symbol_map:
-            raise ValueError(f"tuple {tuple_name} references unknown symbol: {symbol}")
-        values.append(symbol_map[symbol])
-    return values
-
-
 def parse_mise_task_commands(text: str, task_name: str) -> List[str]:
     section_re = re.compile(rf"^\[tasks\.{re.escape(task_name)}\]\n(.*?)(?=^\[tasks\.|\Z)", re.MULTILINE | re.DOTALL)
     section_match = section_re.search(text)
@@ -146,6 +120,27 @@ def parse_manifest_capabilities(fixtures_root: Path) -> List[str]:
             raise ValueError(f"{manifest}: capabilityId must be non-empty string")
         capability_ids.append(capability_id)
     return capability_ids
+
+
+def parse_capability_registry(contract_path: Path) -> List[str]:
+    payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{contract_path}: root must be an object")
+    if payload.get("schema") != 1:
+        raise ValueError(f"{contract_path}: schema must be 1")
+    if payload.get("registryKind") != CAPABILITY_REGISTRY_KIND:
+        raise ValueError(f"{contract_path}: registryKind mismatch")
+    capabilities = payload.get("executableCapabilities")
+    if not isinstance(capabilities, list) or not capabilities:
+        raise ValueError(f"{contract_path}: executableCapabilities must be a non-empty list")
+    parsed: List[str] = []
+    for idx, item in enumerate(capabilities):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f"{contract_path}: executableCapabilities[{idx}] must be a non-empty string")
+        parsed.append(item.strip())
+    if len(set(parsed)) != len(parsed):
+        raise ValueError(f"{contract_path}: executableCapabilities must not contain duplicates")
+    return parsed
 
 
 def parse_control_plane_projection_checks(contract_path: Path) -> List[str]:
@@ -203,7 +198,7 @@ def main() -> int:
     root = args.repo_root.resolve()
     errors: List[str] = []
 
-    run_capability_vectors = root / "tools" / "conformance" / "run_capability_vectors.py"
+    capability_registry = root / "specs" / "premath" / "draft" / "CAPABILITY-REGISTRY.json"
     control_plane_contract = root / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json"
     mise_toml = root / ".mise.toml"
     readme = root / "README.md"
@@ -213,12 +208,7 @@ def main() -> int:
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
-    capability_text = load_text(run_capability_vectors)
-    executable_capabilities = parse_symbol_tuple_values(
-        capability_text,
-        CAP_ASSIGN_RE,
-        "DEFAULT_EXECUTABLE_CAPABILITIES",
-    )
+    executable_capabilities = parse_capability_registry(capability_registry)
     executable_capability_set = set(executable_capabilities)
 
     manifest_capabilities = parse_manifest_capabilities(fixtures_root)

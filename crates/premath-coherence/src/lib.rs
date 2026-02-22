@@ -17,6 +17,7 @@ pub use proposal::{
     validate_proposal_payload,
 };
 
+use premath_kernel::{obligation_gate_registry, obligation_gate_registry_json};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -37,9 +38,6 @@ const REQUIRED_OBLIGATION_IDS: &[&str] = &[
     "coverage_transitivity",
     "glue_or_witness_contractibility",
 ];
-
-const CAP_ASSIGN_PATTERN: &str =
-    r#"(?m)^(CAPABILITY_[A-Z0-9_]+)\s*=\s*"(capabilities\.[a-z0-9_]+)"$"#;
 
 #[derive(Debug, Error)]
 pub enum CoherenceError {
@@ -93,8 +91,8 @@ pub struct CoherenceObligationSpec {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CoherenceSurfaces {
-    pub capability_source_path: String,
-    pub capability_tuple: String,
+    pub capability_registry_path: String,
+    pub capability_registry_kind: String,
     pub capability_manifest_root: String,
     pub readme_path: String,
     pub conformance_readme_path: String,
@@ -116,11 +114,18 @@ pub struct CoherenceSurfaces {
     pub bidir_spec_path: String,
     pub bidir_spec_section_start: String,
     pub bidir_spec_section_end: String,
-    pub bidir_checker_path: String,
-    pub bidir_checker_map_name: String,
+    pub obligation_registry_kind: String,
     pub informative_clause_needle: String,
     pub transport_fixture_root_path: String,
     pub site_fixture_root_path: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CapabilityRegistry {
+    schema: u32,
+    registry_kind: String,
+    executable_capabilities: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -430,7 +435,6 @@ fn check_scope_noncontradiction(
     }
 
     let bidir_spec_path = resolve_path(repo_root, contract.surfaces.bidir_spec_path.as_str());
-    let bidir_checker_path = resolve_path(repo_root, contract.surfaces.bidir_checker_path.as_str());
     let bidir_spec_text = read_text(&bidir_spec_path)?;
     let bidir_spec_section = extract_section_between(
         &bidir_spec_text,
@@ -438,11 +442,19 @@ fn check_scope_noncontradiction(
         contract.surfaces.bidir_spec_section_end.as_str(),
     )?;
     let bidir_spec_obligations = parse_backtick_obligation_tokens(bidir_spec_section)?;
-    let bidir_checker_text = read_text(&bidir_checker_path)?;
-    let bidir_checker_obligations = parse_checker_obligation_map_keys(
-        &bidir_checker_text,
-        contract.surfaces.bidir_checker_map_name.as_str(),
-    )?;
+    let obligation_registry_json = obligation_gate_registry_json();
+    let obligation_registry_kind = obligation_registry_json
+        .get("registryKind")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .unwrap_or_default();
+    if obligation_registry_kind != contract.surfaces.obligation_registry_kind {
+        failures.push("coherence.scope_noncontradiction.bidir_registry_kind_mismatch".to_string());
+    }
+    let bidir_checker_obligations: BTreeSet<String> = obligation_gate_registry()
+        .into_iter()
+        .map(|row| row.obligation_kind.to_string())
+        .collect();
 
     for required in &contract.required_bidir_obligations {
         if !bidir_spec_obligations.contains(required) {
@@ -464,6 +476,7 @@ fn check_scope_noncontradiction(
             "requiredBidirObligations": contract.required_bidir_obligations,
             "bidirSpecObligations": bidir_spec_obligations,
             "bidirCheckerObligations": bidir_checker_obligations,
+            "obligationRegistryKind": obligation_registry_kind,
         }),
     })
 }
@@ -472,14 +485,38 @@ fn check_capability_parity(
     repo_root: &Path,
     contract: &CoherenceContract,
 ) -> Result<ObligationCheck, CoherenceError> {
-    let capability_source_path =
-        resolve_path(repo_root, contract.surfaces.capability_source_path.as_str());
-    let capability_source_text = read_text(&capability_source_path)?;
-    let executable_capabilities = parse_symbol_tuple_values(
-        &capability_source_text,
-        CAP_ASSIGN_PATTERN,
-        contract.surfaces.capability_tuple.as_str(),
-    )?;
+    let capability_registry_path = resolve_path(
+        repo_root,
+        contract.surfaces.capability_registry_path.as_str(),
+    );
+    let capability_registry: CapabilityRegistry =
+        serde_json::from_slice(&read_bytes(&capability_registry_path)?).map_err(|source| {
+            CoherenceError::ParseJson {
+                path: display_path(&capability_registry_path),
+                source,
+            }
+        })?;
+    if capability_registry.schema != 1 {
+        return Err(CoherenceError::Contract(format!(
+            "capability registry schema must be 1: {}",
+            display_path(&capability_registry_path)
+        )));
+    }
+    if capability_registry.registry_kind != contract.surfaces.capability_registry_kind {
+        return Err(CoherenceError::Contract(format!(
+            "capability registry kind mismatch at {}: expected {:?}, got {:?}",
+            display_path(&capability_registry_path),
+            contract.surfaces.capability_registry_kind,
+            capability_registry.registry_kind
+        )));
+    }
+    if capability_registry.executable_capabilities.is_empty() {
+        return Err(CoherenceError::Contract(format!(
+            "capability registry must include at least one capability: {}",
+            display_path(&capability_registry_path)
+        )));
+    }
+    let executable_capabilities = dedupe_sorted(capability_registry.executable_capabilities);
     let executable_set: BTreeSet<String> = executable_capabilities.iter().cloned().collect();
 
     let manifest_root = resolve_path(
@@ -527,6 +564,8 @@ fn check_capability_parity(
         failure_classes: dedupe_sorted(failures),
         details: json!({
             "expected": executable_capabilities,
+            "capabilityRegistryKind": capability_registry.registry_kind,
+            "capabilityRegistryPath": to_repo_relative_or_absolute(repo_root, &capability_registry_path),
             "manifest": sorted_vec_from_set(&manifest_set),
             "readme": sorted_vec_from_set(&readme_set),
             "conformanceReadme": sorted_vec_from_set(&conformance_readme_set),
@@ -1782,45 +1821,6 @@ fn parse_backtick_obligation_tokens(text: &str) -> Result<BTreeSet<String>, Cohe
         .collect())
 }
 
-fn parse_checker_obligation_map_keys(
-    text: &str,
-    map_name: &str,
-) -> Result<BTreeSet<String>, CoherenceError> {
-    let py_map_re = compile_regex(&format!(
-        r#"(?s){}\s*=\s*\{{(.*?)\}}"#,
-        regex::escape(map_name)
-    ))?;
-    if let Some(body) = py_map_re
-        .captures(text)
-        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-    {
-        let key_re = compile_regex(r#""([a-z_]+)"\s*:"#)?;
-        return Ok(key_re
-            .captures_iter(body.as_str())
-            .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-            .collect());
-    }
-
-    let rs_tuple_re = compile_regex(&format!(
-        r#"(?s){}\s*:[^=]*=\s*&\s*\[(.*?)\]"#,
-        regex::escape(map_name)
-    ))?;
-    if let Some(body) = rs_tuple_re
-        .captures(text)
-        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-    {
-        let key_re = compile_regex(r#"\(\s*"([a-z_]+)"\s*,"#)?;
-        return Ok(key_re
-            .captures_iter(body.as_str())
-            .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-            .collect());
-    }
-
-    Err(CoherenceError::Contract(format!(
-        "missing map assignment: {map_name}"
-    )))
-}
-
 fn parse_baseline_task_ids_from_toml(
     toml_text: &str,
     task_name: &str,
@@ -1899,72 +1899,6 @@ fn contains_conditional_normative_clause(
         regex::escape(capability_id)
     ))?;
     Ok(pattern.is_match(section_55))
-}
-
-fn parse_symbol_tuple_values(
-    text: &str,
-    assign_pattern: &str,
-    tuple_name: &str,
-) -> Result<Vec<String>, CoherenceError> {
-    let assign_re = compile_regex(assign_pattern)?;
-    let mut symbol_map: BTreeMap<String, String> = BTreeMap::new();
-    for captures in assign_re.captures_iter(text) {
-        let symbol = captures.get(1).map(|m| m.as_str()).ok_or_else(|| {
-            CoherenceError::Contract(format!(
-                "malformed assignment capture for tuple {tuple_name}"
-            ))
-        })?;
-        let value = captures.get(2).map(|m| m.as_str()).ok_or_else(|| {
-            CoherenceError::Contract(format!(
-                "malformed assignment capture for tuple {tuple_name}"
-            ))
-        })?;
-        symbol_map.insert(symbol.to_string(), value.to_string());
-    }
-    if symbol_map.is_empty() {
-        return Err(CoherenceError::Contract(format!(
-            "no assignment symbols found for tuple {tuple_name}"
-        )));
-    }
-
-    let tuple_re = compile_regex(&format!(
-        r#"(?s){}\s*[^\n]*=\s*\((.*?)\)"#,
-        regex::escape(tuple_name)
-    ))?;
-    let tuple_body = tuple_re
-        .captures(text)
-        .and_then(|caps| caps.get(1).map(|m| m.as_str().to_string()))
-        .ok_or_else(|| {
-            CoherenceError::Contract(format!("missing tuple definition: {tuple_name}"))
-        })?;
-
-    let symbol_re = compile_regex(r"\b([A-Z][A-Z0-9_]+)\b")?;
-    let mut ordered_symbols = Vec::new();
-    for captures in symbol_re.captures_iter(tuple_body.as_str()) {
-        let symbol = captures.get(1).map(|m| m.as_str()).ok_or_else(|| {
-            CoherenceError::Contract(format!("malformed tuple symbol in {tuple_name}"))
-        })?;
-        if symbol_map.contains_key(symbol) && !ordered_symbols.iter().any(|s: &String| s == symbol)
-        {
-            ordered_symbols.push(symbol.to_string());
-        }
-    }
-    if ordered_symbols.is_empty() {
-        return Err(CoherenceError::Contract(format!(
-            "tuple {tuple_name} does not reference known symbols"
-        )));
-    }
-
-    let mut out = Vec::new();
-    for symbol in ordered_symbols {
-        let value = symbol_map.get(&symbol).ok_or_else(|| {
-            CoherenceError::Contract(format!(
-                "tuple {tuple_name} references unknown symbol: {symbol}"
-            ))
-        })?;
-        out.push(value.clone());
-    }
-    Ok(out)
 }
 
 fn extract_section_between<'a>(
@@ -2074,61 +2008,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn parse_symbol_tuple_values_extracts_ordered_values() {
-        let text = r#"
-CAPABILITY_A = "capabilities.alpha"
-CAPABILITY_B = "capabilities.beta"
-DEFAULT_EXECUTABLE_CAPABILITIES = (
-    CAPABILITY_A,
-    CAPABILITY_B,
-)
-"#;
-        let values =
-            parse_symbol_tuple_values(text, CAP_ASSIGN_PATTERN, "DEFAULT_EXECUTABLE_CAPABILITIES")
-                .expect("tuple parse should succeed");
-        assert_eq!(
-            values,
-            vec![
-                "capabilities.alpha".to_string(),
-                "capabilities.beta".to_string()
-            ]
-        );
-    }
-
-    #[test]
     fn extract_section_between_returns_body() {
         let text = "prefix START body END suffix";
         let section =
             extract_section_between(text, "START", "END").expect("section extraction should work");
         assert_eq!(section.trim(), "body");
-    }
-
-    #[test]
-    fn parse_checker_obligation_map_keys_extracts_key_set() {
-        let text = r#"
-OBLIGATION_TO_GATE_FAILURE = {
-    "stability": "stability_failure",
-    "locality": "locality_failure",
-}
-"#;
-        let keys = parse_checker_obligation_map_keys(text, "OBLIGATION_TO_GATE_FAILURE")
-            .expect("map extraction should succeed");
-        assert!(keys.contains("stability"));
-        assert!(keys.contains("locality"));
-    }
-
-    #[test]
-    fn parse_checker_obligation_map_keys_extracts_rust_tuple_set() {
-        let text = r#"
-const OBLIGATION_TO_GATE_FAILURE: &[(&str, &str)] = &[
-    ("stability", "stability_failure"),
-    ("locality", "locality_failure"),
-];
-"#;
-        let keys = parse_checker_obligation_map_keys(text, "OBLIGATION_TO_GATE_FAILURE")
-            .expect("map extraction should succeed");
-        assert!(keys.contains("stability"));
-        assert!(keys.contains("locality"));
     }
 
     #[test]

@@ -82,7 +82,7 @@ python3 tools/conformance/check_spec_traceability.py
 Validates critical docs-to-executable coherence invariants:
 
 - executable capability list parity across:
-  - `tools/conformance/run_capability_vectors.py` (`DEFAULT_EXECUTABLE_CAPABILITIES`)
+  - `specs/premath/draft/CAPABILITY-REGISTRY.json` (`executableCapabilities`)
   - `README.md`
   - `tools/conformance/README.md`
   - `specs/premath/draft/SPEC-INDEX.md` (§5.4)
@@ -125,7 +125,11 @@ mise run coherence-check
 
 ## `run_capability_vectors.py`
 
-Runs executable capability vectors (current set):
+Runs executable capability vectors from typed registry:
+
+- `specs/premath/draft/CAPABILITY-REGISTRY.json`
+
+Current set:
 
 - `capabilities.normal_forms`
 - `capabilities.kcir_witnesses`
