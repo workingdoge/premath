@@ -136,28 +136,47 @@ def fetch_live_rules(
     branch: str,
     token: str,
 ) -> Any:
+    def _fetch_json(url: str) -> Any:
+        request = urllib.request.Request(
+            url,
+            headers={
+                "Accept": "application/vnd.github+json",
+                "Authorization": f"Bearer {token}",
+                "X-GitHub-Api-Version": "2022-11-28",
+                "User-Agent": "premath-branch-policy-check",
+            },
+        )
+        try:
+            with urllib.request.urlopen(request) as response:
+                data = response.read().decode("utf-8")
+                return json.loads(data)
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode("utf-8", errors="replace")
+            raise ValueError(f"live rules fetch failed ({exc.code}) for {url}: {body}") from exc
+        except urllib.error.URLError as exc:
+            raise ValueError(f"live rules fetch failed for {url}: {exc}") from exc
+
     base = api_url.rstrip("/")
-    url = f"{base}/repos/{repo}/rules/branches/{branch}"
-    request = urllib.request.Request(
-        url,
-        headers={
-            "Accept": "application/vnd.github+json",
-            "Authorization": f"Bearer {token}",
-            "X-GitHub-Api-Version": "2022-11-28",
-            "User-Agent": "premath-branch-policy-check",
-        },
-    )
-    try:
-        with urllib.request.urlopen(request) as response:
-            data = response.read().decode("utf-8")
-            return json.loads(data)
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace")
-        raise ValueError(
-            f"live rules fetch failed ({exc.code}) for {repo}:{branch}: {body}"
-        ) from exc
-    except urllib.error.URLError as exc:
-        raise ValueError(f"live rules fetch failed for {repo}:{branch}: {exc}") from exc
+    rules_url = f"{base}/repos/{repo}/rules/branches/{branch}"
+    payload = _fetch_json(rules_url)
+    # When no rulesets are configured, GitHub may return [] here even with classic branch protection.
+    if isinstance(payload, list) and not payload:
+        protection_url = f"{base}/repos/{repo}/branches/{branch}/protection"
+        return _fetch_json(protection_url)
+    return payload
+
+
+def _admin_bypass_enabled(payload: Any) -> bool | None:
+    if not isinstance(payload, dict):
+        return None
+    enforce_admins = payload.get("enforce_admins")
+    if isinstance(enforce_admins, bool):
+        return not enforce_admins
+    if isinstance(enforce_admins, dict):
+        enabled = enforce_admins.get("enabled")
+        if isinstance(enabled, bool):
+            return not enabled
+    return None
 
 
 def _normalize_actor(row: Any) -> str:
@@ -210,6 +229,13 @@ def collect_bypass_actors(payload: Any) -> List[str]:
 
 
 def _as_rule_list(payload: Any) -> List[Dict[str, Any]]:
+    if isinstance(payload, list):
+        out: List[Dict[str, Any]] = []
+        for row in payload:
+            if isinstance(row, dict):
+                out.append(row)
+        return out
+
     if isinstance(payload, dict):
         rules = payload.get("rules")
         if isinstance(rules, list):
@@ -308,6 +334,7 @@ def evaluate_policy(policy: Dict[str, Any], payload: Any) -> Tuple[List[str], Di
     required_checks = extract_required_status_contexts(rules)
     strict_checks = extract_strict_status_checks(rules)
     bypass_actors = collect_bypass_actors(payload)
+    admin_bypass = _admin_bypass_enabled(payload)
 
     errors: List[str] = []
 
@@ -330,12 +357,15 @@ def evaluate_policy(policy: Dict[str, Any], payload: Any) -> Tuple[List[str], Di
 
     if policy["forbidBypassActors"] and bypass_actors:
         errors.append(f"bypass actors present: {', '.join(bypass_actors)}")
+    if policy["forbidBypassActors"] and admin_bypass is True:
+        errors.append("admin bypass path enabled: enforce_admins=false")
 
     details = {
         "ruleTypes": rule_types,
         "requiredStatusChecks": required_checks,
         "strictStatusChecks": strict_checks,
         "bypassActors": bypass_actors,
+        "adminBypassEnabled": admin_bypass,
     }
     return errors, details
 
