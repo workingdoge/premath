@@ -131,6 +131,13 @@ fn main() {
             json,
         } => commands::instruction_check::run(instruction, repo_root, json),
 
+        Commands::InstructionWitness {
+            instruction,
+            runtime,
+            repo_root,
+            json,
+        } => commands::instruction_witness::run(instruction, runtime, repo_root, json),
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
 
         Commands::Ref { command } => match command {

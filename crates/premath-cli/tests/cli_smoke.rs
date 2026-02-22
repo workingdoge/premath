@@ -147,6 +147,31 @@ fn write_proposal_input(dir: &Path) -> PathBuf {
     proposal_path
 }
 
+fn write_instruction_runtime_input(dir: &Path, instruction_ref: &str, failed: bool) -> PathBuf {
+    let runtime = serde_json::json!({
+        "instructionId": "20260221T010000Z-ci-wiring-golden",
+        "instructionRef": instruction_ref,
+        "instructionDigest": "instr1_demo",
+        "squeakSiteProfile": "local",
+        "runStartedAt": "2026-02-22T00:00:00Z",
+        "runFinishedAt": "2026-02-22T00:00:01Z",
+        "runDurationMs": 1000,
+        "results": [{
+            "checkId": "ci-wiring-check",
+            "status": if failed { "failed" } else { "passed" },
+            "exitCode": if failed { 1 } else { 0 },
+            "durationMs": 25
+        }]
+    });
+    let runtime_path = dir.join("instruction-runtime.json");
+    fs::write(
+        &runtime_path,
+        serde_json::to_vec_pretty(&runtime).expect("runtime should serialize"),
+    )
+    .expect("runtime should be written");
+    runtime_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -363,6 +388,49 @@ fn instruction_check_json_smoke() {
         payload["requestedChecks"],
         serde_json::json!(["ci-wiring-check"])
     );
+}
+
+#[test]
+fn instruction_witness_json_smoke() {
+    let tmp = TempDirGuard::new("instruction-witness-json");
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let instruction = repo_root
+        .join("tests")
+        .join("ci")
+        .join("fixtures")
+        .join("instructions")
+        .join("20260221T010000Z-ci-wiring-golden.json");
+    let runtime = write_instruction_runtime_input(
+        tmp.path(),
+        "tests/ci/fixtures/instructions/20260221T010000Z-ci-wiring-golden.json",
+        false,
+    );
+
+    let output = run_premath([
+        OsString::from("instruction-witness"),
+        OsString::from("--instruction"),
+        instruction.as_os_str().to_os_string(),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["witnessKind"], "ci.instruction.v1");
+    assert_eq!(
+        payload["instructionId"],
+        "20260221T010000Z-ci-wiring-golden"
+    );
+    assert_eq!(payload["verdictClass"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
 }
 
 #[test]

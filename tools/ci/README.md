@@ -155,17 +155,20 @@ It separates:
 `tools/ci/run_instruction.sh` is the instruction-envelope entrypoint:
 
 - input: `instructions/<ts>-<id>.json`
-- classifies instruction as `typed(kind)` or `unknown(reason)` (doctrine-level)
+- delegates instruction typing/proposal ingestion to core
+  `premath instruction-check` (typed `instructionClassification` +
+  authoritative `executionDecision`)
 - rejects unroutable `unknown(reason)` unless `typingPolicy.allowUnknown=true`
 - carries optional `capabilityClaims` from envelope into witness artifacts for
   downstream mutation-policy gating surfaces
-- delegates proposal canonicalization/obligation/discharge checks to
-  `premath proposal-check` (core-backed checker path) before gate execution
-- executes requested gate checks through `run_gate.sh`
+- executes requested gate checks through `run_gate.sh` only when
+  `executionDecision.state=execute`
+- delegates final witness verdict/failure/proposal-ingest assembly to core
+  `premath instruction-witness`
 - output: `artifacts/ciwitness/<ts>-<id>.json`
   - for proposal-carrying instructions, witness includes deterministic
     `proposalIngest.obligations[]` and normalized `proposalIngest.discharge`
-    payloads; check execution proceeds only when discharge outcome is accepted.
+    payloads from core checker semantics.
   - instruction witnesses expose the same lineage split:
     - `operationalFailureClasses` for control-plane classes,
     - `semanticFailureClasses` for proposal-discharge semantic classes when

@@ -7,12 +7,22 @@ import json
 import os
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 from typing import Any, Dict, List
 
 
 class InstructionCheckError(ValueError):
     """Instruction-check failure with deterministic failure class."""
+
+    def __init__(self, failure_class: str, message: str) -> None:
+        self.failure_class = failure_class
+        self.reason = message
+        super().__init__(f"{failure_class}: {message}")
+
+
+class InstructionWitnessError(ValueError):
+    """Instruction-witness failure with deterministic failure class."""
 
     def __init__(self, failure_class: str, message: str) -> None:
         self.failure_class = failure_class
@@ -206,3 +216,127 @@ def run_instruction_check(root: Path, instruction_path: Path) -> Dict[str, Any]:
             "instruction-check returned invalid JSON",
         ) from exc
     return _validate_payload(payload)
+
+
+def _validate_witness_payload(payload: Any) -> Dict[str, Any]:
+    if not isinstance(payload, dict):
+        raise InstructionWitnessError(
+            "instruction_runtime_invalid",
+            "instruction-witness payload must be an object",
+        )
+    required_string_fields = (
+        "instructionId",
+        "instructionRef",
+        "instructionDigest",
+        "witnessKind",
+        "verdictClass",
+        "normalizerId",
+        "policyDigest",
+    )
+    for key in required_string_fields:
+        if not isinstance(payload.get(key), str) or not payload.get(key):
+            raise InstructionWitnessError(
+                "instruction_runtime_invalid",
+                f"instruction-witness payload missing {key}",
+            )
+    if not isinstance(payload.get("results"), list):
+        raise InstructionWitnessError(
+            "instruction_runtime_invalid",
+            "instruction-witness payload results must be a list",
+        )
+    if not isinstance(payload.get("failureClasses"), list):
+        raise InstructionWitnessError(
+            "instruction_runtime_invalid",
+            "instruction-witness payload failureClasses must be a list",
+        )
+    if not isinstance(payload.get("operationalFailureClasses"), list):
+        raise InstructionWitnessError(
+            "instruction_runtime_invalid",
+            "instruction-witness payload operationalFailureClasses must be a list",
+        )
+    if not isinstance(payload.get("semanticFailureClasses"), list):
+        raise InstructionWitnessError(
+            "instruction_runtime_invalid",
+            "instruction-witness payload semanticFailureClasses must be a list",
+        )
+    return payload
+
+
+def run_instruction_witness(
+    root: Path, instruction_path: Path, runtime_payload: Dict[str, Any]
+) -> Dict[str, Any]:
+    with tempfile.NamedTemporaryFile(
+        mode="w", suffix=".json", delete=False, encoding="utf-8"
+    ) as runtime_file:
+        json.dump(runtime_payload, runtime_file, indent=2, ensure_ascii=False)
+        runtime_file.write("\n")
+        runtime_path = Path(runtime_file.name)
+
+    try:
+        cli_prefix = resolve_premath_cli(root)
+        cmd = [
+            *cli_prefix,
+            "instruction-witness",
+            "--instruction",
+            str(instruction_path),
+            "--runtime",
+            str(runtime_path),
+            "--repo-root",
+            str(root),
+            "--json",
+        ]
+        completed = subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+
+        # If a stale local binary lacks this subcommand, retry through cargo.
+        if completed.returncode != 0 and cli_prefix and Path(cli_prefix[0]).name == "premath":
+            stderr = completed.stderr + "\n" + completed.stdout
+            if "unrecognized subcommand 'instruction-witness'" in stderr:
+                cmd = [
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "instruction-witness",
+                    "--instruction",
+                    str(instruction_path),
+                    "--runtime",
+                    str(runtime_path),
+                    "--repo-root",
+                    str(root),
+                    "--json",
+                ]
+                completed = subprocess.run(
+                    cmd,
+                    cwd=root,
+                    capture_output=True,
+                    text=True,
+                )
+
+        if completed.returncode != 0:
+            message = _extract_failure_message(completed)
+            match = re.match(r"^(?P<class>[a-z0-9_]+):\s*(?P<reason>.*)$", message)
+            if match:
+                failure_class = match.group("class")
+                reason = match.group("reason").strip() or message
+                raise InstructionWitnessError(failure_class, reason)
+            raise InstructionWitnessError("instruction_runtime_invalid", message)
+
+        try:
+            payload = json.loads(completed.stdout)
+        except json.JSONDecodeError as exc:
+            raise InstructionWitnessError(
+                "instruction_runtime_invalid",
+                "instruction-witness returned invalid JSON",
+            ) from exc
+        return _validate_witness_payload(payload)
+    finally:
+        try:
+            runtime_path.unlink()
+        except FileNotFoundError:
+            pass

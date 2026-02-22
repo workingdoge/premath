@@ -1,6 +1,7 @@
 use crate::{
-    CanonicalProposal, ProposalDischarge, ProposalError, ProposalObligation,
-    compile_proposal_obligations, discharge_proposal_obligations, validate_proposal_payload,
+    CanonicalProposal, ProposalBinding, ProposalDischarge, ProposalError, ProposalObligation,
+    ProposalTargetJudgment, compile_proposal_obligations, discharge_proposal_obligations,
+    validate_proposal_payload,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -14,6 +15,7 @@ const POLICY_KIND: &str = "ci.instruction.policy.v1";
 const POLICY_DIGEST_PREFIX: &str = "pol1_";
 const SUPPORTED_INSTRUCTION_TYPES: [&str; 3] =
     ["ci.gate.check", "ci.gate.pre_commit", "ci.gate.pre_push"];
+const INSTRUCTION_WITNESS_KIND: &str = "ci.instruction.v1";
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("{failure_class}: {message}")]
@@ -84,6 +86,72 @@ pub struct ValidatedInstructionEnvelope {
     pub capability_claims: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proposal: Option<ValidatedInstructionProposal>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ExecutedInstructionCheck {
+    pub check_id: String,
+    pub status: String,
+    pub exit_code: i64,
+    pub duration_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct InstructionWitnessRuntime {
+    pub instruction_id: String,
+    pub instruction_ref: String,
+    pub instruction_digest: String,
+    pub squeak_site_profile: String,
+    pub run_started_at: String,
+    pub run_finished_at: String,
+    pub run_duration_ms: u64,
+    pub results: Vec<ExecutedInstructionCheck>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct InstructionProposalIngest {
+    pub state: String,
+    pub kind: String,
+    pub proposal_digest: String,
+    pub proposal_kcir_ref: String,
+    pub binding: ProposalBinding,
+    pub target_ctx_ref: String,
+    pub target_judgment: ProposalTargetJudgment,
+    pub obligations: Vec<ProposalObligation>,
+    pub discharge: ProposalDischarge,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct InstructionWitness {
+    pub ci_schema: u32,
+    pub witness_kind: String,
+    pub instruction_id: String,
+    pub instruction_ref: String,
+    pub instruction_digest: String,
+    pub instruction_classification: InstructionClassification,
+    pub typing_policy: InstructionTypingPolicy,
+    pub intent: String,
+    pub scope: Value,
+    pub normalizer_id: String,
+    pub policy_digest: String,
+    pub capability_claims: Vec<String>,
+    pub required_checks: Vec<String>,
+    pub executed_checks: Vec<String>,
+    pub results: Vec<ExecutedInstructionCheck>,
+    pub verdict_class: String,
+    pub operational_failure_classes: Vec<String>,
+    pub semantic_failure_classes: Vec<String>,
+    pub failure_classes: Vec<String>,
+    pub squeak_site_profile: String,
+    pub run_started_at: String,
+    pub run_finished_at: String,
+    pub run_duration_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub proposal_ingest: Option<InstructionProposalIngest>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -629,6 +697,116 @@ fn derive_execution_decision(
     InstructionExecutionDecision::Execute
 }
 
+fn ensure_runtime_non_empty(value: &str, label: &str) -> Result<String, InstructionError> {
+    let trimmed = value.trim();
+    if trimmed.is_empty() {
+        return Err(InstructionError::new(
+            "instruction_runtime_invalid",
+            format!("{label} must be a non-empty string"),
+        ));
+    }
+    Ok(trimmed.to_string())
+}
+
+fn normalize_executed_checks(results: &[ExecutedInstructionCheck]) -> Vec<String> {
+    results.iter().map(|row| row.check_id.clone()).collect()
+}
+
+fn proposal_ingest_from_checked(
+    proposal: Option<&ValidatedInstructionProposal>,
+) -> Option<InstructionProposalIngest> {
+    proposal.map(|item| InstructionProposalIngest {
+        state: "typed".to_string(),
+        kind: format!("proposal.{}", item.canonical.proposal_kind),
+        proposal_digest: item.digest.clone(),
+        proposal_kcir_ref: item.kcir_ref.clone(),
+        binding: item.canonical.binding.clone(),
+        target_ctx_ref: item.canonical.target_ctx_ref.clone(),
+        target_judgment: item.canonical.target_judgment.clone(),
+        obligations: item.obligations.clone(),
+        discharge: item.discharge.clone(),
+    })
+}
+
+pub fn build_instruction_witness(
+    checked: &ValidatedInstructionEnvelope,
+    runtime: InstructionWitnessRuntime,
+) -> Result<InstructionWitness, InstructionError> {
+    let instruction_id = ensure_runtime_non_empty(&runtime.instruction_id, "instructionId")?;
+    let instruction_ref = ensure_runtime_non_empty(&runtime.instruction_ref, "instructionRef")?;
+    let instruction_digest =
+        ensure_runtime_non_empty(&runtime.instruction_digest, "instructionDigest")?;
+    let squeak_site_profile =
+        ensure_runtime_non_empty(&runtime.squeak_site_profile, "squeakSiteProfile")?;
+    let run_started_at = ensure_runtime_non_empty(&runtime.run_started_at, "runStartedAt")?;
+    let run_finished_at = ensure_runtime_non_empty(&runtime.run_finished_at, "runFinishedAt")?;
+
+    let results = runtime.results;
+    let executed_checks = normalize_executed_checks(&results);
+    let failed = results.iter().any(|row| row.exit_code != 0);
+
+    let (verdict_class, mut operational_failure_classes, mut semantic_failure_classes) =
+        match &checked.execution_decision {
+            InstructionExecutionDecision::Execute => {
+                if failed {
+                    (
+                        "rejected".to_string(),
+                        vec!["check_failed".to_string()],
+                        Vec::new(),
+                    )
+                } else {
+                    ("accepted".to_string(), Vec::new(), Vec::new())
+                }
+            }
+            InstructionExecutionDecision::Reject {
+                operational_failure_classes,
+                semantic_failure_classes,
+                ..
+            } => (
+                "rejected".to_string(),
+                operational_failure_classes.clone(),
+                semantic_failure_classes.clone(),
+            ),
+        };
+
+    operational_failure_classes = sorted_unique_non_empty(&operational_failure_classes);
+    semantic_failure_classes = sorted_unique_non_empty(&semantic_failure_classes);
+    let failure_classes = sorted_unique_non_empty(
+        &operational_failure_classes
+            .iter()
+            .chain(semantic_failure_classes.iter())
+            .cloned()
+            .collect::<Vec<String>>(),
+    );
+
+    Ok(InstructionWitness {
+        ci_schema: 1,
+        witness_kind: INSTRUCTION_WITNESS_KIND.to_string(),
+        instruction_id,
+        instruction_ref,
+        instruction_digest,
+        instruction_classification: checked.instruction_classification.clone(),
+        typing_policy: checked.typing_policy.clone(),
+        intent: checked.intent.clone(),
+        scope: checked.scope.clone(),
+        normalizer_id: checked.normalizer_id.clone(),
+        policy_digest: checked.policy_digest.clone(),
+        capability_claims: checked.capability_claims.clone(),
+        required_checks: checked.requested_checks.clone(),
+        executed_checks,
+        results,
+        verdict_class,
+        operational_failure_classes,
+        semantic_failure_classes,
+        failure_classes,
+        squeak_site_profile,
+        run_started_at,
+        run_finished_at,
+        run_duration_ms: runtime.run_duration_ms,
+        proposal_ingest: proposal_ingest_from_checked(checked.proposal.as_ref()),
+    })
+}
+
 fn validate_filename(path: &Path) -> Result<(), InstructionError> {
     if path.extension().is_none_or(|ext| ext != "json") {
         return Err(InstructionError::new(
@@ -824,6 +1002,24 @@ mod tests {
             .to_path_buf()
     }
 
+    fn runtime_for(instruction_id: &str, failed: bool) -> InstructionWitnessRuntime {
+        InstructionWitnessRuntime {
+            instruction_id: instruction_id.to_string(),
+            instruction_ref: format!("instructions/{instruction_id}.json"),
+            instruction_digest: "instr1_demo".to_string(),
+            squeak_site_profile: "local".to_string(),
+            run_started_at: "2026-02-22T00:00:00Z".to_string(),
+            run_finished_at: "2026-02-22T00:00:01Z".to_string(),
+            run_duration_ms: 1000,
+            results: vec![ExecutedInstructionCheck {
+                check_id: "ci-wiring-check".to_string(),
+                status: if failed { "failed" } else { "passed" }.to_string(),
+                exit_code: if failed { 1 } else { 0 },
+                duration_ms: 25,
+            }],
+        }
+    }
+
     #[test]
     fn validate_instruction_envelope_accepts_fixture() {
         let root = repo_root();
@@ -932,5 +1128,77 @@ mod tests {
                 semantic_failure_classes: expected_semantic_failure_classes,
             }
         );
+    }
+
+    #[test]
+    fn build_instruction_witness_marks_check_failure_as_operational_reject() {
+        let root = repo_root();
+        let fixture_path = root
+            .join("tests")
+            .join("ci")
+            .join("fixtures")
+            .join("instructions")
+            .join("20260221T010000Z-ci-wiring-golden.json");
+        let payload: Value =
+            serde_json::from_slice(&fs::read(&fixture_path).expect("fixture should be readable"))
+                .expect("fixture json should parse");
+        let checked = validate_instruction_envelope_payload(&payload, &fixture_path, &root)
+            .expect("fixture should validate");
+
+        let witness = build_instruction_witness(
+            &checked,
+            runtime_for("20260221T010000Z-ci-wiring-golden", true),
+        )
+        .expect("witness should build");
+        assert_eq!(witness.verdict_class, "rejected");
+        assert_eq!(
+            witness.operational_failure_classes,
+            vec!["check_failed".to_string()]
+        );
+        assert_eq!(witness.semantic_failure_classes, Vec::<String>::new());
+        assert_eq!(witness.failure_classes, vec!["check_failed".to_string()]);
+        assert!(witness.proposal_ingest.is_some());
+    }
+
+    #[test]
+    fn build_instruction_witness_preserves_semantic_reject_from_execution_decision() {
+        let root = repo_root();
+        let fixture_path = root
+            .join("tests")
+            .join("ci")
+            .join("fixtures")
+            .join("instructions")
+            .join("20260221T010000Z-ci-wiring-golden.json");
+        let mut payload: Value =
+            serde_json::from_slice(&fs::read(&fixture_path).expect("fixture should be readable"))
+                .expect("fixture json should parse");
+        payload["proposal"]["candidateRefs"] = Value::Array(Vec::new());
+        let checked = validate_instruction_envelope_payload(&payload, &fixture_path, &root)
+            .expect("proposal with empty candidate refs should validate");
+        assert!(matches!(
+            checked.execution_decision,
+            InstructionExecutionDecision::Reject { .. }
+        ));
+
+        let witness = build_instruction_witness(
+            &checked,
+            InstructionWitnessRuntime {
+                results: Vec::new(),
+                ..runtime_for("20260221T010000Z-ci-wiring-golden", false)
+            },
+        )
+        .expect("witness should build");
+        assert_eq!(witness.verdict_class, "rejected");
+        assert_eq!(witness.operational_failure_classes, Vec::<String>::new());
+        assert_eq!(
+            witness.semantic_failure_classes,
+            checked
+                .proposal
+                .as_ref()
+                .expect("proposal should be present")
+                .discharge
+                .failure_classes
+        );
+        assert_eq!(witness.failure_classes, witness.semantic_failure_classes);
     }
 }

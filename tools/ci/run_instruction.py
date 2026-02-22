@@ -15,7 +15,12 @@ from pathlib import Path
 from typing import Any, Dict, List
 
 from control_plane_contract import INSTRUCTION_WITNESS_KIND
-from instruction_check_client import InstructionCheckError, run_instruction_check
+from instruction_check_client import (
+    InstructionCheckError,
+    InstructionWitnessError,
+    run_instruction_check,
+    run_instruction_witness,
+)
 
 
 def canonical_json(value: Any) -> str:
@@ -24,10 +29,6 @@ def canonical_json(value: Any) -> str:
 
 def stable_hash(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
-
-
-def sorted_unique_strings(values: List[str]) -> List[str]:
-    return sorted(set(item for item in values if isinstance(item, str) and item))
 
 
 def parse_args() -> argparse.Namespace:
@@ -243,34 +244,14 @@ def main() -> int:
         print(f"[error] instruction file not found: {instruction_path}", file=sys.stderr)
         return 2
 
-    proposal: Dict[str, Any] | None = None
-    proposal_obligations: List[Dict[str, Any]] = []
-    proposal_discharge: Dict[str, Any] | None = None
-
     started_at = datetime.now(timezone.utc)
     raw_envelope: Dict[str, Any] | None = None
 
     try:
         checked = run_instruction_check(root, instruction_path)
         instruction_id = instruction_id_from_path(instruction_path)
-        intent = checked["intent"]
-        scope = checked["scope"]
-        normalizer_id = checked["normalizerId"]
-        policy_digest = checked["policyDigest"]
         requested_checks = checked["requestedChecks"]
-        typing_policy = checked.get("typingPolicy", {"allowUnknown": False})
-        capability_claims = checked.get("capabilityClaims", [])
-        instruction_classification = checked["instructionClassification"]
         execution_decision = checked["executionDecision"]
-        proposal_payload = checked.get("proposal")
-        if isinstance(proposal_payload, dict):
-            proposal = {
-                "canonical": proposal_payload.get("canonical"),
-                "digest": proposal_payload.get("digest"),
-                "kcirRef": proposal_payload.get("kcirRef"),
-            }
-            proposal_obligations = proposal_payload.get("obligations", [])
-            proposal_discharge = proposal_payload.get("discharge")
         raw_envelope = load_instruction(instruction_path)
     except (InstructionCheckError, ValueError, json.JSONDecodeError) as exc:
         try:
@@ -303,28 +284,15 @@ def main() -> int:
     rel_instruction_ref = str(instruction_path.relative_to(root)) if instruction_path.is_relative_to(root) else str(instruction_path)
 
     results: List[Dict[str, Any]] = []
-    failed: List[Dict[str, Any]] = []
-    operational_failure_classes: List[str] = []
-    semantic_failure_classes: List[str] = []
     decision_state = execution_decision.get("state")
     if decision_state == "reject":
-        verdict_class = "rejected"
-        operational_failure_classes = sorted_unique_strings(
-            [
-                item
-                for item in execution_decision.get("operationalFailureClasses", [])
-                if isinstance(item, str) and item
-            ]
-        )
-        semantic_failure_classes = sorted_unique_strings(
-            [
-                item
-                for item in execution_decision.get("semanticFailureClasses", [])
-                if isinstance(item, str) and item
-            ]
-        )
         source = execution_decision.get("source", "unknown")
         reason = execution_decision.get("reason", "unknown")
+        semantic_failure_classes = [
+            item
+            for item in execution_decision.get("semanticFailureClasses", [])
+            if isinstance(item, str) and item
+        ]
         if source == "instruction_classification":
             print(
                 f"[instruction] classification rejected: unknown(reason={reason}) "
@@ -347,20 +315,10 @@ def main() -> int:
         for check_id in requested_checks:
             print(f"[instruction] running check: {check_id}")
             results.append(run_check(root, check_id))
-        failed = [r for r in results if r["exitCode"] != 0]
-        verdict_class = "accepted" if not failed else "rejected"
-        if failed:
-            operational_failure_classes = ["check_failed"]
     else:
         raise ValueError(
             "instruction-check payload executionDecision.state must be execute|reject"
         )
-
-    operational_failure_classes = sorted_unique_strings(operational_failure_classes)
-    semantic_failure_classes = sorted_unique_strings(semantic_failure_classes)
-    failure_classes = sorted_unique_strings(
-        operational_failure_classes + semantic_failure_classes
-    )
 
     squeak_site_profile = os.environ.get(
         "PREMATH_SQUEAK_SITE_PROFILE",
@@ -368,45 +326,24 @@ def main() -> int:
     )
 
     finished_at = datetime.now(timezone.utc)
-    executed_checks = [r["checkId"] for r in results]
-
-    witness = {
-        "ciSchema": 1,
-        "witnessKind": INSTRUCTION_WITNESS_KIND,
+    runtime_payload = {
         "instructionId": instruction_id,
         "instructionRef": rel_instruction_ref,
         "instructionDigest": instruction_digest,
-        "instructionClassification": instruction_classification,
-        "typingPolicy": typing_policy,
-        "intent": intent,
-        "scope": scope,
-        "normalizerId": normalizer_id,
-        "policyDigest": policy_digest,
-        "capabilityClaims": capability_claims,
-        "requiredChecks": requested_checks,
-        "executedChecks": executed_checks,
-        "results": results,
-        "verdictClass": verdict_class,
-        "operationalFailureClasses": operational_failure_classes,
-        "semanticFailureClasses": semantic_failure_classes,
-        "failureClasses": failure_classes,
         "squeakSiteProfile": squeak_site_profile,
         "runStartedAt": started_at.isoformat(),
         "runFinishedAt": finished_at.isoformat(),
         "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
+        "results": results,
     }
-    if proposal is not None:
-        witness["proposalIngest"] = {
-            "state": "typed",
-            "kind": f"proposal.{proposal['canonical']['proposalKind']}",
-            "proposalDigest": proposal["digest"],
-            "proposalKcirRef": proposal["kcirRef"],
-            "binding": proposal["canonical"]["binding"],
-            "targetCtxRef": proposal["canonical"]["targetCtxRef"],
-            "targetJudgment": proposal["canonical"]["targetJudgment"],
-            "obligations": proposal_obligations,
-            "discharge": proposal_discharge,
-        }
+    try:
+        witness = run_instruction_witness(root, instruction_path, runtime_payload)
+    except InstructionWitnessError as exc:
+        print(
+            f"[error] instruction witness build failed: {exc.failure_class}: {exc.reason}",
+            file=sys.stderr,
+        )
+        return 2
 
     out_dir = args.out_dir
     if not out_dir.is_absolute():
@@ -419,7 +356,10 @@ def main() -> int:
 
     print(f"[instruction] witness written: {out_path}")
 
-    if verdict_class == "rejected" and not args.allow_failure:
+    if witness.get("witnessKind") != INSTRUCTION_WITNESS_KIND:
+        print("[error] instruction witness kind mismatch", file=sys.stderr)
+        return 2
+    if witness.get("verdictClass") == "rejected" and not args.allow_failure:
         return 1
     return 0
 

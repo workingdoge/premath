@@ -269,6 +269,25 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Build one CI instruction witness through core checker semantics
+    InstructionWitness {
+        /// Instruction JSON path
+        #[arg(long)]
+        instruction: String,
+
+        /// Runtime JSON path (results/timestamps/profile bindings)
+        #[arg(long)]
+        runtime: String,
+
+        /// Repository root used for policy artifact resolution
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON
