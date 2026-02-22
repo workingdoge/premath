@@ -346,6 +346,73 @@ struct InvarianceObservation<'a> {
     failure_classes: &'a [String],
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+struct PolarityCoverage {
+    matched_golden_count: usize,
+    matched_adversarial_count: usize,
+    matched_invariance_count: usize,
+    matched_expected_accepted_count: usize,
+    matched_expected_rejected_count: usize,
+}
+
+impl PolarityCoverage {
+    fn record_vector_id(&mut self, vector_id: &str) {
+        if vector_id.starts_with("golden/") {
+            self.matched_golden_count += 1;
+        } else if vector_id.starts_with("adversarial/") {
+            self.matched_adversarial_count += 1;
+        } else if vector_id.starts_with("invariance/") {
+            self.matched_invariance_count += 1;
+        }
+    }
+
+    fn record_expected_result(&mut self, expected_result: &str) {
+        if expected_result == "accepted" {
+            self.matched_expected_accepted_count += 1;
+        } else if expected_result == "rejected" {
+            self.matched_expected_rejected_count += 1;
+        }
+    }
+
+    fn emit_missing_failures(
+        &self,
+        failures: &mut Vec<String>,
+        failure_prefix: &str,
+        enforce: bool,
+    ) {
+        if !enforce {
+            return;
+        }
+        if self.matched_golden_count == 0 {
+            failures.push(format!("{failure_prefix}.missing_golden_vector"));
+        }
+        if self.matched_adversarial_count == 0 {
+            failures.push(format!("{failure_prefix}.missing_adversarial_vector"));
+        }
+        if self.matched_expected_accepted_count == 0 {
+            failures.push(format!("{failure_prefix}.missing_expected_accepted_vector"));
+        }
+        if self.matched_expected_rejected_count == 0 {
+            failures.push(format!("{failure_prefix}.missing_expected_rejected_vector"));
+        }
+    }
+
+    fn vector_kind_details(&self) -> Value {
+        json!({
+            "golden": self.matched_golden_count,
+            "adversarial": self.matched_adversarial_count,
+            "invariance": self.matched_invariance_count,
+        })
+    }
+
+    fn expected_result_details(&self) -> Value {
+        json!({
+            "accepted": self.matched_expected_accepted_count,
+            "rejected": self.matched_expected_rejected_count,
+        })
+    }
+}
+
 pub fn run_coherence_check(
     repo_root: impl AsRef<Path>,
     contract_path: impl AsRef<Path>,
@@ -915,11 +982,7 @@ fn check_transport_functoriality(
     let mut seen_vectors = BTreeSet::new();
     let mut vector_rows: Vec<Value> = Vec::new();
     let mut invariance_groups: InvarianceGroups = BTreeMap::new();
-    let mut matched_golden_count = 0usize;
-    let mut matched_adversarial_count = 0usize;
-    let mut matched_invariance_count = 0usize;
-    let mut matched_expected_accepted_count = 0usize;
-    let mut matched_expected_rejected_count = 0usize;
+    let mut polarity = PolarityCoverage::default();
 
     for vector_id in &manifest.vectors {
         if !seen_vectors.insert(vector_id.clone()) {
@@ -942,13 +1005,7 @@ fn check_transport_functoriality(
                 continue;
             }
         };
-        if vector_id.starts_with("golden/") {
-            matched_golden_count += 1;
-        } else if vector_id.starts_with("adversarial/") {
-            matched_adversarial_count += 1;
-        } else if vector_id.starts_with("invariance/") {
-            matched_invariance_count += 1;
-        }
+        polarity.record_vector_id(vector_id);
         let expect_bytes = match read_bytes(&expect_path) {
             Ok(bytes) => bytes,
             Err(err) => {
@@ -991,10 +1048,8 @@ fn check_transport_functoriality(
         if expected_result != "accepted" && expected_result != "rejected" {
             failures
                 .push("coherence.transport_functoriality.vector_expect_invalid_result".to_string());
-        } else if expected_result == "accepted" {
-            matched_expected_accepted_count += 1;
         } else {
-            matched_expected_rejected_count += 1;
+            polarity.record_expected_result(expected_result);
         }
         let expected_failure_classes =
             dedupe_sorted(expect_payload.expected_failure_classes.clone());
@@ -1060,35 +1115,15 @@ fn check_transport_functoriality(
         "coherence.transport_functoriality",
         &invariance_groups,
     );
-    if matched_golden_count == 0 {
-        failures.push("coherence.transport_functoriality.missing_golden_vector".to_string());
-    }
-    if matched_adversarial_count == 0 {
-        failures.push("coherence.transport_functoriality.missing_adversarial_vector".to_string());
-    }
-    if matched_expected_accepted_count == 0 {
-        failures
-            .push("coherence.transport_functoriality.missing_expected_accepted_vector".to_string());
-    }
-    if matched_expected_rejected_count == 0 {
-        failures
-            .push("coherence.transport_functoriality.missing_expected_rejected_vector".to_string());
-    }
+    polarity.emit_missing_failures(&mut failures, "coherence.transport_functoriality", true);
 
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
         details: json!({
             "fixtureRoot": to_repo_relative_or_absolute(repo_root, &fixture_root),
             "manifestVectors": manifest.vectors,
-            "matchedVectorKinds": {
-                "golden": matched_golden_count,
-                "adversarial": matched_adversarial_count,
-                "invariance": matched_invariance_count,
-            },
-            "matchedExpectedResults": {
-                "accepted": matched_expected_accepted_count,
-                "rejected": matched_expected_rejected_count,
-            },
+            "matchedVectorKinds": polarity.vector_kind_details(),
+            "matchedExpectedResults": polarity.expected_result_details(),
             "invariance": invariance_rows,
             "vectors": vector_rows,
         }),
@@ -1249,11 +1284,7 @@ fn check_site_obligation(
     let mut seen_vectors = BTreeSet::new();
     let mut vector_rows: Vec<Value> = Vec::new();
     let mut matched_count = 0usize;
-    let mut matched_golden_count = 0usize;
-    let mut matched_adversarial_count = 0usize;
-    let mut matched_invariance_count = 0usize;
-    let mut matched_expected_accepted_count = 0usize;
-    let mut matched_expected_rejected_count = 0usize;
+    let mut polarity = PolarityCoverage::default();
     let mut invariance_groups: InvarianceGroups = BTreeMap::new();
     let invariance_failure_prefix = format!("coherence.{obligation_id}");
 
@@ -1301,13 +1332,7 @@ fn check_site_obligation(
             continue;
         }
         matched_count += 1;
-        if vector_id.starts_with("golden/") {
-            matched_golden_count += 1;
-        } else if vector_id.starts_with("adversarial/") {
-            matched_adversarial_count += 1;
-        } else if vector_id.starts_with("invariance/") {
-            matched_invariance_count += 1;
-        }
+        polarity.record_vector_id(vector_id);
 
         if case_payload.schema != 1 {
             failures.push(format!(
@@ -1363,10 +1388,8 @@ fn check_site_obligation(
             failures.push(format!(
                 "coherence.{obligation_id}.vector_expect_invalid_result"
             ));
-        } else if expected_result == "accepted" {
-            matched_expected_accepted_count += 1;
         } else {
-            matched_expected_rejected_count += 1;
+            polarity.record_expected_result(expected_result);
         }
         let expected_failure_classes = dedupe_sorted(expect_payload.expected_failure_classes);
 
@@ -1432,26 +1455,12 @@ fn check_site_obligation(
         failures.push(format!(
             "coherence.{obligation_id}.manifest_missing_vectors"
         ));
-    } else {
-        if matched_golden_count == 0 {
-            failures.push(format!("coherence.{obligation_id}.missing_golden_vector"));
-        }
-        if matched_adversarial_count == 0 {
-            failures.push(format!(
-                "coherence.{obligation_id}.missing_adversarial_vector"
-            ));
-        }
-        if matched_expected_accepted_count == 0 {
-            failures.push(format!(
-                "coherence.{obligation_id}.missing_expected_accepted_vector"
-            ));
-        }
-        if matched_expected_rejected_count == 0 {
-            failures.push(format!(
-                "coherence.{obligation_id}.missing_expected_rejected_vector"
-            ));
-        }
     }
+    polarity.emit_missing_failures(
+        &mut failures,
+        invariance_failure_prefix.as_str(),
+        matched_count > 0,
+    );
 
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
@@ -1461,15 +1470,8 @@ fn check_site_obligation(
             "manifestObligationVectors": manifest.obligation_vectors,
             "scopedVectors": scoped_vectors,
             "matchedVectors": matched_count,
-            "matchedVectorKinds": {
-                "golden": matched_golden_count,
-                "adversarial": matched_adversarial_count,
-                "invariance": matched_invariance_count,
-            },
-            "matchedExpectedResults": {
-                "accepted": matched_expected_accepted_count,
-                "rejected": matched_expected_rejected_count,
-            },
+            "matchedVectorKinds": polarity.vector_kind_details(),
+            "matchedExpectedResults": polarity.expected_result_details(),
             "invariance": invariance_rows,
             "vectors": vector_rows,
         }),
