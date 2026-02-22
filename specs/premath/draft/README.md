@@ -22,6 +22,8 @@ Start here:
 - `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
   `premath coherence-check`.
 - `PREMATH-KERNEL.md` — semantic kernel contract.
+- `UNIFICATION-DOCTRINE.md` — minimum-encoding/maximum-expressiveness
+  architecture doctrine for canonical boundaries.
 - `SPEC-TRACEABILITY.md` — spec-to-check/vector coverage matrix with explicit
   gap targets.
 

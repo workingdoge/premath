@@ -161,6 +161,8 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/LLM-PROPOSAL-CHECKING` — proposal ingestion/checking contract for LLM
   proposal artifacts (normative only when
   `capabilities.instruction_typing` is claimed).
+- `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
+  architecture doctrine for canonical boundaries and deterministic projections.
 - `raw/SEMANTICS-INFTOPOS` — presentation-free model sketch (informational).
 - `raw/HYPERDESCENT` — optional strengthening: hyperdescent.
 - `raw/UNIVERSE` — optional extension: universe + comprehension (Tarski-style).
@@ -197,6 +199,7 @@ If you are implementing Interop Full:
 6) `draft/WIRE-FORMATS` + `draft/ERROR-CODES`
 7) `draft/CONFORMANCE` + `draft/CAPABILITY-VECTORS`
 8) `draft/SPEC-TRACEABILITY`
+9) `draft/UNIFICATION-DOCTRINE`
 
 If you are implementing change discipline:
 1) `draft/CHANGE-MORPHISMS`

@@ -66,6 +66,7 @@ Purpose:
 | `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_policy.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
 | `PREMATH-COHERENCE.md` | `mise run coherence-check`; `cargo test -p premath-coherence`; `coherence-check` CLI smoke test | covered | - |
 | `COHERENCE-CONTRACT.json` | `mise run coherence-check`; `coherence-check` CLI smoke test | covered | - |
+| `UNIFICATION-DOCTRINE.md` | `mise run docs-coherence-check`; `mise run coherence-check`; decision-log traceability via `check_spec_traceability.py` | instrumented | - |
 | `SPEC-INDEX.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
 | `SPEC-TRACEABILITY.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
 

@@ -1031,3 +1031,26 @@ the same canonical proposal identity in a KCIR-compatible namespace.
 - deterministic conformance coverage now rejects declared KCIR ref drift.
 - docs now prefer `proposalKcirRef` as canonical external key while retaining
   `proposalDigest` for compatibility.
+
+---
+
+## 2026-02-22 — Decision 0036: Promote unification doctrine for minimum encoding and maximum expressiveness
+
+### Decision
+Add `draft/UNIFICATION-DOCTRINE` as a normative architecture doctrine surface
+and link it from `SPEC-INDEX`, `draft/README`, and `SPEC-TRACEABILITY`.
+
+Doctrine rule:
+
+- one canonical encoding per authority boundary,
+- deterministic expressive projections layered over that encoding.
+
+### Rationale
+Multiple ongoing threads (issue memory, instruction/proposal checking,
+coherence, capability overlays) share the same reduction objective. A single
+doctrine avoids local schema forks and keeps expressiveness in projections
+instead of authority duplication.
+
+### Consequences
+- architectural coherence now has an explicit draft doctrine anchor.
+- future reductions can be judged against a single canonical boundary rule.
