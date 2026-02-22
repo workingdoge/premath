@@ -41,6 +41,8 @@ Authority rule:
 - `CI-PROVIDER-BINDINGS.md`: provider bindings to canonical CI contract.
 - `EV-COHERENCE-OVERVIEW.md`: compact status snapshot for Unified Evidence
   Plane contracts, coherence boundaries, and issue posture.
+- `EV-STAGE1-CHECKLIST.md`: execution checklist for `Ev` Stage 1
+  (typed-core dual projection) delivery.
 - `LIFECYCLE-COHERENCE-FLOWS.md`: operator flow for schema lifecycle policy and
   coherence gate-chain enforcement.
 - `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move

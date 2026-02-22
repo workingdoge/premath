@@ -81,6 +81,10 @@ Issue graph status:
 Near-term work is governance/operations unless a new implementation epic is
 opened for `§10.6` Stage 1 (typed-core dual projection).
 
+Current planning issue for this lane:
+
+- `bd-140` (`[Ev] Stage 1 typed-core dual projection execution checklist`)
+
 If Stage 1 begins, keep scope minimal:
 
 1. introduce typed-core projection identity surface,
