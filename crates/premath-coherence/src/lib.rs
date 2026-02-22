@@ -85,6 +85,17 @@ const REQUIRED_LANE_FAILURE_CLASSES: &[&str] = &[
 const REQUIRED_PULLBACK_ROUTE: &str = "span_square_commutation";
 const GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE: &str =
     "coherence.gate_chain_parity.schema_lifecycle_invalid";
+const GATE_CHAIN_STAGE1_PARITY_INVALID_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_parity_invalid";
+const GATE_CHAIN_STAGE1_PARITY_MISSING_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_parity_missing";
+const GATE_CHAIN_STAGE1_PARITY_MISMATCH_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_parity_mismatch";
+const GATE_CHAIN_STAGE1_PARITY_UNBOUND_FAILURE: &str =
+    "coherence.gate_chain_parity.stage1_parity_unbound";
+const STAGE1_PARITY_CLASS_MISSING: &str = "unification.evidence_stage1.parity.missing";
+const STAGE1_PARITY_CLASS_MISMATCH: &str = "unification.evidence_stage1.parity.mismatch";
+const STAGE1_PARITY_CLASS_UNBOUND: &str = "unification.evidence_stage1.parity.unbound";
 const REQUIRED_SCHEMA_LIFECYCLE_FAMILIES: &[&str] = &[
     "controlPlaneContractKind",
     "requiredWitnessKind",
@@ -195,6 +206,8 @@ struct ControlPlaneProjectionContract {
     #[serde(default)]
     schema_lifecycle: Option<ControlPlaneSchemaLifecycle>,
     #[serde(default)]
+    evidence_stage1_parity: Option<ControlPlaneStage1Parity>,
+    #[serde(default)]
     evidence_lanes: Option<ControlPlaneEvidenceLanes>,
     #[serde(default)]
     lane_artifact_kinds: Option<BTreeMap<String, Vec<String>>>,
@@ -288,6 +301,43 @@ struct ControlPlaneSchemaLifecycleGovernance {
     rollover_cadence_months: Option<u32>,
     #[serde(default)]
     freeze_reason: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage1Parity {
+    #[serde(default)]
+    profile_kind: String,
+    #[serde(default)]
+    authority_to_typed_core_route: String,
+    #[serde(default)]
+    comparison_tuple: ControlPlaneStage1ParityComparisonTuple,
+    #[serde(default)]
+    failure_classes: ControlPlaneStage1ParityFailureClasses,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage1ParityComparisonTuple {
+    #[serde(default)]
+    authority_digest_ref: String,
+    #[serde(default)]
+    typed_core_digest_ref: String,
+    #[serde(default)]
+    normalizer_id_ref: String,
+    #[serde(default)]
+    policy_digest_ref: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage1ParityFailureClasses {
+    #[serde(default)]
+    missing: String,
+    #[serde(default)]
+    mismatch: String,
+    #[serde(default)]
+    unbound: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1314,6 +1364,9 @@ fn check_gate_chain_parity(
     let schema_lifecycle_check = evaluate_control_plane_schema_lifecycle(&control_plane_contract);
     failures.extend(schema_lifecycle_check.failure_classes.clone());
 
+    let stage1_parity_check = evaluate_control_plane_stage1_parity(&control_plane_contract);
+    failures.extend(stage1_parity_check.failure_classes.clone());
+
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     failures.extend(lane_registry_check.failure_classes.clone());
 
@@ -1350,10 +1403,126 @@ fn check_gate_chain_parity(
             "instructionPolicyKind": control_plane_contract.instruction_witness.policy_kind,
             "instructionPolicyDigestPrefix": control_plane_contract.instruction_witness.policy_digest_prefix,
             "schemaLifecycle": schema_lifecycle_check.details,
+            "stage1Parity": stage1_parity_check.details,
             "laneRegistry": lane_registry_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
         }),
     })
+}
+
+fn evaluate_control_plane_stage1_parity(
+    control_plane_contract: &ControlPlaneProjectionContract,
+) -> ObligationCheck {
+    let required_failure_classes = json!({
+        "missing": STAGE1_PARITY_CLASS_MISSING,
+        "mismatch": STAGE1_PARITY_CLASS_MISMATCH,
+        "unbound": STAGE1_PARITY_CLASS_UNBOUND,
+    });
+
+    let mut details = json!({
+        "present": control_plane_contract.evidence_stage1_parity.is_some(),
+        "profileKind": null,
+        "authorityToTypedCoreRoute": null,
+        "comparisonTuple": null,
+        "failureClasses": null,
+        "requiredFailureClasses": required_failure_classes,
+        "reasons": [],
+    });
+
+    let Some(stage1) = &control_plane_contract.evidence_stage1_parity else {
+        return ObligationCheck {
+            failure_classes: Vec::new(),
+            details,
+        };
+    };
+
+    details["profileKind"] = json!(&stage1.profile_kind);
+    details["authorityToTypedCoreRoute"] = json!(&stage1.authority_to_typed_core_route);
+    details["comparisonTuple"] = json!(&stage1.comparison_tuple);
+    details["failureClasses"] = json!(&stage1.failure_classes);
+
+    let mut failures = Vec::new();
+    let mut reasons = Vec::new();
+
+    if stage1.profile_kind.trim().is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_PARITY_INVALID_FAILURE.to_string());
+        reasons.push("evidenceStage1Parity.profileKind must be non-empty".to_string());
+    }
+
+    if stage1.authority_to_typed_core_route.trim().is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_PARITY_MISSING_FAILURE.to_string());
+        reasons
+            .push("evidenceStage1Parity.authorityToTypedCoreRoute must be non-empty".to_string());
+    }
+
+    if stage1
+        .comparison_tuple
+        .authority_digest_ref
+        .trim()
+        .is_empty()
+        || stage1
+            .comparison_tuple
+            .typed_core_digest_ref
+            .trim()
+            .is_empty()
+    {
+        failures.push(GATE_CHAIN_STAGE1_PARITY_MISSING_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage1Parity.comparisonTuple authority/typed-core refs must be non-empty"
+                .to_string(),
+        );
+    }
+
+    let normalizer_ref = stage1.comparison_tuple.normalizer_id_ref.trim();
+    let policy_ref = stage1.comparison_tuple.policy_digest_ref.trim();
+    if normalizer_ref.is_empty() || policy_ref.is_empty() {
+        failures.push(GATE_CHAIN_STAGE1_PARITY_UNBOUND_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage1Parity.comparisonTuple normalizer/policy refs must be non-empty"
+                .to_string(),
+        );
+    } else {
+        if normalizer_ref != "normalizerId" {
+            failures.push(GATE_CHAIN_STAGE1_PARITY_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceStage1Parity.comparisonTuple.normalizerIdRef must be `normalizerId` (got `{normalizer_ref}`)"
+            ));
+        }
+        if policy_ref != "policyDigest" {
+            failures.push(GATE_CHAIN_STAGE1_PARITY_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceStage1Parity.comparisonTuple.policyDigestRef must be `policyDigest` (got `{policy_ref}`)"
+            ));
+        }
+    }
+
+    let declared_failure_classes = [
+        stage1.failure_classes.missing.trim().to_string(),
+        stage1.failure_classes.mismatch.trim().to_string(),
+        stage1.failure_classes.unbound.trim().to_string(),
+    ];
+    let declared_failure_set: BTreeSet<String> = declared_failure_classes
+        .iter()
+        .filter(|class_id| !class_id.is_empty())
+        .cloned()
+        .collect();
+    if declared_failure_set.len() != 3
+        || stage1.failure_classes.missing.trim() != STAGE1_PARITY_CLASS_MISSING
+        || stage1.failure_classes.mismatch.trim() != STAGE1_PARITY_CLASS_MISMATCH
+        || stage1.failure_classes.unbound.trim() != STAGE1_PARITY_CLASS_UNBOUND
+    {
+        failures.push(GATE_CHAIN_STAGE1_PARITY_MISMATCH_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceStage1Parity.failureClasses must map to canonical classes ({STAGE1_PARITY_CLASS_MISSING}, {STAGE1_PARITY_CLASS_MISMATCH}, {STAGE1_PARITY_CLASS_UNBOUND})"
+        ));
+    }
+
+    details["reasons"] = json!(dedupe_sorted(reasons));
+
+    ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details,
+    }
 }
 
 fn evaluate_gate_chain_lane_registry(
@@ -4262,6 +4431,21 @@ Current deterministic projected check IDs include:
                 "policyKind": "ci.instruction.policy.v1",
                 "policyDigestPrefix": "pol1_"
             },
+            "evidenceStage1Parity": {
+                "profileKind": "ev.stage1.core.v1",
+                "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+                "comparisonTuple": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "typedCoreDigestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest"
+                },
+                "failureClasses": {
+                    "missing": "unification.evidence_stage1.parity.missing",
+                    "mismatch": "unification.evidence_stage1.parity.mismatch",
+                    "unbound": "unification.evidence_stage1.parity.unbound"
+                }
+            },
             "evidenceLanes": {
                 "semanticDoctrine": "semantic_doctrine",
                 "strictChecker": "strict_checker",
@@ -4837,6 +5021,106 @@ Current deterministic projected check IDs include:
             evaluated
                 .failure_classes
                 .contains(&"coherence.gate_chain_parity.lane_ownership_violation".to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage1_missing_route() {
+        let temp = TempDirGuard::new("gate-chain-stage1-missing-route");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage1Parity"]["authorityToTypedCoreRoute"] = json!("");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE1_PARITY_MISSING_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage1_unbound_binding_tuple() {
+        let temp = TempDirGuard::new("gate-chain-stage1-unbound-binding");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage1Parity"]["comparisonTuple"]["normalizerIdRef"] = json!("normalizer");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE1_PARITY_UNBOUND_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage1_failure_class_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage1-failure-class-mismatch");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage1Parity"]["failureClasses"]["mismatch"] = json!("ev.parity.mismatch");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE1_PARITY_MISMATCH_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage1_missing_profile_kind() {
+        let temp = TempDirGuard::new("gate-chain-stage1-missing-profile-kind");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage1Parity"]["profileKind"] = json!("");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE1_PARITY_INVALID_FAILURE.to_string())
         );
     }
 

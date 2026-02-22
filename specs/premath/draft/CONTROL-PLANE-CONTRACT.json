@@ -173,5 +173,20 @@
     "witnessKind": "ci.instruction.v1",
     "policyKind": "ci.instruction.policy.v1",
     "policyDigestPrefix": "pol1_"
+  },
+  "evidenceStage1Parity": {
+    "profileKind": "ev.stage1.core.v1",
+    "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+    "comparisonTuple": {
+      "authorityDigestRef": "authorityPayloadDigest",
+      "typedCoreDigestRef": "typedCoreProjectionDigest",
+      "normalizerIdRef": "normalizerId",
+      "policyDigestRef": "policyDigest"
+    },
+    "failureClasses": {
+      "missing": "unification.evidence_stage1.parity.missing",
+      "mismatch": "unification.evidence_stage1.parity.mismatch",
+      "unbound": "unification.evidence_stage1.parity.unbound"
+    }
   }
 }

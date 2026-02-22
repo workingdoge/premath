@@ -136,6 +136,11 @@ Minimum parity set includes:
   fail-closed expiry semantics for contract/witness/projection kinds +
   governance mode metadata (`rollover|freeze`) with decision/accountability
   bindings,
+- when optional `evidenceStage1Parity` is present in
+  `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
+  missing authority-to-typed-core route metadata, unbound deterministic binding
+  tuple metadata (`normalizerId`, `policyDigest`), and mismatch between declared
+  parity failure classes and canonical Stage 1 doctrine classes,
 - when lane-registry fields are present in
   `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
   unknown/duplicate lane IDs, unbound lane artifact-kind mappings, lane
