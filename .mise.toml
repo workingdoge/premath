@@ -110,6 +110,7 @@ run = "python3 tools/ci/check_pipeline_wiring.py"
 [tasks.ci-pipeline-test]
 run = [
   "python3 tools/ci/test_pipeline_required.py",
+  "python3 tools/ci/test_run_required_checks.py",
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_policy.py",
   "python3 tools/ci/test_instruction_reject_witness.py",

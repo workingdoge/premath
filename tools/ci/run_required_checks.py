@@ -148,6 +148,16 @@ def run_check_with_witness(
 ) -> Dict[str, Any]:
     gate_path = _gate_artifact_path(out_dir, projection_digest, check_id, index)
     source_path = _gate_source_path(out_dir, projection_digest, check_id, index)
+
+    # Avoid stale gate artifacts from prior runs with the same projection digest.
+    # If this check does not emit a native witness in the current run, fallback
+    # witness emission must be derived from current exit code, not old files.
+    for stale in (gate_path, source_path):
+        try:
+            stale.unlink()
+        except FileNotFoundError:
+            pass
+
     env = os.environ.copy()
     env["PREMATH_GATE_WITNESS_OUT"] = str(gate_path)
     env["PREMATH_GATE_WITNESS_SOURCE_OUT"] = str(source_path)
