@@ -698,3 +698,32 @@ between promoted draft spec inventory and matrix rows.
 - `mise run baseline` now includes `mise run traceability-check`.
 - `draft/SPEC-TRACEABILITY` marks `SPEC-INDEX.md` as `covered`.
 - Open traceability upgrades continue under `T-DINF-01` and `T-KERNEL-01`.
+
+---
+
+## 2026-02-22 — Decision 0025: Execute T-DINF-01 with doctrine-inf semantic boundary vectors
+
+### Decision
+Extend doctrine validation with executable law-level checks for declared
+preserved/not-preserved morphism boundaries via
+`tools/conformance/run_doctrine_inf_vectors.py` and fixture suite
+`tests/conformance/fixtures/doctrine-inf/`, and include these vectors in
+`mise run doctrine-check`.
+
+Covered doctrine boundary checks:
+
+- edge morphisms must lie within destination `preserved` declarations,
+- edge morphisms declared `notPreserved` reject deterministically,
+- overlap between `preserved` and `notPreserved` declarations rejects
+  deterministically.
+
+### Rationale
+`DOCTRINE-INF.md` coverage was previously graph/declaration coherence only.
+`T-DINF-01` required executable semantic boundary checks that enforce doctrine
+declaration meaning, not just declaration presence.
+
+### Consequences
+- `mise run doctrine-check` now runs both doctrine-site coherence and
+  doctrine-inf semantic boundary vectors.
+- `draft/SPEC-TRACEABILITY` marks `DOCTRINE-INF.md` as `covered`.
+- Open traceability upgrades continue under `T-KERNEL-01`.

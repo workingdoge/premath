@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "suiteId": "doctrine-inf",
+  "vectors": [
+    "golden/preserved_boundary_accept",
+    "adversarial/not_declared_preserved_reject",
+    "adversarial/explicit_not_preserved_reject",
+    "adversarial/declaration_overlap_reject"
+  ]
+}

@@ -36,7 +36,10 @@ run = "python3 tools/conformance/check_stub_invariance.py"
 run = "python3 tools/conformance/check_spec_traceability.py"
 
 [tasks.doctrine-check]
-run = "python3 tools/conformance/check_doctrine_site.py"
+run = [
+  "python3 tools/conformance/check_doctrine_site.py",
+  "python3 tools/conformance/run_doctrine_inf_vectors.py",
+]
 
 [tasks.conformance-run]
 run = "python3 tools/conformance/run_fixture_suites.py"

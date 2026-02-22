@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "expectedFailureClasses": [],
+  "assertions": [
+    "declared preserved morphism boundary accepts"
+  ]
+}

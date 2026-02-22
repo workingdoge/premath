@@ -46,7 +46,7 @@ Purpose:
 
 | Draft spec | Primary executable surface | Status | Coverage target |
 | --- | --- | --- | --- |
-| `DOCTRINE-INF.md` | `mise run doctrine-check` (declaration-set + edge coherence + reachability) | instrumented | `T-DINF-01` |
+| `DOCTRINE-INF.md` | `mise run doctrine-check` (declaration-set + edge coherence + reachability + doctrine-inf semantic boundary vectors) | covered | - |
 | `PREMATH-KERNEL.md` | `cargo test -p premath-kernel`; `mise run test-toy`; `mise run test-kcir-toy` | instrumented | `T-KERNEL-01` |
 | `KCIR-CORE.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`kcir_domain_table_*`) | covered | - |
 | `REF-BINDING.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`ref_projection_and_verify_*`) | covered | - |
@@ -67,11 +67,6 @@ Purpose:
 | `SPEC-TRACEABILITY.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
 
 ## 4. Coverage Targets (Open Gaps/Upgrades)
-
-### `T-DINF-01` Doctrine-Inf Semantic Coverage Upgrade
-
-Extend beyond declaration/graph coherence into executable law-level checks for
-declared preserved/not-preserved boundaries.
 
 ### `T-KERNEL-01` Cross-Model Kernel Vector Profile
 

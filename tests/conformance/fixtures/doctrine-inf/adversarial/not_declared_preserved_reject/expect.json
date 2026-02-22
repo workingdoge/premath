@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "doctrine_boundary_not_declared_preserved"
+  ],
+  "assertions": [
+    "edge morphism outside destination preserved set rejects"
+  ]
+}

@@ -186,3 +186,22 @@ Run:
 ```bash
 python3 tools/conformance/check_doctrine_site.py
 ```
+
+## `run_doctrine_inf_vectors.py`
+
+Runs executable doctrine-inf semantic boundary vectors in:
+
+- `tests/conformance/fixtures/doctrine-inf/`
+
+Checks include deterministic reject/accept behavior for:
+
+- edge morphisms within destination `preserved` declarations,
+- edge morphisms outside destination `preserved` declarations,
+- edge morphisms explicitly listed under destination `notPreserved`,
+- overlap violations between `preserved` and `notPreserved`.
+
+Run:
+
+```bash
+python3 tools/conformance/run_doctrine_inf_vectors.py
+```

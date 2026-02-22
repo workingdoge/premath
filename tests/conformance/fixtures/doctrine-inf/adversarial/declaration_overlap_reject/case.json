@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "doctrine-inf",
+  "vectorId": "adversarial/declaration_overlap_reject",
+  "description": "Overlapping preserved/notPreserved declaration rejects deterministically.",
+  "artifacts": {
+    "doctrineRegistry": [
+      "dm.identity"
+    ],
+    "destinationDeclares": {
+      "preserved": [
+        "dm.identity"
+      ],
+      "notPreserved": [
+        "dm.identity"
+      ]
+    },
+    "edgeMorphisms": [
+      "dm.identity"
+    ]
+  }
+}

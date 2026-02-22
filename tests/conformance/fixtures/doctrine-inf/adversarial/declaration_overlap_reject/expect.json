@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "doctrine_boundary_not_preserved",
+    "doctrine_declaration_overlap"
+  ],
+  "assertions": [
+    "overlap between preserved and notPreserved is rejected"
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "doctrine-inf",
+  "vectorId": "adversarial/not_declared_preserved_reject",
+  "description": "Edge morphism not in preserved declaration rejects.",
+  "artifacts": {
+    "doctrineRegistry": [
+      "dm.identity",
+      "dm.profile.execution",
+      "dm.transport.world"
+    ],
+    "destinationDeclares": {
+      "preserved": [
+        "dm.identity"
+      ],
+      "notPreserved": [
+        "dm.transport.world"
+      ]
+    },
+    "edgeMorphisms": [
+      "dm.identity",
+      "dm.profile.execution"
+    ]
+  }
+}
