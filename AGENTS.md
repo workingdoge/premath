@@ -95,6 +95,16 @@
   - `mise run ci-pipeline-test`
   - `mise run ci-wiring-check`
 
+## GitHub Ops Conventions
+
+- `main` is protected and PR-only. Do not attempt direct pushes to `main`; use topic branch + PR.
+- Keep local and server policy checks aligned:
+  - local fixture contract check: `mise run ci-branch-policy-check`
+  - live server check: `mise run ci-branch-policy-check-live` (requires admin-read token in `GITHUB_TOKEN` or explicit `--token-env`)
+- `branch-policy` workflow requires repository secret `PREMATH_BRANCH_POLICY_TOKEN`; keep it populated before expecting live workflow success.
+- For governance/ops rollouts, record command evidence and resulting URLs in `.premath/OPERATIONS.md` and in the relevant issue notes (`.premath/issues.jsonl`).
+- When protection settings are changed, expect pushes to fail until work goes through PR and required status checks (`ci-required`) report on the PR head.
+
 ## Coding Style & Naming Conventions
 
 - Rust style: `cargo fmt --all`; lint with `cargo clippy --workspace --all-targets -- -D warnings`.
