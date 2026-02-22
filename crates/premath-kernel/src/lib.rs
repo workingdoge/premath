@@ -31,6 +31,7 @@ pub mod definable;
 pub mod descent;
 pub mod error;
 pub mod gate;
+pub mod obligation_registry;
 pub mod toy;
 pub mod witness;
 
@@ -43,4 +44,8 @@ pub use descent::{
 };
 pub use error::PremathError;
 pub use gate::{GateCheck, World};
+pub use obligation_registry::{
+    ObligationGateMapping, failure_class_to_law_ref, obligation_gate_registry,
+    obligation_gate_registry_json, obligation_to_failure_class,
+};
 pub use witness::{GateFailure, GateResult};

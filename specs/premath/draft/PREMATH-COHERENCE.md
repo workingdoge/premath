@@ -90,7 +90,8 @@ Minimum checks:
   remain coherent,
 - informative fallback clause remains present,
 - bidirectional checker surface stays aligned with `draft/BIDIR-DESCENT`
-  obligation vocabulary for the required set declared in the contract.
+  obligation vocabulary for the required set declared in the contract, sourced
+  from kernel authority export (`crates/premath-kernel/src/obligation_registry.rs`).
 
 The bidirectional checker alignment is a parity check over obligation kinds; it
 does not authorize or alter discharge semantics.

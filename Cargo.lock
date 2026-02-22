@@ -665,6 +665,7 @@ dependencies = [
 name = "premath-coherence"
 version = "0.1.0"
 dependencies = [
+ "premath-kernel",
  "regex",
  "serde",
  "serde_json",

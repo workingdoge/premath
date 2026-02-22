@@ -1347,3 +1347,32 @@ site/sheaf abstractions while preserving one acceptance authority path.
   `coherence-site` fixtures for deterministic cache invalidation and replay.
 - no new authority layer is introduced; all outcomes still flow through
   `premath coherence-check` witness emission.
+
+---
+
+## 2026-02-22 — Decision 0047: Kernel-own obligation->Gate authority registry with machine export
+
+### Decision
+Move canonical obligation->Gate mapping authority into `premath-kernel` and
+export it as one typed registry surface:
+
+- source authority: `crates/premath-kernel/src/obligation_registry.rs`
+- Rust APIs: `obligation_to_failure_class`, `failure_class_to_law_ref`,
+  `obligation_gate_registry`, `obligation_gate_registry_json`
+- machine export command: `premath obligation-registry --json`
+
+Downstream checker paths consume this authority instead of local duplicated
+mapping constants.
+
+### Rationale
+The mapping is normative (`draft/BIDIR-DESCENT` §8.1 + `draft/GATE` class/law
+surface) and should not live in a downstream checker implementation file. A
+kernel-owned export reduces duplication and keeps the semantic boundary
+single-source.
+
+### Consequences
+- proposal discharge in `premath-coherence` now imports kernel mapping APIs.
+- coherence contract parity surface now points to kernel registry source for
+  obligation-vocabulary checks.
+- CLI/automation can consume one deterministic JSON registry artifact for
+  cross-surface parity work (`bd-58`, `bd-59`, `bd-63`).

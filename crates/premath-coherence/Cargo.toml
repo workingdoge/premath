@@ -6,6 +6,7 @@ license.workspace = true
 description = "Typed coherence-contract checker and witness surface for Premath"
 
 [dependencies]
+premath-kernel = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }

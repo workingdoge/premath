@@ -100,6 +100,11 @@ Canonical obligation kinds include:
 The recommended operational interface is specified in `draft/BIDIR-DESCENT`, with deterministic
 interop support specified in `draft/NF`, `draft/NORMALIZER`, and `draft/REF-BINDING`.
 
+Repository conformance additionally exports a canonical obligation-authority
+registry from kernel code (`crates/premath-kernel/src/obligation_registry.rs`)
+and machine output (`premath obligation-registry --json`). Downstream layers
+MUST treat that export as read-only authority for obligation->Gate mapping.
+
 ## 2. Ambient coherence level
 
 Premath is parameterized by an ambient “sameness level” \(\mathcal V\), e.g.

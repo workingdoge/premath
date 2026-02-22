@@ -131,6 +131,8 @@ fn main() {
             json,
         } => commands::instruction_check::run(instruction, repo_root, json),
 
+        Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
+
         Commands::Issue { command } => commands::issue::run(command),
 
         Commands::Dep { command } => commands::dep::run(command),

@@ -269,6 +269,13 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Emit canonical obligation->Gate mapping registry
+    ObligationRegistry {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Manage issues in premath-bd JSONL memory
     Issue {
         #[command(subcommand)]

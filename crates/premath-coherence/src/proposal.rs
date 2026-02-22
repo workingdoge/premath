@@ -1,3 +1,6 @@
+use premath_kernel::{
+    failure_class_to_law_ref, obligation_to_failure_class, witness::failure_class, witness::law_ref,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
@@ -5,19 +8,6 @@ use std::collections::BTreeSet;
 use thiserror::Error;
 
 const PROPOSAL_KINDS: &[&str] = &["value", "derivation", "refinementPlan"];
-const OBLIGATION_TO_GATE_FAILURE: &[(&str, &str)] = &[
-    ("stability", "stability_failure"),
-    ("locality", "locality_failure"),
-    ("descent_exists", "descent_failure"),
-    ("descent_contractible", "glue_non_contractible"),
-    ("adjoint_triangle", "adjoint_triple_coherence_failure"),
-    ("beck_chevalley_sigma", "adjoint_triple_coherence_failure"),
-    ("beck_chevalley_pi", "adjoint_triple_coherence_failure"),
-    ("refinement_invariance", "stability_failure"),
-    ("adjoint_triple", "adjoint_triple_coherence_failure"),
-    ("ext_gap", "descent_failure"),
-    ("ext_ambiguous", "glue_non_contractible"),
-];
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("{failure_class}: {message}")]
@@ -535,26 +525,6 @@ pub fn compile_proposal_obligations(canonical: &CanonicalProposal) -> Vec<Propos
         .collect()
 }
 
-fn obligation_to_failure(kind: &str) -> &'static str {
-    for (obligation, failure) in OBLIGATION_TO_GATE_FAILURE {
-        if *obligation == kind {
-            return failure;
-        }
-    }
-    "descent_failure"
-}
-
-fn failure_to_law_ref(failure_class: &str) -> &'static str {
-    match failure_class {
-        "stability_failure" => "GATE-3.1",
-        "locality_failure" => "GATE-3.2",
-        "descent_failure" => "GATE-3.3",
-        "glue_non_contractible" => "GATE-3.4",
-        "adjoint_triple_coherence_failure" => "GATE-3.5",
-        _ => "GATE-3.3",
-    }
-}
-
 fn refinement_obligation_hint(kind: &str) -> Option<&'static str> {
     match kind {
         "adjoint_triangle" => Some("hint:adjoint_triangle"),
@@ -595,8 +565,12 @@ pub fn discharge_proposal_obligations(
         };
 
         if failed {
-            let failure_class = obligation_to_failure(obligation.kind.as_str()).to_string();
-            let law_ref = failure_to_law_ref(&failure_class).to_string();
+            let failure_class = obligation_to_failure_class(obligation.kind.as_str())
+                .unwrap_or(failure_class::DESCENT_FAILURE)
+                .to_string();
+            let law_ref = failure_class_to_law_ref(&failure_class)
+                .unwrap_or(law_ref::DESCENT)
+                .to_string();
             step.failure_class = Some(failure_class.clone());
             step.law_ref = Some(law_ref);
             if let Some(missing_hint) = hint

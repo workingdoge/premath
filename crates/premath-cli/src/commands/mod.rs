@@ -6,6 +6,7 @@ pub mod instruction_check;
 pub mod issue;
 pub mod mcp_serve;
 pub mod mock_gate;
+pub mod obligation_registry;
 pub mod observe;
 pub mod observe_serve;
 pub mod proposal_check;

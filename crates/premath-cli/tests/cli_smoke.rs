@@ -366,6 +366,29 @@ fn instruction_check_json_smoke() {
 }
 
 #[test]
+fn obligation_registry_json_smoke() {
+    let output = run_premath(["obligation-registry", "--json"]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["registryKind"],
+        serde_json::json!("premath.obligation_gate_registry.v1")
+    );
+    let mappings = payload["mappings"]
+        .as_array()
+        .expect("mappings should be an array");
+    assert!(
+        mappings
+            .iter()
+            .any(|row| row["obligationKind"] == "stability"
+                && row["failureClass"] == "stability_failure"
+                && row["lawRef"] == "GATE-3.1")
+    );
+}
+
+#[test]
 fn init_text_smoke() {
     let tmp = TempDirGuard::new("init");
     let repo_root = tmp.path().join("repo");

@@ -109,7 +109,7 @@
     "bidirSpecPath": "specs/premath/draft/BIDIR-DESCENT.md",
     "bidirSpecSectionStart": "## 6. Obligation kinds (normative)",
     "bidirSpecSectionEnd": "### 6.1 Obligation record format (required)",
-    "bidirCheckerPath": "crates/premath-coherence/src/proposal.rs",
+    "bidirCheckerPath": "crates/premath-kernel/src/obligation_registry.rs",
     "bidirCheckerMapName": "OBLIGATION_TO_GATE_FAILURE",
     "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6",
     "transportFixtureRootPath": "tests/conformance/fixtures/coherence-transport",
