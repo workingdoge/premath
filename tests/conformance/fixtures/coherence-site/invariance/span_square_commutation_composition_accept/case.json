@@ -1,0 +1,279 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "span_square_commutation",
+  "semanticScenarioId": "span_square_commutation_composition_accept",
+  "profile": "local",
+  "artifacts": {
+    "spanSquare": {
+      "spans": [
+        {
+          "id": "span_id",
+          "kind": "identity",
+          "left": {"ctx": "Gamma"},
+          "apex": {"id": true},
+          "right": {"ctx": "Gamma"}
+        },
+        {
+          "id": "run_on_base",
+          "kind": "pipeline",
+          "left": {"ctx": "Gamma"},
+          "apex": {"run": "base"},
+          "right": {"out": "y"}
+        },
+        {
+          "id": "run_after_reindex",
+          "kind": "pipeline",
+          "left": {"ctx": "Gamma"},
+          "apex": {"run": "base"},
+          "right": {"out": "y"}
+        },
+        {
+          "id": "reindex_input",
+          "kind": "base_change",
+          "left": {"ctx": "Delta"},
+          "apex": {"map": "rho"},
+          "right": {"ctx": "Gamma"}
+        },
+        {
+          "id": "reindex_output",
+          "kind": "base_change",
+          "left": {"out": "y"},
+          "apex": {"map": "rho"},
+          "right": {"out": "y"}
+        }
+      ],
+      "squares": [
+        {
+          "id": "sq_accept",
+          "top": "run_on_base",
+          "bottom": "run_after_reindex",
+          "left": "reindex_input",
+          "right": "reindex_output",
+          "result": "accepted",
+          "failureClasses": [],
+          "digest": "sqw1_4f42fafb0510c945ce414ca03c9e5668c05b7d4aabd6041f05d0eafa51474235"
+        },
+        {
+          "id": "sq_id",
+          "top": "run_on_base",
+          "bottom": "run_after_reindex",
+          "left": "reindex_input",
+          "right": "reindex_output",
+          "result": "accepted",
+          "failureClasses": [],
+          "digest": "sqw1_4f42fafb0510c945ce414ca03c9e5668c05b7d4aabd6041f05d0eafa51474235"
+        }
+      ],
+      "compositionLaws": {
+        "identitySpanIds": ["span_id"],
+        "identitySquareIds": ["sq_id"],
+        "laws": [
+          {
+            "id": "law_span_identity",
+            "kind": "span",
+            "law": "span_identity",
+            "left": {
+              "compose": {
+                "left": {"span": "span_id"},
+                "right": {"span": "run_on_base"}
+              }
+            },
+            "right": {"span": "run_on_base"},
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_3a557a20700b55a8ce5e817117b48ac3837f8de70e784fdeda101b2e94213a6b"
+          },
+          {
+            "id": "law_span_assoc",
+            "kind": "span",
+            "law": "span_associativity",
+            "left": {
+              "compose": {
+                "left": {
+                  "compose": {
+                    "left": {"span": "run_on_base"},
+                    "right": {"span": "reindex_input"}
+                  }
+                },
+                "right": {"span": "reindex_output"}
+              }
+            },
+            "right": {
+              "compose": {
+                "left": {"span": "run_on_base"},
+                "right": {
+                  "compose": {
+                    "left": {"span": "reindex_input"},
+                    "right": {"span": "reindex_output"}
+                  }
+                }
+              }
+            },
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_b146821252a3e27a21f3b82c4add43c76675e23b16de4952cc4f89f69e6cd8a8"
+          },
+          {
+            "id": "law_sq_identity",
+            "kind": "square",
+            "law": "square_identity",
+            "left": {
+              "compose": {
+                "mode": "horizontal",
+                "left": {"square": "sq_id"},
+                "right": {"square": "sq_accept"}
+              }
+            },
+            "right": {"square": "sq_accept"},
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_de3674b49bf68a68752397cc4d74d53921a867ec0a6776c4ec258fa37e30b80e"
+          },
+          {
+            "id": "law_sq_assoc_h",
+            "kind": "square",
+            "law": "square_associativity_horizontal",
+            "left": {
+              "compose": {
+                "mode": "horizontal",
+                "left": {
+                  "compose": {
+                    "mode": "horizontal",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                },
+                "right": {"square": "sq_accept"}
+              }
+            },
+            "right": {
+              "compose": {
+                "mode": "horizontal",
+                "left": {"square": "sq_accept"},
+                "right": {
+                  "compose": {
+                    "mode": "horizontal",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                }
+              }
+            },
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_59986f862dafeea27827e8b9d391a7705eff0f564dd9d3c681847e3d69f59791"
+          },
+          {
+            "id": "law_sq_assoc_v",
+            "kind": "square",
+            "law": "square_associativity_vertical",
+            "left": {
+              "compose": {
+                "mode": "vertical",
+                "left": {
+                  "compose": {
+                    "mode": "vertical",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                },
+                "right": {"square": "sq_accept"}
+              }
+            },
+            "right": {
+              "compose": {
+                "mode": "vertical",
+                "left": {"square": "sq_accept"},
+                "right": {
+                  "compose": {
+                    "mode": "vertical",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                }
+              }
+            },
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_b10f7ad9a755ad76fed1221ecf0dea0be07a314bddd2d2279500785663ce3dd3"
+          },
+          {
+            "id": "law_sq_hv",
+            "kind": "square",
+            "law": "square_hv_compatibility",
+            "left": {
+              "compose": {
+                "mode": "horizontal",
+                "left": {"square": "sq_id"},
+                "right": {
+                  "compose": {
+                    "mode": "vertical",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                }
+              }
+            },
+            "right": {
+              "compose": {
+                "mode": "vertical",
+                "left": {"square": "sq_accept"},
+                "right": {"square": "sq_accept"}
+              }
+            },
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_65d00b6bba0b3d62f8d68ed207b6cd3ccec445ce364a4859a72ead130b44064a"
+          },
+          {
+            "id": "law_sq_interchange",
+            "kind": "square",
+            "law": "square_interchange",
+            "left": {
+              "compose": {
+                "mode": "vertical",
+                "left": {
+                  "compose": {
+                    "mode": "horizontal",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                },
+                "right": {
+                  "compose": {
+                    "mode": "horizontal",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                }
+              }
+            },
+            "right": {
+              "compose": {
+                "mode": "horizontal",
+                "left": {
+                  "compose": {
+                    "mode": "vertical",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                },
+                "right": {
+                  "compose": {
+                    "mode": "vertical",
+                    "left": {"square": "sq_accept"},
+                    "right": {"square": "sq_accept"}
+                  }
+                }
+              }
+            },
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_48c7bbe7e86becee1a3b89eb9685d08d9fd07605d75754145ae25fdceda69923"
+          }
+        ]
+      }
+    }
+  }
+}

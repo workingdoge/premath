@@ -130,6 +130,29 @@ there MUST be one deterministic natural transformation:
             check_docs_coherence.SPEC_INDEX_UNIFIED_FACTORIZATION_RE.search(text)
         )
 
+    def test_span_square_composition_markers_all_present(self) -> None:
+        text = """
+## 4. Composition Law Surface (Bicategory Profile)
+`compositionLaws`
+`span_identity`
+`square_interchange`
+digest = "sqlw1_" + SHA256(JCS(LawCore))
+"""
+        missing = check_docs_coherence.find_missing_markers(
+            text, check_docs_coherence.SPAN_SQUARE_COMPOSITION_MARKERS
+        )
+        self.assertEqual(missing, [])
+
+    def test_premath_coherence_span_composition_regex_matches(self) -> None:
+        text = (
+            "accepted coverage includes span identity/associativity and square\n"
+            "identity/associativity (horizontal + vertical), horizontal/vertical\n"
+            "compatibility, and interchange."
+        )
+        self.assertIsNotNone(
+            check_docs_coherence.PREMATH_COHERENCE_SPAN_COMPOSITION_RE.search(text)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

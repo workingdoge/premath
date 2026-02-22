@@ -238,7 +238,9 @@ transport obligations are composed in one implementation profile:
 2. composed checks MUST remain deterministic and fail closed on unknown/unbound
    lane or capability material,
 3. cross-lane pullback/base-change claims MUST project through typed
-   span/square witnesses (`draft/SPAN-SQUARE-CHECKING`),
+   span/square witnesses (`draft/SPAN-SQUARE-CHECKING`), including deterministic
+   composition-law witnesses (identity/associativity/h-v/interchange) when
+   composed routing is claimed,
 4. derived projections MAY vary by workflow, but MUST remain replayable to one
    canonical authority artifact.
 

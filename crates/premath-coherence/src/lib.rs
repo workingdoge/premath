@@ -2667,6 +2667,7 @@ fn evaluate_site_case_span_square_commutation(
     }
 
     let mut square_ids = BTreeSet::new();
+    let mut square_digests: BTreeMap<String, String> = BTreeMap::new();
     let mut square_rows = Vec::new();
     for (index, square) in squares.iter().enumerate() {
         let square_obj = square.as_object().ok_or_else(|| {
@@ -2699,6 +2700,7 @@ fn evaluate_site_case_span_square_commutation(
             result.as_str(),
             &square_failure_classes,
         );
+        square_digests.insert(square_id.clone(), expected_digest.clone());
         if digest != expected_digest {
             failures.push("coherence.span_square_commutation.violation".to_string());
         }
@@ -2740,6 +2742,246 @@ fn evaluate_site_case_span_square_commutation(
         }));
     }
 
+    let mut composition_rows = Vec::new();
+    let mut composition_summary = json!({
+        "present": false
+    });
+    if let Some(composition_value) = span_square.get("compositionLaws") {
+        let composition = composition_value.as_object().ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.spanSquare.compositionLaws must be an object",
+                display_path(case_path)
+            ))
+        })?;
+        let identity_span_ids = dedupe_sorted(optional_string_array_field(
+            composition,
+            "identitySpanIds",
+            case_path,
+            "artifacts.spanSquare.compositionLaws",
+        )?);
+        let identity_square_ids = dedupe_sorted(optional_string_array_field(
+            composition,
+            "identitySquareIds",
+            case_path,
+            "artifacts.spanSquare.compositionLaws",
+        )?);
+        for span_id in &identity_span_ids {
+            if !span_digests.contains_key(span_id) {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+            }
+        }
+        for square_id in &identity_square_ids {
+            if !square_digests.contains_key(square_id) {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+            }
+        }
+
+        let law_rows = composition
+            .get("laws")
+            .and_then(Value::as_array)
+            .ok_or_else(|| {
+                CoherenceError::Contract(format!(
+                    "{}: artifacts.spanSquare.compositionLaws.laws must be an array",
+                    display_path(case_path)
+                ))
+            })?;
+        if law_rows.is_empty() {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        }
+        let mut law_ids = BTreeSet::new();
+        let mut accepted_laws = BTreeSet::new();
+        let mut used_square_modes = SquareCompositionModes::default();
+        let identity_span_set: BTreeSet<String> = identity_span_ids.iter().cloned().collect();
+        let identity_square_set: BTreeSet<String> = identity_square_ids.iter().cloned().collect();
+        for (index, law_row) in law_rows.iter().enumerate() {
+            let law_obj = law_row.as_object().ok_or_else(|| {
+                CoherenceError::Contract(format!(
+                    "{}: artifacts.spanSquare.compositionLaws.laws[{index}] must be an object",
+                    display_path(case_path)
+                ))
+            })?;
+            let law_id = require_non_empty_string_field(law_obj, "id", case_path)?;
+            if !law_ids.insert(law_id.clone()) {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+            }
+            let kind = require_non_empty_string_field(law_obj, "kind", case_path)?;
+            let law = require_non_empty_string_field(law_obj, "law", case_path)?;
+            let left_expr = require_value_field(law_obj, "left", case_path)?;
+            let right_expr = require_value_field(law_obj, "right", case_path)?;
+            let result = require_non_empty_string_field(law_obj, "result", case_path)?;
+            let law_failure_classes = dedupe_sorted(require_string_array_field(
+                law_obj,
+                "failureClasses",
+                case_path,
+                "artifacts.spanSquare.compositionLaws.laws[]",
+            )?);
+            let digest = require_non_empty_string_field(law_obj, "digest", case_path)?;
+            let expected_digest = composition_law_digest(
+                kind.as_str(),
+                law.as_str(),
+                left_expr,
+                right_expr,
+                result.as_str(),
+                &law_failure_classes,
+            );
+            if digest != expected_digest {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+            }
+
+            let mut law_eval_error: Option<String> = None;
+            let mut normalized_left = Value::Null;
+            let mut normalized_right = Value::Null;
+            let mut normalized_equal = false;
+            if kind == "span" {
+                if law != "span_identity" && law != "span_associativity" {
+                    failures.push("coherence.span_square_commutation.violation".to_string());
+                    law_eval_error = Some(format!("unsupported span law {law:?}"));
+                } else {
+                    match evaluate_span_expression(left_expr, &span_digests, &identity_span_set) {
+                        Ok(tokens) => {
+                            normalized_left = json!(tokens);
+                        }
+                        Err(message) => {
+                            failures
+                                .push("coherence.span_square_commutation.violation".to_string());
+                            law_eval_error = Some(message);
+                        }
+                    }
+                    if law_eval_error.is_none() {
+                        match evaluate_span_expression(
+                            right_expr,
+                            &span_digests,
+                            &identity_span_set,
+                        ) {
+                            Ok(tokens) => {
+                                normalized_right = json!(tokens);
+                            }
+                            Err(message) => {
+                                failures.push(
+                                    "coherence.span_square_commutation.violation".to_string(),
+                                );
+                                law_eval_error = Some(message);
+                            }
+                        }
+                    }
+                }
+            } else if kind == "square" {
+                if !matches!(
+                    law.as_str(),
+                    "square_identity"
+                        | "square_associativity_horizontal"
+                        | "square_associativity_vertical"
+                        | "square_hv_compatibility"
+                        | "square_interchange"
+                ) {
+                    failures.push("coherence.span_square_commutation.violation".to_string());
+                    law_eval_error = Some(format!("unsupported square law {law:?}"));
+                } else {
+                    match evaluate_square_expression(
+                        left_expr,
+                        &square_digests,
+                        &identity_square_set,
+                        &mut used_square_modes,
+                    ) {
+                        Ok(value) => {
+                            normalized_left = square_expression_to_json(&value);
+                        }
+                        Err(message) => {
+                            failures
+                                .push("coherence.span_square_commutation.violation".to_string());
+                            law_eval_error = Some(message);
+                        }
+                    }
+                    if law_eval_error.is_none() {
+                        match evaluate_square_expression(
+                            right_expr,
+                            &square_digests,
+                            &identity_square_set,
+                            &mut used_square_modes,
+                        ) {
+                            Ok(value) => {
+                                normalized_right = square_expression_to_json(&value);
+                            }
+                            Err(message) => {
+                                failures.push(
+                                    "coherence.span_square_commutation.violation".to_string(),
+                                );
+                                law_eval_error = Some(message);
+                            }
+                        }
+                    }
+                }
+            } else {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+                law_eval_error = Some(format!("unsupported law kind {kind:?}"));
+            }
+
+            if law_eval_error.is_none() {
+                normalized_equal = normalized_left == normalized_right;
+            }
+
+            if result != "accepted" && result != "rejected" {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+            } else if result == "accepted" {
+                if !law_failure_classes.is_empty() || !normalized_equal || law_eval_error.is_some()
+                {
+                    failures.push("coherence.span_square_commutation.violation".to_string());
+                } else {
+                    accepted_laws.insert(law.clone());
+                }
+            } else {
+                if law_failure_classes.is_empty() {
+                    failures.push("coherence.span_square_commutation.violation".to_string());
+                }
+                if law_eval_error.is_none() && normalized_equal {
+                    failures.push("coherence.span_square_commutation.violation".to_string());
+                }
+            }
+
+            composition_rows.push(json!({
+                "id": law_id,
+                "kind": kind,
+                "law": law,
+                "result": result,
+                "normalizedLeft": normalized_left,
+                "normalizedRight": normalized_right,
+                "normalizedEqual": normalized_equal,
+                "failureClasses": law_failure_classes,
+                "providedDigest": digest,
+                "expectedDigest": expected_digest,
+                "evaluationError": law_eval_error,
+            }));
+        }
+
+        for required_law in [
+            "span_identity",
+            "span_associativity",
+            "square_identity",
+            "square_associativity_horizontal",
+            "square_associativity_vertical",
+            "square_hv_compatibility",
+            "square_interchange",
+        ] {
+            if !accepted_laws.contains(required_law) {
+                failures.push("coherence.span_square_commutation.violation".to_string());
+            }
+        }
+        if !used_square_modes.horizontal || !used_square_modes.vertical {
+            failures.push("coherence.span_square_commutation.violation".to_string());
+        }
+        composition_summary = json!({
+            "present": true,
+            "lawCount": law_rows.len(),
+            "acceptedLaws": accepted_laws.into_iter().collect::<Vec<String>>(),
+            "identitySpanIds": identity_span_ids,
+            "identitySquareIds": identity_square_ids,
+            "usedSquareModes": {
+                "horizontal": used_square_modes.horizontal,
+                "vertical": used_square_modes.vertical,
+            }
+        });
+    }
+
     Ok(SiteEvaluation {
         result: if failures.is_empty() {
             "accepted".to_string()
@@ -2754,6 +2996,8 @@ fn evaluate_site_case_span_square_commutation(
             },
             "spans": span_rows,
             "squares": square_rows,
+            "compositionLaws": composition_rows,
+            "compositionSummary": composition_summary,
         }),
     })
 }
@@ -2917,6 +3161,209 @@ fn square_witness_digest(
     format!("sqw1_{:x}", hasher.finalize())
 }
 
+fn composition_law_digest(
+    kind: &str,
+    law: &str,
+    left: &Value,
+    right: &Value,
+    result: &str,
+    failure_classes: &[String],
+) -> String {
+    let core = normalize_semantics(&json!({
+        "kind": kind,
+        "law": law,
+        "left": left,
+        "right": right,
+        "result": result,
+        "failureClasses": failure_classes,
+    }));
+    let canonical = serde_json::to_string(&core).expect("composition law digest serialization");
+    let mut hasher = Sha256::new();
+    hasher.update(canonical.as_bytes());
+    format!("sqlw1_{:x}", hasher.finalize())
+}
+
+#[derive(Debug, Default)]
+struct SquareCompositionModes {
+    horizontal: bool,
+    vertical: bool,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum SquareExpressionValue {
+    Identity,
+    Grid(Vec<Vec<String>>),
+}
+
+fn evaluate_span_expression(
+    expression: &Value,
+    span_digests: &BTreeMap<String, String>,
+    identity_span_ids: &BTreeSet<String>,
+) -> Result<Vec<String>, String> {
+    let expression_obj = expression
+        .as_object()
+        .ok_or_else(|| "span expression must be an object".to_string())?;
+    if let Some(span_ref) = expression_obj.get("span") {
+        let span_id = span_ref
+            .as_str()
+            .map(str::trim)
+            .filter(|item| !item.is_empty())
+            .ok_or_else(|| "span expression field \"span\" must be non-empty".to_string())?;
+        let digest = span_digests
+            .get(span_id)
+            .ok_or_else(|| format!("span expression references unknown span {span_id:?}"))?;
+        if identity_span_ids.contains(span_id) {
+            Ok(Vec::new())
+        } else {
+            Ok(vec![digest.clone()])
+        }
+    } else if let Some(compose_ref) = expression_obj.get("compose") {
+        let compose_obj = compose_ref
+            .as_object()
+            .ok_or_else(|| "span expression compose must be an object".to_string())?;
+        let left = compose_obj
+            .get("left")
+            .ok_or_else(|| "span expression compose missing left".to_string())?;
+        let right = compose_obj
+            .get("right")
+            .ok_or_else(|| "span expression compose missing right".to_string())?;
+        let mut left_tokens = evaluate_span_expression(left, span_digests, identity_span_ids)?;
+        let right_tokens = evaluate_span_expression(right, span_digests, identity_span_ids)?;
+        left_tokens.extend(right_tokens);
+        Ok(left_tokens)
+    } else {
+        Err("span expression must include either \"span\" or \"compose\"".to_string())
+    }
+}
+
+fn evaluate_square_expression(
+    expression: &Value,
+    square_digests: &BTreeMap<String, String>,
+    identity_square_ids: &BTreeSet<String>,
+    used_modes: &mut SquareCompositionModes,
+) -> Result<SquareExpressionValue, String> {
+    let expression_obj = expression
+        .as_object()
+        .ok_or_else(|| "square expression must be an object".to_string())?;
+    if let Some(square_ref) = expression_obj.get("square") {
+        let square_id = square_ref
+            .as_str()
+            .map(str::trim)
+            .filter(|item| !item.is_empty())
+            .ok_or_else(|| "square expression field \"square\" must be non-empty".to_string())?;
+        if identity_square_ids.contains(square_id) {
+            return Ok(SquareExpressionValue::Identity);
+        }
+        let digest = square_digests
+            .get(square_id)
+            .ok_or_else(|| format!("square expression references unknown square {square_id:?}"))?;
+        return Ok(SquareExpressionValue::Grid(vec![vec![digest.clone()]]));
+    }
+    let compose_ref = expression_obj.get("compose").ok_or_else(|| {
+        "square expression must include either \"square\" or \"compose\"".to_string()
+    })?;
+    let compose_obj = compose_ref
+        .as_object()
+        .ok_or_else(|| "square expression compose must be an object".to_string())?;
+    let mode = compose_obj
+        .get("mode")
+        .and_then(Value::as_str)
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .ok_or_else(|| "square expression compose.mode must be non-empty".to_string())?;
+    let left_expr = compose_obj
+        .get("left")
+        .ok_or_else(|| "square expression compose missing left".to_string())?;
+    let right_expr = compose_obj
+        .get("right")
+        .ok_or_else(|| "square expression compose missing right".to_string())?;
+    let left =
+        evaluate_square_expression(left_expr, square_digests, identity_square_ids, used_modes)?;
+    let right =
+        evaluate_square_expression(right_expr, square_digests, identity_square_ids, used_modes)?;
+    if mode == "horizontal" {
+        used_modes.horizontal = true;
+        compose_square_horizontal(left, right)
+    } else if mode == "vertical" {
+        used_modes.vertical = true;
+        compose_square_vertical(left, right)
+    } else {
+        Err(format!(
+            "square expression compose.mode must be \"horizontal\" or \"vertical\", got {mode:?}"
+        ))
+    }
+}
+
+fn compose_square_horizontal(
+    left: SquareExpressionValue,
+    right: SquareExpressionValue,
+) -> Result<SquareExpressionValue, String> {
+    match (left, right) {
+        (SquareExpressionValue::Identity, value) | (value, SquareExpressionValue::Identity) => {
+            Ok(value)
+        }
+        (SquareExpressionValue::Grid(mut left_grid), SquareExpressionValue::Grid(right_grid)) => {
+            let left_dims = square_grid_dimensions(&left_grid)
+                .ok_or_else(|| "square expression left grid is not rectangular".to_string())?;
+            let right_dims = square_grid_dimensions(&right_grid)
+                .ok_or_else(|| "square expression right grid is not rectangular".to_string())?;
+            if left_dims.0 != right_dims.0 {
+                return Err(format!(
+                    "square horizontal composition row mismatch: left rows={}, right rows={}",
+                    left_dims.0, right_dims.0
+                ));
+            }
+            for (left_row, right_row) in left_grid.iter_mut().zip(right_grid.iter()) {
+                left_row.extend(right_row.iter().cloned());
+            }
+            Ok(SquareExpressionValue::Grid(left_grid))
+        }
+    }
+}
+
+fn compose_square_vertical(
+    left: SquareExpressionValue,
+    right: SquareExpressionValue,
+) -> Result<SquareExpressionValue, String> {
+    match (left, right) {
+        (SquareExpressionValue::Identity, value) | (value, SquareExpressionValue::Identity) => {
+            Ok(value)
+        }
+        (SquareExpressionValue::Grid(mut left_grid), SquareExpressionValue::Grid(right_grid)) => {
+            let left_dims = square_grid_dimensions(&left_grid)
+                .ok_or_else(|| "square expression left grid is not rectangular".to_string())?;
+            let right_dims = square_grid_dimensions(&right_grid)
+                .ok_or_else(|| "square expression right grid is not rectangular".to_string())?;
+            if left_dims.1 != right_dims.1 {
+                return Err(format!(
+                    "square vertical composition column mismatch: left cols={}, right cols={}",
+                    left_dims.1, right_dims.1
+                ));
+            }
+            left_grid.extend(right_grid);
+            Ok(SquareExpressionValue::Grid(left_grid))
+        }
+    }
+}
+
+fn square_grid_dimensions(grid: &[Vec<String>]) -> Option<(usize, usize)> {
+    let row_count = grid.len();
+    let col_count = grid.first().map(|row| row.len()).unwrap_or(0);
+    for row in grid {
+        if row.len() != col_count {
+            return None;
+        }
+    }
+    Some((row_count, col_count))
+}
+
+fn square_expression_to_json(value: &SquareExpressionValue) -> Value {
+    match value {
+        SquareExpressionValue::Identity => json!({"identity": true, "grid": []}),
+        SquareExpressionValue::Grid(grid) => json!({"identity": false, "grid": grid}),
+    }
+}
+
 fn require_object_field<'a>(
     parent: &'a Map<String, Value>,
     key: &str,
@@ -2969,6 +3416,38 @@ fn require_string_array_field(
     field_prefix: &str,
 ) -> Result<Vec<String>, CoherenceError> {
     let values = parent.get(key).and_then(Value::as_array).ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: {field_prefix}.{key} must be an array of non-empty strings",
+            display_path(path)
+        ))
+    })?;
+    let mut out = Vec::new();
+    for item in values {
+        let value = item
+            .as_str()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                CoherenceError::Contract(format!(
+                    "{}: {field_prefix}.{key} must contain non-empty strings",
+                    display_path(path)
+                ))
+            })?;
+        out.push(value.to_string());
+    }
+    Ok(out)
+}
+
+fn optional_string_array_field(
+    parent: &Map<String, Value>,
+    key: &str,
+    path: &Path,
+    field_prefix: &str,
+) -> Result<Vec<String>, CoherenceError> {
+    let Some(raw_values) = parent.get(key) else {
+        return Ok(Vec::new());
+    };
+    let values = raw_values.as_array().ok_or_else(|| {
         CoherenceError::Contract(format!(
             "{}: {field_prefix}.{key} must be an array of non-empty strings",
             display_path(path)
@@ -4600,6 +5079,377 @@ Current deterministic projected check IDs include:
             Path::new("site-case-span-square-commutation.json"),
         )
         .expect("span/square commutation case should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.span_square_commutation.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_span_square_commutation_accepts_composition_laws() {
+        let square_failures: Vec<String> = Vec::new();
+        let span_identity_left =
+            json!({"compose": {"left": {"span": "span_id"}, "right": {"span": "run_on_base"}}});
+        let span_identity_right = json!({"span": "run_on_base"});
+        let span_assoc_left = json!({
+            "compose": {
+                "left": {"compose": {"left": {"span": "run_on_base"}, "right": {"span": "reindex_input"}}},
+                "right": {"span": "reindex_output"}
+            }
+        });
+        let span_assoc_right = json!({
+            "compose": {
+                "left": {"span": "run_on_base"},
+                "right": {"compose": {"left": {"span": "reindex_input"}, "right": {"span": "reindex_output"}}}
+            }
+        });
+        let square_identity_left = json!({
+            "compose": {
+                "mode": "horizontal",
+                "left": {"square": "sq_id"},
+                "right": {"square": "sq_accept"}
+            }
+        });
+        let square_identity_right = json!({"square": "sq_accept"});
+        let square_assoc_horizontal_left = json!({
+            "compose": {
+                "mode": "horizontal",
+                "left": {
+                    "compose": {
+                        "mode": "horizontal",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                },
+                "right": {"square": "sq_accept"}
+            }
+        });
+        let square_assoc_horizontal_right = json!({
+            "compose": {
+                "mode": "horizontal",
+                "left": {"square": "sq_accept"},
+                "right": {
+                    "compose": {
+                        "mode": "horizontal",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                }
+            }
+        });
+        let square_assoc_vertical_left = json!({
+            "compose": {
+                "mode": "vertical",
+                "left": {
+                    "compose": {
+                        "mode": "vertical",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                },
+                "right": {"square": "sq_accept"}
+            }
+        });
+        let square_assoc_vertical_right = json!({
+            "compose": {
+                "mode": "vertical",
+                "left": {"square": "sq_accept"},
+                "right": {
+                    "compose": {
+                        "mode": "vertical",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                }
+            }
+        });
+        let square_hv_left = json!({
+            "compose": {
+                "mode": "horizontal",
+                "left": {"square": "sq_id"},
+                "right": {
+                    "compose": {
+                        "mode": "vertical",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                }
+            }
+        });
+        let square_hv_right = json!({
+            "compose": {
+                "mode": "vertical",
+                "left": {"square": "sq_accept"},
+                "right": {"square": "sq_accept"}
+            }
+        });
+        let square_interchange_left = json!({
+            "compose": {
+                "mode": "vertical",
+                "left": {
+                    "compose": {
+                        "mode": "horizontal",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                },
+                "right": {
+                    "compose": {
+                        "mode": "horizontal",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                }
+            }
+        });
+        let square_interchange_right = json!({
+            "compose": {
+                "mode": "horizontal",
+                "left": {
+                    "compose": {
+                        "mode": "vertical",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                },
+                "right": {
+                    "compose": {
+                        "mode": "vertical",
+                        "left": {"square": "sq_accept"},
+                        "right": {"square": "sq_accept"}
+                    }
+                }
+            }
+        });
+        let case = json!({
+            "spanSquare": {
+                "spans": [
+                    {
+                        "id": "span_id",
+                        "kind": "identity",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"id": true},
+                        "right": {"ctx": "Gamma"}
+                    },
+                    {
+                        "id": "run_on_base",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"run": "base"},
+                        "right": {"out": "y"}
+                    },
+                    {
+                        "id": "run_after_reindex",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"run": "base"},
+                        "right": {"out": "y"}
+                    },
+                    {
+                        "id": "reindex_input",
+                        "kind": "base_change",
+                        "left": {"ctx": "Delta"},
+                        "apex": {"map": "rho"},
+                        "right": {"ctx": "Gamma"}
+                    },
+                    {
+                        "id": "reindex_output",
+                        "kind": "base_change",
+                        "left": {"out": "y"},
+                        "apex": {"map": "rho"},
+                        "right": {"out": "y"}
+                    }
+                ],
+                "squares": [
+                    {
+                        "id": "sq_accept",
+                        "top": "run_on_base",
+                        "bottom": "run_after_reindex",
+                        "left": "reindex_input",
+                        "right": "reindex_output",
+                        "result": "accepted",
+                        "failureClasses": square_failures,
+                        "digest": square_witness_digest("run_on_base", "run_after_reindex", "reindex_input", "reindex_output", "accepted", &Vec::new())
+                    },
+                    {
+                        "id": "sq_id",
+                        "top": "run_on_base",
+                        "bottom": "run_after_reindex",
+                        "left": "reindex_input",
+                        "right": "reindex_output",
+                        "result": "accepted",
+                        "failureClasses": [],
+                        "digest": square_witness_digest("run_on_base", "run_after_reindex", "reindex_input", "reindex_output", "accepted", &Vec::new())
+                    }
+                ],
+                "compositionLaws": {
+                    "identitySpanIds": ["span_id"],
+                    "identitySquareIds": ["sq_id"],
+                    "laws": [
+                        {
+                            "id": "law_span_identity",
+                            "kind": "span",
+                            "law": "span_identity",
+                            "left": span_identity_left,
+                            "right": span_identity_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("span", "span_identity", &span_identity_left, &span_identity_right, "accepted", &Vec::new())
+                        },
+                        {
+                            "id": "law_span_assoc",
+                            "kind": "span",
+                            "law": "span_associativity",
+                            "left": span_assoc_left,
+                            "right": span_assoc_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("span", "span_associativity", &span_assoc_left, &span_assoc_right, "accepted", &Vec::new())
+                        },
+                        {
+                            "id": "law_sq_identity",
+                            "kind": "square",
+                            "law": "square_identity",
+                            "left": square_identity_left,
+                            "right": square_identity_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("square", "square_identity", &square_identity_left, &square_identity_right, "accepted", &Vec::new())
+                        },
+                        {
+                            "id": "law_sq_assoc_h",
+                            "kind": "square",
+                            "law": "square_associativity_horizontal",
+                            "left": square_assoc_horizontal_left,
+                            "right": square_assoc_horizontal_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("square", "square_associativity_horizontal", &square_assoc_horizontal_left, &square_assoc_horizontal_right, "accepted", &Vec::new())
+                        },
+                        {
+                            "id": "law_sq_assoc_v",
+                            "kind": "square",
+                            "law": "square_associativity_vertical",
+                            "left": square_assoc_vertical_left,
+                            "right": square_assoc_vertical_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("square", "square_associativity_vertical", &square_assoc_vertical_left, &square_assoc_vertical_right, "accepted", &Vec::new())
+                        },
+                        {
+                            "id": "law_sq_hv",
+                            "kind": "square",
+                            "law": "square_hv_compatibility",
+                            "left": square_hv_left,
+                            "right": square_hv_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("square", "square_hv_compatibility", &square_hv_left, &square_hv_right, "accepted", &Vec::new())
+                        },
+                        {
+                            "id": "law_sq_interchange",
+                            "kind": "square",
+                            "law": "square_interchange",
+                            "left": square_interchange_left,
+                            "right": square_interchange_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("square", "square_interchange", &square_interchange_left, &square_interchange_right, "accepted", &Vec::new())
+                        }
+                    ]
+                }
+            }
+        });
+        let evaluated = evaluate_site_case_span_square_commutation(
+            &case,
+            Path::new("site-case-span-square-commutation-composition-accept.json"),
+        )
+        .expect("span/square commutation composition case should evaluate");
+        assert_eq!(evaluated.result, "accepted");
+        assert!(evaluated.failure_classes.is_empty());
+    }
+
+    #[test]
+    fn evaluate_site_case_span_square_commutation_rejects_missing_composition_law_coverage() {
+        let span_identity_left =
+            json!({"compose": {"left": {"span": "span_id"}, "right": {"span": "run_on_base"}}});
+        let span_identity_right = json!({"span": "run_on_base"});
+        let case = json!({
+            "spanSquare": {
+                "spans": [
+                    {
+                        "id": "span_id",
+                        "kind": "identity",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"id": true},
+                        "right": {"ctx": "Gamma"}
+                    },
+                    {
+                        "id": "run_on_base",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"run": "base"},
+                        "right": {"out": "y"}
+                    },
+                    {
+                        "id": "run_after_reindex",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma"},
+                        "apex": {"run": "base"},
+                        "right": {"out": "y"}
+                    },
+                    {
+                        "id": "reindex_input",
+                        "kind": "base_change",
+                        "left": {"ctx": "Delta"},
+                        "apex": {"map": "rho"},
+                        "right": {"ctx": "Gamma"}
+                    },
+                    {
+                        "id": "reindex_output",
+                        "kind": "base_change",
+                        "left": {"out": "y"},
+                        "apex": {"map": "rho"},
+                        "right": {"out": "y"}
+                    }
+                ],
+                "squares": [
+                    {
+                        "id": "sq_accept",
+                        "top": "run_on_base",
+                        "bottom": "run_after_reindex",
+                        "left": "reindex_input",
+                        "right": "reindex_output",
+                        "result": "accepted",
+                        "failureClasses": [],
+                        "digest": square_witness_digest("run_on_base", "run_after_reindex", "reindex_input", "reindex_output", "accepted", &Vec::new())
+                    }
+                ],
+                "compositionLaws": {
+                    "identitySpanIds": ["span_id"],
+                    "identitySquareIds": [],
+                    "laws": [
+                        {
+                            "id": "law_span_identity",
+                            "kind": "span",
+                            "law": "span_identity",
+                            "left": span_identity_left,
+                            "right": span_identity_right,
+                            "result": "accepted",
+                            "failureClasses": [],
+                            "digest": composition_law_digest("span", "span_identity", &span_identity_left, &span_identity_right, "accepted", &Vec::new())
+                        }
+                    ]
+                }
+            }
+        });
+        let evaluated = evaluate_site_case_span_square_commutation(
+            &case,
+            Path::new("site-case-span-square-commutation-composition-missing-coverage.json"),
+        )
+        .expect("span/square commutation composition case should evaluate");
         assert_eq!(evaluated.result, "rejected");
         assert!(
             evaluated

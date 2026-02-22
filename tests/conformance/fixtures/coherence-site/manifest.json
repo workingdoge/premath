@@ -25,10 +25,14 @@
     "invariance/gate_chain_parity_lane_ownership_permuted_accept",
     "invariance/gate_chain_parity_lane_ownership_permuted_accept_external",
     "golden/span_square_commutation_accept",
+    "golden/span_square_commutation_composition_accept",
     "adversarial/span_square_commutation_reject",
     "adversarial/span_square_commutation_digest_mismatch_reject",
+    "adversarial/span_square_commutation_composition_missing_law_reject",
     "invariance/span_square_commutation_permuted_accept",
-    "invariance/span_square_commutation_permuted_accept_external"
+    "invariance/span_square_commutation_permuted_accept_external",
+    "invariance/span_square_commutation_composition_accept",
+    "invariance/span_square_commutation_composition_accept_external"
   ],
   "obligationVectors": {
     "coverage_base_change": [
@@ -71,10 +75,14 @@
     ],
     "span_square_commutation": [
       "golden/span_square_commutation_accept",
+      "golden/span_square_commutation_composition_accept",
       "adversarial/span_square_commutation_reject",
       "adversarial/span_square_commutation_digest_mismatch_reject",
+      "adversarial/span_square_commutation_composition_missing_law_reject",
       "invariance/span_square_commutation_permuted_accept",
-      "invariance/span_square_commutation_permuted_accept_external"
+      "invariance/span_square_commutation_permuted_accept_external",
+      "invariance/span_square_commutation_composition_accept",
+      "invariance/span_square_commutation_composition_accept_external"
     ]
   }
 }

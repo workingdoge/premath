@@ -2756,3 +2756,42 @@ boundary with minimum additional encoding.
 - `tools/conformance/check_docs_coherence.py` now enforces marker-level presence
   for Unified Evidence factoring and fail-closed boundary language in normative
   docs.
+
+---
+
+## 2026-02-22 — Decision 0096: Promote span/square composition laws to executable coherence surface
+
+### Decision
+Extend `draft/SPAN-SQUARE-CHECKING` and `span_square_commutation` checking to
+cover composition laws explicitly:
+
+1. add optional `compositionLaws` witness surface for span/square law rows,
+2. bind each composition law row to deterministic digest
+   (`sqlw1_ + SHA256(JCS(LawCore))`),
+3. require accepted-law coverage for:
+   - `span_identity`,
+   - `span_associativity`,
+   - `square_identity`,
+   - `square_associativity_horizontal`,
+   - `square_associativity_vertical`,
+   - `square_hv_compatibility`,
+   - `square_interchange`,
+4. evaluate square expressions through deterministic horizontal/vertical
+   composition normalization with fail-closed shape checks.
+
+### Rationale
+Span/square checking previously validated only single-square commutation. The
+algebraic closure track (`bd-123`) requires composition as first-class witness
+data so pipeline/base-change coherence is expressed as one typed executable
+surface, not as implicit prose-only laws.
+
+### Consequences
+- `premath-coherence` now evaluates optional composition-law expressions and
+  enforces deterministic accepted/rejected law semantics.
+- coherence-site fixtures include new vectors:
+  - `golden/span_square_commutation_composition_accept`
+  - `adversarial/span_square_commutation_composition_missing_law_reject`
+  - `invariance/span_square_commutation_composition_accept`
+  - `invariance/span_square_commutation_composition_accept_external`
+- docs coherence checks now enforce composition-law markers in
+  `SPAN-SQUARE-CHECKING` and `PREMATH-COHERENCE`.

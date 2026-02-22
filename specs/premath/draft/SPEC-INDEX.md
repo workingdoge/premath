@@ -173,7 +173,9 @@ explicitly claimed under §5.4 or §5.6.
   architecture doctrine for canonical boundaries and deterministic projections
   (including Unified Evidence Plane contract in §10).
 - `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
-  pipeline/base-change commutation in coherence checker surfaces.
+  pipeline/base-change commutation plus composition-law (identity,
+  associativity, h/v compatibility, interchange) surfaces in coherence checker
+  paths.
 - `raw/CTX-SITE` — informational site base (`Ctx`) + coverage (`J`) model for
   context/refinement decomposition.
 - `raw/SHEAF-STACK` — informational presheaf/sheaf/stack rendering of
@@ -239,7 +241,8 @@ Lane ownership note:
   (`draft/PREMATH-COHERENCE`) and are not profile-scoped.
 - Span/square commutation is a typed witness contract
   (`draft/SPAN-SQUARE-CHECKING`) that composed profiles MUST route through for
-  cross-lane pullback/base-change claims.
+  cross-lane pullback/base-change claims, including composition-law witness
+  coverage for identity/associativity/h-v/interchange.
 - Unified evidence factoring MUST route control-plane artifact families through
   one attested surface (`draft/UNIFICATION-DOCTRINE` §10, including fail-closed
   factorization boundary in §10.5).

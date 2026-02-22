@@ -169,6 +169,14 @@ pipeline/base-change witness layer:
 - accepted squares have empty failure classes and commuting top/bottom span
   semantics,
 - rejected squares carry non-empty failure classes.
+- when optional composition-law artifacts are present:
+  - composition-law digests are deterministic and match canonical fields,
+  - accepted composition laws have empty failure classes and normalized
+    left/right equality,
+  - rejected composition laws carry non-empty failure classes,
+  - accepted coverage includes span identity/associativity and square
+    identity/associativity (horizontal + vertical), horizontal/vertical
+    compatibility, and interchange.
 
 This obligation keeps pipeline + base-change witness squares inside the same
 deterministic coherence contract surface (no side-channel planner authority).

@@ -50,6 +50,19 @@ SPEC_INDEX_UNIFIED_FACTORIZATION_RE = re.compile(
     r"Unified evidence factoring MUST route control-plane artifact families through\s+"
     r"one attested surface"
 )
+SPAN_SQUARE_COMPOSITION_MARKERS: Tuple[str, ...] = (
+    "## 4. Composition Law Surface (Bicategory Profile)",
+    "`compositionLaws`",
+    "`span_identity`",
+    "`square_interchange`",
+    "digest = \"sqlw1_\" + SHA256(JCS(LawCore))",
+)
+PREMATH_COHERENCE_SPAN_COMPOSITION_RE = re.compile(
+    r"accepted coverage includes span identity/associativity and square\s+"
+    r"identity/associativity \(horizontal \+ vertical\), horizontal/vertical\s+"
+    r"compatibility, and interchange",
+    re.IGNORECASE,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -219,6 +232,8 @@ def main() -> int:
     ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
     unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
+    span_square_checking = root / "specs" / "premath" / "draft" / "SPAN-SQUARE-CHECKING.md"
+    pre_math_coherence = root / "specs" / "premath" / "draft" / "PREMATH-COHERENCE.md"
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
@@ -240,6 +255,8 @@ def main() -> int:
 
     spec_index_text = load_text(spec_index)
     unification_text = load_text(unification_doctrine)
+    span_square_text = load_text(span_square_checking)
+    coherence_text = load_text(pre_math_coherence)
     section_54 = extract_heading_section(spec_index_text, "5.4")
     section_55 = extract_heading_section(spec_index_text, "5.5")
     spec_index_caps = set(BACKTICK_CAP_RE.findall(section_54))
@@ -290,6 +307,16 @@ def main() -> int:
     )
     for marker in missing_unification_markers:
         errors.append(f"UNIFICATION-DOCTRINE missing Unified Evidence marker: {marker}")
+    missing_span_square_markers = find_missing_markers(
+        span_square_text, SPAN_SQUARE_COMPOSITION_MARKERS
+    )
+    for marker in missing_span_square_markers:
+        errors.append(f"SPAN-SQUARE-CHECKING missing composition marker: {marker}")
+    if PREMATH_COHERENCE_SPAN_COMPOSITION_RE.search(coherence_text) is None:
+        errors.append(
+            "PREMATH-COHERENCE §4.7 must require composition-law coverage "
+            "(identity/associativity/h-v/interchange)"
+        )
 
     mise_text = load_text(mise_toml)
     baseline_commands = parse_mise_task_commands(mise_text, "baseline")
