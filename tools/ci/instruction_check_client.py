@@ -88,6 +88,44 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
             "instruction_envelope_invalid_shape",
             "instruction-check payload instructionClassification.state must be typed|unknown",
         )
+    execution_decision = payload.get("executionDecision")
+    if not isinstance(execution_decision, dict):
+        raise InstructionCheckError(
+            "instruction_envelope_invalid_shape",
+            "instruction-check payload executionDecision must be an object",
+        )
+    decision_state = execution_decision.get("state")
+    if decision_state == "execute":
+        pass
+    elif decision_state == "reject":
+        if not isinstance(execution_decision.get("source"), str) or not execution_decision.get(
+            "source"
+        ):
+            raise InstructionCheckError(
+                "instruction_envelope_invalid_shape",
+                "instruction-check payload executionDecision.source must be a non-empty string",
+            )
+        if not isinstance(execution_decision.get("reason"), str) or not execution_decision.get(
+            "reason"
+        ):
+            raise InstructionCheckError(
+                "instruction_envelope_invalid_shape",
+                "instruction-check payload executionDecision.reason must be a non-empty string",
+            )
+        for key in ("operationalFailureClasses", "semanticFailureClasses"):
+            values = execution_decision.get(key)
+            if not isinstance(values, list) or not all(
+                isinstance(item, str) and item for item in values
+            ):
+                raise InstructionCheckError(
+                    "instruction_envelope_invalid_shape",
+                    f"instruction-check payload executionDecision.{key} must be a list of non-empty strings",
+                )
+    else:
+        raise InstructionCheckError(
+            "instruction_envelope_invalid_shape",
+            "instruction-check payload executionDecision.state must be execute|reject",
+        )
     typing_policy = payload.get("typingPolicy")
     if not isinstance(typing_policy, dict):
         raise InstructionCheckError(

@@ -261,6 +261,7 @@ def main() -> int:
         typing_policy = checked.get("typingPolicy", {"allowUnknown": False})
         capability_claims = checked.get("capabilityClaims", [])
         instruction_classification = checked["instructionClassification"]
+        execution_decision = checked["executionDecision"]
         proposal_payload = checked.get("proposal")
         if isinstance(proposal_payload, dict):
             proposal = {
@@ -305,38 +306,44 @@ def main() -> int:
     failed: List[Dict[str, Any]] = []
     operational_failure_classes: List[str] = []
     semantic_failure_classes: List[str] = []
-    unknown_rejected = (
-        instruction_classification.get("state") == "unknown"
-        and not typing_policy.get("allowUnknown", False)
-    )
-    proposal_rejected = (
-        proposal_discharge is not None
-        and proposal_discharge.get("outcome") == "rejected"
-    )
-    if unknown_rejected:
+    decision_state = execution_decision.get("state")
+    if decision_state == "reject":
         verdict_class = "rejected"
-        operational_failure_classes = ["instruction_unknown_unroutable"]
-        reason = instruction_classification.get("reason", "unknown")
-        print(
-            f"[instruction] classification rejected: unknown(reason={reason}) "
-            f"without allowUnknown policy",
-            file=sys.stderr,
-        )
-    elif proposal_rejected:
-        verdict_class = "rejected"
-        semantic_failure_classes = sorted_unique_strings(
+        operational_failure_classes = sorted_unique_strings(
             [
                 item
-                for item in proposal_discharge.get("failureClasses", [])
+                for item in execution_decision.get("operationalFailureClasses", [])
                 if isinstance(item, str) and item
             ]
         )
-        print(
-            "[instruction] proposal discharge rejected before execution "
-            f"(failureClasses={semantic_failure_classes})",
-            file=sys.stderr,
+        semantic_failure_classes = sorted_unique_strings(
+            [
+                item
+                for item in execution_decision.get("semanticFailureClasses", [])
+                if isinstance(item, str) and item
+            ]
         )
-    else:
+        source = execution_decision.get("source", "unknown")
+        reason = execution_decision.get("reason", "unknown")
+        if source == "instruction_classification":
+            print(
+                f"[instruction] classification rejected: unknown(reason={reason}) "
+                f"without allowUnknown policy",
+                file=sys.stderr,
+            )
+        elif source == "proposal_discharge":
+            print(
+                "[instruction] proposal discharge rejected before execution "
+                f"(failureClasses={semantic_failure_classes})",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "[instruction] execution decision rejected before execution "
+                f"(source={source}, reason={reason})",
+                file=sys.stderr,
+            )
+    elif decision_state == "execute":
         for check_id in requested_checks:
             print(f"[instruction] running check: {check_id}")
             results.append(run_check(root, check_id))
@@ -344,6 +351,10 @@ def main() -> int:
         verdict_class = "accepted" if not failed else "rejected"
         if failed:
             operational_failure_classes = ["check_failed"]
+    else:
+        raise ValueError(
+            "instruction-check payload executionDecision.state must be execute|reject"
+        )
 
     operational_failure_classes = sorted_unique_strings(operational_failure_classes)
     semantic_failure_classes = sorted_unique_strings(semantic_failure_classes)

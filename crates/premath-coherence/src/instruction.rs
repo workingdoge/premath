@@ -45,6 +45,20 @@ pub enum InstructionClassification {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum InstructionExecutionDecision {
+    Execute,
+    Reject {
+        source: String,
+        reason: String,
+        #[serde(rename = "operationalFailureClasses")]
+        operational_failure_classes: Vec<String>,
+        #[serde(rename = "semanticFailureClasses")]
+        semantic_failure_classes: Vec<String>,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidatedInstructionProposal {
     pub canonical: CanonicalProposal,
@@ -65,6 +79,7 @@ pub struct ValidatedInstructionEnvelope {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instruction_type: Option<String>,
     pub instruction_classification: InstructionClassification,
+    pub execution_decision: InstructionExecutionDecision,
     pub typing_policy: InstructionTypingPolicy,
     pub capability_claims: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -568,6 +583,52 @@ fn classify_instruction(
     }
 }
 
+fn sorted_unique_non_empty(values: &[String]) -> Vec<String> {
+    values
+        .iter()
+        .filter_map(|value| {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        })
+        .collect::<BTreeSet<String>>()
+        .into_iter()
+        .collect()
+}
+
+fn derive_execution_decision(
+    instruction_classification: &InstructionClassification,
+    typing_policy: &InstructionTypingPolicy,
+    proposal: Option<&ValidatedInstructionProposal>,
+) -> InstructionExecutionDecision {
+    if let InstructionClassification::Unknown { reason } = instruction_classification
+        && !typing_policy.allow_unknown
+    {
+        return InstructionExecutionDecision::Reject {
+            source: "instruction_classification".to_string(),
+            reason: reason.clone(),
+            operational_failure_classes: vec!["instruction_unknown_unroutable".to_string()],
+            semantic_failure_classes: Vec::new(),
+        };
+    }
+
+    if let Some(candidate) = proposal
+        && candidate.discharge.outcome == "rejected"
+    {
+        return InstructionExecutionDecision::Reject {
+            source: "proposal_discharge".to_string(),
+            reason: "proposal_discharge_rejected".to_string(),
+            operational_failure_classes: Vec::new(),
+            semantic_failure_classes: sorted_unique_non_empty(&candidate.discharge.failure_classes),
+        };
+    }
+
+    InstructionExecutionDecision::Execute
+}
+
 fn validate_filename(path: &Path) -> Result<(), InstructionError> {
     if path.extension().is_none_or(|ext| ext != "json") {
         return Err(InstructionError::new(
@@ -730,6 +791,11 @@ pub fn validate_instruction_envelope_payload(
 
     let instruction_classification =
         classify_instruction(instruction_type.as_deref(), &requested_checks);
+    let execution_decision = derive_execution_decision(
+        &instruction_classification,
+        &typing_policy,
+        proposal.as_ref(),
+    );
 
     Ok(ValidatedInstructionEnvelope {
         intent,
@@ -739,6 +805,7 @@ pub fn validate_instruction_envelope_payload(
         requested_checks,
         instruction_type,
         instruction_classification,
+        execution_decision,
         typing_policy,
         capability_claims,
         proposal,
@@ -780,6 +847,10 @@ mod tests {
                 kind: "ci.gate.check".to_string()
             }
         );
+        assert_eq!(
+            checked.execution_decision,
+            InstructionExecutionDecision::Execute
+        );
         assert!(checked.proposal.is_some());
     }
 
@@ -800,5 +871,66 @@ mod tests {
         let err = validate_instruction_envelope_payload(&payload, &fixture_path, &root)
             .expect_err("mismatched binding should fail");
         assert_eq!(err.failure_class, "proposal_binding_mismatch");
+    }
+
+    #[test]
+    fn validate_instruction_envelope_rejects_unknown_classification_without_allow_unknown() {
+        let root = repo_root();
+        let fixture_path = root
+            .join("tests")
+            .join("ci")
+            .join("fixtures")
+            .join("instructions")
+            .join("20260221T010000Z-ci-wiring-golden.json");
+        let mut payload: Value =
+            serde_json::from_slice(&fs::read(&fixture_path).expect("fixture should be readable"))
+                .expect("fixture json should parse");
+        payload["instructionType"] = Value::String("ci.gate.unknown".to_string());
+
+        let checked = validate_instruction_envelope_payload(&payload, &fixture_path, &root)
+            .expect("fixture should validate with unknown classification");
+        assert_eq!(
+            checked.execution_decision,
+            InstructionExecutionDecision::Reject {
+                source: "instruction_classification".to_string(),
+                reason: "unsupported_instruction_type".to_string(),
+                operational_failure_classes: vec!["instruction_unknown_unroutable".to_string()],
+                semantic_failure_classes: Vec::new(),
+            }
+        );
+    }
+
+    #[test]
+    fn validate_instruction_envelope_rejects_on_proposal_discharge_before_execution() {
+        let root = repo_root();
+        let fixture_path = root
+            .join("tests")
+            .join("ci")
+            .join("fixtures")
+            .join("instructions")
+            .join("20260221T010000Z-ci-wiring-golden.json");
+        let mut payload: Value =
+            serde_json::from_slice(&fs::read(&fixture_path).expect("fixture should be readable"))
+                .expect("fixture json should parse");
+        payload["proposal"]["candidateRefs"] = Value::Array(Vec::new());
+
+        let checked = validate_instruction_envelope_payload(&payload, &fixture_path, &root)
+            .expect("proposal with empty candidate refs should validate");
+        let expected_semantic_failure_classes = checked
+            .proposal
+            .as_ref()
+            .expect("proposal should be present")
+            .discharge
+            .failure_classes
+            .clone();
+        assert_eq!(
+            checked.execution_decision,
+            InstructionExecutionDecision::Reject {
+                source: "proposal_discharge".to_string(),
+                reason: "proposal_discharge_rejected".to_string(),
+                operational_failure_classes: Vec::new(),
+                semantic_failure_classes: expected_semantic_failure_classes,
+            }
+        );
     }
 }
