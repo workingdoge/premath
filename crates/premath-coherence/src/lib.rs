@@ -1148,6 +1148,8 @@ fn check_site_obligation(
     let mut matched_golden_count = 0usize;
     let mut matched_adversarial_count = 0usize;
     let mut matched_invariance_count = 0usize;
+    let mut matched_expected_accepted_count = 0usize;
+    let mut matched_expected_rejected_count = 0usize;
 
     for vector_id in &manifest.vectors {
         if !seen_vectors.insert(vector_id.clone()) {
@@ -1252,6 +1254,10 @@ fn check_site_obligation(
             failures.push(format!(
                 "coherence.{obligation_id}.vector_expect_invalid_result"
             ));
+        } else if expected_result == "accepted" {
+            matched_expected_accepted_count += 1;
+        } else {
+            matched_expected_rejected_count += 1;
         }
         let expected_failure_classes = dedupe_sorted(expect_payload.expected_failure_classes);
 
@@ -1303,6 +1309,16 @@ fn check_site_obligation(
                 "coherence.{obligation_id}.missing_adversarial_vector"
             ));
         }
+        if matched_expected_accepted_count == 0 {
+            failures.push(format!(
+                "coherence.{obligation_id}.missing_expected_accepted_vector"
+            ));
+        }
+        if matched_expected_rejected_count == 0 {
+            failures.push(format!(
+                "coherence.{obligation_id}.missing_expected_rejected_vector"
+            ));
+        }
     }
 
     Ok(ObligationCheck {
@@ -1315,6 +1331,10 @@ fn check_site_obligation(
                 "golden": matched_golden_count,
                 "adversarial": matched_adversarial_count,
                 "invariance": matched_invariance_count,
+            },
+            "matchedExpectedResults": {
+                "accepted": matched_expected_accepted_count,
+                "rejected": matched_expected_rejected_count,
             },
             "vectors": vector_rows,
         }),
@@ -2713,48 +2733,57 @@ mod tests {
         );
     }
 
-    fn valid_span_square_artifacts() -> Value {
-        let square_failures: Vec<String> = Vec::new();
-        let square_digest = square_witness_digest(
-            "top",
-            "bottom",
-            "left",
-            "right",
-            "accepted",
-            &square_failures,
-        );
+    fn span_square_spans() -> Value {
+        json!([
+            {
+                "id": "top",
+                "kind": "pipeline",
+                "left": {"ctx": "Gamma", "input": "x"},
+                "apex": {"run": "r"},
+                "right": {"out": "y"}
+            },
+            {
+                "id": "bottom",
+                "kind": "pipeline",
+                "left": {"ctx": "Gamma", "input": "x"},
+                "apex": {"run": "r"},
+                "right": {"out": "y"}
+            },
+            {
+                "id": "left",
+                "kind": "base_change",
+                "left": {"ctx": "Delta", "input": "x"},
+                "apex": {"map": "rho"},
+                "right": {"ctx": "Gamma", "input": "x"}
+            },
+            {
+                "id": "right",
+                "kind": "base_change",
+                "left": {"out": "y"},
+                "apex": {"map": "rho"},
+                "right": {"out": "y"}
+            }
+        ])
+    }
+
+    fn valid_span_square_artifacts_for_result(expected_result: &str) -> Value {
+        let (square_result, square_failures, square_digest) = if expected_result == "rejected" {
+            (
+                "accepted",
+                Vec::<String>::new(),
+                "sqw1_digest_mismatch_for_reject_fixture".to_string(),
+            )
+        } else {
+            let failures = Vec::<String>::new();
+            (
+                "accepted",
+                failures.clone(),
+                square_witness_digest("top", "bottom", "left", "right", "accepted", &failures),
+            )
+        };
         json!({
             "spanSquare": {
-                "spans": [
-                    {
-                        "id": "top",
-                        "kind": "pipeline",
-                        "left": {"ctx": "Gamma", "input": "x"},
-                        "apex": {"run": "r"},
-                        "right": {"out": "y"}
-                    },
-                    {
-                        "id": "bottom",
-                        "kind": "pipeline",
-                        "left": {"ctx": "Gamma", "input": "x"},
-                        "apex": {"run": "r"},
-                        "right": {"out": "y"}
-                    },
-                    {
-                        "id": "left",
-                        "kind": "base_change",
-                        "left": {"ctx": "Delta", "input": "x"},
-                        "apex": {"map": "rho"},
-                        "right": {"ctx": "Gamma", "input": "x"}
-                    },
-                    {
-                        "id": "right",
-                        "kind": "base_change",
-                        "left": {"out": "y"},
-                        "apex": {"map": "rho"},
-                        "right": {"out": "y"}
-                    }
-                ],
+                "spans": span_square_spans(),
                 "squares": [
                     {
                         "id": "sq_ok",
@@ -2762,7 +2791,7 @@ mod tests {
                         "bottom": "bottom",
                         "left": "left",
                         "right": "right",
-                        "result": "accepted",
+                        "result": square_result,
                         "failureClasses": square_failures,
                         "digest": square_digest
                     }
@@ -2771,7 +2800,25 @@ mod tests {
         })
     }
 
-    fn write_site_vector(fixture_root: &Path, vector_id: &str, obligation_id: &str) {
+    fn write_site_vector(
+        fixture_root: &Path,
+        vector_id: &str,
+        obligation_id: &str,
+        expected_result: &str,
+    ) {
+        let (artifacts, expected_failure_classes) = if expected_result == "accepted" {
+            (
+                valid_span_square_artifacts_for_result("accepted"),
+                json!([]),
+            )
+        } else if expected_result == "rejected" {
+            (
+                valid_span_square_artifacts_for_result("rejected"),
+                json!(["coherence.span_square_commutation.violation"]),
+            )
+        } else {
+            panic!("unsupported expected_result in write_site_vector: {expected_result}");
+        };
         let vector_root = fixture_root.join(vector_id);
         write_json_file(
             &vector_root.join("case.json"),
@@ -2779,7 +2826,7 @@ mod tests {
                 "schema": 1,
                 "status": "executable",
                 "obligationId": obligation_id,
-                "artifacts": valid_span_square_artifacts(),
+                "artifacts": artifacts,
             }),
         );
         write_json_file(
@@ -2787,8 +2834,8 @@ mod tests {
             &json!({
                 "schema": 1,
                 "status": "executable",
-                "result": "accepted",
-                "expectedFailureClasses": [],
+                "result": expected_result,
+                "expectedFailureClasses": expected_failure_classes,
             }),
         );
     }
@@ -3143,6 +3190,7 @@ mod tests {
             &fixture_root,
             "adversarial/only_vector",
             "span_square_commutation",
+            "accepted",
         );
         let contract = test_contract_with_site_fixture_root("fixtures");
 
@@ -3169,6 +3217,7 @@ mod tests {
             &fixture_root,
             "golden/only_vector",
             "span_square_commutation",
+            "accepted",
         );
         let contract = test_contract_with_site_fixture_root("fixtures");
 
@@ -3194,11 +3243,17 @@ mod tests {
             &fixture_root,
             &["golden/ok_vector", "adversarial/ok_vector"],
         );
-        write_site_vector(&fixture_root, "golden/ok_vector", "span_square_commutation");
+        write_site_vector(
+            &fixture_root,
+            "golden/ok_vector",
+            "span_square_commutation",
+            "accepted",
+        );
         write_site_vector(
             &fixture_root,
             "adversarial/ok_vector",
             "span_square_commutation",
+            "rejected",
         );
         let contract = test_contract_with_site_fixture_root("fixtures");
 
@@ -3210,6 +3265,74 @@ mod tests {
         )
         .expect("site obligation should evaluate");
         assert!(evaluated.failure_classes.is_empty());
+    }
+
+    #[test]
+    fn check_site_obligation_requires_expected_accept_result_vector() {
+        let temp = TempDirGuard::new("site-obligation-missing-expected-accept");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(
+            &fixture_root,
+            &["golden/reject_vector", "adversarial/reject_vector"],
+        );
+        write_site_vector(
+            &fixture_root,
+            "golden/reject_vector",
+            "span_square_commutation",
+            "rejected",
+        );
+        write_site_vector(
+            &fixture_root,
+            "adversarial/reject_vector",
+            "span_square_commutation",
+            "rejected",
+        );
+        let contract = test_contract_with_site_fixture_root("fixtures");
+
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(evaluated.failure_classes.contains(
+            &"coherence.span_square_commutation.missing_expected_accepted_vector".to_string()
+        ));
+    }
+
+    #[test]
+    fn check_site_obligation_requires_expected_reject_result_vector() {
+        let temp = TempDirGuard::new("site-obligation-missing-expected-reject");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(
+            &fixture_root,
+            &["golden/accept_vector", "adversarial/accept_vector"],
+        );
+        write_site_vector(
+            &fixture_root,
+            "golden/accept_vector",
+            "span_square_commutation",
+            "accepted",
+        );
+        write_site_vector(
+            &fixture_root,
+            "adversarial/accept_vector",
+            "span_square_commutation",
+            "accepted",
+        );
+        let contract = test_contract_with_site_fixture_root("fixtures");
+
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(evaluated.failure_classes.contains(
+            &"coherence.span_square_commutation.missing_expected_rejected_vector".to_string()
+        ));
     }
 
     #[test]

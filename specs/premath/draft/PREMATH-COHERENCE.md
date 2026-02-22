@@ -222,8 +222,15 @@ MUST reject when strict comprehension eta equalities fail on fixture rows:
 
 For obligations discharged from `coherence-site` fixtures, checker input MUST
 include at least one matched `golden/` vector and at least one matched
-`adversarial/` vector for each obligation id. Missing either polarity MUST
-reject deterministically.
+`adversarial/` vector for each obligation id.
+
+Checker input MUST also include semantic polarity coverage from `expect.result`:
+
+- at least one matched vector with `expectedResult = accepted`,
+- at least one matched vector with `expectedResult = rejected`.
+
+Missing either path polarity or semantic-result polarity MUST reject
+deterministically.
 
 ## 5. Deterministic Failure Classes
 

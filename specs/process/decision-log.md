@@ -2217,3 +2217,31 @@ while minimizing accidental under-specification.
 - coherence checker now enforces per-obligation fixture polarity coverage.
 - new unit tests cover missing-golden, missing-adversarial, and both-present
   passing cases.
+
+---
+
+## 2026-02-22 — Decision 0078: Require semantic polarity coverage for coherence-site obligations
+
+### Decision
+Extend `coherence-site` polarity enforcement so each matched site obligation
+vector set must include semantic result polarity from `expect.result`:
+
+- at least one vector with `accepted`,
+- at least one vector with `rejected`.
+
+Missing either semantic result polarity now rejects with deterministic failure
+classes:
+
+- `coherence.<obligation_id>.missing_expected_accepted_vector`
+- `coherence.<obligation_id>.missing_expected_rejected_vector`.
+
+### Rationale
+Path prefix polarity (`golden/` and `adversarial/`) is necessary but not
+sufficient. Semantic result polarity closes mislabeling gaps where prefixes can
+look balanced while all vectors assert the same expected result.
+
+### Consequences
+- coherence checker now enforces both path polarity and semantic result
+  polarity for site obligations.
+- unit tests now cover missing-expected-accept, missing-expected-reject, and
+  mixed semantic polarity pass cases.
