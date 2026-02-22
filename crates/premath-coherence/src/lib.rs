@@ -83,6 +83,17 @@ const REQUIRED_LANE_FAILURE_CLASSES: &[&str] = &[
 ];
 
 const REQUIRED_PULLBACK_ROUTE: &str = "span_square_commutation";
+const GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE: &str =
+    "coherence.gate_chain_parity.schema_lifecycle_invalid";
+const REQUIRED_SCHEMA_LIFECYCLE_FAMILIES: &[&str] = &[
+    "controlPlaneContractKind",
+    "requiredWitnessKind",
+    "requiredDecisionKind",
+    "instructionWitnessKind",
+    "instructionPolicyKind",
+    "requiredProjectionPolicy",
+    "requiredDeltaKind",
+];
 
 #[derive(Debug, Error)]
 pub enum CoherenceError {
@@ -182,6 +193,8 @@ struct ControlPlaneProjectionContract {
     schema: u32,
     contract_kind: String,
     #[serde(default)]
+    schema_lifecycle: Option<ControlPlaneSchemaLifecycle>,
+    #[serde(default)]
     evidence_lanes: Option<ControlPlaneEvidenceLanes>,
     #[serde(default)]
     lane_artifact_kinds: Option<BTreeMap<String, Vec<String>>>,
@@ -238,6 +251,29 @@ struct ControlPlaneInstructionWitness {
     witness_kind: String,
     policy_kind: String,
     policy_digest_prefix: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneSchemaLifecycle {
+    active_epoch: String,
+    kind_families: BTreeMap<String, ControlPlaneSchemaKindFamily>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneSchemaKindFamily {
+    canonical_kind: String,
+    #[serde(default)]
+    compatibility_aliases: Vec<ControlPlaneSchemaAlias>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneSchemaAlias {
+    alias_kind: String,
+    support_until_epoch: String,
+    replacement_kind: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -764,6 +800,225 @@ fn check_capability_parity(
     })
 }
 
+fn is_valid_epoch(value: &str) -> bool {
+    let bytes = value.as_bytes();
+    bytes.len() == 7
+        && bytes[0].is_ascii_digit()
+        && bytes[1].is_ascii_digit()
+        && bytes[2].is_ascii_digit()
+        && bytes[3].is_ascii_digit()
+        && bytes[4] == b'-'
+        && bytes[5].is_ascii_digit()
+        && bytes[6].is_ascii_digit()
+        && matches!(
+            (bytes[5], bytes[6]),
+            (b'0', b'1'..=b'9') | (b'1', b'0'..=b'2')
+        )
+}
+
+fn resolve_schema_lifecycle_kind(
+    schema_lifecycle: &ControlPlaneSchemaLifecycle,
+    family_id: &str,
+    kind: &str,
+) -> Result<String, String> {
+    let family = schema_lifecycle
+        .kind_families
+        .get(family_id)
+        .ok_or_else(|| format!("missing kind family `{family_id}`"))?;
+    let canonical_kind = family.canonical_kind.trim();
+    if canonical_kind.is_empty() {
+        return Err(format!("kind family `{family_id}` has empty canonicalKind"));
+    }
+    if kind.trim() == canonical_kind {
+        return Ok(canonical_kind.to_string());
+    }
+
+    let mut seen_aliases: BTreeSet<String> = BTreeSet::new();
+    for alias in &family.compatibility_aliases {
+        let alias_kind = alias.alias_kind.trim();
+        let support_until_epoch = alias.support_until_epoch.trim();
+        let replacement_kind = alias.replacement_kind.trim();
+        if alias_kind.is_empty()
+            || replacement_kind != canonical_kind
+            || !is_valid_epoch(support_until_epoch)
+            || !seen_aliases.insert(alias_kind.to_string())
+        {
+            return Err(format!(
+                "kind family `{family_id}` has invalid compatibilityAliases rows"
+            ));
+        }
+        if alias_kind == kind.trim() {
+            if schema_lifecycle.active_epoch.as_str() > support_until_epoch {
+                return Err(format!(
+                    "kind `{kind}` for `{family_id}` expired at `{support_until_epoch}` (activeEpoch=`{}`)",
+                    schema_lifecycle.active_epoch
+                ));
+            }
+            return Ok(canonical_kind.to_string());
+        }
+    }
+
+    Err(format!(
+        "kind `{kind}` is not supported for kind family `{family_id}` (canonicalKind=`{canonical_kind}`)"
+    ))
+}
+
+fn resolve_or_record_schema_kind(
+    schema_lifecycle: &ControlPlaneSchemaLifecycle,
+    family_id: &str,
+    field_name: &str,
+    value: &str,
+    failures: &mut Vec<String>,
+    reasons: &mut Vec<String>,
+) -> Option<String> {
+    if value.trim().is_empty() {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+        reasons.push(format!("{field_name} must be non-empty"));
+        return None;
+    }
+    match resolve_schema_lifecycle_kind(schema_lifecycle, family_id, value) {
+        Ok(resolved_kind) => Some(resolved_kind),
+        Err(reason) => {
+            failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+            reasons.push(format!("{field_name}: {reason}"));
+            None
+        }
+    }
+}
+
+fn evaluate_control_plane_schema_lifecycle(
+    control_plane_contract: &ControlPlaneProjectionContract,
+) -> ObligationCheck {
+    let mut failures = Vec::new();
+    let mut reasons = Vec::new();
+    let mut resolved = json!({});
+
+    let Some(schema_lifecycle) = &control_plane_contract.schema_lifecycle else {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+        return ObligationCheck {
+            failure_classes: dedupe_sorted(failures),
+            details: json!({
+                "present": false,
+                "requiredKindFamilies": REQUIRED_SCHEMA_LIFECYCLE_FAMILIES,
+                "reasons": ["schemaLifecycle missing"]
+            }),
+        };
+    };
+
+    let active_epoch = schema_lifecycle.active_epoch.trim();
+    if !is_valid_epoch(active_epoch) {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+        reasons.push(format!(
+            "schemaLifecycle.activeEpoch invalid (expected YYYY-MM, got `{}`)",
+            schema_lifecycle.active_epoch
+        ));
+    }
+
+    let expected_families: BTreeSet<String> = REQUIRED_SCHEMA_LIFECYCLE_FAMILIES
+        .iter()
+        .map(|id| (*id).to_string())
+        .collect();
+    let actual_families: BTreeSet<String> = schema_lifecycle
+        .kind_families
+        .keys()
+        .map(|id| id.to_string())
+        .collect();
+    let missing_families: Vec<String> = expected_families
+        .difference(&actual_families)
+        .cloned()
+        .collect();
+    let unknown_families: Vec<String> = actual_families
+        .difference(&expected_families)
+        .cloned()
+        .collect();
+    if !missing_families.is_empty() || !unknown_families.is_empty() {
+        failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+    }
+
+    if let Some(kind) = resolve_or_record_schema_kind(
+        schema_lifecycle,
+        "controlPlaneContractKind",
+        "contractKind",
+        &control_plane_contract.contract_kind,
+        &mut failures,
+        &mut reasons,
+    ) {
+        resolved["contractKind"] = json!(kind.clone());
+        if kind != "premath.control_plane.contract.v1" {
+            failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+            reasons.push(format!(
+                "resolved contractKind must be `premath.control_plane.contract.v1` (actual `{kind}`)"
+            ));
+        }
+    }
+    if let Some(kind) = resolve_or_record_schema_kind(
+        schema_lifecycle,
+        "requiredProjectionPolicy",
+        "requiredGateProjection.projectionPolicy",
+        &control_plane_contract
+            .required_gate_projection
+            .projection_policy,
+        &mut failures,
+        &mut reasons,
+    ) {
+        resolved["requiredProjectionPolicy"] = json!(kind);
+    }
+    if let Some(kind) = resolve_or_record_schema_kind(
+        schema_lifecycle,
+        "requiredWitnessKind",
+        "requiredWitness.witnessKind",
+        &control_plane_contract.required_witness.witness_kind,
+        &mut failures,
+        &mut reasons,
+    ) {
+        resolved["requiredWitnessKind"] = json!(kind);
+    }
+    if let Some(kind) = resolve_or_record_schema_kind(
+        schema_lifecycle,
+        "requiredDecisionKind",
+        "requiredWitness.decisionKind",
+        &control_plane_contract.required_witness.decision_kind,
+        &mut failures,
+        &mut reasons,
+    ) {
+        resolved["requiredDecisionKind"] = json!(kind);
+    }
+    if let Some(kind) = resolve_or_record_schema_kind(
+        schema_lifecycle,
+        "instructionWitnessKind",
+        "instructionWitness.witnessKind",
+        &control_plane_contract.instruction_witness.witness_kind,
+        &mut failures,
+        &mut reasons,
+    ) {
+        resolved["instructionWitnessKind"] = json!(kind);
+    }
+    if let Some(kind) = resolve_or_record_schema_kind(
+        schema_lifecycle,
+        "instructionPolicyKind",
+        "instructionWitness.policyKind",
+        &control_plane_contract.instruction_witness.policy_kind,
+        &mut failures,
+        &mut reasons,
+    ) {
+        resolved["instructionPolicyKind"] = json!(kind);
+    }
+
+    ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details: json!({
+            "present": true,
+            "activeEpoch": schema_lifecycle.active_epoch,
+            "requiredKindFamilies": REQUIRED_SCHEMA_LIFECYCLE_FAMILIES,
+            "actualKindFamilies": actual_families,
+            "missingKindFamilies": missing_families,
+            "unknownKindFamilies": unknown_families,
+            "resolvedKinds": resolved,
+            "reasons": dedupe_sorted(reasons),
+        }),
+    }
+}
+
 fn check_gate_chain_parity(
     repo_root: &Path,
     contract: &CoherenceContract,
@@ -803,13 +1058,6 @@ fn check_gate_chain_parity(
         return Err(CoherenceError::Contract(format!(
             "control-plane contract schema must be 1: {}",
             display_path(&control_plane_contract_path)
-        )));
-    }
-    if control_plane_contract.contract_kind != "premath.control_plane.contract.v1" {
-        return Err(CoherenceError::Contract(format!(
-            "control-plane contract kind mismatch at {}: {:?}",
-            display_path(&control_plane_contract_path),
-            control_plane_contract.contract_kind
         )));
     }
     let projection_checks = dedupe_sorted(
@@ -874,6 +1122,9 @@ fn check_gate_chain_parity(
         failures.push("coherence.gate_chain_parity.projection_set_mismatch".to_string());
     }
 
+    let schema_lifecycle_check = evaluate_control_plane_schema_lifecycle(&control_plane_contract);
+    failures.extend(schema_lifecycle_check.failure_classes.clone());
+
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     failures.extend(lane_registry_check.failure_classes.clone());
 
@@ -909,6 +1160,7 @@ fn check_gate_chain_parity(
             "instructionWitnessKind": control_plane_contract.instruction_witness.witness_kind,
             "instructionPolicyKind": control_plane_contract.instruction_witness.policy_kind,
             "instructionPolicyDigestPrefix": control_plane_contract.instruction_witness.policy_digest_prefix,
+            "schemaLifecycle": schema_lifecycle_check.details,
             "laneRegistry": lane_registry_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
         }),
@@ -3248,6 +3500,81 @@ Current deterministic projected check IDs include:
         json!({
             "schema": 1,
             "contractKind": "premath.control_plane.contract.v1",
+            "schemaLifecycle": {
+                "activeEpoch": "2026-02",
+                "kindFamilies": {
+                    "controlPlaneContractKind": {
+                        "canonicalKind": "premath.control_plane.contract.v1",
+                        "compatibilityAliases": [
+                            {
+                                "aliasKind": "premath.control_plane.contract.v0",
+                                "supportUntilEpoch": "2026-06",
+                                "replacementKind": "premath.control_plane.contract.v1"
+                            }
+                        ]
+                    },
+                    "requiredWitnessKind": {
+                        "canonicalKind": "ci.required.v1",
+                        "compatibilityAliases": [
+                            {
+                                "aliasKind": "ci.required.v0",
+                                "supportUntilEpoch": "2026-06",
+                                "replacementKind": "ci.required.v1"
+                            }
+                        ]
+                    },
+                    "requiredDecisionKind": {
+                        "canonicalKind": "ci.required.decision.v1",
+                        "compatibilityAliases": [
+                            {
+                                "aliasKind": "ci.required.decision.v0",
+                                "supportUntilEpoch": "2026-06",
+                                "replacementKind": "ci.required.decision.v1"
+                            }
+                        ]
+                    },
+                    "instructionWitnessKind": {
+                        "canonicalKind": "ci.instruction.v1",
+                        "compatibilityAliases": [
+                            {
+                                "aliasKind": "ci.instruction.v0",
+                                "supportUntilEpoch": "2026-06",
+                                "replacementKind": "ci.instruction.v1"
+                            }
+                        ]
+                    },
+                    "instructionPolicyKind": {
+                        "canonicalKind": "ci.instruction.policy.v1",
+                        "compatibilityAliases": [
+                            {
+                                "aliasKind": "ci.instruction.policy.v0",
+                                "supportUntilEpoch": "2026-06",
+                                "replacementKind": "ci.instruction.policy.v1"
+                            }
+                        ]
+                    },
+                    "requiredProjectionPolicy": {
+                        "canonicalKind": "ci-topos-v0",
+                        "compatibilityAliases": [
+                            {
+                                "aliasKind": "ci-topos-v0-preview",
+                                "supportUntilEpoch": "2026-06",
+                                "replacementKind": "ci-topos-v0"
+                            }
+                        ]
+                    },
+                    "requiredDeltaKind": {
+                        "canonicalKind": "ci.required.delta.v1",
+                        "compatibilityAliases": [
+                            {
+                                "aliasKind": "ci.delta.v1",
+                                "supportUntilEpoch": "2026-06",
+                                "replacementKind": "ci.required.delta.v1"
+                            }
+                        ]
+                    }
+                }
+            },
             "requiredGateProjection": {
                 "projectionPolicy": "ci-topos-v0",
                 "checkOrder": ["baseline", "build", "test"]
@@ -3621,6 +3948,60 @@ Current deterministic projected check IDs include:
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
         assert!(evaluated.failure_classes.is_empty());
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_missing_schema_lifecycle() {
+        let temp = TempDirGuard::new("gate-chain-schema-lifecycle-missing");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload
+            .as_object_mut()
+            .expect("payload should be object")
+            .remove("schemaLifecycle");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_expired_schema_alias() {
+        let temp = TempDirGuard::new("gate-chain-schema-lifecycle-expired-alias");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["requiredWitness"]["witnessKind"] = json!("ci.required.v0");
+        payload["schemaLifecycle"]["activeEpoch"] = json!("2026-07");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string())
+        );
     }
 
     #[test]

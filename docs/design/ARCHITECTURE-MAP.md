@@ -138,6 +138,13 @@ Authoritative verification (`mise run ci-verify-required`) enforces:
 - required/executed check-set consistency,
 - verdict/failure-class consistency with check results.
 
+Control-plane schema lifecycle discipline:
+- coherence gate-chain parity enforces `schemaLifecycle` resolution over
+  contract/projection/witness kind families.
+- aliases are epoch-bounded under `activeEpoch`; expired aliases reject
+  deterministically as
+  `coherence.gate_chain_parity.schema_lifecycle_invalid`.
+
 Instruction doctrine is executable via:
 - `capabilities.instruction_typing`
 - `capabilities.ci_witnesses`
@@ -146,14 +153,16 @@ Instruction doctrine is executable via:
 
 ## 7. Unification Execution Order (Current)
 
-Current sequencing for the Unified Evidence Plane (`bd-99`) workstream:
+Current sequencing is tracked in `.premath/issues.jsonl` with one active epic:
 
-1. `bd-108` — enforce control-plane lane-registry parity in checker paths,
-2. `bd-107` — add lane-ownership boundary vectors,
-3. `bd-102` — add composed cross-lane invariance vectors,
-4. `bd-103` — migrate CLI/MCP/CI projections to one shared evidence projector,
-5. `bd-110` — add drift-budget sentinels across docs/contracts/checkers,
-6. `bd-109` — add dependency-edge maintenance and cycle diagnostics.
+- `bd-116` — Control-plane lifecycle coherence: one contract, one checker truth.
+- `bd-117` — schemaLifecycle checker enforcement in gate-chain parity.
+- `bd-118` — architecture map refresh + coherence pass.
+- `bd-119` — schemaLifecycle epoch-discipline enforcement in CI.
+
+Operational rule:
+- keep this section as a pointer to the issue graph, not a static duplicate task
+  backlog.
 
 Execution notes:
 - keep semantic authority in kernel/gate paths; do not move admissibility into

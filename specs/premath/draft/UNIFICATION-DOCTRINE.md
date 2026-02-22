@@ -120,7 +120,11 @@ For each kind family:
 2. compatibility aliases MAY be declared with an explicit `supportUntilEpoch`,
 3. each alias MUST declare a canonical replacement kind,
 4. checkers MUST resolve accepted aliases to canonical kind before downstream
-   comparison.
+   comparison,
+5. compatibility aliases participating in one lifecycle table MUST share one
+   deterministic rollover epoch,
+6. rollover runway (`supportUntilEpoch - activeEpoch`) MUST be positive and
+   bounded (CI implementation profile: max 12 months).
 
 When a breaking shape change is introduced:
 

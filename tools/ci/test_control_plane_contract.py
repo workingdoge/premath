@@ -173,6 +173,14 @@ class ControlPlaneContractTests(unittest.TestCase):
             "span_square_commutation",
         )
         self.assertIn("lane_route_missing", loaded["laneFailureClasses"])
+        self.assertEqual(
+            loaded["schemaLifecycle"]["epochDiscipline"]["rolloverEpoch"],
+            "2026-06",
+        )
+        self.assertEqual(
+            loaded["schemaLifecycle"]["epochDiscipline"]["aliasRunwayMonths"],
+            4,
+        )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())
@@ -203,6 +211,23 @@ class ControlPlaneContractTests(unittest.TestCase):
                 "ci.required.v0",
                 active_epoch="2026-07",
             )
+
+    def test_load_rejects_mixed_rollover_epochs(self) -> None:
+        payload = _base_payload()
+        payload["schemaLifecycle"]["kindFamilies"]["requiredWitnessKind"][
+            "compatibilityAliases"
+        ][0]["supportUntilEpoch"] = "2026-07"
+        with self.assertRaisesRegex(ValueError, "one shared supportUntilEpoch"):
+            self._load(payload)
+
+    def test_load_rejects_rollover_runway_too_large(self) -> None:
+        payload = _base_payload()
+        for family in payload["schemaLifecycle"]["kindFamilies"].values():
+            aliases = family.get("compatibilityAliases", [])
+            for alias_row in aliases:
+                alias_row["supportUntilEpoch"] = "2027-03"
+        with self.assertRaisesRegex(ValueError, "max runway"):
+            self._load(payload)
 
 
 if __name__ == "__main__":

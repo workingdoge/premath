@@ -2690,3 +2690,34 @@ table keeps minimum encoding while preserving controlled compatibility windows.
 - `draft/UNIFICATION-DOCTRINE` now states normative lifecycle/deprecation rules
   for contract/witness/projection kind families and migration witness
   expectations.
+
+---
+
+## 2026-02-22 — Decision 0094: Enforce schema lifecycle epoch discipline in CI loader paths
+
+### Decision
+Tighten `schemaLifecycle` validation in `tools/ci/control_plane_contract.py`
+with one deterministic rollover policy:
+
+1. all compatibility aliases in one lifecycle table MUST share one
+   `supportUntilEpoch` rollover epoch,
+2. rollover runway (`supportUntilEpoch - activeEpoch`) MUST be strictly
+   positive,
+3. rollover runway MUST be bounded to 12 months in the CI implementation
+   profile.
+
+Validation remains fail-closed during control-plane contract load.
+
+### Rationale
+Alias-window checks were present, but rollover discipline across families was
+implicit. Without one shared epoch and bounded runway, compatibility windows can
+drift and silently accumulate long-lived aliases.
+
+### Consequences
+- CI loader/import surfaces now reject mixed rollover epochs and unbounded alias
+  runway at contract load time.
+- exported lifecycle metadata now includes deterministic epoch-discipline fields
+  (`rolloverEpoch`, `aliasRunwayMonths`, `maxAliasRunwayMonths`) for downstream
+  diagnostics.
+- unit coverage in `tools/ci/test_control_plane_contract.py` now includes
+  mixed-epoch and overlong-runway rejection paths.

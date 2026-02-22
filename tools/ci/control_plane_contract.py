@@ -27,6 +27,7 @@ _REQUIRED_SCHEMA_KIND_FAMILIES = (
     "requiredProjectionPolicy",
     "requiredDeltaKind",
 )
+_MAX_ALIAS_RUNWAY_MONTHS = 12
 
 
 def _require_non_empty_string(value: Any, label: str) -> str:
@@ -63,6 +64,64 @@ def _require_epoch(value: Any, label: str) -> str:
     if _EPOCH_RE.fullmatch(epoch) is None:
         raise ValueError(f"{label} must use YYYY-MM with zero-padded month")
     return epoch
+
+
+def _epoch_to_month_index(epoch: str) -> int:
+    year_str, month_str = epoch.split("-", 1)
+    return int(year_str) * 12 + int(month_str)
+
+
+def _validate_schema_lifecycle_epoch_discipline(
+    active_epoch: str,
+    kind_families: Dict[str, Dict[str, Any]],
+) -> Dict[str, Any]:
+    alias_support_epochs = []
+    for family in kind_families.values():
+        aliases = family.get("compatibilityAliases", {})
+        if not isinstance(aliases, dict):
+            continue
+        for alias_row in aliases.values():
+            if not isinstance(alias_row, dict):
+                continue
+            support_until_epoch = alias_row.get("supportUntilEpoch")
+            if isinstance(support_until_epoch, str) and support_until_epoch:
+                alias_support_epochs.append(support_until_epoch)
+
+    if not alias_support_epochs:
+        return {
+            "rolloverEpoch": None,
+            "aliasRunwayMonths": 0,
+            "maxAliasRunwayMonths": _MAX_ALIAS_RUNWAY_MONTHS,
+        }
+
+    unique_support_epochs = sorted(set(alias_support_epochs))
+    if len(unique_support_epochs) != 1:
+        raise ValueError(
+            "schemaLifecycle rollover policy requires one shared supportUntilEpoch "
+            f"across all compatibility aliases (got {unique_support_epochs})"
+        )
+
+    rollover_epoch = unique_support_epochs[0]
+    runway_months = _epoch_to_month_index(rollover_epoch) - _epoch_to_month_index(
+        active_epoch
+    )
+    if runway_months < 1:
+        raise ValueError(
+            "schemaLifecycle rollover policy requires supportUntilEpoch to be after "
+            f"activeEpoch (activeEpoch={active_epoch!r}, rolloverEpoch={rollover_epoch!r})"
+        )
+    if runway_months > _MAX_ALIAS_RUNWAY_MONTHS:
+        raise ValueError(
+            "schemaLifecycle rollover policy exceeds max runway "
+            f"({_MAX_ALIAS_RUNWAY_MONTHS} months): "
+            f"activeEpoch={active_epoch!r}, rolloverEpoch={rollover_epoch!r}"
+        )
+
+    return {
+        "rolloverEpoch": rollover_epoch,
+        "aliasRunwayMonths": runway_months,
+        "maxAliasRunwayMonths": _MAX_ALIAS_RUNWAY_MONTHS,
+    }
 
 
 def _require_schema_kind_family(value: Any, label: str) -> Dict[str, Any]:
@@ -172,6 +231,9 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
             kind_families_raw.get(family_id),
             f"schemaLifecycle.kindFamilies.{family_id}",
         )
+    schema_epoch_discipline = _validate_schema_lifecycle_epoch_discipline(
+        active_epoch, kind_families
+    )
 
     contract_kind_declared = _require_non_empty_string(root.get("contractKind"), "contractKind")
     contract_kind = _resolve_kind_in_family(
@@ -346,6 +408,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         "schemaLifecycle": {
             "activeEpoch": active_epoch,
             "kindFamilies": kind_families,
+            "epochDiscipline": schema_epoch_discipline,
         },
         "evidenceLanes": evidence_lanes,
         "laneArtifactKinds": lane_artifact_kinds,
@@ -373,6 +436,12 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
 
 _CONTRACT = load_control_plane_contract()
 SCHEMA_LIFECYCLE_ACTIVE_EPOCH: str = _CONTRACT["schemaLifecycle"]["activeEpoch"]
+SCHEMA_LIFECYCLE_EPOCH_DISCIPLINE: Dict[str, Any] = dict(
+    _CONTRACT["schemaLifecycle"].get("epochDiscipline", {})
+)
+SCHEMA_LIFECYCLE_ROLLOVER_EPOCH: str | None = SCHEMA_LIFECYCLE_EPOCH_DISCIPLINE.get(
+    "rolloverEpoch"
+)
 SCHEMA_KIND_FAMILIES: Dict[str, Dict[str, Any]] = dict(
     _CONTRACT["schemaLifecycle"]["kindFamilies"]
 )
