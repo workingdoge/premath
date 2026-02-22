@@ -1145,6 +1145,9 @@ fn check_site_obligation(
     let mut seen_vectors = BTreeSet::new();
     let mut vector_rows: Vec<Value> = Vec::new();
     let mut matched_count = 0usize;
+    let mut matched_golden_count = 0usize;
+    let mut matched_adversarial_count = 0usize;
+    let mut matched_invariance_count = 0usize;
 
     for vector_id in &manifest.vectors {
         if !seen_vectors.insert(vector_id.clone()) {
@@ -1187,6 +1190,13 @@ fn check_site_obligation(
             continue;
         }
         matched_count += 1;
+        if vector_id.starts_with("golden/") {
+            matched_golden_count += 1;
+        } else if vector_id.starts_with("adversarial/") {
+            matched_adversarial_count += 1;
+        } else if vector_id.starts_with("invariance/") {
+            matched_invariance_count += 1;
+        }
 
         if case_payload.schema != 1 {
             failures.push(format!(
@@ -1284,6 +1294,15 @@ fn check_site_obligation(
         failures.push(format!(
             "coherence.{obligation_id}.manifest_missing_vectors"
         ));
+    } else {
+        if matched_golden_count == 0 {
+            failures.push(format!("coherence.{obligation_id}.missing_golden_vector"));
+        }
+        if matched_adversarial_count == 0 {
+            failures.push(format!(
+                "coherence.{obligation_id}.missing_adversarial_vector"
+            ));
+        }
     }
 
     Ok(ObligationCheck {
@@ -1292,6 +1311,11 @@ fn check_site_obligation(
             "fixtureRoot": to_repo_relative_or_absolute(repo_root, &fixture_root),
             "manifestVectors": manifest.vectors,
             "matchedVectors": matched_count,
+            "matchedVectorKinds": {
+                "golden": matched_golden_count,
+                "adversarial": matched_adversarial_count,
+                "invariance": matched_invariance_count,
+            },
             "vectors": vector_rows,
         }),
     })
@@ -2636,6 +2660,187 @@ fn hex_sha256_from_bytes(bytes: &[u8]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use std::path::{Path, PathBuf};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    struct TempDirGuard {
+        path: PathBuf,
+    }
+
+    impl TempDirGuard {
+        fn new(prefix: &str) -> Self {
+            let mut path = std::env::temp_dir();
+            let nonce = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("clock should be monotonic after unix epoch")
+                .as_nanos();
+            path.push(format!(
+                "premath-coherence-{prefix}-{}-{nonce}",
+                std::process::id()
+            ));
+            fs::create_dir_all(&path).expect("temp test directory should be creatable");
+            Self { path }
+        }
+
+        fn path(&self) -> &Path {
+            &self.path
+        }
+    }
+
+    impl Drop for TempDirGuard {
+        fn drop(&mut self) {
+            let _ = fs::remove_dir_all(&self.path);
+        }
+    }
+
+    fn write_json_file(path: &Path, payload: &Value) {
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).expect("parent directories should be creatable");
+        }
+        let bytes = serde_json::to_vec_pretty(payload).expect("json should serialize");
+        fs::write(path, bytes).expect("json fixture should be writable");
+    }
+
+    fn write_site_manifest(fixture_root: &Path, vectors: &[&str]) {
+        write_json_file(
+            &fixture_root.join("manifest.json"),
+            &json!({
+                "schema": 1,
+                "status": "executable",
+                "vectors": vectors,
+            }),
+        );
+    }
+
+    fn valid_span_square_artifacts() -> Value {
+        let square_failures: Vec<String> = Vec::new();
+        let square_digest = square_witness_digest(
+            "top",
+            "bottom",
+            "left",
+            "right",
+            "accepted",
+            &square_failures,
+        );
+        json!({
+            "spanSquare": {
+                "spans": [
+                    {
+                        "id": "top",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma", "input": "x"},
+                        "apex": {"run": "r"},
+                        "right": {"out": "y"}
+                    },
+                    {
+                        "id": "bottom",
+                        "kind": "pipeline",
+                        "left": {"ctx": "Gamma", "input": "x"},
+                        "apex": {"run": "r"},
+                        "right": {"out": "y"}
+                    },
+                    {
+                        "id": "left",
+                        "kind": "base_change",
+                        "left": {"ctx": "Delta", "input": "x"},
+                        "apex": {"map": "rho"},
+                        "right": {"ctx": "Gamma", "input": "x"}
+                    },
+                    {
+                        "id": "right",
+                        "kind": "base_change",
+                        "left": {"out": "y"},
+                        "apex": {"map": "rho"},
+                        "right": {"out": "y"}
+                    }
+                ],
+                "squares": [
+                    {
+                        "id": "sq_ok",
+                        "top": "top",
+                        "bottom": "bottom",
+                        "left": "left",
+                        "right": "right",
+                        "result": "accepted",
+                        "failureClasses": square_failures,
+                        "digest": square_digest
+                    }
+                ]
+            }
+        })
+    }
+
+    fn write_site_vector(fixture_root: &Path, vector_id: &str, obligation_id: &str) {
+        let vector_root = fixture_root.join(vector_id);
+        write_json_file(
+            &vector_root.join("case.json"),
+            &json!({
+                "schema": 1,
+                "status": "executable",
+                "obligationId": obligation_id,
+                "artifacts": valid_span_square_artifacts(),
+            }),
+        );
+        write_json_file(
+            &vector_root.join("expect.json"),
+            &json!({
+                "schema": 1,
+                "status": "executable",
+                "result": "accepted",
+                "expectedFailureClasses": [],
+            }),
+        );
+    }
+
+    fn test_contract_with_site_fixture_root(site_fixture_root_path: &str) -> CoherenceContract {
+        CoherenceContract {
+            schema: 1,
+            contract_kind: "premath.coherence.contract.v1".to_string(),
+            contract_id: "coherence.test.v1".to_string(),
+            binding: CoherenceBinding {
+                normalizer_id: "normalizer.coherence.v1".to_string(),
+                policy_digest: "policy.coherence.v1".to_string(),
+            },
+            obligations: Vec::new(),
+            surfaces: CoherenceSurfaces {
+                capability_registry_path: String::new(),
+                capability_registry_kind: String::new(),
+                capability_manifest_root: String::new(),
+                readme_path: String::new(),
+                conformance_readme_path: String::new(),
+                spec_index_path: String::new(),
+                spec_index_capability_heading: String::new(),
+                spec_index_informative_heading: String::new(),
+                spec_index_overlay_heading: String::new(),
+                ci_closure_path: String::new(),
+                ci_closure_baseline_start: String::new(),
+                ci_closure_baseline_end: String::new(),
+                ci_closure_projection_start: String::new(),
+                ci_closure_projection_end: String::new(),
+                mise_path: String::new(),
+                mise_baseline_task: String::new(),
+                control_plane_contract_path: String::new(),
+                doctrine_site_path: String::new(),
+                doctrine_root_node_id: String::new(),
+                profile_readme_path: String::new(),
+                bidir_spec_path: String::new(),
+                bidir_spec_section_start: String::new(),
+                bidir_spec_section_end: String::new(),
+                coherence_spec_path: String::new(),
+                coherence_spec_obligation_start: String::new(),
+                coherence_spec_obligation_end: String::new(),
+                obligation_registry_kind: String::new(),
+                informative_clause_needle: String::new(),
+                transport_fixture_root_path: String::new(),
+                site_fixture_root_path: site_fixture_root_path.to_string(),
+            },
+            conditional_capability_docs: Vec::new(),
+            expected_operation_paths: Vec::new(),
+            overlay_docs: Vec::new(),
+            required_bidir_obligations: Vec::new(),
+        }
+    }
 
     #[test]
     fn extract_section_between_returns_body() {
@@ -2927,6 +3132,84 @@ mod tests {
                 .failure_classes
                 .contains(&"coherence.span_square_commutation.violation".to_string())
         );
+    }
+
+    #[test]
+    fn check_site_obligation_requires_golden_polarity_vector() {
+        let temp = TempDirGuard::new("site-obligation-missing-golden");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(&fixture_root, &["adversarial/only_vector"]);
+        write_site_vector(
+            &fixture_root,
+            "adversarial/only_vector",
+            "span_square_commutation",
+        );
+        let contract = test_contract_with_site_fixture_root("fixtures");
+
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.span_square_commutation.missing_golden_vector".to_string())
+        );
+    }
+
+    #[test]
+    fn check_site_obligation_requires_adversarial_polarity_vector() {
+        let temp = TempDirGuard::new("site-obligation-missing-adversarial");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(&fixture_root, &["golden/only_vector"]);
+        write_site_vector(
+            &fixture_root,
+            "golden/only_vector",
+            "span_square_commutation",
+        );
+        let contract = test_contract_with_site_fixture_root("fixtures");
+
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(
+            evaluated.failure_classes.contains(
+                &"coherence.span_square_commutation.missing_adversarial_vector".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn check_site_obligation_accepts_when_both_polarities_present() {
+        let temp = TempDirGuard::new("site-obligation-both-polarities");
+        let fixture_root = temp.path().join("fixtures");
+        write_site_manifest(
+            &fixture_root,
+            &["golden/ok_vector", "adversarial/ok_vector"],
+        );
+        write_site_vector(&fixture_root, "golden/ok_vector", "span_square_commutation");
+        write_site_vector(
+            &fixture_root,
+            "adversarial/ok_vector",
+            "span_square_commutation",
+        );
+        let contract = test_contract_with_site_fixture_root("fixtures");
+
+        let evaluated = check_site_obligation(
+            temp.path(),
+            &contract,
+            "span_square_commutation",
+            evaluate_site_case_span_square_commutation,
+        )
+        .expect("site obligation should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
     }
 
     #[test]

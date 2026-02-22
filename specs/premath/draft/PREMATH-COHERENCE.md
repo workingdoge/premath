@@ -218,6 +218,13 @@ MUST reject when strict comprehension eta equalities fail on fixture rows:
 
 - `⟨π ∘ σ, q[σ]⟩ = σ`.
 
+### 4.15 Site Vector Polarity Coverage
+
+For obligations discharged from `coherence-site` fixtures, checker input MUST
+include at least one matched `golden/` vector and at least one matched
+`adversarial/` vector for each obligation id. Missing either polarity MUST
+reject deterministically.
+
 ## 5. Deterministic Failure Classes
 
 The checker MUST emit deterministic failure classes prefixed by:

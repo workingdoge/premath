@@ -2191,3 +2191,29 @@ coverage closes two important boundaries:
 ### Consequences
 - span/square layer now has explicit invariance + digest-integrity checks in
   executable conformance fixtures.
+
+---
+
+## 2026-02-22 — Decision 0077: Require golden/adversarial polarity coverage per coherence-site obligation
+
+### Decision
+Tighten `coherence-site` checker semantics so each matched site obligation
+vector set must include:
+
+- at least one `golden/` vector, and
+- at least one `adversarial/` vector.
+
+Missing either polarity now rejects with deterministic failure classes:
+
+- `coherence.<obligation_id>.missing_golden_vector`
+- `coherence.<obligation_id>.missing_adversarial_vector`.
+
+### Rationale
+Site obligations are checker authority surfaces. Requiring both acceptance and
+rejection exemplars for each obligation keeps the fixture contract expressive
+while minimizing accidental under-specification.
+
+### Consequences
+- coherence checker now enforces per-obligation fixture polarity coverage.
+- new unit tests cover missing-golden, missing-adversarial, and both-present
+  passing cases.
