@@ -146,6 +146,8 @@ Normative requirements apply only when the corresponding capability is claimed.
 
 - `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
   (`draft/DOCTRINE-SITE.json`).
+- `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
+  explicit gap targets.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
   instruction flows.
 - `draft/LLM-PROPOSAL-CHECKING` — proposal ingestion/checking contract for LLM
@@ -183,6 +185,7 @@ If you are implementing Interop Full:
 5) `draft/BIDIR-DESCENT` + `draft/GATE`
 6) `draft/WIRE-FORMATS` + `draft/ERROR-CODES`
 7) `draft/CONFORMANCE` + `draft/CAPABILITY-VECTORS`
+8) `draft/SPEC-TRACEABILITY`
 
 If you are implementing change discipline:
 1) `draft/CHANGE-MORPHISMS`

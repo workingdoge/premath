@@ -41,6 +41,9 @@ that exchange deterministic artifacts (the “Interop” profiles).
 Conformance is established by **running code**: passing canonical test vectors, for the
 Interop profiles described below.
 
+Spec-level coverage tracking for promoted draft specs is maintained in
+`draft/SPEC-TRACEABILITY`.
+
 ## 2. Conformance claims
 
 An implementation MAY claim any of the following. It MUST satisfy the requirements of every

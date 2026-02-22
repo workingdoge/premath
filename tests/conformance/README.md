@@ -16,6 +16,10 @@ Current status:
   - `capabilities.change_morphisms` is executable.
   - other capability tracks are currently stub/informational.
 
+Spec-to-suite traceability is tracked in:
+
+- `specs/premath/draft/SPEC-TRACEABILITY.md`
+
 Validate fixture integrity and invariance pairing with:
 
 ```bash

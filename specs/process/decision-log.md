@@ -548,3 +548,37 @@ degrees of freedom while preserving explicit handoff/renew flows.
 - `capabilities.change_morphisms` executable vectors now cover lease claim
   transitions, active-contention rejects, and stale/contended projection
   invariants.
+
+---
+
+## 2026-02-22 — Decision 0020: Adopt draft spec traceability matrix with explicit coverage targets
+
+### Decision
+Adopt `draft/SPEC-TRACEABILITY` as the canonical matrix mapping promoted draft
+specs to executable conformance/check surfaces.
+
+The matrix introduces explicit status classes:
+
+- `covered`
+- `instrumented`
+- `gap`
+
+and requires every `gap` row to reference a concrete target ID.
+
+### Rationale
+Conformance vectors were strong for capability claims, but coverage boundaries
+for several promoted draft specs were implicit and distributed across docs/tests.
+
+A single traceability surface reduces planning drift, makes gaps explicit, and
+gives issue discovery a deterministic source of truth.
+
+### Consequences
+- `draft/SPEC-TRACEABILITY` is now part of promoted draft documentation and is
+  linked from `draft/README`, `draft/SPEC-INDEX`, and `draft/CONFORMANCE`.
+- current explicit targets include:
+  - `T-IC-01` (interop-core executable vectors),
+  - `T-GATE-01` (canonical gate vectors),
+  - `T-WID-01` (witness-id conformance vectors),
+  - `T-DINF-01` (doctrine-inf semantic coverage upgrade),
+  - `T-KERNEL-01` (cross-model kernel vector profile),
+  - `T-INDEX-01` (index/traceability integrity check).

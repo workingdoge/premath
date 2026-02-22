@@ -16,6 +16,8 @@ Start here:
 - `LLM-PROPOSAL-CHECKING.md` — proposal ingestion contract binding LLM outputs
   into checking/discharge (never self-authorizing).
 - `PREMATH-KERNEL.md` — semantic kernel contract.
+- `SPEC-TRACEABILITY.md` — spec-to-check/vector coverage matrix with explicit
+  gap targets.
 
 Related:
 
