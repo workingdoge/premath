@@ -64,6 +64,30 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
             "instruction_envelope_invalid_shape",
             "instruction-check payload requestedChecks must be a list",
         )
+    classification = payload.get("instructionClassification")
+    if not isinstance(classification, dict):
+        raise InstructionCheckError(
+            "instruction_envelope_invalid_shape",
+            "instruction-check payload instructionClassification must be an object",
+        )
+    state = classification.get("state")
+    if state == "typed":
+        if not isinstance(classification.get("kind"), str) or not classification.get("kind"):
+            raise InstructionCheckError(
+                "instruction_envelope_invalid_shape",
+                "instruction-check payload instructionClassification.kind must be a non-empty string",
+            )
+    elif state == "unknown":
+        if not isinstance(classification.get("reason"), str) or not classification.get("reason"):
+            raise InstructionCheckError(
+                "instruction_envelope_invalid_shape",
+                "instruction-check payload instructionClassification.reason must be a non-empty string",
+            )
+    else:
+        raise InstructionCheckError(
+            "instruction_envelope_invalid_shape",
+            "instruction-check payload instructionClassification.state must be typed|unknown",
+        )
     typing_policy = payload.get("typingPolicy")
     if not isinstance(typing_policy, dict):
         raise InstructionCheckError(

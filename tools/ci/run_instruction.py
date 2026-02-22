@@ -18,13 +18,6 @@ from control_plane_contract import INSTRUCTION_WITNESS_KIND
 from instruction_check_client import InstructionCheckError, run_instruction_check
 
 
-SUPPORTED_INSTRUCTION_TYPES = {
-    "ci.gate.check",
-    "ci.gate.pre_commit",
-    "ci.gate.pre_push",
-}
-
-
 def canonical_json(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
@@ -65,23 +58,6 @@ def parse_args() -> argparse.Namespace:
         help="Exit 0 even when one or more checks fail.",
     )
     return parser.parse_args()
-
-
-def classify_instruction(instruction_type: str | None, requested_checks: List[str]) -> Dict[str, str]:
-    if instruction_type is not None:
-        if instruction_type in SUPPORTED_INSTRUCTION_TYPES:
-            return {"state": "typed", "kind": instruction_type}
-        return {"state": "unknown", "reason": "unsupported_instruction_type"}
-
-    hk_prefixed = all(check_id.startswith("hk-") for check_id in requested_checks)
-    if hk_prefixed:
-        if requested_checks == ["hk-pre-commit"]:
-            return {"state": "typed", "kind": "ci.gate.pre_commit"}
-        if requested_checks == ["hk-pre-push"]:
-            return {"state": "typed", "kind": "ci.gate.pre_push"}
-        return {"state": "typed", "kind": "ci.gate.check"}
-
-    return {"state": "unknown", "reason": "unrecognized_requested_checks"}
 
 
 def load_instruction(path: Path) -> Dict[str, Any]:
@@ -284,10 +260,7 @@ def main() -> int:
         requested_checks = checked["requestedChecks"]
         typing_policy = checked.get("typingPolicy", {"allowUnknown": False})
         capability_claims = checked.get("capabilityClaims", [])
-        instruction_classification = classify_instruction(
-            checked.get("instructionType"),
-            requested_checks,
-        )
+        instruction_classification = checked["instructionClassification"]
         proposal_payload = checked.get("proposal")
         if isinstance(proposal_payload, dict):
             proposal = {

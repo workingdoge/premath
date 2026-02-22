@@ -12,6 +12,8 @@ use thiserror::Error;
 
 const POLICY_KIND: &str = "ci.instruction.policy.v1";
 const POLICY_DIGEST_PREFIX: &str = "pol1_";
+const SUPPORTED_INSTRUCTION_TYPES: [&str; 3] =
+    ["ci.gate.check", "ci.gate.pre_commit", "ci.gate.pre_push"];
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
 #[error("{failure_class}: {message}")]
@@ -36,6 +38,13 @@ pub struct InstructionTypingPolicy {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(tag = "state", rename_all = "snake_case")]
+pub enum InstructionClassification {
+    Typed { kind: String },
+    Unknown { reason: String },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct ValidatedInstructionProposal {
     pub canonical: CanonicalProposal,
@@ -55,6 +64,7 @@ pub struct ValidatedInstructionEnvelope {
     pub requested_checks: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub instruction_type: Option<String>,
+    pub instruction_classification: InstructionClassification,
     pub typing_policy: InstructionTypingPolicy,
     pub capability_claims: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -518,6 +528,46 @@ fn extract_instruction_proposal(
     Ok(Some(value.clone()))
 }
 
+fn classify_instruction(
+    instruction_type: Option<&str>,
+    requested_checks: &[String],
+) -> InstructionClassification {
+    if let Some(kind) = instruction_type {
+        if SUPPORTED_INSTRUCTION_TYPES.contains(&kind) {
+            return InstructionClassification::Typed {
+                kind: kind.to_string(),
+            };
+        }
+        return InstructionClassification::Unknown {
+            reason: "unsupported_instruction_type".to_string(),
+        };
+    }
+
+    if !requested_checks.is_empty()
+        && requested_checks
+            .iter()
+            .all(|check| check.starts_with("hk-"))
+    {
+        if requested_checks.len() == 1 && requested_checks[0] == "hk-pre-commit" {
+            return InstructionClassification::Typed {
+                kind: "ci.gate.pre_commit".to_string(),
+            };
+        }
+        if requested_checks.len() == 1 && requested_checks[0] == "hk-pre-push" {
+            return InstructionClassification::Typed {
+                kind: "ci.gate.pre_push".to_string(),
+            };
+        }
+        return InstructionClassification::Typed {
+            kind: "ci.gate.check".to_string(),
+        };
+    }
+
+    InstructionClassification::Unknown {
+        reason: "unrecognized_requested_checks".to_string(),
+    }
+}
+
 fn validate_filename(path: &Path) -> Result<(), InstructionError> {
     if path.extension().is_none_or(|ext| ext != "json") {
         return Err(InstructionError::new(
@@ -678,6 +728,9 @@ pub fn validate_instruction_envelope_payload(
         }
     };
 
+    let instruction_classification =
+        classify_instruction(instruction_type.as_deref(), &requested_checks);
+
     Ok(ValidatedInstructionEnvelope {
         intent,
         scope: scope.clone(),
@@ -685,6 +738,7 @@ pub fn validate_instruction_envelope_payload(
         policy_digest,
         requested_checks,
         instruction_type,
+        instruction_classification,
         typing_policy,
         capability_claims,
         proposal,
@@ -720,6 +774,12 @@ mod tests {
             .expect("fixture should validate");
         assert_eq!(checked.normalizer_id, "normalizer.ci.v1");
         assert!(!checked.requested_checks.is_empty());
+        assert_eq!(
+            checked.instruction_classification,
+            InstructionClassification::Typed {
+                kind: "ci.gate.check".to_string()
+            }
+        );
         assert!(checked.proposal.is_some());
     }
 
