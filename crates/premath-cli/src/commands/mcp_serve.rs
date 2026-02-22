@@ -1,7 +1,8 @@
 use super::init::{InitOutcome, init_layout};
 use crate::support::{
-    ISSUE_QUERY_PROJECTION_KIND, ISSUE_QUERY_PROJECTION_SCHEMA, backend_status_payload,
-    collect_backend_status, paths_equivalent,
+    ISSUE_QUERY_PROJECTION_KIND, ISSUE_QUERY_PROJECTION_SCHEMA, IssueQueryProjectionPayload,
+    analyze_issue_query_projection, backend_status_payload, collect_backend_status,
+    paths_equivalent,
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
@@ -594,19 +595,6 @@ tool_box!(
         InstructionRunTool
     ]
 );
-
-#[derive(Debug, Clone, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct IssueQueryProjection {
-    schema: u64,
-    kind: String,
-    source_issues_path: String,
-    #[serde(default)]
-    source_snapshot_ref: Option<String>,
-    generated_at_unix_ms: u128,
-    issue_count: usize,
-    issues: Vec<Issue>,
-}
 
 #[derive(Debug, Clone)]
 struct InstructionWitnessLink {
@@ -2228,48 +2216,29 @@ fn load_store_from_projection(
     path: &Path,
     authority_issues_path: &Path,
 ) -> std::result::Result<ProjectionLoad, CallToolError> {
-    let bytes = fs::read(path)
-        .map_err(|e| call_tool_error(format!("failed to read {}: {e}", path.display())))?;
-    let payload = serde_json::from_slice::<IssueQueryProjection>(&bytes)
-        .map_err(|e| call_tool_error(format!("failed to parse {}: {e}", path.display())))?;
-    if payload.schema != ISSUE_QUERY_PROJECTION_SCHEMA {
+    let analysis = analyze_issue_query_projection(path);
+    if let Some(err) = analysis.error {
         return Err(call_tool_error(format!(
-            "projection schema mismatch at {} (expected={}, actual={})",
-            path.display(),
-            ISSUE_QUERY_PROJECTION_SCHEMA,
-            payload.schema
+            "invalid projection {}: {err}",
+            path.display()
         )));
     }
-    if payload.kind != ISSUE_QUERY_PROJECTION_KIND {
-        return Err(call_tool_error(format!(
-            "projection kind mismatch at {} (expected={}, actual={})",
-            path.display(),
-            ISSUE_QUERY_PROJECTION_KIND,
-            payload.kind
-        )));
-    }
-    let source_snapshot_ref_present = payload.source_snapshot_ref.is_some();
-    let source_path_matches_authority = paths_equivalent(
-        Path::new(&payload.source_issues_path),
-        authority_issues_path,
-    );
-    let store = MemoryStore::from_issues(payload.issues).map_err(|e| {
+
+    let source_snapshot_ref_present = analysis.source_snapshot_ref.is_some();
+    let source_issues_path = analysis.source_issues_path.ok_or_else(|| {
         call_tool_error(format!(
-            "failed to hydrate projection {}: {e}",
+            "invalid projection {}: missing source issues path",
             path.display()
         ))
     })?;
-    if let Some(expected_ref) = payload.source_snapshot_ref.as_deref() {
-        let actual_ref = store_snapshot_ref(&store);
-        if expected_ref != actual_ref {
-            return Err(call_tool_error(format!(
-                "projection source snapshot ref mismatch at {} (expected={}, actual={})",
-                path.display(),
-                expected_ref,
-                actual_ref
-            )));
-        }
-    }
+    let store = analysis.store.ok_or_else(|| {
+        call_tool_error(format!(
+            "invalid projection {}: missing hydrated issue store",
+            path.display()
+        ))
+    })?;
+    let source_path_matches_authority =
+        paths_equivalent(Path::new(&source_issues_path), authority_issues_path);
     Ok(ProjectionLoad {
         store,
         source_path_matches_authority,
@@ -2297,7 +2266,7 @@ fn write_issue_query_projection(
         .unwrap_or_default()
         .as_millis();
     let issues: Vec<Issue> = store.issues().cloned().collect();
-    let payload = IssueQueryProjection {
+    let payload = IssueQueryProjectionPayload {
         schema: ISSUE_QUERY_PROJECTION_SCHEMA,
         kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
         source_issues_path: issues_path.display().to_string(),
@@ -2649,7 +2618,7 @@ mod tests {
         let projection_path = root.join(".premath").join("surreal_issue_cache.json");
         let store = load_store_existing(&issues).expect("issues should load");
         let projection_issues: Vec<Issue> = store.issues().cloned().collect();
-        let invalid_payload = IssueQueryProjection {
+        let invalid_payload = IssueQueryProjectionPayload {
             schema: ISSUE_QUERY_PROJECTION_SCHEMA,
             kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
             source_issues_path: issues.display().to_string(),
@@ -3071,7 +3040,7 @@ mod tests {
         if let Some(parent) = projection_path.parent() {
             fs::create_dir_all(parent).expect("projection parent should exist");
         }
-        let stale_payload = IssueQueryProjection {
+        let stale_payload = IssueQueryProjectionPayload {
             schema: ISSUE_QUERY_PROJECTION_SCHEMA,
             kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
             source_issues_path: root.join("other-issues.jsonl").display().to_string(),
@@ -3098,7 +3067,7 @@ mod tests {
         assert_eq!(payload["items"][0]["id"], "bd-root");
 
         let refreshed_bytes = fs::read(&projection_path).expect("projection should be refreshed");
-        let refreshed: IssueQueryProjection =
+        let refreshed: IssueQueryProjectionPayload =
             serde_json::from_slice(&refreshed_bytes).expect("projection should parse");
         assert_eq!(refreshed.source_issues_path, issues.display().to_string());
         assert_eq!(refreshed.issue_count, 1);
@@ -3134,7 +3103,7 @@ mod tests {
         }
         let authority = load_store_existing(&issues).expect("authority should load");
         let projection_issues: Vec<Issue> = authority.issues().cloned().collect();
-        let legacy_payload = IssueQueryProjection {
+        let legacy_payload = IssueQueryProjectionPayload {
             schema: ISSUE_QUERY_PROJECTION_SCHEMA,
             kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
             source_issues_path: issues.display().to_string(),
@@ -3161,7 +3130,7 @@ mod tests {
         assert_eq!(payload["items"][0]["id"], "bd-root");
 
         let refreshed_bytes = fs::read(&projection_path).expect("projection should be refreshed");
-        let refreshed: IssueQueryProjection =
+        let refreshed: IssueQueryProjectionPayload =
             serde_json::from_slice(&refreshed_bytes).expect("projection should parse");
         assert_eq!(refreshed.source_issues_path, issues.display().to_string());
         assert_eq!(refreshed.issue_count, 1);
@@ -3199,7 +3168,7 @@ mod tests {
 
         let authority = load_store_existing(&issues).expect("authority should load");
         let projection_issues: Vec<Issue> = authority.issues().cloned().collect();
-        let stale_payload = IssueQueryProjection {
+        let stale_payload = IssueQueryProjectionPayload {
             schema: ISSUE_QUERY_PROJECTION_SCHEMA,
             kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
             source_issues_path: issues.display().to_string(),
@@ -3226,7 +3195,7 @@ mod tests {
         assert_eq!(payload["items"][0]["id"], "bd-root");
 
         let refreshed_bytes = fs::read(&projection_path).expect("projection should be refreshed");
-        let refreshed: IssueQueryProjection =
+        let refreshed: IssueQueryProjectionPayload =
             serde_json::from_slice(&refreshed_bytes).expect("projection should parse");
         let expected_ref = store_snapshot_ref(&authority);
         assert_eq!(refreshed.source_issues_path, issues.display().to_string());

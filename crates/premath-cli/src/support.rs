@@ -2,7 +2,7 @@ use premath_bd::{DepType, Issue, MemoryStore, store_snapshot_ref};
 use premath_jj::JjClient;
 use premath_kernel::{CoherenceLevel, ContextId, FiberSignature};
 use premath_surreal::QueryCache;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{BTreeSet, VecDeque};
 use std::fs;
@@ -41,9 +41,34 @@ pub struct BackendStatus {
     pub jj_error: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueQueryProjectionPayload {
+    pub schema: u64,
+    pub kind: String,
+    pub source_issues_path: String,
+    #[serde(default)]
+    pub source_snapshot_ref: Option<String>,
+    pub generated_at_unix_ms: u128,
+    pub issue_count: usize,
+    pub issues: Vec<Issue>,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct IssueQueryProjectionAnalysis {
+    pub schema: Option<u64>,
+    pub kind: Option<String>,
+    pub source_issues_path: Option<String>,
+    pub source_snapshot_ref: Option<String>,
+    pub source_snapshot_ref_matches_payload: Option<bool>,
+    pub payload_snapshot_ref: Option<String>,
+    pub store: Option<MemoryStore>,
+    pub error: Option<String>,
+}
+
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-struct ProjectionPayload {
+struct ProjectionPayloadMetadata {
     #[serde(default)]
     schema: Option<u64>,
     #[serde(default)]
@@ -52,8 +77,6 @@ struct ProjectionPayload {
     source_issues_path: Option<String>,
     #[serde(default)]
     source_snapshot_ref: Option<String>,
-    #[serde(default)]
-    issues: Vec<Issue>,
 }
 
 pub fn parse_level_or_exit(level: &str) -> CoherenceLevel {
@@ -209,73 +232,36 @@ pub fn collect_backend_status(
     let mut projection_error: Option<String> = None;
 
     if projection_exists {
-        match read_projection_payload(&projection_path) {
-            Ok(payload) => {
-                projection_schema = payload.schema;
-                projection_kind = payload.kind.clone();
-                projection_source_issues_path = payload.source_issues_path.clone();
-                projection_source_snapshot_ref = payload.source_snapshot_ref.clone();
+        let projection = analyze_issue_query_projection(&projection_path);
+        projection_schema = projection.schema;
+        projection_kind = projection.kind;
+        projection_source_issues_path = projection.source_issues_path;
+        projection_source_snapshot_ref = projection.source_snapshot_ref;
+        projection_snapshot_matches_payload = projection.source_snapshot_ref_matches_payload;
 
-                let schema_ok = projection_schema == Some(ISSUE_QUERY_PROJECTION_SCHEMA);
-                let kind_ok = projection_kind.as_deref() == Some(ISSUE_QUERY_PROJECTION_KIND);
-                if !schema_ok || !kind_ok {
-                    projection_state = "invalid";
-                    projection_error = Some(format!(
-                        "projection metadata mismatch (expected schema={} kind={}, actual schema={:?} kind={:?})",
-                        ISSUE_QUERY_PROJECTION_SCHEMA,
-                        ISSUE_QUERY_PROJECTION_KIND,
-                        projection_schema,
-                        projection_kind
-                    ));
-                } else {
-                    if let Some(source_ref) = projection_source_snapshot_ref.as_deref() {
-                        match projection_payload_snapshot_ref(&payload.issues) {
-                            Ok(payload_ref) => {
-                                let matches_payload = source_ref == payload_ref;
-                                projection_snapshot_matches_payload = Some(matches_payload);
-                                if !matches_payload {
-                                    projection_state = "invalid";
-                                    projection_error = Some(format!(
-                                        "projection payload snapshot mismatch (sourceSnapshotRef={}, payloadSnapshotRef={})",
-                                        source_ref, payload_ref
-                                    ));
-                                }
-                            }
-                            Err(err) => {
-                                projection_state = "invalid";
-                                projection_error = Some(err);
-                            }
-                        }
-                    }
-
-                    if projection_state != "invalid" {
-                        if let Some(source_path) = projection_source_issues_path.as_deref() {
-                            projection_source_path_matches_authority =
-                                Some(paths_equivalent(Path::new(source_path), &issues_path));
-                        }
-                        if let (Some(source_ref), Some(authority_ref)) = (
-                            projection_source_snapshot_ref.as_deref(),
-                            authority_snapshot_ref.as_deref(),
-                        ) {
-                            projection_snapshot_matches_authority =
-                                Some(source_ref == authority_ref);
-                        }
-
-                        projection_state = match (
-                            projection_source_path_matches_authority,
-                            projection_snapshot_matches_authority,
-                        ) {
-                            (Some(false), _) | (_, Some(false)) => "stale",
-                            (Some(true), Some(true)) => "fresh",
-                            _ => "unknown",
-                        };
-                    }
-                }
+        if let Some(err) = projection.error {
+            projection_state = "invalid";
+            projection_error = Some(err);
+        } else {
+            if let Some(source_path) = projection_source_issues_path.as_deref() {
+                projection_source_path_matches_authority =
+                    Some(paths_equivalent(Path::new(source_path), &issues_path));
             }
-            Err(err) => {
-                projection_state = "invalid";
-                projection_error = Some(err);
+            if let (Some(source_ref), Some(authority_ref)) = (
+                projection_source_snapshot_ref.as_deref(),
+                authority_snapshot_ref.as_deref(),
+            ) {
+                projection_snapshot_matches_authority = Some(source_ref == authority_ref);
             }
+
+            projection_state = match (
+                projection_source_path_matches_authority,
+                projection_snapshot_matches_authority,
+            ) {
+                (Some(false), _) | (_, Some(false)) => "stale",
+                (Some(true), Some(true)) => "fresh",
+                _ => "unknown",
+            };
         }
     }
 
@@ -336,6 +322,76 @@ pub fn collect_backend_status(
     }
 }
 
+pub fn analyze_issue_query_projection(path: &Path) -> IssueQueryProjectionAnalysis {
+    let mut analysis = IssueQueryProjectionAnalysis::default();
+    let bytes = match fs::read(path) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            analysis.error = Some(format!("failed to read {}: {err}", path.display()));
+            return analysis;
+        }
+    };
+
+    if let Ok(metadata) = serde_json::from_slice::<ProjectionPayloadMetadata>(&bytes) {
+        analysis.schema = metadata.schema;
+        analysis.kind = metadata.kind;
+        analysis.source_issues_path = metadata.source_issues_path;
+        analysis.source_snapshot_ref = metadata.source_snapshot_ref;
+    }
+
+    let payload = match serde_json::from_slice::<IssueQueryProjectionPayload>(&bytes) {
+        Ok(payload) => payload,
+        Err(err) => {
+            analysis.error = Some(format!("failed to parse {}: {err}", path.display()));
+            return analysis;
+        }
+    };
+
+    analysis.schema = Some(payload.schema);
+    analysis.kind = Some(payload.kind.clone());
+    analysis.source_issues_path = Some(payload.source_issues_path.clone());
+    analysis.source_snapshot_ref = payload.source_snapshot_ref.clone();
+
+    if payload.schema != ISSUE_QUERY_PROJECTION_SCHEMA
+        || payload.kind.as_str() != ISSUE_QUERY_PROJECTION_KIND
+    {
+        analysis.error = Some(format!(
+            "projection metadata mismatch (expected schema={} kind={}, actual schema={:?} kind={:?})",
+            ISSUE_QUERY_PROJECTION_SCHEMA,
+            ISSUE_QUERY_PROJECTION_KIND,
+            analysis.schema,
+            analysis.kind
+        ));
+        return analysis;
+    }
+
+    let store = match MemoryStore::from_issues(payload.issues) {
+        Ok(store) => store,
+        Err(err) => {
+            analysis.error = Some(format!(
+                "failed to hydrate projection payload issues: {err}"
+            ));
+            return analysis;
+        }
+    };
+    let payload_snapshot_ref = store_snapshot_ref(&store);
+    analysis.payload_snapshot_ref = Some(payload_snapshot_ref.clone());
+    analysis.store = Some(store);
+
+    if let Some(source_ref) = analysis.source_snapshot_ref.as_deref() {
+        let matches_payload = source_ref == payload_snapshot_ref;
+        analysis.source_snapshot_ref_matches_payload = Some(matches_payload);
+        if !matches_payload {
+            analysis.error = Some(format!(
+                "projection payload snapshot mismatch (sourceSnapshotRef={}, payloadSnapshotRef={})",
+                source_ref, payload_snapshot_ref
+            ));
+        }
+    }
+
+    analysis
+}
+
 pub fn backend_status_payload(
     action: &str,
     status: &BackendStatus,
@@ -385,18 +441,6 @@ pub fn backend_status_payload(
     }
 
     payload
-}
-
-fn read_projection_payload(path: &Path) -> Result<ProjectionPayload, String> {
-    let bytes = fs::read(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
-    serde_json::from_slice::<ProjectionPayload>(&bytes)
-        .map_err(|e| format!("failed to parse {}: {e}", path.display()))
-}
-
-fn projection_payload_snapshot_ref(issues: &[Issue]) -> Result<String, String> {
-    let store = MemoryStore::from_issues(issues.to_vec())
-        .map_err(|e| format!("failed to hydrate projection payload issues: {e}"))?;
-    Ok(store_snapshot_ref(&store))
 }
 
 pub fn paths_equivalent(left: &Path, right: &Path) -> bool {
