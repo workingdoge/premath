@@ -35,6 +35,9 @@ run = "python3 tools/conformance/check_stub_invariance.py"
 [tasks.traceability-check]
 run = "python3 tools/conformance/check_spec_traceability.py"
 
+[tasks.docs-coherence-check]
+run = "python3 tools/conformance/check_docs_coherence.py"
+
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
@@ -56,6 +59,7 @@ run = [
   "mise run test-kcir-toy",
   "mise run conformance-check",
   "mise run traceability-check",
+  "mise run docs-coherence-check",
   "mise run doctrine-check",
   "mise run ci-command-surface-check",
   "mise run ci-hygiene-check",
@@ -106,6 +110,7 @@ run = [
   "python3 tools/ci/test_instruction_policy.py",
   "python3 tools/ci/test_instruction_reject_witness.py",
   "python3 tools/ci/test_repo_hygiene.py",
+  "python3 tools/conformance/test_docs_coherence.py",
 ]
 
 [tasks.ci-observation-build]

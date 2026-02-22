@@ -107,7 +107,7 @@ Loop intent:
 
 Baseline gate (`mise run baseline`) enforces:
 - setup/lint/build/test/toy suites,
-- conformance + traceability + doctrine closure,
+- conformance + traceability + docs-coherence + doctrine closure,
 - CI/control-plane wiring, pipeline, observation, and instruction checks,
 - executable fixture-suite closure (`mise run conformance-run`).
 

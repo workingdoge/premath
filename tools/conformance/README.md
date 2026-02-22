@@ -74,6 +74,30 @@ Run:
 python3 tools/conformance/check_spec_traceability.py
 ```
 
+## `check_docs_coherence.py`
+
+Validates critical docs-to-executable coherence invariants:
+
+- executable capability list parity across:
+  - `tools/conformance/run_capability_vectors.py` (`DEFAULT_EXECUTABLE_CAPABILITIES`)
+  - `README.md`
+  - `tools/conformance/README.md`
+  - `specs/premath/draft/SPEC-INDEX.md` (§5.4)
+- baseline gate task parity between:
+  - `.mise.toml` (`[tasks.baseline]`)
+  - `docs/design/CI-CLOSURE.md` baseline task list
+- projected check ID parity between:
+  - `tools/ci/change_projection.py` (`CHECK_ORDER`)
+  - `docs/design/CI-CLOSURE.md` projected check list
+- capability-scoped normative-vs-informative consistency in
+  `specs/premath/draft/SPEC-INDEX.md` (§5.4/§5.5 conditional clauses).
+
+Run:
+
+```bash
+python3 tools/conformance/check_docs_coherence.py
+```
+
 ## `run_capability_vectors.py`
 
 Runs executable capability vectors (current set):

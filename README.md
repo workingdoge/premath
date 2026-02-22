@@ -169,6 +169,7 @@ This enforces the current invariant gate:
 - toy semantic vectors,
 - KCIR toy vectors,
 - conformance capability invariance-stub validation,
+- docs-to-executable coherence validation,
 - doctrine-to-operation site coherence validation,
 - executable capability conformance vectors
   (`capabilities.normal_forms`, `capabilities.kcir_witnesses`,
