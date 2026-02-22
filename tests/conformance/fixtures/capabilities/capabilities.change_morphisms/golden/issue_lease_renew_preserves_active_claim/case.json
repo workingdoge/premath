@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_lease_renew_preserves_active_claim",
+  "description": "Lease renew deterministically preserves active claim ownership and issue binding.",
+  "semanticScenarioId": "change_projection_issue_lease_renew_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_lease_renew",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-renew-201",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-renew-201_agent.alpha",
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 4600000
+      }
+    },
+    "renew": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-renew-201_agent.alpha",
+      "leaseExpiresAtUnixMs": 5600000
+    },
+    "expectedAfter": {
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-renew-201_agent.alpha",
+        "owner": "agent.alpha",
+        "state": "active"
+      }
+    }
+  }
+}

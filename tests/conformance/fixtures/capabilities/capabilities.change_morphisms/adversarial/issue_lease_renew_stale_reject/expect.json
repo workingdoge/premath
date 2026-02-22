@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_stale"
+  ],
+  "assertions": [
+    "stale lease renew requests reject deterministically"
+  ]
+}

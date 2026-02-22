@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_lease_release_reopens_issue",
+  "description": "Lease release deterministically clears lease state, assignee, and reopens in-progress work.",
+  "semanticScenarioId": "change_projection_issue_lease_release_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_lease_release",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "issueBefore": {
+      "id": "bd-release-201",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-release-201_agent.alpha",
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 4600000
+      }
+    },
+    "release": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-release-201_agent.alpha"
+    },
+    "expectedAfter": {
+      "status": "open",
+      "assignee": "",
+      "lease": null
+    }
+  }
+}

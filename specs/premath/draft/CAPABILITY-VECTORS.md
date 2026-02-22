@@ -170,6 +170,9 @@ Required vectors when claimed:
 - golden: work-memory mutation morphisms preserve deterministic claim/discover
   transitions (`issue_claim` and `issue_discover` non-loss linkage), including
   lease binding (`lease_id`, owner, expiry) for multiagent claim discipline.
+- golden: deterministic lease lifecycle mutations preserve coherent claim
+  ownership transitions for `issue_lease_renew` and `issue_lease_release`
+  operations.
 - golden: deterministic lease projection separates stale leases from contended
   active leases.
 - golden: CLI issue command-surface parity preserves coherent
@@ -178,6 +181,9 @@ Required vectors when claimed:
   deterministically.
 - adversarial: active lease contention rejects deterministically
   (`lease_contention_active`).
+- adversarial: stale renew or mismatched lease-owner/lease-id release requests
+  reject deterministically (`lease_stale`, `lease_owner_mismatch`,
+  `lease_id_mismatch`).
 - adversarial: work-memory discover morphism rejects when parent lineage is
   missing.
 - adversarial: incoherent stale/contended lease projection expectations reject

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "lease release clears assignee and lease state with deterministic in-progress to open transition"
+  ]
+}

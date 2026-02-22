@@ -1618,6 +1618,200 @@ def evaluate_change_projection_issue_claim(case: Dict[str, Any]) -> VectorOutcom
     return VectorOutcome("accepted", "accepted", [])
 
 
+def evaluate_change_projection_issue_lease_renew(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "issue_lease_renew" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    now_unix_ms = ensure_int(artifacts.get("nowUnixMs", 0), "artifacts.nowUnixMs")
+    issue_before = artifacts.get("issueBefore")
+    if not isinstance(issue_before, dict):
+        raise ValueError("artifacts.issueBefore must be an object")
+    before_status = ensure_string(issue_before.get("status"), "artifacts.issueBefore.status")
+
+    before_lease = issue_before.get("lease")
+    if before_lease is None:
+        return VectorOutcome("rejected", "rejected", ["lease_missing"])
+    if not isinstance(before_lease, dict):
+        raise ValueError("artifacts.issueBefore.lease must be an object when present")
+    before_lease_owner = ensure_string(
+        before_lease.get("owner"),
+        "artifacts.issueBefore.lease.owner",
+    )
+    before_lease_id = ensure_string(
+        before_lease.get("leaseId"),
+        "artifacts.issueBefore.lease.leaseId",
+    )
+    before_lease_expires_at_unix_ms = ensure_int(
+        before_lease.get("expiresAtUnixMs"),
+        "artifacts.issueBefore.lease.expiresAtUnixMs",
+    )
+
+    renew = artifacts.get("renew")
+    if not isinstance(renew, dict):
+        raise ValueError("artifacts.renew must be an object")
+    renew_assignee = ensure_string(renew.get("assignee"), "artifacts.renew.assignee")
+    renew_lease_id = ensure_string(renew.get("leaseId"), "artifacts.renew.leaseId")
+    renew_lease_ttl_seconds = renew.get("leaseTtlSeconds", 3600)
+    if renew_lease_ttl_seconds is not None and not isinstance(renew_lease_ttl_seconds, int):
+        raise ValueError("artifacts.renew.leaseTtlSeconds must be an integer when present")
+    renew_lease_expires_at_unix_ms = renew.get("leaseExpiresAtUnixMs")
+    if renew_lease_expires_at_unix_ms is not None and not isinstance(renew_lease_expires_at_unix_ms, int):
+        raise ValueError("artifacts.renew.leaseExpiresAtUnixMs must be an integer when present")
+    if renew_lease_expires_at_unix_ms is not None:
+        lease_expires_at_unix_ms = renew_lease_expires_at_unix_ms
+    else:
+        ttl_seconds = renew_lease_ttl_seconds if isinstance(renew_lease_ttl_seconds, int) else 3600
+        lease_expires_at_unix_ms = now_unix_ms + ttl_seconds * 1000
+
+    if before_status == "closed":
+        return VectorOutcome("rejected", "rejected", ["lease_issue_closed"])
+    if before_lease_expires_at_unix_ms <= now_unix_ms:
+        return VectorOutcome("rejected", "rejected", ["lease_stale"])
+    if before_lease_owner != renew_assignee:
+        return VectorOutcome("rejected", "rejected", ["lease_owner_mismatch"])
+    if before_lease_id != renew_lease_id:
+        return VectorOutcome("rejected", "rejected", ["lease_id_mismatch"])
+    if lease_expires_at_unix_ms <= now_unix_ms:
+        return VectorOutcome("rejected", "rejected", ["lease_invalid_expires_at"])
+
+    actual_after = {
+        "status": "in_progress",
+        "assignee": renew_assignee,
+        "lease": {
+            "leaseId": renew_lease_id,
+            "owner": renew_assignee,
+            "state": "active",
+        },
+    }
+
+    expected_after = artifacts.get("expectedAfter")
+    if expected_after is not None:
+        if not isinstance(expected_after, dict):
+            raise ValueError("artifacts.expectedAfter must be an object when present")
+        expected_status = ensure_string(expected_after.get("status"), "artifacts.expectedAfter.status")
+        expected_assignee = ensure_string(
+            expected_after.get("assignee"),
+            "artifacts.expectedAfter.assignee",
+        )
+        expected_lease = expected_after.get("lease")
+        if not isinstance(expected_lease, dict):
+            raise ValueError("artifacts.expectedAfter.lease must be an object")
+        expected_lease_id = ensure_string(
+            expected_lease.get("leaseId"),
+            "artifacts.expectedAfter.lease.leaseId",
+        )
+        expected_lease_owner = ensure_string(
+            expected_lease.get("owner"),
+            "artifacts.expectedAfter.lease.owner",
+        )
+        expected_lease_state = ensure_string(
+            expected_lease.get("state"),
+            "artifacts.expectedAfter.lease.state",
+        )
+        if (
+            actual_after["status"] != expected_status
+            or actual_after["assignee"] != expected_assignee
+            or actual_after["lease"]["leaseId"] != expected_lease_id
+            or actual_after["lease"]["owner"] != expected_lease_owner
+            or actual_after["lease"]["state"] != expected_lease_state
+        ):
+            return VectorOutcome("rejected", "rejected", ["issue_lease_renew_transition_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_issue_lease_release(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "issue_lease_release" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    issue_before = artifacts.get("issueBefore")
+    if not isinstance(issue_before, dict):
+        raise ValueError("artifacts.issueBefore must be an object")
+    before_status = ensure_string(issue_before.get("status"), "artifacts.issueBefore.status")
+    before_assignee_raw = issue_before.get("assignee", "")
+    if not isinstance(before_assignee_raw, str):
+        raise ValueError("artifacts.issueBefore.assignee must be a string when present")
+    before_assignee = before_assignee_raw
+
+    release = artifacts.get("release")
+    if not isinstance(release, dict):
+        raise ValueError("artifacts.release must be an object")
+    release_assignee = release.get("assignee")
+    if release_assignee is not None and not isinstance(release_assignee, str):
+        raise ValueError("artifacts.release.assignee must be a string when present")
+    expected_assignee = release_assignee if isinstance(release_assignee, str) and release_assignee else None
+    release_lease_id = release.get("leaseId")
+    if release_lease_id is not None and not isinstance(release_lease_id, str):
+        raise ValueError("artifacts.release.leaseId must be a string when present")
+    expected_lease_id = release_lease_id if isinstance(release_lease_id, str) and release_lease_id else None
+
+    before_lease = issue_before.get("lease")
+    if before_lease is not None and not isinstance(before_lease, dict):
+        raise ValueError("artifacts.issueBefore.lease must be an object when present")
+
+    if before_lease is None:
+        if expected_assignee is not None or expected_lease_id is not None:
+            return VectorOutcome("rejected", "rejected", ["lease_missing"])
+        actual_after = {"status": before_status, "assignee": before_assignee, "lease": None}
+    else:
+        before_lease_owner = ensure_string(
+            before_lease.get("owner"),
+            "artifacts.issueBefore.lease.owner",
+        )
+        before_lease_id = ensure_string(
+            before_lease.get("leaseId"),
+            "artifacts.issueBefore.lease.leaseId",
+        )
+        if expected_assignee is not None and before_lease_owner != expected_assignee:
+            return VectorOutcome("rejected", "rejected", ["lease_owner_mismatch"])
+        if expected_lease_id is not None and before_lease_id != expected_lease_id:
+            return VectorOutcome("rejected", "rejected", ["lease_id_mismatch"])
+        actual_after = {
+            "status": "open" if before_status == "in_progress" else before_status,
+            "assignee": "",
+            "lease": None,
+        }
+
+    expected_after = artifacts.get("expectedAfter")
+    if expected_after is not None:
+        if not isinstance(expected_after, dict):
+            raise ValueError("artifacts.expectedAfter must be an object when present")
+        expected_status = ensure_string(expected_after.get("status"), "artifacts.expectedAfter.status")
+        expected_assignee_after_raw = expected_after.get("assignee", "")
+        if not isinstance(expected_assignee_after_raw, str):
+            raise ValueError("artifacts.expectedAfter.assignee must be a string")
+        expected_assignee_after = expected_assignee_after_raw
+        expected_lease = expected_after.get("lease")
+        if expected_lease is not None:
+            raise ValueError("artifacts.expectedAfter.lease must be null for release checks")
+        if actual_after["status"] != expected_status or actual_after["assignee"] != expected_assignee_after:
+            return VectorOutcome("rejected", "rejected", ["issue_lease_release_transition_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
 def _extract_issue_ids(value: Any, label: str) -> List[str]:
     if not isinstance(value, list):
         raise ValueError(f"{label} must be a list")
@@ -1964,6 +2158,10 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "golden/issue_discover_preserves_existing_and_links_discovered_from":
         return evaluate_change_projection_issue_discover(case)
+    if vector_id == "golden/issue_lease_renew_preserves_active_claim":
+        return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id == "golden/issue_lease_release_reopens_issue":
+        return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "golden/issue_ready_blocked_partition_coherent":
         return evaluate_change_projection_issue_ready_blocked(case)
     if vector_id == "golden/issue_lease_projection_stale_and_contended":
@@ -1985,6 +2183,10 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "adversarial/issue_claim_rejects_active_lease_contention":
         return evaluate_change_projection_issue_claim(case)
+    if vector_id == "adversarial/issue_lease_renew_stale_reject":
+        return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id == "adversarial/issue_lease_release_owner_mismatch_reject":
+        return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "adversarial/issue_lease_projection_mismatch_reject":
         return evaluate_change_projection_issue_lease_projection(case)
     if vector_id.startswith("invariance/"):

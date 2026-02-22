@@ -546,8 +546,8 @@ degrees of freedom while preserving explicit handoff/renew flows.
 - `premath-bd` issue schema now includes first-class lease state.
 - MCP mutation surface includes renew/release actions and lease projection.
 - `capabilities.change_morphisms` executable vectors now cover lease claim
-  transitions, active-contention rejects, and stale/contended projection
-  invariants.
+  transitions, renew/release lifecycle transitions, active-contention rejects,
+  and stale/contended projection invariants.
 
 ---
 
