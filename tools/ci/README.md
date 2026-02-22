@@ -81,6 +81,14 @@ private/local-only surfaces (for example `.claude/`, `.serena/`,
 `.premath/cache/`) and required ignore entries
 (`mise run ci-hygiene-check`).
 
+`tools/ci/check_issue_graph.py` validates issue-memory contract invariants
+(`.premath/issues.jsonl`) for machine-actionable planning surfaces:
+
+- `[EPIC]` title rows must use `issue_type=epic`,
+- active issues (`open`/`in_progress`) must carry an `Acceptance:` section,
+- active issues must include at least one verification command surface,
+- oversized `notes` payloads are reported as warnings to limit JSONL churn.
+
 `tools/ci/check_branch_policy.py` validates effective GitHub `main` branch
 rules against tracked process policy (`specs/process/GITHUB-BRANCH-POLICY.json`)
 with two modes:

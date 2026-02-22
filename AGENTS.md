@@ -35,7 +35,7 @@
 - `mise run hk-pre-commit` / `mise run hk-pre-push` — run hk hook profiles manually.
 - `mise run hk-check` / `mise run hk-fix` — run hk baseline check or fast local fixes (`hk-fix` runs on all files with no auto-stage).
 - `mise run ci-command-surface-check` — enforce `mise`-only command-surface references (reject legacy task-runner command/file surfaces).
-- `mise run ci-hygiene-check` — enforce repository hygiene guardrails for private/local-only surfaces and required ignore entries.
+- `mise run ci-hygiene-check` — enforce repository hygiene guardrails plus issue-graph contract checks (epic typing, active-issue acceptance/proof fields).
 - `mise run ci-branch-policy-check` — validate tracked GitHub `main` branch policy contract against deterministic effective-rules fixture.
 - `mise run ci-branch-policy-check-live` — validate tracked GitHub `main` branch policy contract against live server rules API (`GITHUB_TOKEN`/admin-read token required).
 - `mise run ci-pipeline-check` — validate provider workflow wrappers call canonical provider-neutral pipeline entrypoints.

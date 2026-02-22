@@ -104,7 +104,10 @@ run = "python3 tools/ci/project_checks.py"
 run = "python3 tools/ci/check_command_surface.py"
 
 [tasks.ci-hygiene-check]
-run = "python3 tools/ci/check_repo_hygiene.py"
+run = [
+  "python3 tools/ci/check_repo_hygiene.py",
+  "python3 tools/ci/check_issue_graph.py",
+]
 
 [tasks.ci-branch-policy-check]
 run = "python3 tools/ci/check_branch_policy.py --rules-json tests/ci/fixtures/branch-policy/effective-main-rules-golden.json"
@@ -141,6 +144,7 @@ run = [
   "python3 tools/ci/test_instruction_reject_witness.py",
   "python3 tools/ci/test_branch_policy.py",
   "python3 tools/ci/test_repo_hygiene.py",
+  "python3 tools/ci/test_issue_graph.py",
   "python3 tools/conformance/test_docs_coherence.py",
   "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
