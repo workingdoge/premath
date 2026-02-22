@@ -134,9 +134,18 @@ fn main() {
         Commands::InstructionWitness {
             instruction,
             runtime,
+            pre_execution_failure_class,
+            pre_execution_reason,
             repo_root,
             json,
-        } => commands::instruction_witness::run(instruction, runtime, repo_root, json),
+        } => commands::instruction_witness::run(
+            instruction,
+            runtime,
+            pre_execution_failure_class,
+            pre_execution_reason,
+            repo_root,
+            json,
+        ),
 
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
 

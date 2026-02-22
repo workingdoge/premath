@@ -153,6 +153,71 @@ class InstructionCheckClientTests(unittest.TestCase):
                 )
         self.assertEqual(exc.exception.failure_class, "instruction_runtime_invalid")
 
+    def test_run_instruction_witness_accepts_pre_execution_payload(self) -> None:
+        payload = {
+            "ciSchema": 1,
+            "witnessKind": "ci.instruction.v1",
+            "instructionId": "20260222T000001Z-invalid-normalizer",
+            "instructionRef": "instructions/20260222T000001Z-invalid-normalizer.json",
+            "instructionDigest": "instr1_demo",
+            "verdictClass": "rejected",
+            "normalizerId": None,
+            "policyDigest": "pol1_demo",
+            "results": [],
+            "failureClasses": ["instruction_invalid_normalizer"],
+            "operationalFailureClasses": ["instruction_invalid_normalizer"],
+            "semanticFailureClasses": [],
+            "rejectStage": "pre_execution",
+            "rejectReason": "normalizerId must be a non-empty string",
+        }
+        completed = subprocess.CompletedProcess(
+            args=["premath", "instruction-witness"],
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+        with patch("instruction_check_client.subprocess.run", return_value=completed) as run_mock:
+            witness = run_instruction_witness(
+                Path("."),
+                Path("instructions/demo.json"),
+                {
+                    "instructionId": "20260222T000001Z-invalid-normalizer",
+                    "instructionRef": "instructions/demo.json",
+                    "instructionDigest": "instr1_demo",
+                    "squeakSiteProfile": "local",
+                    "runStartedAt": "2026-02-22T00:00:00Z",
+                    "runFinishedAt": "2026-02-22T00:00:01Z",
+                    "runDurationMs": 1000,
+                    "results": [],
+                },
+                pre_execution_failure_class="instruction_invalid_normalizer",
+                pre_execution_reason="normalizerId must be a non-empty string",
+            )
+        self.assertEqual(witness["rejectStage"], "pre_execution")
+        cmd = run_mock.call_args[0][0]
+        self.assertIn("--pre-execution-failure-class", cmd)
+        self.assertIn("instruction_invalid_normalizer", cmd)
+        self.assertIn("--pre-execution-reason", cmd)
+
+    def test_run_instruction_witness_rejects_partial_pre_execution_args(self) -> None:
+        with self.assertRaises(InstructionWitnessError) as exc:
+            run_instruction_witness(
+                Path("."),
+                Path("instructions/demo.json"),
+                {
+                    "instructionId": "20260222T000001Z-invalid-normalizer",
+                    "instructionRef": "instructions/demo.json",
+                    "instructionDigest": "instr1_demo",
+                    "squeakSiteProfile": "local",
+                    "runStartedAt": "2026-02-22T00:00:00Z",
+                    "runFinishedAt": "2026-02-22T00:00:01Z",
+                    "runDurationMs": 1000,
+                    "results": [],
+                },
+                pre_execution_failure_class="instruction_invalid_normalizer",
+            )
+        self.assertEqual(exc.exception.failure_class, "instruction_runtime_invalid")
+
 
 if __name__ == "__main__":
     unittest.main()

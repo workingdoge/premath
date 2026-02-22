@@ -9,7 +9,8 @@ mod proposal;
 pub use instruction::{
     ExecutedInstructionCheck, InstructionError, InstructionProposalIngest, InstructionTypingPolicy,
     InstructionWitness, InstructionWitnessRuntime, ValidatedInstructionEnvelope,
-    ValidatedInstructionProposal, build_instruction_witness, validate_instruction_envelope_payload,
+    ValidatedInstructionProposal, build_instruction_witness, build_pre_execution_reject_witness,
+    validate_instruction_envelope_payload,
 };
 pub use proposal::{
     CanonicalProposal, ProposalBinding, ProposalDischarge, ProposalError, ProposalObligation,

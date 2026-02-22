@@ -136,8 +136,8 @@ pub struct InstructionWitness {
     pub typing_policy: InstructionTypingPolicy,
     pub intent: String,
     pub scope: Value,
-    pub normalizer_id: String,
-    pub policy_digest: String,
+    pub normalizer_id: Option<String>,
+    pub policy_digest: Option<String>,
     pub capability_claims: Vec<String>,
     pub required_checks: Vec<String>,
     pub executed_checks: Vec<String>,
@@ -150,6 +150,10 @@ pub struct InstructionWitness {
     pub run_started_at: String,
     pub run_finished_at: String,
     pub run_duration_ms: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reject_stage: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reject_reason: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proposal_ingest: Option<InstructionProposalIngest>,
 }
@@ -728,6 +732,155 @@ fn proposal_ingest_from_checked(
     })
 }
 
+fn optional_trimmed_non_empty(value: Option<&Value>) -> Option<String> {
+    value.and_then(Value::as_str).and_then(|raw| {
+        let trimmed = raw.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed.to_string())
+        }
+    })
+}
+
+fn normalized_typing_policy_from_envelope(envelope: Option<&Value>) -> InstructionTypingPolicy {
+    let Some(raw) = envelope else {
+        return InstructionTypingPolicy {
+            allow_unknown: false,
+        };
+    };
+    let Some(root) = raw.as_object() else {
+        return InstructionTypingPolicy {
+            allow_unknown: false,
+        };
+    };
+    let allow_unknown = root
+        .get("typingPolicy")
+        .and_then(Value::as_object)
+        .and_then(|policy| policy.get("allowUnknown"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false);
+    InstructionTypingPolicy { allow_unknown }
+}
+
+fn normalized_requested_checks_from_envelope(envelope: Option<&Value>) -> Vec<String> {
+    let Some(raw) = envelope else {
+        return Vec::new();
+    };
+    let Some(root) = raw.as_object() else {
+        return Vec::new();
+    };
+    let Some(values) = root.get("requestedChecks").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    values
+        .iter()
+        .filter_map(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .collect::<BTreeSet<String>>()
+        .into_iter()
+        .collect()
+}
+
+fn normalized_capability_claims_from_envelope(envelope: Option<&Value>) -> Vec<String> {
+    let Some(raw) = envelope else {
+        return Vec::new();
+    };
+    let Some(root) = raw.as_object() else {
+        return Vec::new();
+    };
+    let Some(values) = root.get("capabilityClaims").and_then(Value::as_array) else {
+        return Vec::new();
+    };
+    values
+        .iter()
+        .filter_map(|value| value.as_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+        .collect::<BTreeSet<String>>()
+        .into_iter()
+        .collect()
+}
+
+fn normalized_intent_from_envelope(envelope: Option<&Value>) -> String {
+    optional_trimmed_non_empty(
+        envelope
+            .and_then(Value::as_object)
+            .and_then(|root| root.get("intent")),
+    )
+    .unwrap_or_else(|| "(invalid envelope)".to_string())
+}
+
+fn normalized_scope_from_envelope(envelope: Option<&Value>) -> Value {
+    envelope
+        .and_then(Value::as_object)
+        .and_then(|root| root.get("scope").cloned())
+        .unwrap_or(Value::Null)
+}
+
+pub fn build_pre_execution_reject_witness(
+    envelope: Option<&Value>,
+    runtime: InstructionWitnessRuntime,
+    failure_class: &str,
+    reason: &str,
+) -> Result<InstructionWitness, InstructionError> {
+    let instruction_id = ensure_runtime_non_empty(&runtime.instruction_id, "instructionId")?;
+    let instruction_ref = ensure_runtime_non_empty(&runtime.instruction_ref, "instructionRef")?;
+    let instruction_digest =
+        ensure_runtime_non_empty(&runtime.instruction_digest, "instructionDigest")?;
+    let squeak_site_profile =
+        ensure_runtime_non_empty(&runtime.squeak_site_profile, "squeakSiteProfile")?;
+    let run_started_at = ensure_runtime_non_empty(&runtime.run_started_at, "runStartedAt")?;
+    let run_finished_at = ensure_runtime_non_empty(&runtime.run_finished_at, "runFinishedAt")?;
+    let failure_class = ensure_runtime_non_empty(failure_class, "failureClass")?;
+    let reason = ensure_runtime_non_empty(reason, "reason")?;
+
+    let normalizer_id = optional_trimmed_non_empty(
+        envelope
+            .and_then(Value::as_object)
+            .and_then(|root| root.get("normalizerId")),
+    );
+    let policy_digest = optional_trimmed_non_empty(
+        envelope
+            .and_then(Value::as_object)
+            .and_then(|root| root.get("policyDigest")),
+    );
+
+    Ok(InstructionWitness {
+        ci_schema: 1,
+        witness_kind: INSTRUCTION_WITNESS_KIND.to_string(),
+        instruction_id,
+        instruction_ref,
+        instruction_digest,
+        instruction_classification: InstructionClassification::Unknown {
+            reason: "pre_execution_invalid".to_string(),
+        },
+        typing_policy: normalized_typing_policy_from_envelope(envelope),
+        intent: normalized_intent_from_envelope(envelope),
+        scope: normalized_scope_from_envelope(envelope),
+        normalizer_id,
+        policy_digest,
+        capability_claims: normalized_capability_claims_from_envelope(envelope),
+        required_checks: normalized_requested_checks_from_envelope(envelope),
+        executed_checks: Vec::new(),
+        results: Vec::new(),
+        verdict_class: "rejected".to_string(),
+        operational_failure_classes: vec![failure_class.clone()],
+        semantic_failure_classes: Vec::new(),
+        failure_classes: vec![failure_class],
+        squeak_site_profile,
+        run_started_at,
+        run_finished_at,
+        run_duration_ms: runtime.run_duration_ms,
+        reject_stage: Some("pre_execution".to_string()),
+        reject_reason: Some(reason),
+        proposal_ingest: None,
+    })
+}
+
 pub fn build_instruction_witness(
     checked: &ValidatedInstructionEnvelope,
     runtime: InstructionWitnessRuntime,
@@ -789,8 +942,8 @@ pub fn build_instruction_witness(
         typing_policy: checked.typing_policy.clone(),
         intent: checked.intent.clone(),
         scope: checked.scope.clone(),
-        normalizer_id: checked.normalizer_id.clone(),
-        policy_digest: checked.policy_digest.clone(),
+        normalizer_id: Some(checked.normalizer_id.clone()),
+        policy_digest: Some(checked.policy_digest.clone()),
         capability_claims: checked.capability_claims.clone(),
         required_checks: checked.requested_checks.clone(),
         executed_checks,
@@ -803,6 +956,8 @@ pub fn build_instruction_witness(
         run_started_at,
         run_finished_at,
         run_duration_ms: runtime.run_duration_ms,
+        reject_stage: None,
+        reject_reason: None,
         proposal_ingest: proposal_ingest_from_checked(checked.proposal.as_ref()),
     })
 }
@@ -1200,5 +1355,57 @@ mod tests {
                 .failure_classes
         );
         assert_eq!(witness.failure_classes, witness.semantic_failure_classes);
+    }
+
+    #[test]
+    fn build_pre_execution_reject_witness_preserves_invalid_envelope_projection() {
+        let envelope = json!({
+            "schema": 1,
+            "intent": "  ",
+            "scope": {"kind": "repo"},
+            "policyDigest": "pol1_demo",
+            "requestedChecks": ["ci-wiring-check", "ci-wiring-check", "   "],
+            "typingPolicy": {
+                "allowUnknown": true
+            },
+            "capabilityClaims": ["capabilities.instruction_typing", "capabilities.instruction_typing"]
+        });
+
+        let witness = build_pre_execution_reject_witness(
+            Some(&envelope),
+            InstructionWitnessRuntime {
+                instruction_id: "20260222T000001Z-invalid-normalizer".to_string(),
+                instruction_ref: "instructions/20260222T000001Z-invalid-normalizer.json"
+                    .to_string(),
+                instruction_digest: "instr1_demo".to_string(),
+                squeak_site_profile: "local".to_string(),
+                run_started_at: "2026-02-22T00:00:00Z".to_string(),
+                run_finished_at: "2026-02-22T00:00:01Z".to_string(),
+                run_duration_ms: 1000,
+                results: Vec::new(),
+            },
+            "instruction_invalid_normalizer",
+            "normalizerId must be a non-empty string",
+        )
+        .expect("pre-execution witness should build");
+
+        assert_eq!(witness.verdict_class, "rejected");
+        assert_eq!(
+            witness.operational_failure_classes,
+            vec!["instruction_invalid_normalizer".to_string()]
+        );
+        assert_eq!(witness.reject_stage, Some("pre_execution".to_string()));
+        assert_eq!(
+            witness.reject_reason,
+            Some("normalizerId must be a non-empty string".to_string())
+        );
+        assert_eq!(witness.normalizer_id, None);
+        assert_eq!(witness.policy_digest, Some("pol1_demo".to_string()));
+        assert_eq!(witness.intent, "(invalid envelope)".to_string());
+        assert_eq!(witness.required_checks, vec!["ci-wiring-check".to_string()]);
+        assert_eq!(
+            witness.capability_claims,
+            vec!["capabilities.instruction_typing".to_string()]
+        );
     }
 }

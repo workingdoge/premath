@@ -230,14 +230,19 @@ def _validate_witness_payload(payload: Any) -> Dict[str, Any]:
         "instructionDigest",
         "witnessKind",
         "verdictClass",
-        "normalizerId",
-        "policyDigest",
     )
     for key in required_string_fields:
         if not isinstance(payload.get(key), str) or not payload.get(key):
             raise InstructionWitnessError(
                 "instruction_runtime_invalid",
                 f"instruction-witness payload missing {key}",
+            )
+    for key in ("normalizerId", "policyDigest"):
+        value = payload.get(key)
+        if value is not None and (not isinstance(value, str) or not value):
+            raise InstructionWitnessError(
+                "instruction_runtime_invalid",
+                f"instruction-witness payload {key} must be a non-empty string or null",
             )
     if not isinstance(payload.get("results"), list):
         raise InstructionWitnessError(
@@ -259,12 +264,39 @@ def _validate_witness_payload(payload: Any) -> Dict[str, Any]:
             "instruction_runtime_invalid",
             "instruction-witness payload semanticFailureClasses must be a list",
         )
+    reject_stage = payload.get("rejectStage")
+    reject_reason = payload.get("rejectReason")
+    if reject_stage is not None:
+        if not isinstance(reject_stage, str) or not reject_stage:
+            raise InstructionWitnessError(
+                "instruction_runtime_invalid",
+                "instruction-witness payload rejectStage must be a non-empty string when present",
+            )
+        if not isinstance(reject_reason, str) or not reject_reason:
+            raise InstructionWitnessError(
+                "instruction_runtime_invalid",
+                "instruction-witness payload rejectReason must be a non-empty string when rejectStage is present",
+            )
+    elif reject_reason is not None:
+        raise InstructionWitnessError(
+            "instruction_runtime_invalid",
+            "instruction-witness payload rejectReason requires rejectStage",
+        )
     return payload
 
 
 def run_instruction_witness(
-    root: Path, instruction_path: Path, runtime_payload: Dict[str, Any]
+    root: Path,
+    instruction_path: Path,
+    runtime_payload: Dict[str, Any],
+    pre_execution_failure_class: str | None = None,
+    pre_execution_reason: str | None = None,
 ) -> Dict[str, Any]:
+    if (pre_execution_failure_class is None) ^ (pre_execution_reason is None):
+        raise InstructionWitnessError(
+            "instruction_runtime_invalid",
+            "pre_execution_failure_class and pre_execution_reason must be provided together",
+        )
     with tempfile.NamedTemporaryFile(
         mode="w", suffix=".json", delete=False, encoding="utf-8"
     ) as runtime_file:
@@ -285,6 +317,15 @@ def run_instruction_witness(
             str(root),
             "--json",
         ]
+        if pre_execution_failure_class is not None:
+            cmd.extend(
+                [
+                    "--pre-execution-failure-class",
+                    pre_execution_failure_class,
+                    "--pre-execution-reason",
+                    pre_execution_reason or "",
+                ]
+            )
         completed = subprocess.run(
             cmd,
             cwd=root,
@@ -311,6 +352,15 @@ def run_instruction_witness(
                     str(root),
                     "--json",
                 ]
+                if pre_execution_failure_class is not None:
+                    cmd.extend(
+                        [
+                            "--pre-execution-failure-class",
+                            pre_execution_failure_class,
+                            "--pre-execution-reason",
+                            pre_execution_reason or "",
+                        ]
+                    )
                 completed = subprocess.run(
                     cmd,
                     cwd=root,

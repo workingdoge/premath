@@ -109,115 +109,6 @@ def _normalized_instruction_digest(path: Path, envelope: Dict[str, Any] | None) 
     return "instr1_" + hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _normalized_typing_policy(envelope: Dict[str, Any] | None) -> Dict[str, Any]:
-    if envelope is None:
-        return {"allowUnknown": False}
-    raw_policy = envelope.get("typingPolicy")
-    if not isinstance(raw_policy, dict):
-        return {"allowUnknown": False}
-    allow_unknown = raw_policy.get("allowUnknown", False)
-    if not isinstance(allow_unknown, bool):
-        return {"allowUnknown": False}
-    return {"allowUnknown": allow_unknown}
-
-
-def _normalized_requested_checks(envelope: Dict[str, Any] | None) -> List[str]:
-    if envelope is None:
-        return []
-    raw = envelope.get("requestedChecks", [])
-    if not isinstance(raw, list):
-        return []
-    out: List[str] = []
-    for item in raw:
-        if isinstance(item, str) and item.strip():
-            out.append(item.strip())
-    return sorted(set(out))
-
-
-def _normalized_capability_claims(envelope: Dict[str, Any] | None) -> List[str]:
-    if envelope is None:
-        return []
-    raw = envelope.get("capabilityClaims", [])
-    if not isinstance(raw, list):
-        return []
-    out: List[str] = []
-    for item in raw:
-        if isinstance(item, str) and item.strip():
-            out.append(item.strip())
-    return sorted(set(out))
-
-
-def _string_or_none(value: Any) -> str | None:
-    if isinstance(value, str) and value.strip():
-        return value.strip()
-    return None
-
-
-def write_pre_execution_reject_witness(
-    root: Path,
-    out_dir: Path,
-    instruction_path: Path,
-    instruction_id: str,
-    envelope: Dict[str, Any] | None,
-    failure_class: str,
-    reason: str,
-    started_at: datetime,
-) -> Path:
-    rel_instruction_ref = (
-        str(instruction_path.relative_to(root))
-        if instruction_path.is_relative_to(root)
-        else str(instruction_path)
-    )
-    finished_at = datetime.now(timezone.utc)
-
-    intent = _string_or_none(envelope.get("intent")) if envelope is not None else None
-    if intent is None:
-        intent = "(invalid envelope)"
-
-    witness = {
-        "ciSchema": 1,
-        "witnessKind": INSTRUCTION_WITNESS_KIND,
-        "instructionId": instruction_id,
-        "instructionRef": rel_instruction_ref,
-        "instructionDigest": _normalized_instruction_digest(instruction_path, envelope),
-        "instructionClassification": {
-            "state": "unknown",
-            "reason": "pre_execution_invalid",
-        },
-        "typingPolicy": _normalized_typing_policy(envelope),
-        "intent": intent,
-        "scope": envelope.get("scope") if envelope is not None else None,
-        "normalizerId": _string_or_none(envelope.get("normalizerId")) if envelope is not None else None,
-        "policyDigest": _string_or_none(envelope.get("policyDigest")) if envelope is not None else None,
-        "capabilityClaims": _normalized_capability_claims(envelope),
-        "requiredChecks": _normalized_requested_checks(envelope),
-        "executedChecks": [],
-        "results": [],
-        "verdictClass": "rejected",
-        "operationalFailureClasses": [failure_class],
-        "semanticFailureClasses": [],
-        "failureClasses": [failure_class],
-        "rejectStage": "pre_execution",
-        "rejectReason": reason,
-        "squeakSiteProfile": os.environ.get(
-            "PREMATH_SQUEAK_SITE_PROFILE",
-            os.environ.get("PREMATH_EXECUTOR_PROFILE", "local"),
-        ),
-        "runStartedAt": started_at.isoformat(),
-        "runFinishedAt": finished_at.isoformat(),
-        "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
-    }
-
-    if not out_dir.is_absolute():
-        out_dir = (root / out_dir).resolve()
-    out_dir.mkdir(parents=True, exist_ok=True)
-    out_path = out_dir / f"{instruction_id}.json"
-    with out_path.open("w", encoding="utf-8") as f:
-        json.dump(witness, f, indent=2, ensure_ascii=False)
-        f.write("\n")
-    return out_path
-
-
 def run_check(root: Path, check_id: str) -> Dict[str, Any]:
     cmd = ["sh", str(root / "tools" / "ci" / "run_gate.sh"), check_id]
     started = time.perf_counter()
@@ -260,16 +151,52 @@ def main() -> int:
             raw_envelope = None
         invalid = classify_invalid_envelope(exc)
         fallback_instruction_id = fallback_instruction_id_from_path(instruction_path)
-        reject_path = write_pre_execution_reject_witness(
-            root=root,
-            out_dir=args.out_dir,
-            instruction_path=instruction_path,
-            instruction_id=fallback_instruction_id,
-            envelope=raw_envelope,
-            failure_class=invalid["failureClass"],
-            reason=invalid["reason"],
-            started_at=started_at,
+        instruction_digest = _normalized_instruction_digest(instruction_path, raw_envelope)
+        rel_instruction_ref = (
+            str(instruction_path.relative_to(root))
+            if instruction_path.is_relative_to(root)
+            else str(instruction_path)
         )
+        squeak_site_profile = os.environ.get(
+            "PREMATH_SQUEAK_SITE_PROFILE",
+            os.environ.get("PREMATH_EXECUTOR_PROFILE", "local"),
+        )
+        finished_at = datetime.now(timezone.utc)
+        runtime_payload = {
+            "instructionId": fallback_instruction_id,
+            "instructionRef": rel_instruction_ref,
+            "instructionDigest": instruction_digest,
+            "squeakSiteProfile": squeak_site_profile,
+            "runStartedAt": started_at.isoformat(),
+            "runFinishedAt": finished_at.isoformat(),
+            "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
+            "results": [],
+        }
+        try:
+            witness = run_instruction_witness(
+                root,
+                instruction_path,
+                runtime_payload,
+                pre_execution_failure_class=invalid["failureClass"],
+                pre_execution_reason=invalid["reason"],
+            )
+        except InstructionWitnessError as witness_error:
+            print(
+                (
+                    "[error] instruction witness build failed: "
+                    f"{witness_error.failure_class}: {witness_error.reason}"
+                ),
+                file=sys.stderr,
+            )
+            return 2
+        out_dir = args.out_dir
+        if not out_dir.is_absolute():
+            out_dir = (root / out_dir).resolve()
+        out_dir.mkdir(parents=True, exist_ok=True)
+        reject_path = out_dir / f"{fallback_instruction_id}.json"
+        with reject_path.open("w", encoding="utf-8") as f:
+            json.dump(witness, f, indent=2, ensure_ascii=False)
+            f.write("\n")
         print(
             (
                 "[error] invalid instruction envelope: "

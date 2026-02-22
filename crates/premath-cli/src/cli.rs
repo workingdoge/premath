@@ -279,6 +279,14 @@ pub enum Commands {
         #[arg(long)]
         runtime: String,
 
+        /// Optional pre-execution reject failure class (invalid-envelope flow)
+        #[arg(long)]
+        pre_execution_failure_class: Option<String>,
+
+        /// Optional pre-execution reject reason (invalid-envelope flow)
+        #[arg(long)]
+        pre_execution_reason: Option<String>,
+
         /// Repository root used for policy artifact resolution
         #[arg(long, default_value = ".")]
         repo_root: String,
