@@ -10,6 +10,7 @@ __pycache__/
 node_modules/
 .idea/
 .vscode/
+.claude/
 .venv/
 venv/
 .terraform/
