@@ -56,11 +56,15 @@ claim it asserts.
 This claim means the implementation’s chosen model/host satisfies the semantic laws in
 `draft/PREMATH-KERNEL`.
 
-This bundle does not (yet) standardize a universal cross-host vector suite for the kernel
+This bundle does not standardize a universal host-independent proof artifact for the kernel
 claim alone. Implementations SHOULD substantiate kernel conformance by one of:
 
 - a proof-assistant formalization of the kernel laws for the chosen host, or
 - a published, reproducible test suite specific to the chosen `(𝒞, J, 𝒱, Def)` model.
+
+This repository additionally publishes a canonical cross-model kernel profile vector
+suite (`tests/conformance/fixtures/kernel-profile/`) for deterministic scenario
+comparison across the semantic toy and KCIR toy evidence surfaces.
 
 (Interop claims below *do* have canonical vectors.)
 
@@ -194,6 +198,7 @@ A repository SHOULD organize vectors as:
 
 - `tests/conformance/fixtures/interop-core/{golden,adversarial}/`
 - `tests/conformance/fixtures/gate/{golden,adversarial}/`
+- `tests/conformance/fixtures/kernel-profile/{golden,adversarial}/`
 - `tests/conformance/fixtures/capabilities/<capability-id>/{golden,adversarial,invariance}/`
 
 This repository's merge-gated conformance surface executes:
@@ -205,6 +210,7 @@ The fixture-suite runner executes the executable suites:
 - `python3 tools/conformance/run_interop_core_vectors.py`
 - `python3 tools/conformance/run_gate_vectors.py`
 - `python3 tools/conformance/run_witness_id_vectors.py`
+- `python3 tools/conformance/run_kernel_profile_vectors.py`
 - `python3 tools/conformance/run_capability_vectors.py`
 
 Golden vectors MUST verify successfully.

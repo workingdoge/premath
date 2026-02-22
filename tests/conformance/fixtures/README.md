@@ -5,6 +5,7 @@ Suggested layout (from `draft/CONFORMANCE.md`):
 - `interop-core/{golden,adversarial}`
 - `gate/{golden,adversarial}`
 - `witness-id/{golden,adversarial}`
+- `kernel-profile/{golden,adversarial}`
 - `doctrine-inf/{golden,adversarial}`
 - `capabilities/<capability-id>/{golden,adversarial,invariance}`
 

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "suiteId": "kernel-profile",
+  "vectorId": "golden/descent_sheaf_bits_accept",
+  "artifacts": {
+    "scenarioId": "golden_descent_sheaf_bits"
+  }
+}

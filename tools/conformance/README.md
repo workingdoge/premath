@@ -9,6 +9,7 @@ Runs the executable conformance fixture suites through one command surface:
 - `interop-core` (`run_interop_core_vectors.py`)
 - `gate` (`run_gate_vectors.py`)
 - `witness-id` (`run_witness_id_vectors.py`)
+- `kernel-profile` (`run_kernel_profile_vectors.py`)
 - `capabilities` (`run_capability_vectors.py`)
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
@@ -163,6 +164,28 @@ Run:
 
 ```bash
 python3 tools/conformance/run_witness_id_vectors.py
+```
+
+## `run_kernel_profile_vectors.py`
+
+Runs canonical cross-model kernel profile vectors in:
+
+- `tests/conformance/fixtures/kernel-profile/`
+
+Checks include deterministic semantic outcome parity for shared scenarios across:
+
+- semantic toy fixtures (`tests/toy/fixtures`)
+- KCIR toy fixtures (`tests/kcir_toy/fixtures`)
+
+The stable compared projection is:
+
+- `result`
+- `failures[].{class, lawRef, witnessId}`
+
+Run:
+
+```bash
+python3 tools/conformance/run_kernel_profile_vectors.py
 ```
 
 ## `check_doctrine_site.py`

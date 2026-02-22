@@ -727,3 +727,35 @@ declaration meaning, not just declaration presence.
   doctrine-inf semantic boundary vectors.
 - `draft/SPEC-TRACEABILITY` marks `DOCTRINE-INF.md` as `covered`.
 - Open traceability upgrades continue under `T-KERNEL-01`.
+
+---
+
+## 2026-02-22 — Decision 0026: Execute T-KERNEL-01 with cross-model kernel profile vectors
+
+### Decision
+Implement and merge a canonical cross-model kernel profile vector suite under
+`tests/conformance/fixtures/kernel-profile/` with deterministic runner
+`tools/conformance/run_kernel_profile_vectors.py`, and wire it into
+`mise run conformance-run` via the cached fixture-suite runner.
+
+Covered kernel profile checks:
+
+- stable semantic result parity (`accepted|rejected`) across toy and KCIR toy
+  evidence surfaces for shared scenarios,
+- stable failure tuple parity (`class`, `lawRef`, `witnessId`) across both
+  surfaces for rejected scenarios,
+- deterministic expected-outcome validation for each canonical vector.
+
+### Rationale
+`PREMATH-KERNEL.md` coverage previously remained `instrumented` through host
+tests and toy suites without a canonical cross-model profile for reproducible
+comparison. `T-KERNEL-01` required a dedicated deterministic conformance vector
+surface that compares kernel-law outcomes across multiple evidence
+representations.
+
+### Consequences
+- `mise run conformance-run` now executes `kernel-profile` vectors alongside
+  interop-core, gate, witness-id, and capability suites under KCIR-style cache
+  bindings.
+- `draft/SPEC-TRACEABILITY` marks `PREMATH-KERNEL.md` as `covered`.
+- The traceability target backlog (`T-*-*`) is currently empty.

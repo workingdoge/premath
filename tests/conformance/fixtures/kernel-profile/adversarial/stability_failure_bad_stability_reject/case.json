@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "suiteId": "kernel-profile",
+  "vectorId": "adversarial/stability_failure_bad_stability_reject",
+  "artifacts": {
+    "scenarioId": "adversarial_stability_failure_bad_stability"
+  }
+}

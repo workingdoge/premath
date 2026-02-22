@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "suiteId": "kernel-profile",
+  "vectorId": "adversarial/locality_failure_partial_restrict_reject",
+  "artifacts": {
+    "scenarioId": "adversarial_locality_failure_partial_restrict"
+  }
+}

@@ -87,6 +87,20 @@ SUITES: Tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        suite_id="kernel-profile",
+        domain="conformance.kernel-profile",
+        command=("python3", "tools/conformance/run_kernel_profile_vectors.py"),
+        input_paths=(
+            ROOT / "tools" / "conformance" / "run_fixture_suites.py",
+            ROOT / "tools" / "conformance" / "run_kernel_profile_vectors.py",
+            ROOT / "tests" / "conformance" / "fixtures" / "kernel-profile",
+            ROOT / "tests" / "toy" / "fixtures",
+            ROOT / "tests" / "kcir_toy" / "fixtures",
+            ROOT / "tools" / "toy",
+            ROOT / "tools" / "kcir_toy",
+        ),
+    ),
+    Suite(
         suite_id="capabilities",
         domain="conformance.capabilities",
         command=("python3", "tools/conformance/run_capability_vectors.py"),

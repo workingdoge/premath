@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "result": "accepted",
+  "expectedOutcome": {
+    "result": "rejected",
+    "failures": [
+      {
+        "class": "glue_non_contractible",
+        "lawRef": "GATE-3.4",
+        "witnessId": "w1_c0kubjophjuo3h5cr03elvc75606hoba3v4ksii3ktvpgr0enh9g"
+      }
+    ]
+  }
+}

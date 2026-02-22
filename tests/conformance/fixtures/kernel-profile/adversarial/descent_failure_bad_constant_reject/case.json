@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "suiteId": "kernel-profile",
+  "vectorId": "adversarial/descent_failure_bad_constant_reject",
+  "artifacts": {
+    "scenarioId": "adversarial_descent_failure_bad_constant"
+  }
+}

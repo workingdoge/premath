@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "result": "accepted",
+  "expectedOutcome": {
+    "result": "rejected",
+    "failures": [
+      {
+        "class": "stability_failure",
+        "lawRef": "GATE-3.1",
+        "witnessId": "w1_l1v24u75j3sudbdnhflh4l6sb29ii02vosfj2cm5m3qh0rg8ab30"
+      }
+    ]
+  }
+}

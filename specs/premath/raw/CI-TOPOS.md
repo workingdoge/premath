@@ -76,7 +76,7 @@ The v0 baseline check set is:
 5. conformance stub invariance
 6. spec traceability matrix integrity check
 7. doctrine-site + doctrine-inf semantic boundary checks
-8. executable conformance fixture suites (interop-core, gate, witness-id, capabilities)
+8. executable conformance fixture suites (interop-core, gate, witness-id, kernel-profile, capabilities)
 
 Canonical local command:
 

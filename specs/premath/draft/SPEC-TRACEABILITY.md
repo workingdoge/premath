@@ -47,7 +47,7 @@ Purpose:
 | Draft spec | Primary executable surface | Status | Coverage target |
 | --- | --- | --- | --- |
 | `DOCTRINE-INF.md` | `mise run doctrine-check` (declaration-set + edge coherence + reachability + doctrine-inf semantic boundary vectors) | covered | - |
-| `PREMATH-KERNEL.md` | `cargo test -p premath-kernel`; `mise run test-toy`; `mise run test-kcir-toy` | instrumented | `T-KERNEL-01` |
+| `PREMATH-KERNEL.md` | `python3 tools/conformance/run_kernel_profile_vectors.py`; `cargo test -p premath-kernel`; `mise run test-toy`; `mise run test-kcir-toy` | covered | - |
 | `KCIR-CORE.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`kcir_domain_table_*`) | covered | - |
 | `REF-BINDING.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`ref_projection_and_verify_*`) | covered | - |
 | `NF.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`nf_*`) + `capabilities.normal_forms` + kernel tests | covered | - |
@@ -68,10 +68,7 @@ Purpose:
 
 ## 4. Coverage Targets (Open Gaps/Upgrades)
 
-### `T-KERNEL-01` Cross-Model Kernel Vector Profile
-
-Define a canonical kernel conformance vector profile for reproducible
-cross-model comparison (in addition to host-specific proofs/tests).
+No open coverage targets currently.
 
 ## 5. Maintenance Rules
 

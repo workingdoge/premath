@@ -1,0 +1,12 @@
+{
+  "suiteId": "kernel-profile",
+  "vectors": [
+    "golden/stability_sheaf_bits_accept",
+    "golden/descent_sheaf_bits_accept",
+    "golden/descent_sheaf_bits_cocycle_accept",
+    "adversarial/locality_failure_partial_restrict_reject",
+    "adversarial/stability_failure_bad_stability_reject",
+    "adversarial/descent_failure_bad_constant_reject",
+    "adversarial/glue_non_contractible_non_separated_reject"
+  ]
+}
