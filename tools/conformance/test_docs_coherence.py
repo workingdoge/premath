@@ -145,6 +145,21 @@ rollback MUST NOT introduce a second authority artifact,
         )
         self.assertEqual(missing, [])
 
+    def test_unification_stage1_profile_markers_all_present(self) -> None:
+        text = """
+#### 10.6.1 Stage 1 typed-core profile (minimum)
+one profile kind identifier (for example `ev.stage1.core.v1`),
+one canonical typed-core identity function over canonicalized profile bytes
+#### 10.6.2 Stage 1 dual-projection parity contract
+`unification.evidence_stage1.parity.missing`
+`unification.evidence_stage1.parity.mismatch`
+`unification.evidence_stage1.parity.unbound`
+"""
+        missing = check_docs_coherence.find_missing_markers(
+            text, check_docs_coherence.UNIFICATION_STAGE1_PROFILE_MARKERS
+        )
+        self.assertEqual(missing, [])
+
     def test_span_square_composition_markers_all_present(self) -> None:
         text = """
 ## 4. Composition Law Surface (Bicategory Profile)

@@ -254,7 +254,8 @@ Lane ownership note:
   factorization boundary in §10.5).
 - Typed evidence-object migration MUST follow staged internalization gates in
   `draft/UNIFICATION-DOCTRINE` §10.6 (single authority artifact per stage with
-  deterministic compatibility/rollback boundaries).
+  deterministic compatibility/rollback boundaries). Stage 1 typed-core parity
+  claims MUST use the fail-closed class boundary in §10.6.2.
 
 ## 6. Suggested reading order
 

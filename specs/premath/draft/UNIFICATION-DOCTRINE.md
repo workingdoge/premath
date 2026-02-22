@@ -387,6 +387,44 @@ Rollback requirements:
 3. rollback conditions and target stage MUST be decision-logged and issue-linked
    before re-attempting promotion.
 
+#### 10.6.1 Stage 1 typed-core profile (minimum)
+
+When Stage 1 is claimed, implementations MUST define one deterministic
+typed-core projection profile with:
+
+1. one profile kind identifier (for example `ev.stage1.core.v1`),
+2. deterministic binding fields:
+   - `normalizerId`
+   - `policyDigest`
+3. one canonical typed-core identity function over canonicalized profile bytes
+   (an `ev1_*`-style prefix is RECOMMENDED),
+4. one deterministic projection from current authority payload to the Stage 1
+   typed-core profile.
+
+The Stage 1 typed-core profile is checker-facing parity material; it MUST NOT
+be treated as a second authority artifact while Stage 1 is active.
+
+#### 10.6.2 Stage 1 dual-projection parity contract
+
+Stage 1 parity checks MUST evaluate one deterministic comparison tuple for fixed
+canonical inputs:
+
+- authority payload digest,
+- typed-core projection digest/ref,
+- deterministic binding tuple (`normalizerId`, `policyDigest`).
+
+Implementations MUST reject fail closed on Stage 1 parity errors with at least:
+
+- `unification.evidence_stage1.parity.missing`
+  (missing authority->typed-core route),
+- `unification.evidence_stage1.parity.mismatch`
+  (deterministic parity comparison failed),
+- `unification.evidence_stage1.parity.unbound`
+  (missing deterministic binding context for parity comparison).
+
+Equivalent implementation-local class names are permitted only when a
+deterministic mapping to these classes is documented and replay-stable.
+
 ## 11. Cross-layer Obstruction Algebra (v0)
 
 Implementations MAY project failure classes into one typed obstruction algebra

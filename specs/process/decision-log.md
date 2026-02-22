@@ -3176,3 +3176,41 @@ preserving the minimum-encoding authority boundary.
 - Compatibility windows remain lifecycle-governed rather than ad-hoc.
 - Stage failures are handled by deterministic rollback, not parallel authority
   execution paths.
+
+---
+
+## 2026-02-22 — Decision 0107: Define Stage 1 typed-core profile and parity class boundary for `Ev`
+
+### Decision
+Add a minimal normative Stage 1 profile/class contract under
+`draft/UNIFICATION-DOCTRINE` §10.6 to make typed-core dual-projection claims
+machine-checkable.
+
+Implemented scope:
+
+1. add `§10.6.1 Stage 1 typed-core profile (minimum)` requiring:
+   - one profile kind identifier,
+   - deterministic binding fields (`normalizerId`, `policyDigest`),
+   - one canonical typed-core identity function,
+   - one deterministic authority->typed-core projection.
+2. add `§10.6.2 Stage 1 dual-projection parity contract` requiring deterministic
+   parity tuple evaluation and fail-closed rejection classes:
+   - `unification.evidence_stage1.parity.missing`
+   - `unification.evidence_stage1.parity.mismatch`
+   - `unification.evidence_stage1.parity.unbound`
+3. clarify in `draft/SPEC-INDEX` lane guidance that Stage 1 parity claims are
+   bound to `§10.6.2` fail-closed class boundary.
+4. extend docs-coherence checks/tests to enforce marker-level presence for the
+   new Stage 1 profile and class contract text.
+
+### Rationale
+`§10.6` already defined staged internalization, but Stage 1 lacked explicit
+minimal profile fields and deterministic parity error vocabulary. That left the
+first implementation step underspecified.
+
+### Consequences
+- Stage 1 now has a precise minimum contract without introducing parallel
+  semantic authority.
+- Implementations can assert/reject Stage 1 parity deterministically with one
+  stable class surface.
+- Docs coherence checks now fail closed if Stage 1 profile/class clauses drift.

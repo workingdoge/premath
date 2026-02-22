@@ -55,6 +55,15 @@ UNIFICATION_INTERNALIZATION_MARKERS: Tuple[str, ...] = (
     "Rollback requirements:",
     "rollback MUST NOT introduce a second authority artifact,",
 )
+UNIFICATION_STAGE1_PROFILE_MARKERS: Tuple[str, ...] = (
+    "#### 10.6.1 Stage 1 typed-core profile (minimum)",
+    "one profile kind identifier (for example `ev.stage1.core.v1`),",
+    "one canonical typed-core identity function over canonicalized profile bytes",
+    "#### 10.6.2 Stage 1 dual-projection parity contract",
+    "`unification.evidence_stage1.parity.missing`",
+    "`unification.evidence_stage1.parity.mismatch`",
+    "`unification.evidence_stage1.parity.unbound`",
+)
 SPEC_INDEX_UNIFIED_FACTORIZATION_RE = re.compile(
     r"Unified evidence factoring MUST route control-plane artifact families through\s+"
     r"one attested surface"
@@ -358,6 +367,11 @@ def main() -> int:
         errors.append(
             f"UNIFICATION-DOCTRINE missing typed evidence internalization marker: {marker}"
         )
+    missing_stage1_markers = find_missing_markers(
+        unification_text, UNIFICATION_STAGE1_PROFILE_MARKERS
+    )
+    for marker in missing_stage1_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing Stage 1 profile marker: {marker}")
     missing_span_square_markers = find_missing_markers(
         span_square_text, SPAN_SQUARE_COMPOSITION_MARKERS
     )

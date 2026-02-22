@@ -35,9 +35,9 @@ Execute Stage 1 (`typed-core dual projection`) with:
 
 ## 3.1 Contract surfaces
 
-- [ ] Add Stage 1 typed-core profile section under normative `Ev` contract path.
-- [ ] Add deterministic field-level binding requirements for parity inputs.
-- [ ] Define canonical parity result payload shape.
+- [x] Add Stage 1 typed-core profile section under normative `Ev` contract path.
+- [x] Add deterministic field-level binding requirements for parity inputs.
+- [x] Define canonical parity result payload shape.
 
 ## 3.2 Checker wiring
 
