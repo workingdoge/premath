@@ -106,6 +106,30 @@ run = [
         missing = check_docs_coherence.find_missing_markers(text, ("alpha", "beta"))
         self.assertEqual(missing, [])
 
+    def test_unification_evidence_markers_all_present(self) -> None:
+        text = """
+### 10.2 Universal factoring rule
+there MUST be one deterministic natural transformation:
+`eta_F : F => Ev`
+### 10.5 Fail-closed factorization boundary
+`unification.evidence_factorization.missing`
+`unification.evidence_factorization.ambiguous`
+`unification.evidence_factorization.unbound`
+"""
+        missing = check_docs_coherence.find_missing_markers(
+            text, check_docs_coherence.UNIFICATION_EVIDENCE_MARKERS
+        )
+        self.assertEqual(missing, [])
+
+    def test_spec_index_unified_factoring_regex_matches(self) -> None:
+        text = (
+            "Unified evidence factoring MUST route control-plane artifact families through\n"
+            "one attested surface."
+        )
+        self.assertIsNotNone(
+            check_docs_coherence.SPEC_INDEX_UNIFIED_FACTORIZATION_RE.search(text)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

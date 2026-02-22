@@ -37,6 +37,19 @@ EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
     "python3 tools/conformance/check_doctrine_site.py",
     "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 )
+UNIFICATION_EVIDENCE_MARKERS: Tuple[str, ...] = (
+    "### 10.2 Universal factoring rule",
+    "there MUST be one deterministic natural transformation:",
+    "`eta_F : F => Ev`",
+    "### 10.5 Fail-closed factorization boundary",
+    "`unification.evidence_factorization.missing`",
+    "`unification.evidence_factorization.ambiguous`",
+    "`unification.evidence_factorization.unbound`",
+)
+SPEC_INDEX_UNIFIED_FACTORIZATION_RE = re.compile(
+    r"Unified evidence factoring MUST route control-plane artifact families through\s+"
+    r"one attested surface"
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -205,6 +218,7 @@ def main() -> int:
     conformance_readme = root / "tools" / "conformance" / "README.md"
     ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
+    unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
@@ -225,6 +239,7 @@ def main() -> int:
     conformance_readme_caps = set(BACKTICK_CAP_RE.findall(load_text(conformance_readme)))
 
     spec_index_text = load_text(spec_index)
+    unification_text = load_text(unification_doctrine)
     section_54 = extract_heading_section(spec_index_text, "5.4")
     section_55 = extract_heading_section(spec_index_text, "5.5")
     spec_index_caps = set(BACKTICK_CAP_RE.findall(section_54))
@@ -266,6 +281,15 @@ def main() -> int:
     missing_raw_lifecycle_markers = find_missing_markers(section_55, SPEC_INDEX_RAW_LIFECYCLE_MARKERS)
     for marker in missing_raw_lifecycle_markers:
         errors.append(f"SPEC-INDEX §5.5 raw lifecycle policy missing marker: {marker}")
+    if SPEC_INDEX_UNIFIED_FACTORIZATION_RE.search(spec_index_text) is None:
+        errors.append(
+            "SPEC-INDEX lane ownership note must require Unified Evidence factoring as MUST"
+        )
+    missing_unification_markers = find_missing_markers(
+        unification_text, UNIFICATION_EVIDENCE_MARKERS
+    )
+    for marker in missing_unification_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing Unified Evidence marker: {marker}")
 
     mise_text = load_text(mise_toml)
     baseline_commands = parse_mise_task_commands(mise_text, "baseline")

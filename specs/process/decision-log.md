@@ -2721,3 +2721,38 @@ drift and silently accumulate long-lived aliases.
   diagnostics.
 - unit coverage in `tools/ci/test_control_plane_contract.py` now includes
   mixed-epoch and overlong-runway rejection paths.
+
+---
+
+## 2026-02-22 — Decision 0095: Make Unified Evidence Plane factorization explicitly fail-closed
+
+### Decision
+Tighten `draft/UNIFICATION-DOCTRINE` Unified Evidence Plane (`§10`) to require
+explicit universal factorization semantics:
+
+1. implementations claiming Unified Evidence Plane MUST define one indexed
+   evidence family `Ev : Ctx^op -> V`,
+2. each control-plane artifact family MUST factor through one deterministic
+   natural transformation `eta_F : F => Ev`,
+3. factorization MUST be unique up to canonical projection equality for fixed
+   deterministic bindings,
+4. non-factorable or ambiguous factorization MUST reject deterministically via
+   fail-closed factorization classes.
+
+### Rationale
+The doctrine already declared one evidence surface, but wording remained partly
+advisory (`SHOULD`) and did not state the fail-closed boundary when routing is
+missing or ambiguous. Explicit factorization semantics tighten the authority
+boundary with minimum additional encoding.
+
+### Consequences
+- `draft/UNIFICATION-DOCTRINE` now defines deterministic fail-closed
+  factorization classes:
+  - `unification.evidence_factorization.missing`
+  - `unification.evidence_factorization.ambiguous`
+  - `unification.evidence_factorization.unbound`
+- `draft/SPEC-INDEX` now requires (MUST) unified evidence factoring in lane
+  ownership guidance.
+- `tools/conformance/check_docs_coherence.py` now enforces marker-level presence
+  for Unified Evidence factoring and fail-closed boundary language in normative
+  docs.

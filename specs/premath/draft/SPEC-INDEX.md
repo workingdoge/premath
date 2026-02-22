@@ -240,8 +240,9 @@ Lane ownership note:
 - Span/square commutation is a typed witness contract
   (`draft/SPAN-SQUARE-CHECKING`) that composed profiles MUST route through for
   cross-lane pullback/base-change claims.
-- Unified evidence factoring SHOULD route control-plane artifact families through
-  one attested surface (`draft/UNIFICATION-DOCTRINE` §10).
+- Unified evidence factoring MUST route control-plane artifact families through
+  one attested surface (`draft/UNIFICATION-DOCTRINE` §10, including fail-closed
+  factorization boundary in §10.5).
 
 ## 6. Suggested reading order
 

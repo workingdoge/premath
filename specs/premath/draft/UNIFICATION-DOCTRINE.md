@@ -244,8 +244,8 @@ transport obligations are composed in one implementation profile:
 
 ## 10. Unified Evidence Plane Contract (v0)
 
-To keep one authority surface while increasing expressiveness, implementations
-SHOULD model attested evidence as one context-indexed family:
+Implementations claiming the Unified Evidence Plane MUST model attested evidence
+as one context-indexed family:
 
 - `Ev : Ctx^op -> V`
 
@@ -263,12 +263,16 @@ checker outcomes.
 
 For every control-plane artifact family `F : Ctx^op -> V` that carries
 attestable output (instruction/proposal/coherence/CI/observation projections),
-there SHOULD be a deterministic natural transformation:
+there MUST be one deterministic natural transformation:
 
 - `eta_F : F => Ev`
 
 so artifact meaning factors through one evidence surface instead of parallel
 authority schemas.
+
+For fixed canonical inputs (contract bytes + repository state + deterministic
+binding context), `eta_F` MUST be unique up to canonical projection equality in
+`Ev` (no alternate authority encoding for the same artifact family output).
 
 ### 10.3 Required law set
 
@@ -288,3 +292,18 @@ When cross-lane pullback/base-change claims are surfaced in `Ev`, implementation
 MUST route commutation through typed span/square witnesses
 (`draft/SPAN-SQUARE-CHECKING`) so lane composition remains explicit and
 replayable.
+
+### 10.5 Fail-closed factorization boundary
+
+Implementations MUST reject deterministically when factorization into `Ev`
+cannot be established as a unique canonical route.
+
+Minimum fail-closed classes:
+
+- `unification.evidence_factorization.missing` (no typed `eta_F` route),
+- `unification.evidence_factorization.ambiguous` (multiple inequivalent routes),
+- `unification.evidence_factorization.unbound` (missing deterministic binding
+  context for canonical comparison).
+
+Equivalent implementation-local class names are permitted only when a
+deterministic mapping to these classes is documented and replay-stable.
