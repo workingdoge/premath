@@ -7,6 +7,7 @@ mod instruction;
 mod proposal;
 mod required;
 mod required_decide;
+mod required_projection;
 mod required_verify;
 
 pub use instruction::{
@@ -27,6 +28,11 @@ pub use required::{
 };
 pub use required_decide::{
     RequiredWitnessDecideRequest, RequiredWitnessDecideResult, decide_required_witness_request,
+};
+pub use required_projection::{
+    PROJECTION_POLICY, PROJECTION_SCHEMA, RequiredProjectionRequest, RequiredProjectionResult,
+    normalize_paths as normalize_projection_paths, project_required_checks,
+    projection_plan_payload,
 };
 pub use required_verify::{
     RequiredWitnessVerifyDerived, RequiredWitnessVerifyRequest, RequiredWitnessVerifyResult,

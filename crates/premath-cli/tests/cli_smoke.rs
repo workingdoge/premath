@@ -214,6 +214,19 @@ fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
     runtime_path
 }
 
+fn write_required_projection_input(dir: &Path, changed_paths: Vec<&str>) -> PathBuf {
+    let input = serde_json::json!({
+        "changedPaths": changed_paths
+    });
+    let input_path = dir.join("required-projection-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("projection input should serialize"),
+    )
+    .expect("required projection input should be written");
+    input_path
+}
+
 fn write_required_verify_input(dir: &Path, failed: bool) -> PathBuf {
     let runtime = write_required_runtime_input(dir, failed);
     let witness_output = run_premath([
@@ -544,6 +557,34 @@ fn required_witness_json_smoke() {
         payload["failureClasses"],
         serde_json::json!(["check_failed", "descent_failure"])
     );
+}
+
+#[test]
+fn required_projection_json_smoke() {
+    let tmp = TempDirGuard::new("required-projection-json");
+    let input =
+        write_required_projection_input(tmp.path(), vec!["crates/premath-kernel/src/lib.rs"]);
+
+    let output = run_premath([
+        OsString::from("required-projection"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["projectionPolicy"], "ci-topos-v0");
+    assert_eq!(
+        payload["changedPaths"],
+        serde_json::json!(["crates/premath-kernel/src/lib.rs"])
+    );
+    assert_eq!(
+        payload["requiredChecks"],
+        serde_json::json!(["build", "test", "test-toy", "test-kcir-toy"])
+    );
+    assert_eq!(payload["docsOnly"], false);
 }
 
 #[test]

@@ -151,6 +151,10 @@ fn main() {
             commands::required_witness::run(runtime, json)
         }
 
+        Commands::RequiredProjection { input, json } => {
+            commands::required_projection::run(input, json)
+        }
+
         Commands::RequiredWitnessVerify { input, json } => {
             commands::required_witness_verify::run(input, json)
         }

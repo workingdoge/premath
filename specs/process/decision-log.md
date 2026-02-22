@@ -1750,3 +1750,36 @@ gate paths. Required witness validation previously lived in
   from core output (`errors`, `derived`).
 - pipeline and CLI smoke surfaces now include
   `required-witness-verify` client/command tests.
+
+---
+
+## 2026-02-22 — Decision 0060: Move Delta→requiredChecks projection semantics to core `premath required-projection`
+
+### Decision
+Make required-check projection (`changedPaths -> requiredChecks + reasons +
+projectionDigest`) core-owned:
+
+- add `premath-coherence` projection evaluator
+  (`project_required_checks`, `normalize_projection_paths`) with deterministic
+  result shape,
+- add `premath-cli required-projection --input <json> --json`,
+- route `tools/ci/change_projection.py` projection evaluation through
+  `tools/ci/required_projection_client.py` and keep Python-side logic limited to
+  git delta discovery + wrapper orchestration.
+
+Also bind required-witness verification to the same projection authority by
+reusing `required_projection` logic inside `required_verify`.
+
+### Rationale
+`bd-34` requires one semantic authority path for CI gate projection surfaces.
+Projection logic previously lived in Python (`change_projection.py`) and was
+duplicated in core verification code. Moving this boundary to core removes
+parallel encodings and reduces drift risk across run/verify/decide paths.
+
+### Consequences
+- `run_required_checks.py`, `verify_required_witness.py`,
+  `decide_required.py`, and capability/conformance helpers now consume projection
+  semantics through the core command/client path.
+- `required_verify` and runtime projection now share one core implementation.
+- pipeline and CLI smoke surfaces now include required-projection client/command
+  tests.

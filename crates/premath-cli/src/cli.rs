@@ -307,6 +307,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Project changed paths to required check IDs through core checker semantics
+    RequiredProjection {
+        /// Projection input JSON path (`{changedPaths:[...]}`)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Verify one CI required witness against deterministic projection semantics
     RequiredWitnessVerify {
         /// Verify input JSON path (witness + changedPaths + optional gate payload map)

@@ -12,6 +12,7 @@ pub mod observe;
 pub mod observe_serve;
 pub mod proposal_check;
 pub mod ref_binding;
+pub mod required_projection;
 pub mod required_witness;
 pub mod required_witness_decide;
 pub mod required_witness_verify;
