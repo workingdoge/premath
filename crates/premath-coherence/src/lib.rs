@@ -915,6 +915,11 @@ fn check_transport_functoriality(
     let mut seen_vectors = BTreeSet::new();
     let mut vector_rows: Vec<Value> = Vec::new();
     let mut invariance_groups: InvarianceGroups = BTreeMap::new();
+    let mut matched_golden_count = 0usize;
+    let mut matched_adversarial_count = 0usize;
+    let mut matched_invariance_count = 0usize;
+    let mut matched_expected_accepted_count = 0usize;
+    let mut matched_expected_rejected_count = 0usize;
 
     for vector_id in &manifest.vectors {
         if !seen_vectors.insert(vector_id.clone()) {
@@ -937,6 +942,13 @@ fn check_transport_functoriality(
                 continue;
             }
         };
+        if vector_id.starts_with("golden/") {
+            matched_golden_count += 1;
+        } else if vector_id.starts_with("adversarial/") {
+            matched_adversarial_count += 1;
+        } else if vector_id.starts_with("invariance/") {
+            matched_invariance_count += 1;
+        }
         let expect_bytes = match read_bytes(&expect_path) {
             Ok(bytes) => bytes,
             Err(err) => {
@@ -979,6 +991,10 @@ fn check_transport_functoriality(
         if expected_result != "accepted" && expected_result != "rejected" {
             failures
                 .push("coherence.transport_functoriality.vector_expect_invalid_result".to_string());
+        } else if expected_result == "accepted" {
+            matched_expected_accepted_count += 1;
+        } else {
+            matched_expected_rejected_count += 1;
         }
         let expected_failure_classes =
             dedupe_sorted(expect_payload.expected_failure_classes.clone());
@@ -1044,12 +1060,35 @@ fn check_transport_functoriality(
         "coherence.transport_functoriality",
         &invariance_groups,
     );
+    if matched_golden_count == 0 {
+        failures.push("coherence.transport_functoriality.missing_golden_vector".to_string());
+    }
+    if matched_adversarial_count == 0 {
+        failures.push("coherence.transport_functoriality.missing_adversarial_vector".to_string());
+    }
+    if matched_expected_accepted_count == 0 {
+        failures
+            .push("coherence.transport_functoriality.missing_expected_accepted_vector".to_string());
+    }
+    if matched_expected_rejected_count == 0 {
+        failures
+            .push("coherence.transport_functoriality.missing_expected_rejected_vector".to_string());
+    }
 
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
         details: json!({
             "fixtureRoot": to_repo_relative_or_absolute(repo_root, &fixture_root),
             "manifestVectors": manifest.vectors,
+            "matchedVectorKinds": {
+                "golden": matched_golden_count,
+                "adversarial": matched_adversarial_count,
+                "invariance": matched_invariance_count,
+            },
+            "matchedExpectedResults": {
+                "accepted": matched_expected_accepted_count,
+                "rejected": matched_expected_rejected_count,
+            },
             "invariance": invariance_rows,
             "vectors": vector_rows,
         }),
@@ -3240,6 +3279,95 @@ mod tests {
                 .failure_classes
                 .contains(&"coherence.transport_functoriality.identity_violation".to_string())
         );
+    }
+
+    #[test]
+    fn check_transport_functoriality_requires_golden_polarity_vector() {
+        let temp = TempDirGuard::new("transport-missing-golden");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(&fixture_root, &["adversarial/only_reject"]);
+        write_transport_vector(&fixture_root, "adversarial/only_reject", "rejected");
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.transport_functoriality.missing_golden_vector".to_string())
+        );
+    }
+
+    #[test]
+    fn check_transport_functoriality_requires_adversarial_polarity_vector() {
+        let temp = TempDirGuard::new("transport-missing-adversarial");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(&fixture_root, &["golden/only_accept"]);
+        write_transport_vector(&fixture_root, "golden/only_accept", "accepted");
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(
+            evaluated.failure_classes.contains(
+                &"coherence.transport_functoriality.missing_adversarial_vector".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn check_transport_functoriality_requires_expected_accept_result_vector() {
+        let temp = TempDirGuard::new("transport-missing-expected-accept");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(
+            &fixture_root,
+            &["golden/reject_vector", "adversarial/reject_vector"],
+        );
+        write_transport_vector(&fixture_root, "golden/reject_vector", "rejected");
+        write_transport_vector(&fixture_root, "adversarial/reject_vector", "rejected");
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(evaluated.failure_classes.contains(
+            &"coherence.transport_functoriality.missing_expected_accepted_vector".to_string()
+        ));
+    }
+
+    #[test]
+    fn check_transport_functoriality_requires_expected_reject_result_vector() {
+        let temp = TempDirGuard::new("transport-missing-expected-reject");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(
+            &fixture_root,
+            &["golden/accept_vector", "adversarial/accept_vector"],
+        );
+        write_transport_vector(&fixture_root, "golden/accept_vector", "accepted");
+        write_transport_vector(&fixture_root, "adversarial/accept_vector", "accepted");
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(evaluated.failure_classes.contains(
+            &"coherence.transport_functoriality.missing_expected_rejected_vector".to_string()
+        ));
+    }
+
+    #[test]
+    fn check_transport_functoriality_accepts_when_both_polarities_present() {
+        let temp = TempDirGuard::new("transport-both-polarities");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(
+            &fixture_root,
+            &["golden/accept_vector", "adversarial/reject_vector"],
+        );
+        write_transport_vector(&fixture_root, "golden/accept_vector", "accepted");
+        write_transport_vector(&fixture_root, "adversarial/reject_vector", "rejected");
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
     }
 
     #[test]

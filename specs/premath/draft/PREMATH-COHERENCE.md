@@ -220,9 +220,13 @@ MUST reject when strict comprehension eta equalities fail on fixture rows:
 
 ### 4.15 Fixture Vector Polarity and Invariance Coverage
 
-For obligations discharged from `coherence-site` fixtures, checker input MUST
-include at least one matched `golden/` vector and at least one matched
-`adversarial/` vector for each obligation id.
+For obligations discharged from fixture families:
+
+- `coherence-site` (per obligation id), and
+- `coherence-transport` (`transport_functoriality`),
+
+checker input MUST include at least one matched `golden/` vector and at least
+one matched `adversarial/` vector per obligation scope.
 
 Checker input MUST also include semantic polarity coverage from `expect.result`:
 

@@ -2319,3 +2319,33 @@ coverage. One shared contract keeps the checker surface minimal and expressive.
   for the same semantic scenario.
 - unit coverage now includes transport invariance pair-count mismatch,
   pair-result mismatch, and passing pair cases.
+
+---
+
+## 2026-02-22 — Decision 0082: Enforce transport polarity coverage parity
+
+### Decision
+Apply site-style polarity requirements to `coherence-transport` vectors under
+`transport_functoriality`:
+
+- require at least one matched `golden/` vector,
+- require at least one matched `adversarial/` vector,
+- require at least one matched `expectedResult = accepted`,
+- require at least one matched `expectedResult = rejected`.
+
+### Rationale
+Transport checker semantics were still weaker than site semantics on polarity
+coverage. Enforcing the same minimal polarity contract closes under-specification
+without adding new surface types.
+
+### Consequences
+- transport checker now emits deterministic polarity failures aligned with site
+  vocabulary:
+  - `missing_golden_vector`
+  - `missing_adversarial_vector`
+  - `missing_expected_accepted_vector`
+  - `missing_expected_rejected_vector`
+- transport witness details now expose matched vector-kind and expected-result
+  counters.
+- unit tests now cover all four missing-polarity modes and one passing mixed
+  polarity case.
