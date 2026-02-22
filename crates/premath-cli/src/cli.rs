@@ -307,6 +307,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Verify one CI required witness against deterministic projection semantics
+    RequiredWitnessVerify {
+        /// Verify input JSON path (witness + changedPaths + optional gate payload map)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON

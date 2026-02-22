@@ -74,6 +74,7 @@
 - `cargo run --package premath-cli -- instruction-check --instruction <instruction.json> --repo-root . --json` — validate/canonicalize one instruction envelope and emit typed execution decision metadata.
 - `cargo run --package premath-cli -- instruction-witness --instruction <instruction.json> --runtime <runtime.json> --repo-root . --json` — finalize one CI instruction witness from typed instruction semantics plus executed check runtime payload.
 - `cargo run --package premath-cli -- required-witness --runtime <runtime.json> --json` — finalize one CI required witness from projection/check/gate-ref runtime payload.
+- `cargo run --package premath-cli -- required-witness-verify --input <verify_input.json> --json` — verify one CI required witness against deterministic projection semantics and emit `{errors,derived}`.
 - `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json` — evaluate typed coherence obligations and emit deterministic coherence witness output.
 - `cargo run --package premath-cli -- ref project --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --json` — project deterministic backend refs via profile-bound `project_ref`.
 - `cargo run --package premath-cli -- ref verify --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --evidence-hex <hex> --ref-scheme-id <id> --ref-params-hash <hash> --ref-domain <domain> --ref-digest <digest> --json` — verify provided refs via profile-bound `verify_ref`.

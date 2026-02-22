@@ -6,6 +6,7 @@
 mod instruction;
 mod proposal;
 mod required;
+mod required_verify;
 
 pub use instruction::{
     ExecutedInstructionCheck, InstructionError, InstructionProposalIngest, InstructionTypingPolicy,
@@ -22,6 +23,10 @@ pub use proposal::{
 pub use required::{
     ExecutedRequiredCheck, RequiredGateWitnessRef, RequiredWitness, RequiredWitnessError,
     RequiredWitnessRuntime, build_required_witness,
+};
+pub use required_verify::{
+    RequiredWitnessVerifyDerived, RequiredWitnessVerifyRequest, RequiredWitnessVerifyResult,
+    verify_required_witness_payload, verify_required_witness_request,
 };
 
 use premath_kernel::{obligation_gate_registry, obligation_gate_registry_json};

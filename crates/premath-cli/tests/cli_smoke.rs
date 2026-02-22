@@ -214,6 +214,30 @@ fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
     runtime_path
 }
 
+fn write_required_verify_input(dir: &Path, failed: bool) -> PathBuf {
+    let runtime = write_required_runtime_input(dir, failed);
+    let witness_output = run_premath([
+        OsString::from("required-witness"),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&witness_output);
+    let witness = parse_json_stdout(&witness_output);
+    let input = serde_json::json!({
+        "witness": witness,
+        "changedPaths": ["README.md"],
+        "nativeRequiredChecks": []
+    });
+    let input_path = dir.join("required-verify-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("verify input should serialize"),
+    )
+    .expect("required verify input should be written");
+    input_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -496,6 +520,39 @@ fn required_witness_json_smoke() {
         payload["failureClasses"],
         serde_json::json!(["check_failed", "descent_failure"])
     );
+}
+
+#[test]
+fn required_witness_verify_json_smoke() {
+    let tmp = TempDirGuard::new("required-witness-verify-json");
+    let input = write_required_verify_input(tmp.path(), false);
+
+    let output = run_premath([
+        OsString::from("required-witness-verify"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert!(
+        payload["errors"]
+            .as_array()
+            .expect("errors should be an array")
+            .iter()
+            .any(|row| row
+                .as_str()
+                .unwrap_or_default()
+                .contains("projectionDigest mismatch"))
+    );
+    assert!(
+        payload["derived"]["projectionDigest"]
+            .as_str()
+            .expect("projectionDigest should be string")
+            .starts_with("proj1_")
+    );
+    assert_eq!(payload["derived"]["expectedVerdict"], "accepted");
 }
 
 #[test]

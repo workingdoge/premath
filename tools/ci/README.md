@@ -39,6 +39,8 @@ native-or-fallback gate envelope emission for that check.
 
 `tools/ci/verify_required_witness.py` verifies `ci.required` artifacts against
 deterministic projection semantics.
+It delegates semantic verification to core
+`premath required-witness-verify` via a thin adapter.
 When `gateWitnessRefs` are present, verification also enforces linkage integrity
 (check ordering, artifact digest, and payload/result consistency).
 `--require-native-check <id>` can phase in native-only requirements for selected

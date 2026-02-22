@@ -151,6 +151,10 @@ fn main() {
             commands::required_witness::run(runtime, json)
         }
 
+        Commands::RequiredWitnessVerify { input, json } => {
+            commands::required_witness_verify::run(input, json)
+        }
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
 
         Commands::Ref { command } => match command {

@@ -1721,3 +1721,32 @@ assembly to core keeps wrappers transport-only and reduces drift risk.
   authoritative `ci.required.v1` witness JSON output.
 - CI pipeline test surface now includes dedicated required-witness client tests.
 - CLI smoke coverage now includes `required-witness` JSON command surface.
+
+---
+
+## 2026-02-22 — Decision 0059: Move ci.required verification semantics to core `premath required-witness-verify`
+
+### Decision
+Add a core required witness verification path:
+
+- `premath-coherence` now exposes deterministic required witness verification
+  (`verify_required_witness_payload`) including projection parity, gate witness
+  linkage integrity, native-required source constraints, and failure-lineage
+  union checks.
+- `premath-cli` adds `required-witness-verify --input <json> --json`.
+- Python verifier helpers now delegate to core through
+  `tools/ci/required_witness_verify_client.py` and keep filesystem loading as
+  adapter-only behavior.
+
+### Rationale
+`bd-34` aims to remove Python-local checker authority from required/instruction
+gate paths. Required witness validation previously lived in
+`tools/ci/required_witness.py`, creating a parallel semantic surface.
+
+### Consequences
+- `tools/ci/required_witness.py` is now a thin adapter that forwards
+  `{witness, changedPaths, nativeRequiredChecks, gateWitnessPayloads}` to core.
+- `verify_required_witness.py` keeps orchestration but semantic verdicts come
+  from core output (`errors`, `derived`).
+- pipeline and CLI smoke surfaces now include
+  `required-witness-verify` client/command tests.
