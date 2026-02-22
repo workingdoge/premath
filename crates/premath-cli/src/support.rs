@@ -498,3 +498,92 @@ pub fn print_sample_block(header: &str, items: &[String], truncated: usize) {
 pub fn yes_no(ok: bool) -> &'static str {
     if ok { "yes" } else { "no" }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_dir(prefix: &str) -> PathBuf {
+        let nonce = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap_or_default()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("premath-support-{prefix}-{nonce}"));
+        fs::create_dir_all(&dir).expect("temp dir should create");
+        dir
+    }
+
+    #[test]
+    fn analyze_issue_query_projection_accepts_matching_snapshot_ref() {
+        let root = temp_dir("projection-analysis-ok");
+        let projection_path = root.join("projection.json");
+        let store = MemoryStore::default();
+        let snapshot_ref = store_snapshot_ref(&store);
+        let payload = IssueQueryProjectionPayload {
+            schema: ISSUE_QUERY_PROJECTION_SCHEMA,
+            kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
+            source_issues_path: root.join("issues.jsonl").display().to_string(),
+            source_snapshot_ref: Some(snapshot_ref.clone()),
+            generated_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            issue_count: 0,
+            issues: Vec::new(),
+        };
+        fs::write(
+            &projection_path,
+            serde_json::to_vec_pretty(&payload).expect("payload should serialize"),
+        )
+        .expect("projection should write");
+
+        let analysis = analyze_issue_query_projection(&projection_path);
+        assert_eq!(analysis.schema, Some(ISSUE_QUERY_PROJECTION_SCHEMA));
+        assert_eq!(analysis.kind.as_deref(), Some(ISSUE_QUERY_PROJECTION_KIND));
+        assert_eq!(
+            analysis.source_snapshot_ref.as_deref(),
+            Some(snapshot_ref.as_str())
+        );
+        assert_eq!(
+            analysis.payload_snapshot_ref.as_deref(),
+            Some(snapshot_ref.as_str())
+        );
+        assert_eq!(analysis.source_snapshot_ref_matches_payload, Some(true));
+        assert!(analysis.store.is_some());
+        assert!(analysis.error.is_none());
+    }
+
+    #[test]
+    fn analyze_issue_query_projection_rejects_snapshot_ref_mismatch() {
+        let root = temp_dir("projection-analysis-mismatch");
+        let projection_path = root.join("projection.json");
+        let payload = IssueQueryProjectionPayload {
+            schema: ISSUE_QUERY_PROJECTION_SCHEMA,
+            kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
+            source_issues_path: root.join("issues.jsonl").display().to_string(),
+            source_snapshot_ref: Some("iss1_invalid_projection_ref".to_string()),
+            generated_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            issue_count: 0,
+            issues: Vec::new(),
+        };
+        fs::write(
+            &projection_path,
+            serde_json::to_vec_pretty(&payload).expect("payload should serialize"),
+        )
+        .expect("projection should write");
+
+        let analysis = analyze_issue_query_projection(&projection_path);
+        assert_eq!(analysis.source_snapshot_ref_matches_payload, Some(false));
+        assert!(
+            analysis
+                .error
+                .as_deref()
+                .expect("analysis should contain mismatch error")
+                .contains("payload snapshot mismatch")
+        );
+    }
+}
