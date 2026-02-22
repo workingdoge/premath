@@ -1836,3 +1836,30 @@ semantics checker-authoritative and reduces wrapper drift risk.
 - decision-chain semantic checks now execute through one core command surface.
 - pipeline tests include `test_required_decision_verify_client.py`.
 - CLI smoke coverage includes `required-decision-verify`.
+
+---
+
+## 2026-02-22 — Decision 0063: Move required gate-ref and fallback payload synthesis to core `premath required-gate-ref`
+
+### Decision
+Move per-check gate reference assembly and fallback gate payload synthesis into
+core semantics:
+
+- add `premath-coherence` gate-ref builder (`build_required_gate_ref`),
+- add `premath-cli required-gate-ref --input <json> --json`,
+- route `tools/ci/run_required_checks.py` native/fallback gate ref assembly
+  through `tools/ci/required_gate_ref_client.py`,
+- route `tools/ci/emit_gate_witness.py` fallback envelope emission through the
+  same core command surface.
+
+### Rationale
+`run_required_checks.py` previously owned semantic pieces of gate lineage
+assembly (`sha256` projection, failure-class extraction, fallback envelope
+materialization). That left a parallel authority path outside core checker
+surfaces. This decision keeps wrappers in transport mode and makes gate-ref
+lineage deterministic under one command surface.
+
+### Consequences
+- required-gate runtime wrappers no longer compute gate ref semantics locally.
+- pipeline tests include `test_required_gate_ref_client.py`.
+- CLI smoke coverage includes `required-gate-ref`.

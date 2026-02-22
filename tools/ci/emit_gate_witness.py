@@ -7,7 +7,7 @@ import argparse
 import json
 from pathlib import Path
 
-from gate_witness_envelope import make_gate_witness_envelope
+from required_gate_ref_client import RequiredGateRefError, run_required_gate_ref
 
 
 def parse_args() -> argparse.Namespace:
@@ -38,14 +38,29 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> int:
     args = parse_args()
-    envelope = make_gate_witness_envelope(
-        check_id=args.check_id,
-        exit_code=args.exit_code,
-        projection_digest=args.projection_digest,
-        policy_digest=args.policy_digest,
-        ctx_ref=args.ctx_ref,
-        data_head_ref=args.data_head_ref,
-    )
+    root = Path(__file__).resolve().parents[2]
+    try:
+        payload = run_required_gate_ref(
+            root,
+            {
+                "checkId": args.check_id,
+                "artifactRelPath": f"gates/{args.projection_digest}/00-{args.check_id}.json",
+                "source": args.source,
+                "fallback": {
+                    "exitCode": args.exit_code,
+                    "projectionDigest": args.projection_digest,
+                    "policyDigest": args.policy_digest,
+                    "ctxRef": args.ctx_ref,
+                    "dataHeadRef": args.data_head_ref,
+                },
+            },
+        )
+    except RequiredGateRefError as exc:
+        raise ValueError(f"{exc.failure_class}: {exc.reason}") from exc
+
+    envelope = payload.get("gatePayload")
+    if not isinstance(envelope, dict):
+        raise ValueError("required-gate-ref missing fallback gatePayload")
     envelope["witnessSource"] = args.source
 
     out_path = args.out

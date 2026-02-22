@@ -20,6 +20,8 @@ snapshot for strict compare phases (`ci-verify-required-strict`,
 For each executed check it requests a per-check gate envelope artifact under
 `artifacts/ciwitness/gates/<projection-digest>/` and links it from
 `ci.required.v1` via `gateWitnessRefs`.
+Gate-ref assembly and fallback gate payload synthesis are core-owned via
+`premath required-gate-ref`.
 It delegates final `ci.required.v1` witness assembly to core
 `premath required-witness` (Python wrapper is transport only).
 `run_gate.sh` prefers a native runner/task artifact when present; otherwise it

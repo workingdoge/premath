@@ -8,6 +8,7 @@ mod proposal;
 mod required;
 mod required_decide;
 mod required_decision_verify;
+mod required_gate_ref;
 mod required_projection;
 mod required_verify;
 
@@ -33,6 +34,9 @@ pub use required_decide::{
 pub use required_decision_verify::{
     RequiredDecisionVerifyDerived, RequiredDecisionVerifyRequest, RequiredDecisionVerifyResult,
     verify_required_decision_request,
+};
+pub use required_gate_ref::{
+    RequiredGateRefFallback, RequiredGateRefRequest, RequiredGateRefResult, build_required_gate_ref,
 };
 pub use required_projection::{
     PROJECTION_POLICY, PROJECTION_SCHEMA, RequiredProjectionRequest, RequiredProjectionResult,

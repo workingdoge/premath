@@ -75,6 +75,7 @@
 - `cargo run --package premath-cli -- instruction-witness --instruction <instruction.json> --runtime <runtime.json> --repo-root . --json` — finalize one CI instruction witness from typed instruction semantics plus executed check runtime payload.
 - `cargo run --package premath-cli -- required-projection --input <projection_input.json> --json` — project `changedPaths` to deterministic required check IDs through core semantics.
 - `cargo run --package premath-cli -- required-delta --input <delta_input.json> --json` — detect deterministic `changedPaths` + `{source,fromRef,toRef}` through core git/workspace delta semantics.
+- `cargo run --package premath-cli -- required-gate-ref --input <gate_ref_input.json> --json` — build deterministic `gateWitnessRef` (and optional fallback `gatePayload`) from native gate payload or fallback synthesis inputs.
 - `cargo run --package premath-cli -- required-witness --runtime <runtime.json> --json` — finalize one CI required witness from projection/check/gate-ref runtime payload.
 - `cargo run --package premath-cli -- required-witness-verify --input <verify_input.json> --json` — verify one CI required witness against deterministic projection semantics and emit `{errors,derived}`.
 - `cargo run --package premath-cli -- required-witness-decide --input <decide_input.json> --json` — decide one CI required witness (`accept|reject`) through core semantics and emit deterministic decision fields.

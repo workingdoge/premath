@@ -329,6 +329,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Build one required gate witness ref (+optional fallback payload) through core semantics
+    RequiredGateRef {
+        /// Input JSON path (`{checkId,artifactRelPath,source?,gatePayload?|fallback?}`)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Verify one CI required witness against deterministic projection semantics
     RequiredWitnessVerify {
         /// Verify input JSON path (witness + changedPaths + optional gate payload map)

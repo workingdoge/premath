@@ -14,6 +14,7 @@ pub mod proposal_check;
 pub mod ref_binding;
 pub mod required_decision_verify;
 pub mod required_delta;
+pub mod required_gate_ref;
 pub mod required_projection;
 pub mod required_witness;
 pub mod required_witness_decide;

@@ -157,6 +157,8 @@ fn main() {
 
         Commands::RequiredDelta { input, json } => commands::required_delta::run(input, json),
 
+        Commands::RequiredGateRef { input, json } => commands::required_gate_ref::run(input, json),
+
         Commands::RequiredWitnessVerify { input, json } => {
             commands::required_witness_verify::run(input, json)
         }

@@ -122,6 +122,7 @@ run = [
   "python3 tools/ci/test_required_delta_client.py",
   "python3 tools/ci/test_required_projection_client.py",
   "python3 tools/ci/test_required_witness_client.py",
+  "python3 tools/ci/test_required_gate_ref_client.py",
   "python3 tools/ci/test_required_witness_verify_client.py",
   "python3 tools/ci/test_required_witness_decide_client.py",
   "python3 tools/ci/test_required_decision_verify_client.py",

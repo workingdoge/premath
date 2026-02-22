@@ -355,6 +355,28 @@ fn write_required_decision_verify_input(dir: &Path) -> PathBuf {
     input_path
 }
 
+fn write_required_gate_ref_input(dir: &Path) -> PathBuf {
+    let input = serde_json::json!({
+        "checkId": "baseline",
+        "artifactRelPath": "gates/proj1_demo/01-baseline.json",
+        "source": "fallback",
+        "fallback": {
+            "exitCode": 1,
+            "projectionDigest": "proj1_demo",
+            "policyDigest": "ci-topos-v0",
+            "ctxRef": "origin/main",
+            "dataHeadRef": "HEAD"
+        }
+    });
+    let input_path = dir.join("required-gate-ref-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("gate ref input should serialize"),
+    )
+    .expect("required gate ref input should be written");
+    input_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -798,6 +820,30 @@ fn required_decision_verify_json_smoke() {
         payload["derived"]["requiredChecks"],
         serde_json::json!(["baseline"])
     );
+}
+
+#[test]
+fn required_gate_ref_json_smoke() {
+    let tmp = TempDirGuard::new("required-gate-ref-json");
+    let input = write_required_gate_ref_input(tmp.path());
+
+    let output = run_premath([
+        OsString::from("required-gate-ref"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["gateWitnessRef"]["checkId"], "baseline");
+    assert_eq!(payload["gateWitnessRef"]["source"], "fallback");
+    assert_eq!(payload["gateWitnessRef"]["result"], "rejected");
+    assert_eq!(
+        payload["gateWitnessRef"]["failureClasses"],
+        serde_json::json!(["descent_failure"])
+    );
+    assert_eq!(payload["gatePayload"]["result"], "rejected");
 }
 
 #[test]
