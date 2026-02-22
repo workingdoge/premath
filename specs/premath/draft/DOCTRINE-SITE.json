@@ -278,6 +278,12 @@
       "path": "tools/conformance/check_doctrine_site.py",
       "kind": "operation",
       "requiresDeclaration": false
+    },
+    {
+      "id": "op/conformance.doctrine_inf",
+      "path": "tools/conformance/run_doctrine_inf_vectors.py",
+      "kind": "operation",
+      "requiresDeclaration": false
     }
   ],
   "covers": [
@@ -313,7 +319,8 @@
         "op/ci.decide_required",
         "op/conformance.stub",
         "op/conformance.capability",
-        "op/conformance.doctrine"
+        "op/conformance.doctrine",
+        "op/conformance.doctrine_inf"
       ]
     }
   ],
@@ -567,6 +574,15 @@
       "id": "e.ci.op.doctrine",
       "from": "raw/PREMATH-CI",
       "to": "op/conformance.doctrine",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.doctrine_inf",
+      "from": "raw/PREMATH-CI",
+      "to": "op/conformance.doctrine_inf",
       "morphisms": [
         "dm.identity",
         "dm.presentation.projection"

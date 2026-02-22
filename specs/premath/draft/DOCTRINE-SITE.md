@@ -94,6 +94,9 @@ Repository v0 note:
 - CI operation nodes currently include `tools/ci/run_gate.sh`,
   `tools/ci/run_instruction.sh`, `tools/ci/verify_required_witness.py`, and
   `tools/ci/decide_required.py`.
+- doctrine-conformance operation nodes currently include
+  `tools/conformance/check_doctrine_site.py` and
+  `tools/conformance/run_doctrine_inf_vectors.py`.
 
 ## 5. Edge discipline
 

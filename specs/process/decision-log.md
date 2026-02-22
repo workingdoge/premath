@@ -798,3 +798,30 @@ attention routing remained under-specified.
 - `needsAttention` is now raised for rejected/error state *or* coherence
   attention reasons.
 - Observation semantics checks now validate coherence-attention consistency.
+
+---
+
+## 2026-02-22 — Decision 0028: Extend doctrine-site operation coverage to doctrine-inf vectors
+
+### Decision
+Add the doctrine-inf executable vector runner as a first-class doctrine-site
+operation node:
+
+- `op/conformance.doctrine_inf` ->
+  `tools/conformance/run_doctrine_inf_vectors.py`
+
+and bind it into `draft/DOCTRINE-SITE.json` covers/edges so it is reachable
+from doctrine root under the same CI control-loop ancestry as other doctrine
+operations.
+
+### Rationale
+`mise run doctrine-check` executes both doctrine-site coherence checks and
+doctrine-inf semantic boundary vectors. The site map previously represented only
+`check_doctrine_site.py`, leaving the second doctrine-check operation outside
+the audited doctrine-to-operation graph.
+
+### Consequences
+- doctrine-site reachability checks now include
+  `tools/conformance/run_doctrine_inf_vectors.py`.
+- `draft/DOCTRINE-SITE.md` repository notes now enumerate both doctrine
+  conformance operation nodes.
