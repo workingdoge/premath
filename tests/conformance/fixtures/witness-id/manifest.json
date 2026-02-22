@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "suiteId": "witness-id",
+  "vectors": [
+    "golden/stable_key_ignores_excluded_fields",
+    "adversarial/class_change_changes_witness_id",
+    "adversarial/law_ref_change_changes_witness_id",
+    "adversarial/token_path_change_changes_witness_id",
+    "adversarial/context_change_changes_witness_id"
+  ]
+}

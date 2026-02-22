@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "excluded witness fields do not affect witness-id key material"
+  ]
+}

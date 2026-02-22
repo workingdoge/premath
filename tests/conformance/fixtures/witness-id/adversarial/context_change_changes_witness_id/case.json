@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "witness-id",
+  "vectorId": "adversarial/context_change_changes_witness_id",
+  "description": "Changing context changes witnessId.",
+  "artifacts": {
+    "leftWitness": {
+      "class": "stability_failure",
+      "lawRef": "GATE-3.1",
+      "tokenPath": "scope/predicate",
+      "context": {
+        "mask": "101",
+        "level": 2
+      }
+    },
+    "rightWitness": {
+      "class": "stability_failure",
+      "lawRef": "GATE-3.1",
+      "tokenPath": "scope/predicate",
+      "context": {
+        "mask": "111",
+        "level": 2
+      }
+    },
+    "expectedRelation": "not_equal",
+    "expectedLeftWitnessId": "w1_5ojk0d0ji4g4rv6k8hhovmt4ugghtihkabc1aqin984clctj9db0",
+    "expectedRightWitnessId": "w1_rtre834h080bphai13tj8gb8pis7f0bfg3uq8qkj6im8hb56t07g"
+  }
+}

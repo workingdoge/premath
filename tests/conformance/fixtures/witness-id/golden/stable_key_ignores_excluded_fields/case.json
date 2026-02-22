@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "witness-id",
+  "vectorId": "golden/stable_key_ignores_excluded_fields",
+  "description": "Fields excluded by draft/WITNESS-ID (message/sources/details) do not change witnessId.",
+  "artifacts": {
+    "leftWitness": {
+      "class": "stability_failure",
+      "lawRef": "GATE-3.1",
+      "tokenPath": "scope/predicate",
+      "context": {
+        "mask": "101",
+        "level": 2
+      },
+      "message": "alpha wording",
+      "sources": [
+        "toy.alpha"
+      ],
+      "details": {
+        "debug": "left"
+      }
+    },
+    "rightWitness": {
+      "class": "stability_failure",
+      "lawRef": "GATE-3.1",
+      "tokenPath": "scope/predicate",
+      "context": {
+        "mask": "101",
+        "level": 2
+      },
+      "message": "beta wording",
+      "sources": [
+        "toy.beta",
+        "toy.gamma"
+      ],
+      "details": {
+        "debug": "right",
+        "hint": "extra"
+      }
+    },
+    "expectedRelation": "equal",
+    "expectedLeftWitnessId": "w1_5ojk0d0ji4g4rv6k8hhovmt4ugghtihkabc1aqin984clctj9db0",
+    "expectedRightWitnessId": "w1_5ojk0d0ji4g4rv6k8hhovmt4ugghtihkabc1aqin984clctj9db0"
+  }
+}

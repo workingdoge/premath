@@ -4,6 +4,7 @@ Suggested layout (from `draft/CONFORMANCE.md`):
 
 - `interop-core/{golden,adversarial}`
 - `gate/{golden,adversarial}`
+- `witness-id/{golden,adversarial}`
 - `capabilities/<capability-id>/{golden,adversarial,invariance}`
 
 Capability fixtures include both:

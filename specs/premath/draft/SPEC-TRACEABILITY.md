@@ -53,7 +53,7 @@ Purpose:
 | `NF.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`nf_*`) + `capabilities.normal_forms` + kernel tests | covered | - |
 | `WIRE-FORMATS.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`wire_*`) | covered | - |
 | `ERROR-CODES.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`error_code_registry_*`) | covered | - |
-| `WITNESS-ID.md` | `premath-kernel` witness-id unit tests | instrumented | `T-WID-01` |
+| `WITNESS-ID.md` | `python3 tools/conformance/run_witness_id_vectors.py`; `premath-kernel` witness-id unit tests | covered | - |
 | `BIDIR-DESCENT.md` | `capabilities.instruction_typing`; `capabilities.adjoints_sites` | covered | - |
 | `GATE.md` | `python3 tools/conformance/run_gate_vectors.py` + `premath-kernel` gate tests + toy vectors | covered | - |
 | `CONFORMANCE.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_interop_core_vectors.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
@@ -66,15 +66,6 @@ Purpose:
 | `SPEC-INDEX.md` | index/reference contract; validated indirectly by doc updates and doctrine-site references | instrumented | `T-INDEX-01` |
 
 ## 4. Coverage Targets (Open Gaps/Upgrades)
-
-### `T-WID-01` Witness-ID Conformance Vectors
-
-Add fixture-level witness-id determinism vectors (not just unit tests).
-
-Minimum acceptance:
-
-- deterministic witness-id stability/sensitivity vectors in conformance fixtures,
-- executable validation path in merge-gated conformance command surface.
 
 ### `T-DINF-01` Doctrine-Inf Semantic Coverage Upgrade
 

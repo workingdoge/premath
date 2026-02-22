@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "witness-id",
+  "vectorId": "adversarial/law_ref_change_changes_witness_id",
+  "description": "Changing lawRef changes witnessId.",
+  "artifacts": {
+    "leftWitness": {
+      "class": "stability_failure",
+      "lawRef": "GATE-3.1",
+      "tokenPath": "scope/predicate",
+      "context": {
+        "mask": "101",
+        "level": 2
+      }
+    },
+    "rightWitness": {
+      "class": "stability_failure",
+      "lawRef": "GATE-3.2",
+      "tokenPath": "scope/predicate",
+      "context": {
+        "mask": "101",
+        "level": 2
+      }
+    },
+    "expectedRelation": "not_equal",
+    "expectedLeftWitnessId": "w1_5ojk0d0ji4g4rv6k8hhovmt4ugghtihkabc1aqin984clctj9db0",
+    "expectedRightWitnessId": "w1_1beu1l4c7is1kc6soan9qu1v8rsqk6phqqfgoton0lttr6vo0pjg"
+  }
+}

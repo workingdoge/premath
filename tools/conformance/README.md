@@ -8,6 +8,7 @@ Runs the executable conformance fixture suites through one command surface:
 
 - `interop-core` (`run_interop_core_vectors.py`)
 - `gate` (`run_gate_vectors.py`)
+- `witness-id` (`run_witness_id_vectors.py`)
 - `capabilities` (`run_capability_vectors.py`)
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
@@ -125,6 +126,23 @@ Run:
 
 ```bash
 python3 tools/conformance/run_gate_vectors.py
+```
+
+## `run_witness_id_vectors.py`
+
+Runs executable Witness-ID vectors in:
+
+- `tests/conformance/fixtures/witness-id/`
+
+Checks include deterministic witness-id behavior for:
+
+- stability under excluded field changes (`message`, `sources`, `details`)
+- sensitivity to canonical key fields (`class`, `lawRef`, `tokenPath`, `context`)
+
+Run:
+
+```bash
+python3 tools/conformance/run_witness_id_vectors.py
 ```
 
 ## `check_doctrine_site.py`

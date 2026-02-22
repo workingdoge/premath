@@ -642,3 +642,32 @@ traceability target `T-GATE-01` an explicit open gap.
 - `draft/SPEC-TRACEABILITY` marks `GATE.md` as `covered`.
 - Open traceability upgrades now continue under `T-WID-01`, `T-DINF-01`,
   `T-KERNEL-01`, and `T-INDEX-01`.
+
+---
+
+## 2026-02-22 — Decision 0023: Execute T-WID-01 with witness-id conformance vectors
+
+### Decision
+Implement and merge executable Witness-ID vectors under
+`tests/conformance/fixtures/witness-id/` with deterministic runner
+`tools/conformance/run_witness_id_vectors.py`, and wire it into
+`mise run conformance-run` through the fixture-suite runner.
+
+Covered Witness-ID requirements:
+
+- stability under excluded-field variation (`message`, `sources`, `details`),
+- sensitivity to canonical witness-key fields (`class`, `lawRef`, `tokenPath`,
+  `context`),
+- deterministic witness-id computation for fixed key material.
+
+### Rationale
+`WITNESS-ID.md` was only instrumented via unit tests. `T-WID-01` required a
+first-class conformance vector suite in the merge-gated conformance surface so
+determinism/sensitivity behavior is validated at fixture level.
+
+### Consequences
+- `mise run conformance-run` now executes witness-id vectors alongside interop,
+  gate, and capability suites.
+- `draft/SPEC-TRACEABILITY` marks `WITNESS-ID.md` as `covered`.
+- Open traceability upgrades continue under `T-DINF-01`, `T-KERNEL-01`, and
+  `T-INDEX-01`.

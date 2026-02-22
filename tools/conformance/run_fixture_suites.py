@@ -76,6 +76,17 @@ SUITES: Tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        suite_id="witness-id",
+        domain="conformance.witness-id",
+        command=("python3", "tools/conformance/run_witness_id_vectors.py"),
+        input_paths=(
+            ROOT / "tools" / "conformance" / "run_fixture_suites.py",
+            ROOT / "tools" / "conformance" / "run_witness_id_vectors.py",
+            ROOT / "tests" / "conformance" / "fixtures" / "witness-id",
+            ROOT / "tools" / "toy" / "witness_id.py",
+        ),
+    ),
+    Suite(
         suite_id="capabilities",
         domain="conformance.capabilities",
         command=("python3", "tools/conformance/run_capability_vectors.py"),
