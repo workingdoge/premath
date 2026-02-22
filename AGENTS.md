@@ -47,8 +47,8 @@
 - `mise run ci-observation-check` — enforce semantic projection invariance (observation output must equal deterministic reducer output from CI witness artifacts).
 - `mise run ci-drift-budget-check` — enforce deterministic drift-budget sentinels across SPEC-INDEX/CAPABILITY-REGISTRY maps, control-plane lane bindings, coherence required obligation sets, SigPi notation, and coherence-cache input closure.
 - `python3 -m http.server 43173 --directory docs` — serve docs locally (includes `docs/observation/index.html` dashboard).
-- `mise run ci-pipeline-required` — run provider-neutral required-gate pipeline (`tools/ci/pipeline_required.py`) with deterministic retry-policy enforcement from `policies/control/harness-retry-policy-v1.json`.
-- `mise run ci-pipeline-instruction` — run provider-neutral instruction pipeline (`INSTRUCTION=instructions/<ts>-<id>.json`) with deterministic retry-policy enforcement from `policies/control/harness-retry-policy-v1.json`.
+- `mise run ci-pipeline-required` — run provider-neutral required-gate pipeline (`tools/ci/pipeline_required.py`) with deterministic retry-policy enforcement from `policies/control/harness-retry-policy-v1.json` and terminal escalation mapping to `premath issue` mutations (`issue_discover` / `mark_blocked` / `stop`).
+- `mise run ci-pipeline-instruction` — run provider-neutral instruction pipeline (`INSTRUCTION=instructions/<ts>-<id>.json`) with deterministic retry-policy enforcement from `policies/control/harness-retry-policy-v1.json` and terminal escalation mapping to `premath issue` mutations (`issue_discover` / `mark_blocked` / `stop`).
 - `mise run ci-check` — canonical gate entrypoint through `tools/ci/run_gate.sh` (SqueakSite profile switch: `PREMATH_SQUEAK_SITE_PROFILE=local|external`; legacy `PREMATH_EXECUTOR_PROFILE` still accepted).
 - `mise run ci-instruction` — run one instruction envelope (`INSTRUCTION=instructions/<ts>-<id>.json`) and emit `artifacts/ciwitness/<instruction-id>.json`.
 - `sh tools/ci/run_instruction.sh instructions/<ts>-<id>.json` — run an instruction envelope and emit `artifacts/ciwitness/<instruction-id>.json`.
@@ -124,6 +124,8 @@
 - Keep retry policy digest-valid and wrapper-bound:
   - canonical policy path: `policies/control/harness-retry-policy-v1.json`
   - helper surface: `tools/ci/harness_retry_policy.py`
+  - escalation bridge: `tools/ci/harness_escalation.py`
+  - active issue env: `PREMATH_ACTIVE_ISSUE_ID` (fallback `PREMATH_ISSUE_ID`), optional issues path override `PREMATH_ISSUES_PATH`
 
 ## GitHub Ops Conventions
 

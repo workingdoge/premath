@@ -11,6 +11,11 @@ import subprocess
 from pathlib import Path
 from typing import Dict, Sequence
 
+from harness_escalation import (
+    EscalationError,
+    EscalationResult,
+    apply_terminal_escalation,
+)
 from harness_retry_policy import (
     RetryDecision,
     RetryPolicyError,
@@ -104,6 +109,27 @@ def _render_retry_lines(retry_history: Sequence[RetryDecision]) -> list[str]:
     return lines
 
 
+def _render_escalation_lines(escalation: EscalationResult | None) -> list[str]:
+    if escalation is None:
+        return []
+    lines = [
+        (
+            f"- escalation: action=`{escalation.action}` "
+            f"outcome=`{escalation.outcome}`"
+        )
+    ]
+    if escalation.issue_id:
+        lines.append(f"- escalation issue id: `{escalation.issue_id}`")
+    if escalation.created_issue_id:
+        lines.append(f"- escalation created issue id: `{escalation.created_issue_id}`")
+    if escalation.note_digest:
+        lines.append(f"- escalation note digest: `{escalation.note_digest}`")
+    lines.append(f"- escalation witness ref: `{escalation.witness_ref}`")
+    if escalation.details:
+        lines.append(f"- escalation details: `{escalation.details}`")
+    return lines
+
+
 def render_summary(
     repo_root: Path,
     instruction_id: str,
@@ -111,6 +137,7 @@ def render_summary(
     retry_history: Sequence[RetryDecision] = (),
     retry_policy_digest: str | None = None,
     retry_policy_id: str | None = None,
+    escalation: EscalationResult | None = None,
 ) -> str:
     witness_path = repo_root / "artifacts/ciwitness" / f"{instruction_id}.json"
     witness_sha_path = repo_root / "artifacts/ciwitness" / f"{instruction_id}.sha256"
@@ -170,6 +197,7 @@ def render_summary(
         policy_label = retry_policy_id or "(unknown)"
         lines.append(f"- retry policy: `{policy_label}` (`{retry_policy_digest}`)")
     lines.extend(_render_retry_lines(retry_history))
+    lines.extend(_render_escalation_lines(escalation))
     return "\n".join(lines) + "\n"
 
 
@@ -212,14 +240,14 @@ def run_instruction_with_retry(
     policy: Dict[str, object],
     *,
     allow_failure: bool,
-) -> tuple[int, tuple[RetryDecision, ...]]:
+) -> tuple[int, tuple[RetryDecision, ...], EscalationResult | None]:
     retry_history: list[RetryDecision] = []
     witness_path = root / "artifacts/ciwitness" / f"{instruction_id}.json"
     attempt = 1
     while True:
         exit_code = run_instruction_once(root, instruction_path, allow_failure)
         if exit_code == 0:
-            return 0, tuple(retry_history)
+            return 0, tuple(retry_history), None
 
         failure_classes = failure_classes_from_witness_path(witness_path)
         decision = resolve_retry_decision(policy, failure_classes, attempt=attempt)
@@ -236,14 +264,40 @@ def run_instruction_with_retry(
             attempt += 1
             continue
 
+        try:
+            escalation = apply_terminal_escalation(
+                root,
+                scope="instruction",
+                decision=decision,
+                policy=policy,
+                witness_path=witness_path,
+            )
+        except EscalationError as exc:
+            print(
+                (
+                    "[pipeline-instruction] escalation error "
+                    f"{exc.failure_class}: {exc.reason}"
+                )
+            )
+            escalation = EscalationResult(
+                action=decision.escalation_action,
+                outcome=f"error:{exc.failure_class}",
+                issue_id=None,
+                created_issue_id=None,
+                note_digest=None,
+                witness_ref=str(witness_path.relative_to(root)),
+                details=exc.reason,
+            )
+            return 2, tuple(retry_history), escalation
+
         print(
             (
                 "[pipeline-instruction] escalation "
-                f"action={decision.escalation_action} "
+                f"action={decision.escalation_action} outcome={escalation.outcome} "
                 f"(rule={decision.rule_id}, matched={decision.matched_failure_class})"
             )
         )
-        return exit_code, tuple(retry_history)
+        return exit_code, tuple(retry_history), escalation
 
 
 def main() -> int:
@@ -268,7 +322,7 @@ def main() -> int:
     allow_failure_env = os.environ.get("ALLOW_FAILURE", "").strip().lower()
     allow_failure = args.allow_failure or allow_failure_env in {"1", "true", "yes", "on"}
 
-    exit_code, retry_history = run_instruction_with_retry(
+    exit_code, retry_history, escalation = run_instruction_with_retry(
         root,
         instruction_path,
         instruction_id,
@@ -281,6 +335,7 @@ def main() -> int:
         retry_history=retry_history,
         retry_policy_digest=str(retry_policy.get("policyDigest")),
         retry_policy_id=str(retry_policy.get("policyId")),
+        escalation=escalation,
     )
     write_summary(summary, args.summary_out)
     return exit_code

@@ -30,6 +30,8 @@ Operational source of truth:
 
 Both provider-neutral wrappers enforce deterministic retry classification from
 `policies/control/harness-retry-policy-v1.json` before escalation.
+Terminal escalation actions can bind into issue-memory mutations when active
+issue context env is present (`PREMATH_ACTIVE_ISSUE_ID` / `PREMATH_ISSUE_ID`).
 
 Current full baseline gate (`mise run baseline`) includes:
 

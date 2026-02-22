@@ -2944,3 +2944,39 @@ moving semantic authority out of checker/witness surfaces.
 - Wrapper failures classify from emitted witness artifacts, not ad-hoc stderr.
 - Escalation actions are typed (`issue_discover`, `mark_blocked`, `stop`), with
   automatic issue-memory mutation wiring left as follow-on work.
+
+---
+
+## 2026-02-22 — Decision 0101: Bind terminal retry escalation actions to premath-bd mutations
+
+### Decision
+Bind terminal retry escalation actions from provider-neutral pipeline wrappers
+to `premath issue` mutation commands via one shared bridge.
+
+Implemented scope:
+
+1. add shared bridge:
+   - `tools/ci/harness_escalation.py`
+2. wrapper integration:
+   - `tools/ci/pipeline_required.py`
+   - `tools/ci/pipeline_instruction.py`
+3. action mapping:
+   - `issue_discover` -> `premath issue discover`
+   - `mark_blocked` -> `premath issue update --status blocked --notes ...`
+   - `stop` -> no mutation
+4. active issue context contract:
+   - `PREMATH_ACTIVE_ISSUE_ID` (fallback `PREMATH_ISSUE_ID`)
+   - optional `PREMATH_ISSUES_PATH`
+
+### Rationale
+Retry policy classification without mutation execution leaves escalation as
+informational output only. Binding terminal actions into `premath-bd` keeps
+harness state progression in the same issue-memory authority surface and closes
+the operational loop for long-running workflows.
+
+### Consequences
+- Terminal escalation now creates/updates issue-memory state deterministically
+  when active issue context is present.
+- Missing issue context produces deterministic skipped-escalation metadata.
+- Mutation command failures are fail-closed in wrappers (non-success return
+  with typed escalation error metadata).

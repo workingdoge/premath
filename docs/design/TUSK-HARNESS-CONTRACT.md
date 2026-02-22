@@ -114,15 +114,16 @@ Trajectory records are an operational lane, not semantic authority.
 
 ## 8. Gaps (remaining)
 
-1. Retry policy is now explicit and enforced in pipeline wrappers; escalation
-   actions are surfaced but not yet wired to automatic `premath-bd` mutations.
+1. Escalation mutation wiring is active for terminal retry decisions, but
+   adoption still depends on active issue context env (`PREMATH_ACTIVE_ISSUE_ID`
+   / `PREMATH_ISSUE_ID`) in each harness execution environment.
 
 ## 9. Implementation slice plan (no math generalization required)
 
-1. Wire retry escalation actions (`issue_discover`, `mark_blocked`, `stop`) to
-   `premath-bd` mutation operations with deterministic witness linkage.
-2. Expand failure-class coverage from observed CI/harness runs while preserving
+1. Expand failure-class coverage from observed CI/harness runs while preserving
    policy digest discipline.
+2. Promote active issue-context provisioning into harness bootstrap defaults so
+   escalation mutation paths are always available during long-run execution.
 
 Each slice should ship with:
 

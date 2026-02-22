@@ -10,6 +10,7 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from harness_escalation import EscalationResult
 from harness_retry_policy import RetryDecision
 
 import pipeline_instruction
@@ -164,10 +165,21 @@ class PipelineInstructionTests(unittest.TestCase):
                 retry_history=history,
                 retry_policy_digest="pol1_retry",
                 retry_policy_id="policy.harness.retry.v1",
+                escalation=EscalationResult(
+                    action="issue_discover",
+                    outcome="applied",
+                    issue_id="bd-10",
+                    created_issue_id="bd-11",
+                    note_digest="note1_abc",
+                    witness_ref=f"artifacts/ciwitness/{instruction_id}.json",
+                    details="issuesPath=.premath/issues.jsonl",
+                ),
             )
             self.assertIn("- retry policy: `policy.harness.retry.v1` (`pol1_retry`)", summary)
             self.assertIn("rule=operational_retry", summary)
             self.assertIn("matched=pipeline_missing_witness", summary)
+            self.assertIn("- escalation: action=`issue_discover` outcome=`applied`", summary)
+            self.assertIn("- escalation created issue id: `bd-11`", summary)
 
 
 if __name__ == "__main__":

@@ -97,6 +97,34 @@ Wrapper contract:
 
 Both wrappers append deterministic retry history to markdown summary output.
 
+## 7. Escalation mutation binding
+
+Terminal escalation actions are bridged into `premath-bd` issue operations
+through:
+
+- `tools/ci/harness_escalation.py`
+
+Action mapping:
+
+- `issue_discover` -> `premath issue discover <active-issue-id> ...`
+- `mark_blocked` -> `premath issue update <active-issue-id> --status blocked --notes ...`
+- `stop` -> no mutation
+
+Active issue context:
+
+- primary env: `PREMATH_ACTIVE_ISSUE_ID`
+- fallback env: `PREMATH_ISSUE_ID`
+- optional issues path override: `PREMATH_ISSUES_PATH`
+
+If active issue context is missing, wrappers emit deterministic
+`skipped_missing_issue_context` escalation output and still fail the pipeline
+with the underlying check failure code.
+
+Mutation command failures are fail-closed:
+
+- wrappers return non-success (`2`) with typed escalation error surface in
+  summary output.
+
 ## 6. Verification commands
 
 - `python3 tools/ci/test_harness_retry_policy.py`
