@@ -2118,3 +2118,26 @@ hits.
   source changes.
 - cache validity aligns with checker authority dependencies across
   kernel/coherence layers.
+
+---
+
+## 2026-02-22 — Decision 0074: Bind coherence-contract cache inputs to Cargo manifests
+
+### Decision
+Extend `load_coherence_contract_input_paths()` to include repository Cargo
+manifests:
+
+- `Cargo.toml`
+- `Cargo.lock`
+
+for `coherence-contract` suite cache-input closure.
+
+### Rationale
+`coherence-check` behavior can drift when dependency graph or crate feature
+resolution changes. Without Cargo manifests in cache bindings, those changes
+could be skipped by stale conformance cache hits.
+
+### Consequences
+- coherence-contract cache refs now invalidate on workspace dependency/feature
+  changes.
+- cache validity remains aligned with executable checker runtime composition.

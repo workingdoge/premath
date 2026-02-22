@@ -77,6 +77,8 @@ def load_coherence_contract_input_paths() -> Tuple[Path, ...]:
     base_paths: List[Path] = [
         ROOT / "tools" / "conformance" / "run_fixture_suites.py",
         contract_path,
+        ROOT / "Cargo.toml",
+        ROOT / "Cargo.lock",
         ROOT / "tests" / "conformance" / "fixtures" / "coherence-transport",
         ROOT / "tests" / "conformance" / "fixtures" / "coherence-site",
         ROOT / "crates" / "premath-kernel" / "src",
