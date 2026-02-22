@@ -1863,3 +1863,30 @@ lineage deterministic under one command surface.
 - required-gate runtime wrappers no longer compute gate ref semantics locally.
 - pipeline tests include `test_required_gate_ref_client.py`.
 - CLI smoke coverage includes `required-gate-ref`.
+
+---
+
+## 2026-02-22 — Decision 0064: Deduplicate required client transport into shared `core_cli_client`
+
+### Decision
+Consolidate repeated Python wrapper transport behavior for required gate command
+clients into one helper module:
+
+- add `tools/ci/core_cli_client.py`,
+- centralize premath binary resolution, temp JSON input handoff, stale local
+  binary retry-to-cargo, deterministic failure-class extraction, and JSON
+  decode/retry handling,
+- keep per-client payload-shape validation local in each
+  `required_*_client.py`.
+
+### Rationale
+After moving required gate semantics into core commands, wrappers still carried
+duplicated transport code across seven client modules. That duplication
+increased drift risk without adding semantic expressiveness. Centralizing
+transport keeps wrappers thinner while preserving command-specific validation.
+
+### Consequences
+- `required_*_client.py` modules now encode only command metadata and payload
+  shape validation.
+- behavior parity remains covered by existing required-client tests and
+  `ci-pipeline-test`.
