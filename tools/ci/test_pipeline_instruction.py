@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from harness_retry_policy import RetryDecision
+
 import pipeline_instruction
 
 
@@ -116,6 +118,56 @@ class PipelineInstructionTests(unittest.TestCase):
                 os.environ.pop("GITHUB_SHA", None)
             else:
                 os.environ["GITHUB_SHA"] = original_gh_sha
+
+    def test_render_summary_includes_retry_policy_and_history(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-instruction-retry-") as tmp:
+            root = Path(tmp)
+            ciwitness = root / "artifacts" / "ciwitness"
+            ciwitness.mkdir(parents=True, exist_ok=True)
+
+            instruction_id = "20260221T020000Z-retry"
+            (ciwitness / f"{instruction_id}.json").write_text(
+                json.dumps(
+                    {
+                        "instructionId": instruction_id,
+                        "instructionDigest": "instr_retry",
+                        "normalizerId": "normalizer.retry.v1",
+                        "verdictClass": "rejected",
+                        "requiredChecks": ["ci-wiring-check"],
+                        "executedChecks": ["ci-wiring-check"],
+                        "failureClasses": ["pipeline_missing_witness"],
+                        "operationalFailureClasses": ["pipeline_missing_witness"],
+                        "semanticFailureClasses": [],
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            history = (
+                RetryDecision(
+                    attempt=1,
+                    retry=True,
+                    max_attempts=2,
+                    backoff_class="fixed_short",
+                    escalation_action="issue_discover",
+                    rule_id="operational_retry",
+                    matched_failure_class="pipeline_missing_witness",
+                    failure_classes=("pipeline_missing_witness",),
+                ),
+            )
+            summary = pipeline_instruction.render_summary(
+                root,
+                instruction_id,
+                retry_history=history,
+                retry_policy_digest="pol1_retry",
+                retry_policy_id="policy.harness.retry.v1",
+            )
+            self.assertIn("- retry policy: `policy.harness.retry.v1` (`pol1_retry`)", summary)
+            self.assertIn("rule=operational_retry", summary)
+            self.assertIn("matched=pipeline_missing_witness", summary)
 
 
 if __name__ == "__main__":

@@ -114,12 +114,15 @@ Trajectory records are an operational lane, not semantic authority.
 
 ## 8. Gaps (remaining)
 
-1. No single documented retry-policy table bound to failure classes.
+1. Retry policy is now explicit and enforced in pipeline wrappers; escalation
+   actions are surfaced but not yet wired to automatic `premath-bd` mutations.
 
 ## 9. Implementation slice plan (no math generalization required)
 
-1. Add deterministic retry-policy table in control-plane docs + enforcement
-   hook in pipeline wrappers.
+1. Wire retry escalation actions (`issue_discover`, `mark_blocked`, `stop`) to
+   `premath-bd` mutation operations with deterministic witness linkage.
+2. Expand failure-class coverage from observed CI/harness runs while preserving
+   policy digest discipline.
 
 Each slice should ship with:
 
@@ -134,6 +137,7 @@ Each slice should ship with:
 - Harness handoff artifact: `docs/design/TUSK-HARNESS-SESSION.md`
 - Harness feature ledger: `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
 - Harness trajectory rows: `docs/design/TUSK-HARNESS-TRAJECTORY.md`
+- Harness retry policy table: `docs/design/TUSK-HARNESS-RETRY-POLICY.md`
 - Identity/refinement/witness details:
   - `docs/design/TUSK-IDENTITY.md`
   - `docs/design/TUSK-REFINEMENT.md`

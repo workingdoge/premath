@@ -9,8 +9,15 @@ import json
 import os
 import subprocess
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Sequence
 
+from harness_retry_policy import (
+    RetryDecision,
+    RetryPolicyError,
+    failure_classes_from_witness_path,
+    load_retry_policy,
+    resolve_retry_decision,
+)
 from provider_env import map_github_to_premath_env
 
 
@@ -28,6 +35,12 @@ def parse_args(default_root: Path) -> argparse.Namespace:
         default=None,
         help="Optional summary markdown output path (defaults to GITHUB_STEP_SUMMARY when set).",
     )
+    parser.add_argument(
+        "--retry-policy",
+        type=Path,
+        default=None,
+        help="Optional retry-policy artifact path (defaults to policies/control/harness-retry-policy-v1.json).",
+    )
     return parser.parse_args()
 
 
@@ -44,7 +57,33 @@ def _write_sha(path: Path, out_path: Path) -> str:
     return digest
 
 
-def render_summary(repo_root: Path) -> str:
+def _render_retry_lines(retry_history: Sequence[RetryDecision]) -> list[str]:
+    if not retry_history:
+        return []
+    lines = [
+        "- retry history:",
+    ]
+    for decision in retry_history:
+        failure_line = ", ".join(decision.failure_classes) if decision.failure_classes else "(none)"
+        action = "retry" if decision.retry else decision.escalation_action
+        lines.append(
+            (
+                f"  - attempt {decision.attempt}/{decision.max_attempts}: "
+                f"rule={decision.rule_id} matched={decision.matched_failure_class} "
+                f"backoff={decision.backoff_class} action={action} "
+                f"failureClasses={failure_line}"
+            )
+        )
+    return lines
+
+
+def render_summary(
+    repo_root: Path,
+    *,
+    retry_history: Sequence[RetryDecision] = (),
+    retry_policy_digest: str | None = None,
+    retry_policy_id: str | None = None,
+) -> str:
     witness_path = repo_root / "artifacts/ciwitness/latest-required.json"
     digest_path = repo_root / "artifacts/ciwitness/latest-required.sha256"
     delta_path = repo_root / "artifacts/ciwitness/latest-delta.json"
@@ -102,6 +141,11 @@ def render_summary(repo_root: Path) -> str:
             ]
         )
 
+    if retry_policy_digest:
+        policy_label = retry_policy_id or "(unknown)"
+        lines.append(f"- retry policy: `{policy_label}` (`{retry_policy_digest}`)")
+    lines.extend(_render_retry_lines(retry_history))
+
     return "\n".join(lines) + "\n"
 
 
@@ -118,6 +162,41 @@ def write_summary(summary_text: str, summary_out: Path | None) -> None:
     print(summary_text, end="")
 
 
+def run_required_with_retry(root: Path, policy: Dict[str, object]) -> tuple[int, tuple[RetryDecision, ...]]:
+    retry_history: list[RetryDecision] = []
+    attempt = 1
+    witness_path = root / "artifacts/ciwitness/latest-required.json"
+    while True:
+        run = subprocess.run(["mise", "run", "ci-required-attested"], cwd=root)
+        exit_code = int(run.returncode)
+        if exit_code == 0:
+            return 0, tuple(retry_history)
+
+        failure_classes = failure_classes_from_witness_path(witness_path)
+        decision = resolve_retry_decision(policy, failure_classes, attempt=attempt)
+        retry_history.append(decision)
+        if decision.retry:
+            print(
+                (
+                    "[pipeline-required] retry "
+                    f"{attempt + 1}/{decision.max_attempts} "
+                    f"(rule={decision.rule_id}, matched={decision.matched_failure_class}, "
+                    f"backoff={decision.backoff_class})"
+                )
+            )
+            attempt += 1
+            continue
+
+        print(
+            (
+                "[pipeline-required] escalation "
+                f"action={decision.escalation_action} "
+                f"(rule={decision.rule_id}, matched={decision.matched_failure_class})"
+            )
+        )
+        return exit_code, tuple(retry_history)
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[2]
     args = parse_args(repo_root)
@@ -128,10 +207,21 @@ def main() -> int:
         mapped_str = ", ".join(f"{k}={v}" for k, v in sorted(mapped.items()))
         print(f"[pipeline-required] mapped provider refs: {mapped_str}")
 
-    run = subprocess.run(["mise", "run", "ci-required-attested"], cwd=root)
-    summary = render_summary(root)
+    try:
+        retry_policy = load_retry_policy(root, args.retry_policy)
+    except RetryPolicyError as exc:
+        print(f"[pipeline-required] retry policy error: {exc.failure_class}: {exc.reason}")
+        return 2
+
+    exit_code, retry_history = run_required_with_retry(root, retry_policy)
+    summary = render_summary(
+        root,
+        retry_history=retry_history,
+        retry_policy_digest=str(retry_policy.get("policyDigest")),
+        retry_policy_id=str(retry_policy.get("policyId")),
+    )
     write_summary(summary, args.summary_out)
-    return int(run.returncode)
+    return exit_code
 
 
 if __name__ == "__main__":

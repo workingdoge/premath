@@ -28,6 +28,9 @@ Operational source of truth:
 - `tools/ci/pipeline_required.py`
 - `tools/ci/pipeline_instruction.py`
 
+Both provider-neutral wrappers enforce deterministic retry classification from
+`policies/control/harness-retry-policy-v1.json` before escalation.
+
 Current full baseline gate (`mise run baseline`) includes:
 
 1. setup + language hygiene (`py-setup`, `rust-setup`, `fmt`, `lint`)

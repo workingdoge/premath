@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "policyKind": "ci.harness.retry.policy.v1",
+  "policyId": "policy.harness.retry.v1",
+  "defaultRule": {
+    "maxAttempts": 1,
+    "backoffClass": "none",
+    "escalationAction": "stop"
+  },
+  "rules": [
+    {
+      "ruleId": "transient_retry",
+      "failureClasses": [
+        "executor_unavailable",
+        "flaky_execution",
+        "flaky_io",
+        "gate_timeout",
+        "network_timeout"
+      ],
+      "maxAttempts": 3,
+      "backoffClass": "exponential_short",
+      "escalationAction": "issue_discover"
+    },
+    {
+      "ruleId": "operational_retry",
+      "failureClasses": [
+        "instruction_runtime_invalid",
+        "pipeline_invalid_witness_json",
+        "pipeline_invalid_witness_shape",
+        "pipeline_missing_witness",
+        "required_witness_runtime_invalid"
+      ],
+      "maxAttempts": 2,
+      "backoffClass": "fixed_short",
+      "escalationAction": "issue_discover"
+    },
+    {
+      "ruleId": "semantic_no_retry",
+      "failureClasses": [
+        "check_failed",
+        "instruction_check_not_allowed",
+        "instruction_invalid_normalizer",
+        "instruction_unknown_unroutable",
+        "proposal_binding_mismatch",
+        "proposal_discharge_failed",
+        "proposal_invalid_step",
+        "proposal_nondeterministic",
+        "proposal_unbound_policy"
+      ],
+      "maxAttempts": 1,
+      "backoffClass": "none",
+      "escalationAction": "mark_blocked"
+    }
+  ],
+  "policyDigest": "pol1_7dc928615fec4a20c1f8d71aca695d737ab478b508bc9a9a8445757be37e9759"
+}

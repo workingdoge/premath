@@ -20,6 +20,8 @@ Authority rule:
 - `TUSK-WITNESSING.md`: Gate vs transport witnessing split.
 - `TUSK-HARNESS-CONTRACT.md`: long-running harness hooks (`boot/step/stop`),
   durability boundaries, and trajectory/evidence mapping.
+- `TUSK-HARNESS-RETRY-POLICY.md`: canonical retry classification/escalation
+  table for harness pipeline wrappers.
 - `TUSK-HARNESS-SESSION.md`: compact handoff artifact + bootstrap payload
   contract for fresh-context restartability.
 - `TUSK-HARNESS-FEATURE-LEDGER.md`: typed per-feature progress ledger, closure

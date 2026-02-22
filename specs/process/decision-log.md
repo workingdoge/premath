@@ -2908,3 +2908,39 @@ encoding and avoids duplicating admissibility semantics in CI or planner layers.
   authoritative.
 - Follow-on implementation can proceed as bounded slices without forcing full
   mathematical generalization up front.
+
+---
+
+## 2026-02-22 — Decision 0100: Canonical harness retry-policy contract for pipeline wrappers
+
+### Decision
+Adopt one digest-bound retry-policy artifact for provider-neutral pipeline
+wrappers and enforce it through a shared helper.
+
+Implemented scope:
+
+1. add canonical retry policy registry + artifact:
+   - `policies/control/README.md`
+   - `policies/control/harness-retry-policy-v1.json`
+2. add shared deterministic policy helper:
+   - `tools/ci/harness_retry_policy.py`
+   - validates schema + digest
+   - parses witness failure classes
+   - returns typed attempt-level retry/escalation decisions
+3. enforce policy in wrapper entrypoints:
+   - `tools/ci/pipeline_required.py`
+   - `tools/ci/pipeline_instruction.py`
+4. emit retry policy + retry history in wrapper summary outputs.
+
+### Rationale
+The harness contract required fail-closed classify/retry/escalate behavior, but
+the operational table was implicit. A single digest-bound policy keeps retry
+logic deterministic and shared across required/instruction wrapper paths without
+moving semantic authority out of checker/witness surfaces.
+
+### Consequences
+- Retry behavior is now explicit, auditable, and test-covered in one policy
+  surface.
+- Wrapper failures classify from emitted witness artifacts, not ad-hoc stderr.
+- Escalation actions are typed (`issue_discover`, `mark_blocked`, `stop`), with
+  automatic issue-memory mutation wiring left as follow-on work.
