@@ -129,6 +129,8 @@ struct ControlPlaneProjectionContract {
     schema: u32,
     contract_kind: String,
     required_gate_projection: RequiredGateProjection,
+    required_witness: ControlPlaneRequiredWitness,
+    instruction_witness: ControlPlaneInstructionWitness,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -136,6 +138,21 @@ struct ControlPlaneProjectionContract {
 struct RequiredGateProjection {
     projection_policy: String,
     check_order: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneRequiredWitness {
+    witness_kind: String,
+    decision_kind: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneInstructionWitness {
+    witness_kind: String,
+    policy_kind: String,
+    policy_digest_prefix: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -582,6 +599,45 @@ fn check_gate_chain_parity(
     let ci_projection_set = parse_backticked_tasks(ci_projection_section)?;
 
     let mut failures = Vec::new();
+    if control_plane_contract
+        .required_gate_projection
+        .projection_policy
+        .trim()
+        .is_empty()
+    {
+        failures.push("coherence.gate_chain_parity.projection_policy_invalid".to_string());
+    }
+    if control_plane_contract
+        .required_witness
+        .witness_kind
+        .trim()
+        .is_empty()
+        || control_plane_contract
+            .required_witness
+            .decision_kind
+            .trim()
+            .is_empty()
+    {
+        failures.push("coherence.gate_chain_parity.required_witness_shape_invalid".to_string());
+    }
+    if control_plane_contract
+        .instruction_witness
+        .witness_kind
+        .trim()
+        .is_empty()
+        || control_plane_contract
+            .instruction_witness
+            .policy_kind
+            .trim()
+            .is_empty()
+        || control_plane_contract
+            .instruction_witness
+            .policy_digest_prefix
+            .trim()
+            .is_empty()
+    {
+        failures.push("coherence.gate_chain_parity.instruction_witness_shape_invalid".to_string());
+    }
     if baseline_set != ci_baseline_set {
         failures.push("coherence.gate_chain_parity.baseline_set_mismatch".to_string());
     }
@@ -597,6 +653,11 @@ fn check_gate_chain_parity(
             "projectionPolicy": control_plane_contract.required_gate_projection.projection_policy,
             "projectionFromControlPlane": projection_checks,
             "projectionFromCiClosure": sorted_vec_from_set(&ci_projection_set),
+            "requiredWitnessKind": control_plane_contract.required_witness.witness_kind,
+            "requiredDecisionKind": control_plane_contract.required_witness.decision_kind,
+            "instructionWitnessKind": control_plane_contract.instruction_witness.witness_kind,
+            "instructionPolicyKind": control_plane_contract.instruction_witness.policy_kind,
+            "instructionPolicyDigestPrefix": control_plane_contract.instruction_witness.policy_digest_prefix,
         }),
     })
 }

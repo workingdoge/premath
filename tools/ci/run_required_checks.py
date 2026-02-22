@@ -19,6 +19,7 @@ from change_projection import (
     project_required_checks,
     projection_plan_payload,
 )
+from control_plane_contract import REQUIRED_WITNESS_KIND
 from delta_snapshot import (
     default_delta_snapshot_path,
     make_delta_snapshot_payload,
@@ -317,7 +318,7 @@ def main() -> int:
     finished_at = datetime.now(timezone.utc)
     witness = {
         "ciSchema": 1,
-        "witnessKind": "ci.required.v1",
+        "witnessKind": REQUIRED_WITNESS_KIND,
         "projectionPolicy": plan["projectionPolicy"],
         "projectionDigest": plan["projectionDigest"],
         "changedPaths": plan["changedPaths"],

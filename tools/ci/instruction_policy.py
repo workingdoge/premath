@@ -9,11 +9,15 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Mapping
 
+from control_plane_contract import (
+    INSTRUCTION_POLICY_DIGEST_PREFIX,
+    INSTRUCTION_POLICY_KIND,
+)
 
 ROOT = Path(__file__).resolve().parents[2]
 POLICY_DIR = ROOT / "policies" / "instruction"
-POLICY_KIND = "ci.instruction.policy.v1"
-POLICY_DIGEST_PREFIX = "pol1_"
+POLICY_KIND = INSTRUCTION_POLICY_KIND
+POLICY_DIGEST_PREFIX = INSTRUCTION_POLICY_DIGEST_PREFIX
 
 
 class PolicyValidationError(ValueError):

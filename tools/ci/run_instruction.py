@@ -14,6 +14,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
+from control_plane_contract import INSTRUCTION_WITNESS_KIND
 from instruction_check_client import InstructionCheckError, run_instruction_check
 
 
@@ -194,7 +195,7 @@ def write_pre_execution_reject_witness(
 
     witness = {
         "ciSchema": 1,
-        "witnessKind": "ci.instruction.v1",
+        "witnessKind": INSTRUCTION_WITNESS_KIND,
         "instructionId": instruction_id,
         "instructionRef": rel_instruction_ref,
         "instructionDigest": _normalized_instruction_digest(instruction_path, envelope),
@@ -374,7 +375,7 @@ def main() -> int:
 
     witness = {
         "ciSchema": 1,
-        "witnessKind": "ci.instruction.v1",
+        "witnessKind": INSTRUCTION_WITNESS_KIND,
         "instructionId": instruction_id,
         "instructionRef": rel_instruction_ref,
         "instructionDigest": instruction_digest,

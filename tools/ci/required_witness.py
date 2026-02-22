@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
 from change_projection import PROJECTION_POLICY, normalize_paths, project_required_checks
+from control_plane_contract import REQUIRED_WITNESS_KIND
 from gate_witness_envelope import stable_sha256
 
 
@@ -246,7 +247,7 @@ def verify_required_witness_payload(
 
     if witness.get("ciSchema") != 1:
         errors.append(f"ciSchema must be 1 (actual={witness.get('ciSchema')!r})")
-    _check_str_field(witness, "witnessKind", "ci.required.v1", errors)
+    _check_str_field(witness, "witnessKind", REQUIRED_WITNESS_KIND, errors)
     _check_str_field(witness, "projectionPolicy", PROJECTION_POLICY, errors)
     _check_str_field(witness, "policyDigest", PROJECTION_POLICY, errors)
 

@@ -11,107 +11,26 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Set, Tuple
 
+from control_plane_contract import (
+    REQUIRED_CHECK_IDS,
+    REQUIRED_CHECK_ORDER,
+    REQUIRED_PROJECTION_POLICY,
+)
 from provider_env import resolve_premath_ci_refs
 
 PROJECTION_SCHEMA = 1
-CONTROL_PLANE_CONTRACT_PATH = (
-    Path(__file__).resolve().parents[2]
-    / "specs"
-    / "premath"
-    / "draft"
-    / "CONTROL-PLANE-CONTRACT.json"
-)
-CONTROL_PLANE_CONTRACT_KIND = "premath.control_plane.contract.v1"
+PROJECTION_POLICY = REQUIRED_PROJECTION_POLICY
 
+CHECK_BASELINE = REQUIRED_CHECK_IDS["baseline"]
+CHECK_BUILD = REQUIRED_CHECK_IDS["build"]
+CHECK_TEST = REQUIRED_CHECK_IDS["test"]
+CHECK_TEST_TOY = REQUIRED_CHECK_IDS["testToy"]
+CHECK_TEST_KCIR_TOY = REQUIRED_CHECK_IDS["testKcirToy"]
+CHECK_CONFORMANCE = REQUIRED_CHECK_IDS["conformanceCheck"]
+CHECK_CONFORMANCE_RUN = REQUIRED_CHECK_IDS["conformanceRun"]
+CHECK_DOCTRINE = REQUIRED_CHECK_IDS["doctrineCheck"]
 
-def _load_control_plane_projection_contract() -> Dict[str, Any]:
-    try:
-        payload = json.loads(CONTROL_PLANE_CONTRACT_PATH.read_text(encoding="utf-8"))
-    except OSError as exc:
-        raise RuntimeError(
-            f"failed to read control-plane contract: {CONTROL_PLANE_CONTRACT_PATH}: {exc}"
-        ) from exc
-    except json.JSONDecodeError as exc:
-        raise RuntimeError(
-            f"invalid json in control-plane contract: {CONTROL_PLANE_CONTRACT_PATH}: {exc}"
-        ) from exc
-
-    if not isinstance(payload, dict):
-        raise RuntimeError("control-plane contract root must be an object")
-    if payload.get("schema") != 1:
-        raise RuntimeError("control-plane contract schema must be 1")
-    if payload.get("contractKind") != CONTROL_PLANE_CONTRACT_KIND:
-        raise RuntimeError(
-            f"control-plane contract kind must be {CONTROL_PLANE_CONTRACT_KIND!r}"
-        )
-
-    required = payload.get("requiredGateProjection")
-    if not isinstance(required, dict):
-        raise RuntimeError("control-plane contract requiredGateProjection must be an object")
-
-    projection_policy = required.get("projectionPolicy")
-    if not isinstance(projection_policy, str) or not projection_policy.strip():
-        raise RuntimeError("control-plane contract projectionPolicy must be a non-empty string")
-
-    check_ids = required.get("checkIds")
-    if not isinstance(check_ids, dict):
-        raise RuntimeError("control-plane contract checkIds must be an object")
-
-    required_check_id_keys = (
-        "baseline",
-        "build",
-        "test",
-        "testToy",
-        "testKcirToy",
-        "conformanceCheck",
-        "conformanceRun",
-        "doctrineCheck",
-    )
-    parsed_ids: Dict[str, str] = {}
-    for key in required_check_id_keys:
-        value = check_ids.get(key)
-        if not isinstance(value, str) or not value.strip():
-            raise RuntimeError(f"control-plane contract checkIds.{key} must be a non-empty string")
-        parsed_ids[key] = value.strip()
-    if len(set(parsed_ids.values())) != len(parsed_ids):
-        raise RuntimeError("control-plane contract checkIds must not contain duplicate values")
-
-    check_order = required.get("checkOrder")
-    if not isinstance(check_order, list) or not check_order:
-        raise RuntimeError("control-plane contract checkOrder must be a non-empty list")
-    parsed_order: List[str] = []
-    for idx, item in enumerate(check_order):
-        if not isinstance(item, str) or not item.strip():
-            raise RuntimeError(f"control-plane contract checkOrder[{idx}] must be a non-empty string")
-        parsed_order.append(item.strip())
-
-    known_ids = set(parsed_ids.values())
-    order_set = set(parsed_order)
-    if len(order_set) != len(parsed_order):
-        raise RuntimeError("control-plane contract checkOrder must not contain duplicates")
-    if order_set != known_ids:
-        raise RuntimeError("control-plane contract checkOrder must cover exactly checkIds values")
-
-    return {
-        "projectionPolicy": projection_policy.strip(),
-        "checkIds": parsed_ids,
-        "checkOrder": parsed_order,
-    }
-
-
-_CONTROL_PLANE_PROJECTION = _load_control_plane_projection_contract()
-PROJECTION_POLICY = _CONTROL_PLANE_PROJECTION["projectionPolicy"]
-
-CHECK_BASELINE = _CONTROL_PLANE_PROJECTION["checkIds"]["baseline"]
-CHECK_BUILD = _CONTROL_PLANE_PROJECTION["checkIds"]["build"]
-CHECK_TEST = _CONTROL_PLANE_PROJECTION["checkIds"]["test"]
-CHECK_TEST_TOY = _CONTROL_PLANE_PROJECTION["checkIds"]["testToy"]
-CHECK_TEST_KCIR_TOY = _CONTROL_PLANE_PROJECTION["checkIds"]["testKcirToy"]
-CHECK_CONFORMANCE = _CONTROL_PLANE_PROJECTION["checkIds"]["conformanceCheck"]
-CHECK_CONFORMANCE_RUN = _CONTROL_PLANE_PROJECTION["checkIds"]["conformanceRun"]
-CHECK_DOCTRINE = _CONTROL_PLANE_PROJECTION["checkIds"]["doctrineCheck"]
-
-CHECK_ORDER: Sequence[str] = tuple(_CONTROL_PLANE_PROJECTION["checkOrder"])
+CHECK_ORDER: Sequence[str] = tuple(REQUIRED_CHECK_ORDER)
 
 DOC_FILE_NAMES: Set[str] = {
     "AGENTS.md",

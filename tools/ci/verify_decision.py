@@ -10,6 +10,8 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
+from control_plane_contract import REQUIRED_DECISION_KIND
+
 
 def parse_args() -> argparse.Namespace:
     root = Path(__file__).resolve().parents[2]
@@ -120,8 +122,8 @@ def main() -> int:
         return 2
 
     errors: List[str] = []
-    if decision.get("decisionKind") != "ci.required.decision.v1":
-        errors.append("decisionKind must be 'ci.required.decision.v1'")
+    if decision.get("decisionKind") != REQUIRED_DECISION_KIND:
+        errors.append(f"decisionKind must be {REQUIRED_DECISION_KIND!r}")
     decision_value = decision.get("decision")
     if decision_value not in {"accept", "reject"}:
         errors.append("decision must be 'accept' or 'reject'")

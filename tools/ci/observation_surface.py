@@ -10,8 +10,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from control_plane_contract import (
+    INSTRUCTION_WITNESS_KIND,
+    REQUIRED_DECISION_KIND,
+    REQUIRED_WITNESS_KIND,
+)
+
 SCHEMA = 1
 SURFACE_KIND = "ci.observation.surface.v0"
+REQUIRED_EVENT_KIND = f"{REQUIRED_WITNESS_KIND}.summary"
+REQUIRED_DECISION_EVENT_KIND = f"{REQUIRED_DECISION_KIND}.summary"
+INSTRUCTION_EVENT_KIND = f"{INSTRUCTION_WITNESS_KIND}.summary"
 BLOCKING_DEP_TYPES = {"blocks", "parent-child", "conditional-blocks", "waits-for"}
 
 
@@ -583,7 +592,7 @@ def build_surface(
             payload = _load_json(path)
             if payload is None:
                 continue
-            if payload.get("witnessKind") != "ci.instruction.v1":
+            if payload.get("witnessKind") != INSTRUCTION_WITNESS_KIND:
                 continue
             instructions.append(_normalize_instruction(payload, _relative(path, repo_root)))
     instructions.sort(key=lambda row: row["instructionId"])
@@ -643,15 +652,15 @@ def build_events(surface: Dict[str, Any]) -> List[Dict[str, Any]]:
     if isinstance(delta, dict):
         events.append({"kind": "ci.delta.v1.summary", "payload": delta})
     if isinstance(required, dict):
-        events.append({"kind": "ci.required.v1.summary", "payload": required})
+        events.append({"kind": REQUIRED_EVENT_KIND, "payload": required})
     if isinstance(decision, dict):
-        events.append({"kind": "ci.required.decision.v1.summary", "payload": decision})
+        events.append({"kind": REQUIRED_DECISION_EVENT_KIND, "payload": decision})
 
     instructions = surface.get("instructions")
     if isinstance(instructions, list):
         for row in instructions:
             if isinstance(row, dict):
-                events.append({"kind": "ci.instruction.v1.summary", "payload": row})
+                events.append({"kind": INSTRUCTION_EVENT_KIND, "payload": row})
 
     summary = surface.get("summary")
     if isinstance(summary, dict):

@@ -115,7 +115,10 @@ Minimum parity set includes:
 
 - baseline task composition parity (`.mise.toml` vs CI closure docs),
 - deterministic projected check ID parity (`draft/CONTROL-PLANE-CONTRACT.json`
-  required-gate projection order vs CI closure docs).
+  required-gate projection order vs CI closure docs),
+- shared control-plane witness/policy identifiers are present and well-formed
+  in `draft/CONTROL-PLANE-CONTRACT.json` (`requiredWitness`,
+  `instructionWitness`).
 
 ### 4.4 `operation_reachability`
 
