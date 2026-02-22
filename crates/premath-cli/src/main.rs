@@ -123,6 +123,8 @@ fn main() {
             json,
         } => commands::coherence_check::run(contract, repo_root, json),
 
+        Commands::ProposalCheck { proposal, json } => commands::proposal_check::run(proposal, json),
+
         Commands::Issue { command } => commands::issue::run(command),
 
         Commands::Dep { command } => commands::dep::run(command),

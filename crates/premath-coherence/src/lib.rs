@@ -3,6 +3,15 @@
 //! This crate evaluates a machine contract artifact against repository surfaces
 //! and emits deterministic witnesses.
 
+mod proposal;
+
+pub use proposal::{
+    CanonicalProposal, ProposalBinding, ProposalDischarge, ProposalError, ProposalObligation,
+    ProposalStep, ProposalTargetJudgment, ValidatedProposal, compile_proposal_obligations,
+    compute_proposal_digest, compute_proposal_kcir_ref, discharge_proposal_obligations,
+    validate_proposal_payload,
+};
+
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};

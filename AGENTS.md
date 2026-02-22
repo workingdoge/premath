@@ -68,6 +68,7 @@
 - `cargo run --package premath-cli -- init .` — initialize local `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present).
 - `cargo run --package premath-cli -- mock-gate --json` — emit a mock Gate witness envelope.
 - `cargo run --package premath-cli -- tusk-eval --identity <run_identity.json> --descent-pack <descent_pack.json> --json` — evaluate a Tusk descent pack and emit envelope + glue result.
+- `cargo run --package premath-cli -- proposal-check --proposal <proposal.json> --json` — validate/canonicalize one proposal payload, compile obligations, and emit deterministic discharge output.
 - `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json` — evaluate typed coherence obligations and emit deterministic coherence witness output.
 - `cargo run --package premath-cli -- observe --mode latest --json` — query Observation Surface v0 through the UX composition layer.
 - `cargo run --package premath-cli -- observe-serve --bind 127.0.0.1:43174` — serve Observation Surface v0 through the UX HTTP API.

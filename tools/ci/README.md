@@ -130,6 +130,8 @@ It separates:
 - rejects unroutable `unknown(reason)` unless `typingPolicy.allowUnknown=true`
 - carries optional `capabilityClaims` from envelope into witness artifacts for
   downstream mutation-policy gating surfaces
+- delegates proposal canonicalization/obligation/discharge checks to
+  `premath proposal-check` (core-backed checker path) before gate execution
 - executes requested gate checks through `run_gate.sh`
 - output: `artifacts/ciwitness/<ts>-<id>.json`
   - for proposal-carrying instructions, witness includes deterministic

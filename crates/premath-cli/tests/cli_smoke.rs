@@ -124,6 +124,29 @@ fn write_tusk_eval_inputs(dir: &Path) -> (PathBuf, PathBuf) {
     (identity_path, pack_path)
 }
 
+fn write_proposal_input(dir: &Path) -> PathBuf {
+    let proposal = serde_json::json!({
+        "proposalKind": "value",
+        "targetCtxRef": "ctx:repo.main",
+        "targetJudgment": {
+            "kind": "obj",
+            "shape": "ObjNF:site"
+        },
+        "candidateRefs": ["ref:alpha"],
+        "binding": {
+            "normalizerId": "normalizer.ci.v1",
+            "policyDigest": "pol1_demo"
+        }
+    });
+    let proposal_path = dir.join("proposal.json");
+    fs::write(
+        &proposal_path,
+        serde_json::to_vec_pretty(&proposal).expect("proposal should serialize"),
+    )
+    .expect("proposal should be written");
+    proposal_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -273,6 +296,34 @@ fn tusk_eval_json_smoke() {
     let payload = parse_json_stdout(&output);
     assert_eq!(payload["envelope"]["result"], "accepted");
     assert_eq!(payload["glueResult"]["selected"], "proposal:1");
+}
+
+#[test]
+fn proposal_check_json_smoke() {
+    let tmp = TempDirGuard::new("proposal-check-json");
+    let proposal = write_proposal_input(tmp.path());
+
+    let output = run_premath([
+        OsString::from("proposal-check"),
+        OsString::from("--proposal"),
+        proposal.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["canonical"]["proposalKind"], "value");
+    assert_eq!(payload["discharge"]["outcome"], "accepted");
+    assert_eq!(
+        payload["discharge"]["failureClasses"],
+        serde_json::json!([])
+    );
+    assert!(
+        payload["kcirRef"]
+            .as_str()
+            .expect("kcirRef should be string")
+            .starts_with("kcir1_")
+    );
 }
 
 #[test]

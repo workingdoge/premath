@@ -243,6 +243,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Validate and discharge one proposal payload through core checker semantics
+    ProposalCheck {
+        /// Proposal JSON path
+        #[arg(long)]
+        proposal: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Manage issues in premath-bd JSONL memory
     Issue {
         #[command(subcommand)]

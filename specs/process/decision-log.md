@@ -1226,3 +1226,31 @@ projections.
 - KCIR proposal projection shape is explicit and portable (`kcir.proposal.v1`).
 - migration away from duplicate proposal identity encodings is now concrete and
   test-gated.
+
+---
+
+## 2026-02-22 — Decision 0043: Route instruction proposal discharge through core-backed CLI checker path
+
+### Decision
+Advance `bd-34` migration execution by moving instruction proposal semantic
+evaluation off Python-local kernels and onto a core-backed CLI path:
+
+- add `premath proposal-check --proposal <proposal.json> --json`,
+- implement proposal canonicalization/digest/KCIR ref checks and deterministic
+  obligation compile/discharge in `premath-coherence`,
+- update `tools/ci/run_instruction.py` to delegate proposal ingest checks to the
+  new CLI command (Python remains orchestration/witness shaping wrapper).
+
+### Rationale
+`run_instruction.py` previously executed proposal semantic kernels directly in
+Python (`compile_proposal_obligations`/`discharge_proposal_obligations`), which
+left a parallel authority path during migration. This step reduces that degree
+of freedom by shifting the live instruction gate path to the core-backed
+checker surface.
+
+### Consequences
+- instruction gate execution now uses core-backed proposal checking semantics.
+- Python keeps policy/env orchestration responsibility but no longer owns
+  proposal discharge semantics on the authoritative instruction path.
+- migration work for `bd-34` is now in-progress with one concrete cutover lane
+  completed; remaining parity migration surfaces still need consolidation.

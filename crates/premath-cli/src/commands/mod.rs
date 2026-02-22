@@ -7,5 +7,6 @@ pub mod mcp_serve;
 pub mod mock_gate;
 pub mod observe;
 pub mod observe_serve;
+pub mod proposal_check;
 pub mod tusk_eval;
 pub mod verify;
