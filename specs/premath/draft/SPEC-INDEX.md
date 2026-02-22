@@ -176,6 +176,23 @@ explicitly claimed under §5.4 or §5.6.
 - `raw/CI-TOPOS` — closure-style CI projection discipline (informational/raw).
 - `docs/foundations/` — explanatory notes (non-normative).
 
+Raw capability-spec lifecycle policy:
+
+- Raw capability specs MAY be exercised by executable vectors, but remain
+  lifecycle-raw until promotion criteria are met.
+- Capability claims bind only the capability-scoped normative clauses listed in
+  §5.4; raw status still means the full document text is open to iteration.
+- Promotion from raw to draft for capability-scoped specs requires:
+  1) deterministic golden/adversarial/invariance vectors for every claimed law
+     boundary;
+  2) deterministic witness/failure-class mapping through checker/run surfaces;
+  3) issue-backed migration plan + decision-log entry for lifecycle change.
+
+Current tracked promotion queue:
+
+- `raw/SQUEAK-SITE` — tracked by issue `bd-44`.
+- `raw/TUSK-CORE` — tracked by issue `bd-45`.
+
 ### 5.6 Normative for profile overlays (only if claimed)
 
 - `profile/ADJOINTS-AND-SITES` — capability-scoped adjoint/site overlay:

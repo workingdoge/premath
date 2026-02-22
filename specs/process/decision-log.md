@@ -1054,3 +1054,62 @@ instead of authority duplication.
 ### Consequences
 - architectural coherence now has an explicit draft doctrine anchor.
 - future reductions can be judged against a single canonical boundary rule.
+
+---
+
+## 2026-02-22 — Decision 0037: Deprecate ROADMAP as planning authority; issue graph + decision log are canonical
+
+### Decision
+Keep `specs/premath/raw/ROADMAP.md` as an informative orientation document,
+but explicitly deprecate it as a source of active execution truth.
+
+Canonical planning authority is now:
+
+- `.premath/issues.jsonl` for active work graph/state,
+- `specs/process/decision-log.md` for binding architectural/process decisions.
+
+Add docs-coherence enforcement so `raw/ROADMAP` must contain explicit authority
+markers pointing to those surfaces.
+
+### Rationale
+The roadmap phase sketch is useful context but drifts quickly. Active work
+selection and ordering is already deterministic and queryable via the issue
+graph. Binding intent is already captured in the decision log. Treating roadmap
+text as execution authority duplicates state and reintroduces ambiguity.
+
+### Consequences
+- planning authority is now singular and machine-checkable.
+- roadmap drift can no longer silently become a competing source of truth.
+
+---
+
+## 2026-02-22 — Decision 0038: Define raw capability-spec promotion policy and queue
+
+### Decision
+Define and publish lifecycle policy for optional capability-adjacent raw specs:
+`raw/SQUEAK-SITE` and `raw/TUSK-CORE`.
+
+Policy:
+
+- raw capability specs may be exercised by executable vectors while still
+  lifecycle-raw;
+- capability claims bind only the capability-scoped normative clauses listed in
+  `SPEC-INDEX` §5.4;
+- promotion to draft requires deterministic vectors, deterministic
+  witness/failure mappings, and an issue-backed migration plan with decision-log
+  record.
+
+Track promotion-prep as explicit issue queue:
+
+- `bd-44` for `raw/SQUEAK-SITE`,
+- `bd-45` for `raw/TUSK-CORE`.
+
+### Rationale
+Capability scope and lifecycle scope are different axes. We need explicit rules
+that preserve expressive optionality while preventing accidental draft-level
+authority from raw text drift.
+
+### Consequences
+- optional raw capability docs now have explicit retention/promotion criteria.
+- promotion work is queryable as first-class issue graph state, not implicit
+  intent.

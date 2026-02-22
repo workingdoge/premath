@@ -24,24 +24,30 @@ This document is governed by the process in `../../process/coss.md`.
 
 ## 1. Purpose
 
-This document is **informative**. It outlines a suggested path from an initial
-raw spec set to a draft/stable Premath kernel.
+This document is **informative** and intentionally narrow.
 
-## 2. What to freeze first
+It records a compact phase model for orientation, but it is **not the
+authoritative source of active work**.
 
-In a consensus-oriented process, it is usually best to freeze the things that
-are most expensive to change:
+Authoritative planning surfaces are:
 
-1. Reference model + binding interface (`draft/KCIR-CORE`, `draft/REF-BINDING`)
-2. NF byte grammars (`draft/NF`)
-3. Normalizer comparison key semantics (`draft/NORMALIZER`)
-4. Bidirectional/descent obligations (`draft/BIDIR-DESCENT`)
-5. Gate law wording + witness classes (`draft/GATE`)
+- `.premath/issues.jsonl` (query/mutate through `premath issue ...` surfaces)
+- `specs/process/decision-log.md` (binding architecture/process decisions)
 
-Optional extensions (PullAtom, additional canonicalization modules, extra wire formats)
-can be postponed until tests and multiple implementations justify freezing.
+If this file conflicts with those surfaces, treat this file as stale and follow
+the issue graph + decision log.
 
-## 3. Suggested phases
+## 2. Current status
+
+As of 2026-02-22:
+
+- Core kernel + interop contract surfaces have been promoted to `draft`.
+- Coherence and instruction/proposal checking surfaces are executable and
+  merge-gated.
+- Forward planning is tracked as issue graph epics/tasks (`bd-*`) with
+  dependency edges.
+
+## 3. Phase model (historical heuristic)
 
 ### Phase A — Raw publication
 
@@ -65,3 +71,13 @@ can be postponed until tests and multiple implementations justify freezing.
 
 - Promote to stable once used by third parties.
 - Restrict changes to errata and clarifications.
+
+## 4. Planning policy
+
+Use this file for high-level orientation only.
+
+For execution ordering, ownership, blocking analysis, and acceptance evidence:
+
+1. use `.premath/issues.jsonl` as the canonical task memory substrate;
+2. use `specs/process/decision-log.md` as the canonical architectural intent log;
+3. require deterministic witnesses/checks for any promoted contract changes.

@@ -69,6 +69,16 @@ run = "echo ok"
             )
         )
 
+    def test_find_missing_markers(self) -> None:
+        text = "alpha beta gamma"
+        missing = check_docs_coherence.find_missing_markers(text, ("alpha", "delta", "gamma"))
+        self.assertEqual(missing, ["delta"])
+
+    def test_find_missing_markers_all_present(self) -> None:
+        text = "alpha beta gamma"
+        missing = check_docs_coherence.find_missing_markers(text, ("alpha", "beta"))
+        self.assertEqual(missing, [])
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,6 +23,18 @@ EXPECTED_CONDITIONAL_CAPABILITY_DOCS: Tuple[Tuple[str, str], ...] = (
     ("raw/SQUEAK-SITE", "capabilities.squeak_site"),
     ("raw/PREMATH-CI", "capabilities.ci_witnesses"),
 )
+SPEC_INDEX_RAW_LIFECYCLE_MARKERS: Tuple[str, ...] = (
+    "Raw capability-spec lifecycle policy:",
+    "Promotion from raw to draft for capability-scoped specs requires:",
+    "`raw/SQUEAK-SITE` — tracked by issue `bd-44`",
+    "`raw/TUSK-CORE` — tracked by issue `bd-45`",
+)
+ROADMAP_AUTHORITY_MARKERS: Tuple[str, ...] = (
+    "authoritative source of active work",
+    "If this file conflicts with those surfaces",
+    "`.premath/issues.jsonl`",
+    "`specs/process/decision-log.md`",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -153,6 +165,10 @@ def sorted_csv(values: Sequence[str]) -> str:
     return ", ".join(sorted(values))
 
 
+def find_missing_markers(text: str, markers: Sequence[str]) -> List[str]:
+    return [marker for marker in markers if marker not in text]
+
+
 def main() -> int:
     args = parse_args()
     root = args.repo_root.resolve()
@@ -165,6 +181,7 @@ def main() -> int:
     conformance_readme = root / "tools" / "conformance" / "README.md"
     ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
+    roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
     capability_text = load_text(run_capability_vectors)
@@ -227,6 +244,10 @@ def main() -> int:
                 f"SPEC-INDEX §5.5 missing conditional normative clause for {doc_ref} ({capability_id})"
             )
 
+    missing_raw_lifecycle_markers = find_missing_markers(section_55, SPEC_INDEX_RAW_LIFECYCLE_MARKERS)
+    for marker in missing_raw_lifecycle_markers:
+        errors.append(f"SPEC-INDEX §5.5 raw lifecycle policy missing marker: {marker}")
+
     mise_text = load_text(mise_toml)
     baseline_commands = parse_mise_task_commands(mise_text, "baseline")
     baseline_task_ids = parse_baseline_task_ids_from_commands(baseline_commands)
@@ -260,6 +281,11 @@ def main() -> int:
             "CI-CLOSURE projected check ID list mismatch with tools/ci/change_projection.py CHECK_ORDER: "
             f"expected=[{sorted_csv(projection_checks)}], got=[{sorted_csv(ci_projection_checks)}]"
         )
+
+    roadmap_text = load_text(roadmap)
+    missing_roadmap_markers = find_missing_markers(roadmap_text, ROADMAP_AUTHORITY_MARKERS)
+    for marker in missing_roadmap_markers:
+        errors.append(f"ROADMAP authority contract missing marker: {marker}")
 
     if errors:
         print(f"[docs-coherence-check] FAIL (errors={len(errors)})")
