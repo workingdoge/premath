@@ -1,5 +1,5 @@
 use super::init::{InitOutcome, init_layout};
-use crate::support::{ISSUE_QUERY_PROJECTION_KIND, collect_backend_status};
+use crate::support::{ISSUE_QUERY_PROJECTION_KIND, backend_status_payload, collect_backend_status};
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use premath_bd::{DepType, Issue, IssueLease, IssueLeaseState, MemoryStore};
@@ -923,30 +923,12 @@ fn call_issue_backend_status(
     let repo_root = resolve_repo_root(&config.repo_root);
     let projection_path = resolve_issue_query_projection_path(config);
     let status = collect_backend_status(&issues_path, &repo_root, &projection_path);
-
-    json_result(json!({
-        "action": "issue.backend-status",
-        "issuesPath": status.issues_path.display().to_string(),
-        "repoRoot": status.repo_root.display().to_string(),
-        "queryBackend": config.issue_query_backend.as_str(),
-        "canonicalMemory": {
-            "kind": "jsonl",
-            "path": status.issues_path.display().to_string(),
-            "exists": status.issues_exists
-        },
-        "queryProjection": {
-            "kind": ISSUE_QUERY_PROJECTION_KIND,
-            "path": status.projection_path.display().to_string(),
-            "exists": status.projection_exists
-        },
-        "jj": {
-            "state": status.jj_state,
-            "available": status.jj_available,
-            "repoRoot": status.jj_repo_root,
-            "headChangeId": status.jj_head_change_id,
-            "error": status.jj_error
-        }
-    }))
+    let payload = backend_status_payload(
+        "issue.backend-status",
+        &status,
+        Some(config.issue_query_backend.as_str()),
+    );
+    json_result(payload)
 }
 
 fn call_issue_blocked(

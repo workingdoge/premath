@@ -1,5 +1,5 @@
 use crate::cli::IssueCommands;
-use crate::support::{ISSUE_QUERY_PROJECTION_KIND, collect_backend_status};
+use crate::support::{backend_status_payload, collect_backend_status};
 use premath_bd::{
     DepType, Issue, MemoryStore, event_stream_ref, migrate_store_to_events, read_events_from_path,
     replay_events, replay_events_from_path, store_snapshot_ref, stores_equivalent,
@@ -242,28 +242,7 @@ fn run_backend_status(issues: String, repo: String, projection: String, json_out
     );
 
     if json_output {
-        let payload = json!({
-            "action": "issue.backend-status",
-            "issuesPath": status.issues_path.display().to_string(),
-            "repoRoot": status.repo_root.display().to_string(),
-            "canonicalMemory": {
-                "kind": "jsonl",
-                "path": status.issues_path.display().to_string(),
-                "exists": status.issues_exists
-            },
-            "queryProjection": {
-                "kind": ISSUE_QUERY_PROJECTION_KIND,
-                "path": status.projection_path.display().to_string(),
-                "exists": status.projection_exists
-            },
-            "jj": {
-                "state": status.jj_state,
-                "available": status.jj_available,
-                "repoRoot": status.jj_repo_root,
-                "headChangeId": status.jj_head_change_id,
-                "error": status.jj_error
-            }
-        });
+        let payload = backend_status_payload("issue.backend-status", &status, None);
         println!(
             "{}",
             serde_json::to_string_pretty(&payload).expect("json serialization")

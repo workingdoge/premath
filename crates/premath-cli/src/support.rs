@@ -2,7 +2,7 @@ use premath_bd::{DepType, MemoryStore};
 use premath_jj::JjClient;
 use premath_kernel::{CoherenceLevel, ContextId, FiberSignature};
 use premath_surreal::QueryCache;
-use serde_json::json;
+use serde_json::{Value, json};
 use std::collections::{BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -202,6 +202,46 @@ pub fn collect_backend_status(
         jj_head_change_id,
         jj_error,
     }
+}
+
+pub fn backend_status_payload(
+    action: &str,
+    status: &BackendStatus,
+    query_backend: Option<&str>,
+) -> Value {
+    let mut payload = json!({
+        "action": action,
+        "issuesPath": status.issues_path.display().to_string(),
+        "repoRoot": status.repo_root.display().to_string(),
+        "canonicalMemory": {
+            "kind": "jsonl",
+            "path": status.issues_path.display().to_string(),
+            "exists": status.issues_exists
+        },
+        "queryProjection": {
+            "kind": ISSUE_QUERY_PROJECTION_KIND,
+            "path": status.projection_path.display().to_string(),
+            "exists": status.projection_exists
+        },
+        "jj": {
+            "state": status.jj_state,
+            "available": status.jj_available,
+            "repoRoot": status.jj_repo_root,
+            "headChangeId": status.jj_head_change_id,
+            "error": status.jj_error
+        }
+    });
+
+    if let Some(query_backend) = query_backend
+        && let Value::Object(ref mut map) = payload
+    {
+        map.insert(
+            "queryBackend".to_string(),
+            Value::String(query_backend.to_string()),
+        );
+    }
+
+    payload
 }
 
 pub fn read_json_file_or_exit<T>(path: &str, label: &str) -> T
