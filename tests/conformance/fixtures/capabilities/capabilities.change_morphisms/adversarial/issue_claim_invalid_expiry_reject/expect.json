@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_invalid_expires_at"
+  ],
+  "assertions": [
+    "explicit non-future lease expiry is rejected deterministically"
+  ]
+}

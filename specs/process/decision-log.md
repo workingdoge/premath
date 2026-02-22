@@ -891,3 +891,32 @@ state evolution.
 - Replay equivalence is executable and test-gated.
 - Workflow-specific dependency interpretations are explicit projection views,
   not schema forks.
+
+---
+
+## 2026-02-22 — Decision 0031: Align lease-claim conformance semantics with runtime state machine
+
+### Decision
+For issue lease/claim workflow semantics, make conformance vectors enforce the
+same state machine as MCP runtime claim paths:
+
+- stale lease claims are reclaimable (state may be normalized before claim),
+- lease binding rejects ambiguous claim inputs (`ttl` + explicit expiry),
+- lease TTL range is bounded,
+- explicit lease expiry must be in the future,
+- default lease-id derivation uses the same token normalization shape as runtime.
+
+Add executable vectors for:
+
+- stale lease reclaim golden path,
+- invalid expiry reject,
+- invalid TTL reject.
+
+### Rationale
+Lease/workflow control is a high-leverage orchestration boundary. Any drift
+between executable conformance and runtime mutation semantics creates silent
+multiagent coordination bugs.
+
+### Consequences
+- change-morphism conformance now catches stale-claim and lease-binding drift.
+- runtime and conformance both fail-closed on invalid claim lease bindings.

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_invalid_ttl"
+  ],
+  "assertions": [
+    "out-of-range lease TTL is rejected deterministically"
+  ]
+}

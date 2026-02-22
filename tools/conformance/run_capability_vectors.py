@@ -55,6 +55,9 @@ BLOCKING_DEP_TYPES = {
     "conditional-blocks",
     "waits-for",
 }
+DEFAULT_LEASE_TTL_SECONDS = 3600
+MIN_LEASE_TTL_SECONDS = 30
+MAX_LEASE_TTL_SECONDS = 86_400
 ADJOINTS_SITES_REQUIRED_OBLIGATIONS = {
     "adjoint_triangle",
     "beck_chevalley_sigma",
@@ -182,6 +185,49 @@ def ensure_gate_witness_payloads(
             raise ValueError(f"{label}[{key!r}] must be an object")
         out[key] = payload
     return out
+
+
+def lease_token(value: str) -> str:
+    out_chars: List[str] = []
+    for ch in value:
+        if ch.isascii() and ch.isalnum():
+            out_chars.append(ch.lower())
+        elif ch in {"-", "_"}:
+            out_chars.append(ch)
+        else:
+            out_chars.append("_")
+    trimmed = "".join(out_chars).strip("_")
+    return trimmed if trimmed else "anon"
+
+
+def resolve_lease_id(raw_lease_id: Any, issue_id: str, assignee: str) -> str:
+    if isinstance(raw_lease_id, str) and raw_lease_id:
+        return raw_lease_id
+    return f"lease1_{lease_token(issue_id)}_{lease_token(assignee)}"
+
+
+def resolve_lease_expiry_unix_ms(
+    now_unix_ms: int,
+    ttl_seconds_raw: Any,
+    expires_at_unix_ms_raw: Any,
+) -> tuple[Optional[int], Optional[str]]:
+    if ttl_seconds_raw is not None and not isinstance(ttl_seconds_raw, int):
+        raise ValueError("leaseTtlSeconds must be an integer when present")
+    if expires_at_unix_ms_raw is not None and not isinstance(expires_at_unix_ms_raw, int):
+        raise ValueError("leaseExpiresAtUnixMs must be an integer when present")
+
+    if ttl_seconds_raw is not None and expires_at_unix_ms_raw is not None:
+        return (None, "lease_binding_ambiguous")
+
+    if expires_at_unix_ms_raw is not None:
+        if expires_at_unix_ms_raw <= now_unix_ms:
+            return (None, "lease_invalid_expires_at")
+        return (expires_at_unix_ms_raw, None)
+
+    ttl_seconds = ttl_seconds_raw if isinstance(ttl_seconds_raw, int) else DEFAULT_LEASE_TTL_SECONDS
+    if ttl_seconds < MIN_LEASE_TTL_SECONDS or ttl_seconds > MAX_LEASE_TTL_SECONDS:
+        return (None, "lease_invalid_ttl")
+    return (now_unix_ms + ttl_seconds * 1000, None)
 
 
 def evaluate_nf_binding_stable(case: Dict[str, Any]) -> VectorOutcome:
@@ -1447,35 +1493,40 @@ def evaluate_change_projection_issue_claim(case: Dict[str, Any]) -> VectorOutcom
     claim_lease_id = claim.get("leaseId")
     if claim_lease_id is not None and not isinstance(claim_lease_id, str):
         raise ValueError("artifacts.claim.leaseId must be a string when present")
-    claim_lease_ttl_seconds = claim.get("leaseTtlSeconds", 3600)
-    if claim_lease_ttl_seconds is not None and not isinstance(claim_lease_ttl_seconds, int):
-        raise ValueError("artifacts.claim.leaseTtlSeconds must be an integer when present")
+    claim_lease_ttl_seconds = claim.get("leaseTtlSeconds")
     claim_lease_expires_at_unix_ms = claim.get("leaseExpiresAtUnixMs")
-    if claim_lease_expires_at_unix_ms is not None and not isinstance(claim_lease_expires_at_unix_ms, int):
-        raise ValueError("artifacts.claim.leaseExpiresAtUnixMs must be an integer when present")
 
     if before_status == "closed":
         return VectorOutcome("rejected", "rejected", ["issue_claim_closed"])
-    if (
-        before_lease_owner
+    has_stale_lease = (
+        before_lease_owner is not None
+        and before_lease_expires_at_unix_ms is not None
+        and before_lease_expires_at_unix_ms <= now_unix_ms
+    )
+    has_active_lease = (
+        before_lease_owner is not None
         and before_lease_expires_at_unix_ms is not None
         and before_lease_expires_at_unix_ms > now_unix_ms
+    )
+    if (
+        has_active_lease
+        and before_lease_owner is not None
         and before_lease_owner != claim_assignee
     ):
         return VectorOutcome("rejected", "rejected", ["lease_contention_active"])
-    if before_assignee and before_assignee != claim_assignee:
+    if before_assignee and before_assignee != claim_assignee and not has_active_lease and not has_stale_lease:
         return VectorOutcome("rejected", "rejected", ["issue_already_claimed"])
 
-    lease_id = (
-        claim_lease_id
-        if isinstance(claim_lease_id, str) and claim_lease_id
-        else f"lease1_{issue_id}_{claim_assignee}"
+    lease_id = resolve_lease_id(claim_lease_id, issue_id, claim_assignee)
+    lease_expires_at_unix_ms, expiry_error = resolve_lease_expiry_unix_ms(
+        now_unix_ms,
+        claim_lease_ttl_seconds,
+        claim_lease_expires_at_unix_ms,
     )
-    if claim_lease_expires_at_unix_ms is not None:
-        lease_expires_at_unix_ms = claim_lease_expires_at_unix_ms
-    else:
-        ttl_seconds = claim_lease_ttl_seconds if isinstance(claim_lease_ttl_seconds, int) else 3600
-        lease_expires_at_unix_ms = now_unix_ms + ttl_seconds * 1000
+    if expiry_error is not None:
+        return VectorOutcome("rejected", "rejected", [expiry_error])
+    if lease_expires_at_unix_ms is None:
+        return VectorOutcome("rejected", "rejected", ["lease_invalid_expires_at"])
 
     actual_after = {
         "status": "in_progress",
@@ -1568,17 +1619,17 @@ def evaluate_change_projection_issue_lease_renew(case: Dict[str, Any]) -> Vector
         raise ValueError("artifacts.renew must be an object")
     renew_assignee = ensure_string(renew.get("assignee"), "artifacts.renew.assignee")
     renew_lease_id = ensure_string(renew.get("leaseId"), "artifacts.renew.leaseId")
-    renew_lease_ttl_seconds = renew.get("leaseTtlSeconds", 3600)
-    if renew_lease_ttl_seconds is not None and not isinstance(renew_lease_ttl_seconds, int):
-        raise ValueError("artifacts.renew.leaseTtlSeconds must be an integer when present")
+    renew_lease_ttl_seconds = renew.get("leaseTtlSeconds")
     renew_lease_expires_at_unix_ms = renew.get("leaseExpiresAtUnixMs")
-    if renew_lease_expires_at_unix_ms is not None and not isinstance(renew_lease_expires_at_unix_ms, int):
-        raise ValueError("artifacts.renew.leaseExpiresAtUnixMs must be an integer when present")
-    if renew_lease_expires_at_unix_ms is not None:
-        lease_expires_at_unix_ms = renew_lease_expires_at_unix_ms
-    else:
-        ttl_seconds = renew_lease_ttl_seconds if isinstance(renew_lease_ttl_seconds, int) else 3600
-        lease_expires_at_unix_ms = now_unix_ms + ttl_seconds * 1000
+    lease_expires_at_unix_ms, expiry_error = resolve_lease_expiry_unix_ms(
+        now_unix_ms,
+        renew_lease_ttl_seconds,
+        renew_lease_expires_at_unix_ms,
+    )
+    if expiry_error is not None:
+        return VectorOutcome("rejected", "rejected", [expiry_error])
+    if lease_expires_at_unix_ms is None:
+        return VectorOutcome("rejected", "rejected", ["lease_invalid_expires_at"])
 
     if before_status == "closed":
         return VectorOutcome("rejected", "rejected", ["lease_issue_closed"])
@@ -1588,8 +1639,6 @@ def evaluate_change_projection_issue_lease_renew(case: Dict[str, Any]) -> Vector
         return VectorOutcome("rejected", "rejected", ["lease_owner_mismatch"])
     if before_lease_id != renew_lease_id:
         return VectorOutcome("rejected", "rejected", ["lease_id_mismatch"])
-    if lease_expires_at_unix_ms <= now_unix_ms:
-        return VectorOutcome("rejected", "rejected", ["lease_invalid_expires_at"])
 
     actual_after = {
         "status": "in_progress",
@@ -2062,6 +2111,8 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "golden/issue_claim_assigns_active_lease":
         return evaluate_change_projection_issue_claim(case)
+    if vector_id == "golden/issue_claim_reclaims_stale_lease":
+        return evaluate_change_projection_issue_claim(case)
     if vector_id == "golden/issue_discover_preserves_existing_and_links_discovered_from":
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "golden/issue_lease_renew_preserves_active_claim":
@@ -2088,6 +2139,10 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
     if vector_id == "adversarial/issue_discover_rejects_parent_missing":
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "adversarial/issue_claim_rejects_active_lease_contention":
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id == "adversarial/issue_claim_invalid_expiry_reject":
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id == "adversarial/issue_claim_invalid_ttl_reject":
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "adversarial/issue_lease_renew_stale_reject":
         return evaluate_change_projection_issue_lease_renew(case)

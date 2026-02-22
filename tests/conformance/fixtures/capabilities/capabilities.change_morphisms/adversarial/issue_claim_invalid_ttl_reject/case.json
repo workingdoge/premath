@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/issue_claim_invalid_ttl_reject",
+  "description": "Claim flow rejects lease TTL values outside the allowed range.",
+  "semanticScenarioId": "change_projection_issue_claim_lease_05",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-205",
+      "status": "open",
+      "assignee": ""
+    },
+    "claim": {
+      "assignee": "agent.alpha",
+      "leaseTtlSeconds": 10
+    }
+  }
+}

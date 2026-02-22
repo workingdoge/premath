@@ -2885,6 +2885,153 @@ mod tests {
     }
 
     #[test]
+    fn issue_claim_reclaims_stale_lease_and_rebinds_assignee() {
+        let root = temp_dir("issue-claim-reclaim-stale");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Stale claim target".to_string(),
+                id: Some("bd-stale-claim".to_string()),
+                description: None,
+                status: Some("in_progress".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: Some("alice".to_string()),
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+
+        let mut store = MemoryStore::load_jsonl(&issues).expect("store should load");
+        {
+            let issue = store
+                .issue_mut("bd-stale-claim")
+                .expect("stale claim issue must exist");
+            issue.lease = Some(IssueLease {
+                lease_id: "lease1_bd-stale-claim_alice".to_string(),
+                owner: "alice".to_string(),
+                acquired_at: Utc::now() - Duration::seconds(120),
+                expires_at: Utc::now() - Duration::seconds(30),
+                renewed_at: None,
+            });
+            issue.touch_updated_at();
+        }
+        store.save_jsonl(&issues).expect("store should save");
+
+        let claim = call_issue_claim(
+            &config,
+            IssueClaimTool {
+                id: "bd-stale-claim".to_string(),
+                assignee: "bob".to_string(),
+                lease_id: Some("lease1_bd-stale-claim_bob".to_string()),
+                lease_ttl_seconds: Some(120),
+                lease_expires_at: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("claim should reclaim stale lease");
+
+        let payload = parse_tool_json(claim);
+        assert_eq!(payload["issue"]["status"], "in_progress");
+        assert_eq!(payload["issue"]["assignee"], "bob");
+        assert_eq!(payload["issue"]["lease"]["owner"], "bob");
+        assert_eq!(payload["issue"]["lease"]["state"], "active");
+        assert_eq!(payload["leaseProjection"]["staleCount"], 0);
+        assert_eq!(payload["leaseProjection"]["contendedCount"], 0);
+    }
+
+    #[test]
+    fn issue_claim_rejects_invalid_lease_ttl() {
+        let root = temp_dir("issue-claim-invalid-ttl");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Invalid ttl target".to_string(),
+                id: Some("bd-invalid-ttl".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+
+        let err = call_issue_claim(
+            &config,
+            IssueClaimTool {
+                id: "bd-invalid-ttl".to_string(),
+                assignee: "alice".to_string(),
+                lease_id: None,
+                lease_ttl_seconds: Some(10),
+                lease_expires_at: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect_err("invalid ttl should fail");
+        assert!(
+            err.to_string().contains("[failureClass=lease_invalid_ttl]"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn issue_claim_rejects_non_future_expiry() {
+        let root = temp_dir("issue-claim-invalid-expiry");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Invalid expiry target".to_string(),
+                id: Some("bd-invalid-expiry".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+
+        let err = call_issue_claim(
+            &config,
+            IssueClaimTool {
+                id: "bd-invalid-expiry".to_string(),
+                assignee: "alice".to_string(),
+                lease_id: None,
+                lease_ttl_seconds: None,
+                lease_expires_at: Some((Utc::now() - Duration::seconds(5)).to_rfc3339()),
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect_err("non-future expiry should fail");
+        assert!(
+            err.to_string()
+                .contains("[failureClass=lease_invalid_expires_at]"),
+            "unexpected error: {err}"
+        );
+    }
+
+    #[test]
     fn issue_lease_renew_rejects_stale_lease() {
         let root = temp_dir("issue-lease-renew-stale");
         let issues = root.join("issues.jsonl");

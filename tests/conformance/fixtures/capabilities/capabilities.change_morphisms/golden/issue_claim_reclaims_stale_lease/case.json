@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_claim_reclaims_stale_lease",
+  "description": "Claim flow deterministically reclaims stale lease state and rebinds assignee/lease ownership.",
+  "semanticScenarioId": "change_projection_issue_claim_lease_03",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-203",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 900000
+      }
+    },
+    "claim": {
+      "assignee": "agent.beta",
+      "leaseId": "lease1_bd-lease-203_agent.beta",
+      "leaseExpiresAtUnixMs": 4600000
+    },
+    "expectedAfter": {
+      "status": "in_progress",
+      "assignee": "agent.beta",
+      "lease": {
+        "leaseId": "lease1_bd-lease-203_agent.beta",
+        "owner": "agent.beta",
+        "state": "active"
+      }
+    }
+  }
+}
