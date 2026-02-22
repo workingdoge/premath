@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "suiteId": "interop-core",
+  "vectorId": "golden/wire_legacy_fixed32_v1_parse_accept",
+  "artifacts": {
+    "wireFormatId": "kcir.wire.legacy-fixed32.v1",
+    "nodeHex": "010101010101010101010101010101010101010101010101010101010101010102020202020202020202020202020202020202020202020202020202020202020110999999999999999999999999999999999999999999999999999999999999999903c0ffee02aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  }
+}

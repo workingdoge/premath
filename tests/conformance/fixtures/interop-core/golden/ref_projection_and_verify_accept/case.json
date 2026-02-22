@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "suiteId": "interop-core",
+  "vectorId": "golden/ref_projection_and_verify_accept",
+  "artifacts": {
+    "profile": {
+      "schemeId": "refsim.sha256.v1",
+      "paramsHash": "params-v1",
+      "supportedDomains": [
+        "kcir.node",
+        "kcir.obj_nf",
+        "kcir.mor_nf"
+      ],
+      "acceptsEvidence": false
+    },
+    "projectionInput": {
+      "domain": "kcir.node",
+      "payloadHex": "deadbeef"
+    },
+    "providedRef": {
+      "schemeId": "refsim.sha256.v1",
+      "paramsHash": "params-v1",
+      "domain": "kcir.node",
+      "digest": "745925eafa6f2677cf903bb0c95019642beb91bd8a2dd0d8809a7a4bee183ddd"
+    },
+    "evidenceHex": ""
+  }
+}

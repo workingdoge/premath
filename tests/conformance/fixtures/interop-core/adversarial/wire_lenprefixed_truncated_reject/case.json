@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "suiteId": "interop-core",
+  "vectorId": "adversarial/wire_lenprefixed_truncated_reject",
+  "artifacts": {
+    "wireFormatId": "kcir.wire.lenprefixed-ref.v1",
+    "nodeHex": "01010101010101010101010101010101010101010101010101010101010101010202020202020202020202020202020202020202020202020202020202020202011005deadbeef"
+  }
+}

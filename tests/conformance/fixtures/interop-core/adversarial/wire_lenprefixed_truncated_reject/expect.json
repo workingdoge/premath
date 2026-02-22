@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "expectedResult": "rejected",
+  "expectedFailureClasses": [
+    "kcir_v2.parse_error"
+  ]
+}

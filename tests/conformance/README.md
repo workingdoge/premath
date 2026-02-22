@@ -4,7 +4,8 @@ This directory contains Premath conformance fixtures.
 
 Current status:
 
-- `fixtures/interop-core/` and `fixtures/gate/` are layout placeholders.
+- `fixtures/interop-core/` is executable.
+- `fixtures/gate/` is still a layout placeholder.
 - `fixtures/capabilities/` contains capability vectors.
   - `capabilities.normal_forms` is executable.
   - `capabilities.kcir_witnesses` is executable.
@@ -24,6 +25,12 @@ Validate fixture integrity and invariance pairing with:
 
 ```bash
 python3 tools/conformance/check_stub_invariance.py
+```
+
+Run executable interop-core vectors with:
+
+```bash
+python3 tools/conformance/run_interop_core_vectors.py
 ```
 
 Run executable capability vectors with:

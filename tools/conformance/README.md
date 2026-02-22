@@ -58,6 +58,26 @@ Run:
 python3 tools/conformance/run_capability_vectors.py
 ```
 
+## `run_interop_core_vectors.py`
+
+Runs executable Interop Core vectors in:
+
+- `tests/conformance/fixtures/interop-core/`
+
+Checks include:
+
+- deterministic ref projection/verification slices (`draft/REF-BINDING`),
+- required KCIR domain table coverage (`draft/KCIR-CORE`),
+- ObjNF/MorNF parser/constructor contracts (`draft/NF`),
+- registered wire-format parse behavior (`draft/WIRE-FORMATS`),
+- known error-code registry membership checks (`draft/ERROR-CODES`).
+
+Run:
+
+```bash
+python3 tools/conformance/run_interop_core_vectors.py
+```
+
 ## `check_doctrine_site.py`
 
 Validates doctrine-to-operation site coherence using:

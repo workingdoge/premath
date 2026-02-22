@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "suiteId": "interop-core",
+  "vectorId": "golden/kcir_domain_table_minimum_accept",
+  "artifacts": {
+    "profile": {
+      "supportedDomains": [
+        "kcir.node",
+        "kcir.obj_nf",
+        "kcir.mor_nf"
+      ]
+    }
+  }
+}

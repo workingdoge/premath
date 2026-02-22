@@ -1,0 +1,16 @@
+{
+  "suiteId": "interop-core",
+  "vectors": [
+    "golden/ref_projection_and_verify_accept",
+    "adversarial/ref_digest_mismatch_reject",
+    "golden/kcir_domain_table_minimum_accept",
+    "adversarial/kcir_domain_missing_reject",
+    "golden/nf_obj_mor_parse_accept",
+    "adversarial/nf_pull_atom_requires_claim_reject",
+    "golden/wire_lenprefixed_ref_v1_parse_accept",
+    "golden/wire_legacy_fixed32_v1_parse_accept",
+    "adversarial/wire_lenprefixed_truncated_reject",
+    "golden/error_code_registry_known_accept",
+    "adversarial/error_code_registry_unknown_reject"
+  ]
+}

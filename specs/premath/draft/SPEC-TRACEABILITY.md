@@ -48,15 +48,15 @@ Purpose:
 | --- | --- | --- | --- |
 | `DOCTRINE-INF.md` | `mise run doctrine-check` (declaration-set + edge coherence + reachability) | instrumented | `T-DINF-01` |
 | `PREMATH-KERNEL.md` | `cargo test -p premath-kernel`; `mise run test-toy`; `mise run test-kcir-toy` | instrumented | `T-KERNEL-01` |
-| `KCIR-CORE.md` | `capabilities.kcir_witnesses` (reference integrity slices only) | gap | `T-IC-01` |
-| `REF-BINDING.md` | `capabilities.kcir_witnesses`; `capabilities.ci_witnesses` (partial) | gap | `T-IC-01` |
-| `NF.md` | `capabilities.normal_forms` + kernel tests | instrumented | `T-IC-01` |
-| `WIRE-FORMATS.md` | no dedicated vector suite yet | gap | `T-IC-01` |
-| `ERROR-CODES.md` | no dedicated vector suite yet | gap | `T-IC-01` |
+| `KCIR-CORE.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`kcir_domain_table_*`) | covered | - |
+| `REF-BINDING.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`ref_projection_and_verify_*`) | covered | - |
+| `NF.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`nf_*`) + `capabilities.normal_forms` + kernel tests | covered | - |
+| `WIRE-FORMATS.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`wire_*`) | covered | - |
+| `ERROR-CODES.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`error_code_registry_*`) | covered | - |
 | `WITNESS-ID.md` | `premath-kernel` witness-id unit tests | instrumented | `T-WID-01` |
 | `BIDIR-DESCENT.md` | `capabilities.instruction_typing`; `capabilities.adjoints_sites` | covered | - |
 | `GATE.md` | `premath-kernel` gate tests + toy vectors | instrumented | `T-GATE-01` |
-| `CONFORMANCE.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
+| `CONFORMANCE.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_interop_core_vectors.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
 | `CAPABILITY-VECTORS.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
 | `CHANGE-MORPHISMS.md` | `capabilities.change_morphisms` vectors | covered | - |
 | `DOCTRINE-SITE.md` | `mise run doctrine-check` | covered | - |
@@ -65,22 +65,7 @@ Purpose:
 | `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_policy.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
 | `SPEC-INDEX.md` | index/reference contract; validated indirectly by doc updates and doctrine-site references | instrumented | `T-INDEX-01` |
 
-## 4. Coverage Targets (Current Gaps/Upgrades)
-
-### `T-IC-01` Interop-Core Vectors
-
-Add executable Interop Core suites for:
-
-- `KCIR-CORE`,
-- `REF-BINDING`,
-- `NF` parser/constructor contracts,
-- `WIRE-FORMATS`,
-- `ERROR-CODES`.
-
-Minimum acceptance:
-
-- deterministic golden/adversarial vectors under `tests/conformance/fixtures/interop-core/`,
-- runner integration into merge-gated conformance command surface.
+## 4. Coverage Targets (Open Gaps/Upgrades)
 
 ### `T-GATE-01` Canonical Gate Vectors
 

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "suiteId": "interop-core",
+  "vectorId": "golden/error_code_registry_known_accept",
+  "artifacts": {
+    "code": "kcir_v2.digest_mismatch"
+  }
+}

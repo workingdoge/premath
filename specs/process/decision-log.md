@@ -582,3 +582,34 @@ gives issue discovery a deterministic source of truth.
   - `T-DINF-01` (doctrine-inf semantic coverage upgrade),
   - `T-KERNEL-01` (cross-model kernel vector profile),
   - `T-INDEX-01` (index/traceability integrity check).
+
+---
+
+## 2026-02-22 — Decision 0021: Execute T-IC-01 with first-class interop-core vectors
+
+### Decision
+Implement and merge executable Interop Core vector coverage under
+`tests/conformance/fixtures/interop-core/` with deterministic runner
+`tools/conformance/run_interop_core_vectors.py`, and wire it into
+`mise run conformance-run`.
+
+Covered slices:
+
+- `draft/KCIR-CORE` (domain table minimum),
+- `draft/REF-BINDING` (projection + verify digest/profile/domain semantics),
+- `draft/NF` (ObjNF/MorNF parser contracts, including `PullAtom` claim gate),
+- `draft/WIRE-FORMATS` (registered wire parse behavior),
+- `draft/ERROR-CODES` (registry membership checks).
+
+### Rationale
+`T-IC-01` was the largest explicit traceability gap for promoted draft specs.
+Closing it converts Interop Core from mostly indirect instrumentation into a
+deterministic vectored surface in merge-gated conformance runs.
+
+### Consequences
+- `mise run conformance-run` now executes interop-core vectors before capability
+  vectors.
+- `draft/SPEC-TRACEABILITY` rows for `KCIR-CORE`, `REF-BINDING`, `NF`,
+  `WIRE-FORMATS`, and `ERROR-CODES` move to `covered`.
+- Remaining open coverage upgrades continue under `T-GATE-01`, `T-WID-01`,
+  `T-DINF-01`, `T-KERNEL-01`, and `T-INDEX-01`.

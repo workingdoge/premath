@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "suiteId": "interop-core",
+  "vectorId": "adversarial/kcir_domain_missing_reject",
+  "artifacts": {
+    "profile": {
+      "supportedDomains": [
+        "kcir.node",
+        "kcir.obj_nf"
+      ]
+    }
+  }
+}

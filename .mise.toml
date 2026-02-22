@@ -36,7 +36,10 @@ run = "python3 tools/conformance/check_stub_invariance.py"
 run = "python3 tools/conformance/check_doctrine_site.py"
 
 [tasks.conformance-run]
-run = "python3 tools/conformance/run_capability_vectors.py"
+run = [
+  "python3 tools/conformance/run_interop_core_vectors.py",
+  "python3 tools/conformance/run_capability_vectors.py",
+]
 
 [tasks.baseline]
 run = [

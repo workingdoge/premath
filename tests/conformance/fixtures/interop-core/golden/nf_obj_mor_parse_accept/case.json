@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "suiteId": "interop-core",
+  "vectorId": "golden/nf_obj_mor_parse_accept",
+  "artifacts": {
+    "adoptPullAtomMor": false,
+    "objHex": "0302201111111111111111111111111111111111111111111111111111111111111111202222222222222222222222222222222222222222222222222222222222222222",
+    "morHex": "1120aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  }
+}
