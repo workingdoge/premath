@@ -2045,3 +2045,30 @@ surfaces changed.
   checker-read surface declared by contract.
 - cache hits cannot bypass coherence-check execution after relevant doc/surface
   edits.
+
+---
+
+## 2026-02-22 — Decision 0071: Add cache-ref drift proof for coherence-spec changes
+
+### Decision
+Add a deterministic unit test in
+`tools/conformance/test_run_fixture_suites.py` proving
+`coherence-contract` suite cache refs drift when
+`PREMATH-COHERENCE` content changes.
+
+The test:
+
+- uses the real `coherence-contract` suite input closure,
+- swaps only the coherence-spec input path with a mutated temporary copy,
+- asserts `params_hash` stays constant while `material_digest` and `cache_ref`
+  both change.
+
+### Rationale
+Decision 0070 closed cache input coverage, but we still needed an executable
+proof that the suite plan actually responds to edits on a contract-declared doc
+surface and cannot produce stale cache hits.
+
+### Consequences
+- cache drift on coherence-spec edits is now explicitly regression-tested.
+- `bd-33` gains stronger cache correctness evidence without expanding command
+  surface.
