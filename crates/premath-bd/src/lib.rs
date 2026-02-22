@@ -20,10 +20,16 @@
 //! ```
 
 pub mod dependency;
+pub mod events;
 pub mod issue;
 pub mod jsonl;
 pub mod memory;
 
-pub use dependency::{DepType, Dependency};
+pub use dependency::{DepType, Dependency, DependencyProjection, DependencyView};
+pub use events::{
+    EventError, ISSUE_EVENT_SCHEMA, IssueEvent, IssueEventAction, migrate_store_to_events,
+    read_events, read_events_from_path, replay_events, replay_events_from_path, stores_equivalent,
+    write_events, write_events_to_path,
+};
 pub use issue::{Issue, IssueLease, IssueLeaseState};
 pub use memory::{MemoryStore, MemoryStoreError};

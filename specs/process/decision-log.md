@@ -863,3 +863,31 @@ drift risk between executable conformance and runtime instruction checking.
   checker implementation for both instruction execution and conformance vectors.
 - Reject witnesses now fail closed on whitespace-bound binding fields that would
   otherwise bypass canonical policy/normalizer matching.
+
+---
+
+## 2026-02-22 — Decision 0030: Adopt issue.event.v1 replay boundary and projected dependency views
+
+### Decision
+For issue memory evolution, keep a single canonical edge encoding and add
+deterministic projection/replay surfaces:
+
+- add `issue.event.v1` in `premath-bd` as an append-only event envelope with
+  deterministic migration from issue snapshot JSONL and deterministic replay.
+- add `premath issue migrate-events` to emit `.premath/memory/events.jsonl`
+  and fail closed on replay mismatch.
+- keep one dependency encoding (`DepType`) and add semantic projections
+  (`execution`, `gtd`, `groupoid`) via `premath dep project`.
+
+### Rationale
+The issue system needs minimum encoding with maximum expressiveness. Multiple
+parallel edge schemas would duplicate semantics and drift. A single canonical
+encoding plus projection views gives expressiveness for different workflows
+(execution/GTD/groupoid) while preserving deterministic replay and auditable
+state evolution.
+
+### Consequences
+- Snapshot memory now has a deterministic migration path to event-log memory.
+- Replay equivalence is executable and test-gated.
+- Workflow-specific dependency interpretations are explicit projection views,
+  not schema forks.

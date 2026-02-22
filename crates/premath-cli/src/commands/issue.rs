@@ -1,5 +1,8 @@
 use crate::cli::IssueCommands;
-use premath_bd::{DepType, Issue, MemoryStore};
+use premath_bd::{
+    DepType, Issue, MemoryStore, migrate_store_to_events, replay_events_from_path,
+    stores_equivalent, write_events_to_path,
+};
 use premath_surreal::QueryCache;
 use serde_json::json;
 use std::fs;
@@ -96,6 +99,12 @@ pub fn run(command: IssueCommands) {
             issues,
             json,
         ),
+
+        IssueCommands::MigrateEvents {
+            issues,
+            events,
+            json,
+        } => run_migrate_events(issues, events, json),
     }
 }
 
@@ -611,6 +620,68 @@ fn run_discover(
             persisted.id,
             parent_issue_id,
             path.display()
+        );
+    }
+}
+
+fn run_migrate_events(issues: String, events: String, json_output: bool) {
+    let (store, issues_path) = load_store_existing_or_exit(&issues);
+    let events_path = PathBuf::from(events);
+
+    if let Some(parent) = events_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent).unwrap_or_else(|e| {
+            eprintln!(
+                "error: failed to create events directory {}: {e}",
+                parent.display()
+            );
+            std::process::exit(1);
+        });
+    }
+
+    let events = migrate_store_to_events(&store);
+    write_events_to_path(&events_path, &events).unwrap_or_else(|e| {
+        eprintln!("error: failed to save {}: {e}", events_path.display());
+        std::process::exit(1);
+    });
+
+    let replayed = replay_events_from_path(&events_path).unwrap_or_else(|e| {
+        eprintln!("error: failed to replay {}: {e}", events_path.display());
+        std::process::exit(1);
+    });
+
+    let equivalent = stores_equivalent(&store, &replayed);
+    if !equivalent {
+        eprintln!(
+            "error: migration replay mismatch between {} and {}",
+            issues_path.display(),
+            events_path.display()
+        );
+        std::process::exit(1);
+    }
+
+    if json_output {
+        let payload = json!({
+            "action": "issue.migrate-events",
+            "issuesPath": issues_path.display().to_string(),
+            "eventsPath": events_path.display().to_string(),
+            "issueCount": store.len(),
+            "eventCount": events.len(),
+            "equivalent": equivalent
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else {
+        println!(
+            "premath issue migrate-events\n  Issues: {}\n  Events: {}\n  Issue count: {}\n  Event count: {}\n  Equivalent replay: {}",
+            issues_path.display(),
+            events_path.display(),
+            store.len(),
+            events.len(),
+            equivalent
         );
     }
 }

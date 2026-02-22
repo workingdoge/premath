@@ -450,6 +450,150 @@ fn issue_update_and_list_json_smoke() {
 }
 
 #[test]
+fn issue_migrate_events_json_smoke() {
+    let tmp = TempDirGuard::new("issue-migrate-events");
+    let issues = tmp.path().join("issues.jsonl");
+    let events = tmp.path().join("events.jsonl");
+
+    let out_add_root = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Root issue"),
+        OsString::from("--id"),
+        OsString::from("bd-root"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_root);
+
+    let out_add_child = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Child issue"),
+        OsString::from("--id"),
+        OsString::from("bd-child"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_child);
+
+    let out_dep = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep);
+
+    let out_migrate = run_premath([
+        OsString::from("issue"),
+        OsString::from("migrate-events"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--events"),
+        events.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_migrate);
+
+    let payload = parse_json_stdout(&out_migrate);
+    assert_eq!(payload["action"], "issue.migrate-events");
+    assert_eq!(payload["issueCount"], 2);
+    assert_eq!(payload["eventCount"], 3);
+    assert_eq!(payload["equivalent"], true);
+
+    let event_lines = fs::read_to_string(&events).expect("events jsonl should exist");
+    assert_eq!(event_lines.lines().count(), 3);
+    let first_event: Value =
+        serde_json::from_str(event_lines.lines().next().expect("at least one event line"))
+            .expect("first event should parse");
+    assert_eq!(first_event["schema"], "issue.event.v1");
+    assert_eq!(first_event["action"], "upsert_issue");
+}
+
+#[test]
+fn dep_project_views_json_smoke() {
+    let tmp = TempDirGuard::new("dep-project-views");
+    let issues = tmp.path().join("issues.jsonl");
+
+    let out_add_root = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Root issue"),
+        OsString::from("--id"),
+        OsString::from("bd-root"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_root);
+
+    let out_add_child = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Child issue"),
+        OsString::from("--id"),
+        OsString::from("bd-child"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_child);
+
+    let out_dep = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep);
+
+    let out_gtd = run_premath([
+        OsString::from("dep"),
+        OsString::from("project"),
+        OsString::from("--view"),
+        OsString::from("gtd"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_gtd);
+    let gtd = parse_json_stdout(&out_gtd);
+    assert_eq!(gtd["action"], "dep.project");
+    assert_eq!(gtd["view"], "gtd");
+    assert_eq!(gtd["count"], 1);
+    assert_eq!(gtd["items"][0]["type"], "blocks");
+    assert_eq!(gtd["items"][0]["role"], "next-action");
+    assert_eq!(gtd["items"][0]["blocking"], true);
+
+    let out_groupoid = run_premath([
+        OsString::from("dep"),
+        OsString::from("project"),
+        OsString::from("--view"),
+        OsString::from("groupoid"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_groupoid);
+    let groupoid = parse_json_stdout(&out_groupoid);
+    assert_eq!(groupoid["view"], "groupoid");
+    assert_eq!(groupoid["items"][0]["role"], "constraint");
+}
+
+#[test]
 fn coherence_check_json_smoke() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = crate_dir

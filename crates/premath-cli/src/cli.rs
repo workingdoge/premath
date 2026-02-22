@@ -469,6 +469,21 @@ pub enum IssueCommands {
         #[arg(long)]
         json: bool,
     },
+
+    /// Migrate issue snapshots into an issue.event.v1 JSONL log
+    MigrateEvents {
+        /// Path to issues JSONL snapshot
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Path to issue-event JSONL output
+        #[arg(long, default_value = ".premath/memory/events.jsonl")]
+        events: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -488,6 +503,21 @@ pub enum DepCommands {
         /// Optional created_by annotation
         #[arg(long, default_value = "")]
         created_by: String,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Project dependencies into one semantic view
+    Project {
+        /// View: execution, gtd, or groupoid
+        #[arg(long, default_value = "execution")]
+        view: DepViewArg,
 
         /// Path to issues JSONL
         #[arg(long, default_value = ".premath/issues.jsonl")]
@@ -521,4 +551,14 @@ pub enum DepTypeArg {
     WaitsFor,
     #[value(name = "replies-to")]
     RepliesTo,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum DepViewArg {
+    #[value(name = "execution")]
+    Execution,
+    #[value(name = "gtd")]
+    Gtd,
+    #[value(name = "groupoid")]
+    Groupoid,
 }
