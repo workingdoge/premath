@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "profileKind": "premath.ref_profile.v1",
+  "profileId": "ref.sha256.detached.v1",
+  "schemeId": "ref.sha256.detached.v1",
+  "paramsHash": "sha256.detached.params.v1",
+  "supportedDomains": [
+    "kcir.node",
+    "kcir.obj_nf",
+    "kcir.mor_nf"
+  ],
+  "evidencePolicy": "empty_only"
+}

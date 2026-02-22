@@ -1498,3 +1498,139 @@ must be checked at the server surface, not inferred from local gate execution.
   admin-read token requirement (`PREMATH_BRANCH_POLICY_TOKEN`).
 - governance hardening remains fail-closed on bypass actors under the tracked
   policy.
+
+---
+
+## 2026-02-22 — Decision 0052: Make doctrine-site mapping generation-first with typed source + operation registry
+
+### Decision
+Adopt a generation-first doctrine-site contract flow:
+
+- add `draft/DOCTRINE-SITE-SOURCE.json` as the non-operation topology source,
+- add `draft/DOCTRINE-OP-REGISTRY.json` as operation-node + CI-edge registry,
+- generate `draft/DOCTRINE-SITE.json` deterministically from:
+  - source topology,
+  - operation registry,
+  - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`).
+
+Require doctrine-site checker roundtrip parity (`generated == tracked`) in
+addition to existing morphism/declaration/reachability checks.
+
+### Rationale
+`DOCTRINE-SITE.json` previously duplicated declaration sets directly, creating a
+hand-maintained drift surface. Generation-first removes duplicate encoding,
+keeps operation ancestry auditable, and preserves one canonical projection path.
+
+### Consequences
+- doctrine-site authority now has three explicit artifacts:
+  `DOCTRINE-SITE-SOURCE.json` + `DOCTRINE-OP-REGISTRY.json` ->
+  `DOCTRINE-SITE.json`.
+- `tools/conformance/check_doctrine_site.py` now enforces roundtrip drift
+  rejection and points to the generator for repair.
+- new helper/generator/test surfaces:
+  - `tools/conformance/doctrine_site_contract.py`
+  - `tools/conformance/generate_doctrine_site.py`
+  - `tools/conformance/test_doctrine_site_contract.py`
+
+---
+
+## 2026-02-22 — Decision 0053: Add boundary-authority invariance vectors across kernel/coherence/CI witness surfaces
+
+### Decision
+Extend `capabilities.ci_witnesses` executable vectors with a boundary-authority
+lineage slice that validates one shared authority chain:
+
+- kernel obligation registry mapping (`obligationKind -> failureClass`),
+- proposal discharge failed-obligation classes,
+- coherence scope registry kind + bidir obligation surface,
+- CI witness semantic failure lineage (`semanticFailureClasses` plus union shape).
+
+Add adversarial vectors for:
+
+- obligation-registry mapping mismatch,
+- stale generated doctrine-site digest material.
+
+Add paired local/external invariance vectors for the same boundary-authority
+scenario.
+
+### Rationale
+`bd-61` requires proving that authority mappings remain invariant across the
+kernel/coherence/CI projection boundary, not just inside one witness format.
+This closes the remaining parity gap after typed registry and generation-first
+surfaces were introduced (`bd-57`, `bd-58`, `bd-59`, `bd-60`, `bd-63`).
+
+### Consequences
+- `tools/conformance/run_capability_vectors.py` now includes boundary-authority
+  lineage validation in the `capabilities.ci_witnesses` evaluator.
+- `tests/conformance/fixtures/capabilities/capabilities.ci_witnesses/` now
+  contains:
+  - `golden/boundary_authority_lineage_accept`,
+  - `adversarial/boundary_authority_registry_mismatch_reject`,
+  - `adversarial/boundary_authority_stale_generated_reject`,
+  - `invariance/same_boundary_authority_local`,
+  - `invariance/same_boundary_authority_external`.
+- capability/conformance docs now explicitly require boundary-authority lineage
+  parity and stale generated doctrine-site rejection under
+  `capabilities.ci_witnesses`.
+
+---
+
+## 2026-02-22 — Decision 0054: Bind Interop ref vectors to a real profile-backed verifier surface
+
+### Decision
+Adopt a first-class reference profile artifact and route Interop ref vectors
+through the canonical CLI verifier surface:
+
+- add `policies/ref/sha256_detached_v1.json` as profile kind
+  `premath.ref_profile.v1`,
+- add `premath ref project` and `premath ref verify` commands in
+  `premath-cli`,
+- execute `interop-core` ref projection/verification vectors by invoking those
+  CLI commands (not a Python-local digest shim),
+- pin fixture refs to the profile fields
+  (`schemeId=ref.sha256.detached.v1`,
+  `paramsHash=sha256.detached.params.v1`).
+
+### Rationale
+`bd-36` requires "at least one real backend profile + reference verifier
+implementation" for M1 coherence. The previous interop runner validated ref
+logic using a Python simulation; that validated behavior but left the canonical
+command surface unexercised. Binding vectors to the CLI closes that boundary and
+reduces duplicate encoding.
+
+### Consequences
+- `project_ref`/`verify_ref` now have one typed implementation path in
+  `premath-cli` with deterministic rejection classes.
+- interop ref vectors now test the same command surface users and CI consume.
+- CLI smoke coverage includes `ref project` and `ref verify` JSON surfaces.
+- M1 reference verifier milestone criteria are satisfied at command surface +
+  conformance levels.
+
+---
+
+## 2026-02-22 — Decision 0055: Retire legacy Python instruction-policy shim authority
+
+### Decision
+Remove `tools/ci/instruction_policy.py` and its dedicated unit surface
+`tools/ci/test_instruction_policy.py`.
+
+Keep instruction policy/allowlist/binding authority exclusively on the core
+`premath instruction-check` path consumed via:
+
+- `tools/ci/instruction_check_client.py`,
+- `tools/ci/run_instruction.py`,
+- `tools/ci/test_instruction_reject_witness.py`.
+
+Update pipeline and traceability surfaces to reference core-backed tests only.
+
+### Rationale
+The Python instruction-policy module had become an unreferenced duplicate
+semantic surface after instruction envelope validation moved into
+`premath-coherence` and `premath-cli`. Keeping it introduced avoidable encoding
+drift risk.
+
+### Consequences
+- `mise run ci-pipeline-test` no longer executes `test_instruction_policy.py`.
+- traceability for `draft/LLM-PROPOSAL-CHECKING` now points to
+  `test_instruction_check_client.py` + `test_instruction_reject_witness.py`.
+- instruction policy semantics remain single-path and checker-owned.

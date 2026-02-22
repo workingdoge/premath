@@ -147,6 +147,31 @@ fn write_proposal_input(dir: &Path) -> PathBuf {
     proposal_path
 }
 
+fn write_instruction_runtime_input(dir: &Path, instruction_ref: &str, failed: bool) -> PathBuf {
+    let runtime = serde_json::json!({
+        "instructionId": "20260221T010000Z-ci-wiring-golden",
+        "instructionRef": instruction_ref,
+        "instructionDigest": "instr1_demo",
+        "squeakSiteProfile": "local",
+        "runStartedAt": "2026-02-22T00:00:00Z",
+        "runFinishedAt": "2026-02-22T00:00:01Z",
+        "runDurationMs": 1000,
+        "results": [{
+            "checkId": "ci-wiring-check",
+            "status": if failed { "failed" } else { "passed" },
+            "exitCode": if failed { 1 } else { 0 },
+            "durationMs": 25
+        }]
+    });
+    let runtime_path = dir.join("instruction-runtime.json");
+    fs::write(
+        &runtime_path,
+        serde_json::to_vec_pretty(&runtime).expect("runtime should serialize"),
+    )
+    .expect("runtime should be written");
+    runtime_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -366,6 +391,49 @@ fn instruction_check_json_smoke() {
 }
 
 #[test]
+fn instruction_witness_json_smoke() {
+    let tmp = TempDirGuard::new("instruction-witness-json");
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let instruction = repo_root
+        .join("tests")
+        .join("ci")
+        .join("fixtures")
+        .join("instructions")
+        .join("20260221T010000Z-ci-wiring-golden.json");
+    let runtime = write_instruction_runtime_input(
+        tmp.path(),
+        "tests/ci/fixtures/instructions/20260221T010000Z-ci-wiring-golden.json",
+        false,
+    );
+
+    let output = run_premath([
+        OsString::from("instruction-witness"),
+        OsString::from("--instruction"),
+        instruction.as_os_str().to_os_string(),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["witnessKind"], "ci.instruction.v1");
+    assert_eq!(
+        payload["instructionId"],
+        "20260221T010000Z-ci-wiring-golden"
+    );
+    assert_eq!(payload["verdictClass"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+}
+
+#[test]
 fn obligation_registry_json_smoke() {
     let output = run_premath(["obligation-registry", "--json"]);
     assert_success(&output);
@@ -452,6 +520,99 @@ fn observe_instruction_json_smoke() {
         "20260221T010000Z-ci-wiring-golden"
     );
     assert_eq!(payload["verdictClass"], "accepted");
+}
+
+#[test]
+fn ref_project_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let profile = repo_root
+        .join("policies")
+        .join("ref")
+        .join("sha256_detached_v1.json");
+
+    let output = run_premath([
+        OsString::from("ref"),
+        OsString::from("project"),
+        OsString::from("--profile"),
+        profile.as_os_str().to_os_string(),
+        OsString::from("--domain"),
+        OsString::from("kcir.node"),
+        OsString::from("--payload-hex"),
+        OsString::from("deadbeef"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["profileId"], "ref.sha256.detached.v1");
+    assert_eq!(payload["ref"]["schemeId"], "ref.sha256.detached.v1");
+    assert_eq!(payload["ref"]["paramsHash"], "sha256.detached.params.v1");
+    assert_eq!(payload["ref"]["domain"], "kcir.node");
+    assert_eq!(
+        payload["ref"]["digest"],
+        "c461b57a070b9629fbfb7ebb028bc18855b01fad8f8ce5221eb2ddd95ca5fdda"
+    );
+}
+
+#[test]
+fn ref_verify_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let profile = repo_root
+        .join("policies")
+        .join("ref")
+        .join("sha256_detached_v1.json");
+
+    let output = run_premath([
+        OsString::from("ref"),
+        OsString::from("verify"),
+        OsString::from("--profile"),
+        profile.as_os_str().to_os_string(),
+        OsString::from("--domain"),
+        OsString::from("kcir.node"),
+        OsString::from("--payload-hex"),
+        OsString::from("deadbeef"),
+        OsString::from("--evidence-hex"),
+        OsString::from(""),
+        OsString::from("--ref-scheme-id"),
+        OsString::from("ref.sha256.detached.v1"),
+        OsString::from("--ref-params-hash"),
+        OsString::from("sha256.detached.params.v1"),
+        OsString::from("--ref-domain"),
+        OsString::from("kcir.node"),
+        OsString::from("--ref-digest"),
+        OsString::from("c461b57a070b9629fbfb7ebb028bc18855b01fad8f8ce5221eb2ddd95ca5fdda"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+    assert_eq!(
+        payload["projectedRef"]["schemeId"],
+        "ref.sha256.detached.v1"
+    );
+    assert_eq!(
+        payload["projectedRef"]["paramsHash"],
+        "sha256.detached.params.v1"
+    );
+    assert_eq!(payload["projectedRef"]["domain"], "kcir.node");
+    assert_eq!(
+        payload["projectedRef"]["digest"],
+        "c461b57a070b9629fbfb7ebb028bc18855b01fad8f8ce5221eb2ddd95ca5fdda"
+    );
 }
 
 #[test]

@@ -62,8 +62,10 @@ Purpose:
 | `CHANGE-MORPHISMS.md` | `capabilities.change_morphisms` vectors | covered | - |
 | `DOCTRINE-SITE.md` | `mise run doctrine-check` | covered | - |
 | `DOCTRINE-SITE.json` | `mise run doctrine-check` | covered | - |
+| `DOCTRINE-SITE-SOURCE.json` | `mise run doctrine-check`; `python3 tools/conformance/generate_doctrine_site.py --check` | covered | - |
+| `DOCTRINE-OP-REGISTRY.json` | `mise run doctrine-check`; `python3 tools/conformance/generate_doctrine_site.py --check` | covered | - |
 | `LLM-INSTRUCTION-DOCTRINE.md` | `capabilities.instruction_typing`; `capabilities.ci_witnesses`; `mise run ci-pipeline-test` | covered | - |
-| `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_policy.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
+| `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_check_client.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
 | `PREMATH-COHERENCE.md` | `mise run coherence-check`; `cargo test -p premath-coherence`; `coherence-check` CLI smoke test | covered | - |
 | `COHERENCE-CONTRACT.json` | `mise run coherence-check`; `coherence-check` CLI smoke test | covered | - |
 | `CAPABILITY-REGISTRY.json` | `python3 tools/conformance/check_docs_coherence.py`; `python3 tools/conformance/run_capability_vectors.py`; `mise run coherence-check` | covered | - |

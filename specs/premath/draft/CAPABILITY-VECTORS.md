@@ -245,12 +245,19 @@ Required vectors when claimed:
   gate witness refs, and native required-check bindings.
 - golden: strict-delta compare and decision-attestation chain are stable for
   fixed inputs.
+- golden: boundary authority lineage remains coherent across kernel obligation
+  registry mapping, proposal discharge classes, coherence checker scope
+  obligations, and CI semantic witness failure classes.
 - adversarial: mismatched verdict class or required/executed check sets for the
   same instruction envelope reject deterministically.
 - adversarial: required-gate witness digest/source/projection mismatches reject
   deterministically.
+- adversarial: obligation-registry mapping mismatches reject deterministically.
+- adversarial: stale generated doctrine-site digest material rejects
+  deterministically.
 - invariance: local/external execution profiles preserve kernel verdict and Gate
-  failure classes for paired instruction and required-gate scenarios.
+  failure classes for paired instruction, required-gate, and boundary-authority
+  lineage scenarios.
 
 ### 2.10 `capabilities.instruction_typing`
 

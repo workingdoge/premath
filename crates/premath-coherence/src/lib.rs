@@ -7,8 +7,10 @@ mod instruction;
 mod proposal;
 
 pub use instruction::{
-    InstructionError, InstructionTypingPolicy, ValidatedInstructionEnvelope,
-    ValidatedInstructionProposal, validate_instruction_envelope_payload,
+    ExecutedInstructionCheck, InstructionError, InstructionProposalIngest, InstructionTypingPolicy,
+    InstructionWitness, InstructionWitnessRuntime, ValidatedInstructionEnvelope,
+    ValidatedInstructionProposal, build_instruction_witness, build_pre_execution_reject_witness,
+    validate_instruction_envelope_payload,
 };
 pub use proposal::{
     CanonicalProposal, ProposalBinding, ProposalDischarge, ProposalError, ProposalObligation,

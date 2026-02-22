@@ -4,10 +4,8 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
-import tempfile
-from typing import Any, Dict, List
+from typing import List
 
 from instruction_check_client import InstructionCheckError, run_instruction_check
 
@@ -16,17 +14,13 @@ DEFAULT_GLOBS = (
     "instructions/*.json",
     "tests/ci/fixtures/instructions/*.json",
 )
-def validate_envelope(path: Path, payload: Dict[str, Any], repo_root: Path) -> None:
-    with tempfile.TemporaryDirectory(prefix="premath-instruction-envelope-check-") as tmp:
-        tmp_path = Path(tmp) / path.name
-        tmp_path.write_text(
-            json.dumps(payload, ensure_ascii=False),
-            encoding="utf-8",
-        )
-        try:
-            run_instruction_check(repo_root, tmp_path)
-        except InstructionCheckError as exc:
-            raise ValueError(str(exc)) from exc
+
+
+def validate_envelope(path: Path, repo_root: Path) -> None:
+    try:
+        run_instruction_check(repo_root, path)
+    except InstructionCheckError as exc:
+        raise ValueError(str(exc)) from exc
 
 
 def parse_args(default_root: Path) -> argparse.Namespace:
@@ -77,10 +71,7 @@ def main() -> int:
             errors.append(f"{path}: file not found")
             continue
         try:
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            if not isinstance(payload, dict):
-                raise ValueError("root must be a JSON object")
-            validate_envelope(path, payload, root)
+            validate_envelope(path, root)
         except Exception as exc:
             errors.append(f"{path}: {exc}")
 

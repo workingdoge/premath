@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "golden/boundary_authority_lineage_accept",
+  "description": "Kernel registry, proposal discharge, coherence scope, and CI semantic witness lineage remain aligned.",
+  "semanticScenarioId": "ci_boundary_authority_lineage_01",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "obligationRegistry": {
+      "registryKind": "premath.obligation_gate_registry.v1",
+      "mappings": [
+        {
+          "obligationKind": "stability",
+          "failureClass": "stability_failure"
+        },
+        {
+          "obligationKind": "locality",
+          "failureClass": "locality_failure"
+        },
+        {
+          "obligationKind": "descent_exists",
+          "failureClass": "descent_failure"
+        },
+        {
+          "obligationKind": "descent_contractible",
+          "failureClass": "glue_non_contractible"
+        },
+        {
+          "obligationKind": "adjoint_triple",
+          "failureClass": "adjoint_triple_coherence_failure"
+        },
+        {
+          "obligationKind": "ext_gap",
+          "failureClass": "descent_failure"
+        },
+        {
+          "obligationKind": "ext_ambiguous",
+          "failureClass": "glue_non_contractible"
+        }
+      ]
+    },
+    "proposal": {
+      "obligations": [
+        {
+          "kind": "stability"
+        },
+        {
+          "kind": "ext_gap"
+        }
+      ],
+      "discharge": {
+        "steps": [
+          {
+            "kind": "stability",
+            "status": "passed"
+          },
+          {
+            "kind": "ext_gap",
+            "status": "failed",
+            "failureClass": "descent_failure"
+          }
+        ],
+        "failureClasses": [
+          "descent_failure"
+        ]
+      }
+    },
+    "coherence": {
+      "obligationRegistryKind": "premath.obligation_gate_registry.v1",
+      "bidirCheckerObligations": [
+        "stability",
+        "locality",
+        "descent_exists",
+        "descent_contractible",
+        "adjoint_triple",
+        "ext_gap",
+        "ext_ambiguous"
+      ]
+    },
+    "ciWitness": {
+      "semanticFailureClasses": [
+        "descent_failure"
+      ],
+      "operationalFailureClasses": [],
+      "failureClasses": [
+        "descent_failure"
+      ],
+      "proposalIngest": {
+        "obligations": [
+          {
+            "kind": "stability"
+          },
+          {
+            "kind": "ext_gap"
+          }
+        ],
+        "discharge": {
+          "failureClasses": [
+            "descent_failure"
+          ]
+        }
+      }
+    },
+    "doctrineSite": {
+      "trackedDigest": "c5191e4d586bdc758e41643546663b2b5ff4bd23230adb31266638bb37387564",
+      "generatedDigest": "c5191e4d586bdc758e41643546663b2b5ff4bd23230adb31266638bb37387564"
+    }
+  }
+}

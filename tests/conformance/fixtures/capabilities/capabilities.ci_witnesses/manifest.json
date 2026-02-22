@@ -11,6 +11,7 @@
     "golden/strict_delta_compare_match",
     "golden/delta_snapshot_projection_decision_stable",
     "golden/decision_attestation_chain_accept",
+    "golden/boundary_authority_lineage_accept",
     "adversarial/instruction_witness_non_deterministic_reject",
     "adversarial/instruction_reject_witness_failure_class_mismatch_reject",
     "adversarial/instruction_witness_requires_claim",
@@ -23,9 +24,13 @@
     "adversarial/strict_delta_compare_mismatch_reject",
     "adversarial/decision_attestation_witness_sha_mismatch_reject",
     "adversarial/decision_attestation_delta_sha_mismatch_reject",
+    "adversarial/boundary_authority_registry_mismatch_reject",
+    "adversarial/boundary_authority_stale_generated_reject",
     "invariance/same_instruction_local",
     "invariance/same_instruction_external",
     "invariance/same_required_witness_local",
-    "invariance/same_required_witness_external"
+    "invariance/same_required_witness_external",
+    "invariance/same_boundary_authority_local",
+    "invariance/same_boundary_authority_external"
   ]
 }
