@@ -427,11 +427,11 @@ surface.
     witness with allowed `policyDigest` plus action capability claims
     (`capabilities.change_morphisms` + per-action claim or
     `capabilities.change_morphisms.all`).
-  - data-plane tools: `init_tool`, `issue_ready`, `issue_list`, `issue_blocked`,
-    `issue_add`, `issue_claim`, `issue_lease_renew`, `issue_lease_release`,
-    `issue_lease_projection`, `issue_discover`, `issue_update`, `dep_add`,
-    `observe_latest`, `observe_needs_attention`, `observe_instruction`,
-    `observe_projection`.
+  - data-plane tools: `init_tool`, `issue_ready`, `issue_list`,
+    `issue_backend_status`, `issue_blocked`, `issue_add`, `issue_claim`,
+    `issue_lease_renew`, `issue_lease_release`, `issue_lease_projection`,
+    `issue_discover`, `issue_update`, `dep_add`, `observe_latest`,
+    `observe_needs_attention`, `observe_instruction`, `observe_projection`.
   - doctrine-gated tools: `instruction_check`, `instruction_run`
     (runs `tools/ci/pipeline_instruction.py` and emits CI witness artifacts).
 - `premath issue add "Title" --issues .premath/issues.jsonl --json`

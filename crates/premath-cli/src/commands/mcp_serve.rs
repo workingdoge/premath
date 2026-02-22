@@ -157,7 +157,7 @@ async fn run_async(args: Args) -> Result<(), String> {
         },
         protocol_version: ProtocolVersion::V2025_11_25.into(),
         instructions: Some(
-            "Use init_tool to initialize canonical .premath/issues.jsonl memory. issue/dep mutation tools (including issue_claim, issue_lease_renew, issue_lease_release, and issue_discover) are instruction-mediated by policy (default: instruction-linked) and reads may use jsonl or surreal projection backends. Use issue_lease_projection for deterministic stale/contended lease views. Use instruction_* tools for doctrine-gated runs (instruction envelopes require normalizerId + policyDigest, requestedChecks must be policy-allowlisted, optional capabilityClaims are carried to witness for mutation gating, and optional proposal ingestion uses proposal/llmProposal) and observe_* tools for observation queries."
+            "Use init_tool to initialize canonical .premath/issues.jsonl memory. issue/dep mutation tools (including issue_claim, issue_lease_renew, issue_lease_release, and issue_discover) are instruction-mediated by policy (default: instruction-linked) and reads may use jsonl or surreal projection backends. Use issue_backend_status for backend integration state and issue_lease_projection for deterministic stale/contended lease views. Use instruction_* tools for doctrine-gated runs (instruction envelopes require normalizerId + policyDigest, requestedChecks must be policy-allowlisted, optional capabilityClaims are carried to witness for mutation gating, and optional proposal ingestion uses proposal/llmProposal) and observe_* tools for observation queries."
                 .into(),
         ),
         meta: None,
@@ -206,6 +206,9 @@ impl ServerHandler for PremathMcpHandler {
         match tool_params {
             PremathTools::IssueReadyTool(tool) => call_issue_ready(&self.config, tool),
             PremathTools::IssueListTool(tool) => call_issue_list(&self.config, tool),
+            PremathTools::IssueBackendStatusTool(tool) => {
+                call_issue_backend_status(&self.config, tool)
+            }
             PremathTools::IssueBlockedTool(tool) => call_issue_blocked(&self.config, tool),
             PremathTools::IssueAddTool(tool) => call_issue_add(&self.config, tool),
             PremathTools::IssueClaimTool(tool) => call_issue_claim(&self.config, tool),
@@ -260,6 +263,18 @@ struct IssueListTool {
     status: Option<String>,
     #[serde(default)]
     assignee: Option<String>,
+    #[serde(default)]
+    issues_path: Option<String>,
+}
+
+#[mcp_tool(
+    name = "issue_backend_status",
+    description = "Report issue backend integration state (jsonl authority, surreal projection, jj)",
+    read_only_hint = true
+)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "camelCase")]
+struct IssueBackendStatusTool {
     #[serde(default)]
     issues_path: Option<String>,
 }
@@ -556,6 +571,7 @@ tool_box!(
     [
         IssueReadyTool,
         IssueListTool,
+        IssueBackendStatusTool,
         IssueBlockedTool,
         IssueAddTool,
         IssueClaimTool,
@@ -896,6 +912,74 @@ fn call_issue_list(
         "querySource": graph.query_source,
         "count": items.len(),
         "items": items
+    }))
+}
+
+fn call_issue_backend_status(
+    config: &PremathMcpConfig,
+    tool: IssueBackendStatusTool,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    let issues_path = resolve_path(tool.issues_path, &config.issues_path);
+    let repo_root = resolve_repo_root(&config.repo_root);
+    let projection_path = resolve_issue_query_projection_path(config);
+
+    let issues_exists = issues_path.exists();
+    let projection_exists = projection_path.exists();
+
+    let jj_available = JjClient::is_available();
+    let mut jj_repo_root: Option<String> = None;
+    let mut jj_head_change_id: Option<String> = None;
+    let mut jj_error: Option<String> = None;
+
+    if jj_available {
+        match JjClient::discover(&repo_root) {
+            Ok(client) => {
+                jj_repo_root = Some(client.repo_root().display().to_string());
+                match client.current_change_id() {
+                    Ok(change_id) => {
+                        jj_head_change_id = Some(change_id);
+                    }
+                    Err(err) => {
+                        jj_error = Some(err.to_string());
+                    }
+                }
+            }
+            Err(err) => {
+                jj_error = Some(err.to_string());
+            }
+        }
+    }
+
+    let jj_state = if !jj_available {
+        "unavailable"
+    } else if jj_error.is_none() {
+        "ready"
+    } else {
+        "error"
+    };
+
+    json_result(json!({
+        "action": "issue.backend-status",
+        "issuesPath": issues_path.display().to_string(),
+        "repoRoot": repo_root.display().to_string(),
+        "queryBackend": config.issue_query_backend.as_str(),
+        "canonicalMemory": {
+            "kind": "jsonl",
+            "path": issues_path.display().to_string(),
+            "exists": issues_exists
+        },
+        "queryProjection": {
+            "kind": ISSUE_QUERY_PROJECTION_KIND,
+            "path": projection_path.display().to_string(),
+            "exists": projection_exists
+        },
+        "jj": {
+            "state": jj_state,
+            "available": jj_available,
+            "repoRoot": jj_repo_root,
+            "headChangeId": jj_head_change_id,
+            "error": jj_error
+        }
     }))
 }
 
@@ -2426,6 +2510,58 @@ mod tests {
             blocked_payload["items"][0]["blockers"][0]["dependsOnId"],
             "bd-root"
         );
+    }
+
+    #[test]
+    fn issue_backend_status_reports_integration_state() {
+        let root = temp_dir("issue-backend-status");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Root".to_string(),
+                id: Some("bd-root".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+
+        let projection_path = root.join(".premath").join("surreal_issue_cache.json");
+        fs::create_dir_all(
+            projection_path
+                .parent()
+                .expect("projection path should have parent"),
+        )
+        .expect("projection dir should exist");
+        fs::write(&projection_path, "{}").expect("projection file should write");
+
+        let result =
+            call_issue_backend_status(&config, IssueBackendStatusTool { issues_path: None })
+                .expect("backend status should succeed");
+        let payload = parse_tool_json(result);
+        assert_eq!(payload["action"], "issue.backend-status");
+        assert_eq!(payload["queryBackend"], "jsonl");
+        assert_eq!(payload["canonicalMemory"]["kind"], "jsonl");
+        assert_eq!(payload["canonicalMemory"]["exists"], true);
+        assert_eq!(
+            payload["queryProjection"]["kind"],
+            "premath.surreal.issue_projection.v0"
+        );
+        assert_eq!(payload["queryProjection"]["exists"], true);
+        assert!(payload["jj"]["available"].is_boolean());
+        let jj_state = payload["jj"]["state"]
+            .as_str()
+            .expect("jj.state should be a string");
+        assert!(jj_state == "ready" || jj_state == "error" || jj_state == "unavailable");
     }
 
     #[test]
