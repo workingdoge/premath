@@ -25,6 +25,14 @@ pub struct RequiredDecisionVerifyDerived {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub projection_digest: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub normalizer_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub required_checks: Option<Vec<String>>,
 }
 
@@ -121,6 +129,10 @@ pub fn verify_required_decision_request(
     let mut derived = RequiredDecisionVerifyDerived {
         decision: None,
         projection_digest: None,
+        typed_core_projection_digest: None,
+        authority_payload_digest: None,
+        normalizer_id: None,
+        policy_digest: None,
         required_checks: None,
     };
 
@@ -159,6 +171,38 @@ pub fn verify_required_decision_request(
     );
     if let Some(value) = projection_digest.clone() {
         derived.projection_digest = Some(value);
+    }
+    let typed_core_projection_digest = parse_non_empty_string(
+        decision_obj.get("typedCoreProjectionDigest"),
+        "decision.typedCoreProjectionDigest",
+        &mut errors,
+    );
+    if let Some(value) = typed_core_projection_digest.clone() {
+        derived.typed_core_projection_digest = Some(value);
+    }
+    let authority_payload_digest = parse_non_empty_string(
+        decision_obj.get("authorityPayloadDigest"),
+        "decision.authorityPayloadDigest",
+        &mut errors,
+    );
+    if let Some(value) = authority_payload_digest.clone() {
+        derived.authority_payload_digest = Some(value);
+    }
+    let normalizer_id = parse_non_empty_string(
+        decision_obj.get("normalizerId"),
+        "decision.normalizerId",
+        &mut errors,
+    );
+    if let Some(value) = normalizer_id.clone() {
+        derived.normalizer_id = Some(value);
+    }
+    let policy_digest = parse_non_empty_string(
+        decision_obj.get("policyDigest"),
+        "decision.policyDigest",
+        &mut errors,
+    );
+    if let Some(value) = policy_digest.clone() {
+        derived.policy_digest = Some(value);
     }
 
     let decision_required_checks = parse_string_list(
@@ -213,6 +257,50 @@ pub fn verify_required_decision_request(
     if let Some(witness) = request.witness.as_ref()
         && let Some(witness_obj) = as_object(witness, "witness", &mut errors)
     {
+        if let Some(typed_core_projection_digest) = typed_core_projection_digest.as_deref() {
+            let witness_typed = parse_non_empty_string(
+                witness_obj.get("typedCoreProjectionDigest"),
+                "witness.typedCoreProjectionDigest",
+                &mut errors,
+            );
+            if witness_typed.as_deref() != Some(typed_core_projection_digest) {
+                errors.push(
+                    "typedCoreProjectionDigest mismatch between decision and witness".to_string(),
+                );
+            }
+        }
+        if let Some(authority_payload_digest) = authority_payload_digest.as_deref() {
+            let witness_alias = parse_non_empty_string(
+                witness_obj.get("authorityPayloadDigest"),
+                "witness.authorityPayloadDigest",
+                &mut errors,
+            );
+            if witness_alias.as_deref() != Some(authority_payload_digest) {
+                errors.push(
+                    "authorityPayloadDigest mismatch between decision and witness".to_string(),
+                );
+            }
+        }
+        if let Some(normalizer_id) = normalizer_id.as_deref() {
+            let witness_normalizer = parse_non_empty_string(
+                witness_obj.get("normalizerId"),
+                "witness.normalizerId",
+                &mut errors,
+            );
+            if witness_normalizer.as_deref() != Some(normalizer_id) {
+                errors.push("normalizerId mismatch between decision and witness".to_string());
+            }
+        }
+        if let Some(policy_digest) = policy_digest.as_deref() {
+            let witness_policy = parse_non_empty_string(
+                witness_obj.get("policyDigest"),
+                "witness.policyDigest",
+                &mut errors,
+            );
+            if witness_policy.as_deref() != Some(policy_digest) {
+                errors.push("policyDigest mismatch between decision and witness".to_string());
+            }
+        }
         if let Some(projection_digest) = projection_digest.as_deref() {
             let witness_projection = parse_non_empty_string(
                 witness_obj.get("projectionDigest"),
@@ -240,6 +328,54 @@ pub fn verify_required_decision_request(
     if let Some(delta_snapshot) = request.delta_snapshot.as_ref()
         && let Some(delta_obj) = as_object(delta_snapshot, "deltaSnapshot", &mut errors)
     {
+        if let Some(typed_core_projection_digest) = typed_core_projection_digest.as_deref() {
+            let delta_typed = parse_non_empty_string(
+                delta_obj.get("typedCoreProjectionDigest"),
+                "deltaSnapshot.typedCoreProjectionDigest",
+                &mut errors,
+            );
+            if delta_typed.as_deref() != Some(typed_core_projection_digest) {
+                errors.push(
+                    "typedCoreProjectionDigest mismatch between decision and delta snapshot"
+                        .to_string(),
+                );
+            }
+        }
+        if let Some(authority_payload_digest) = authority_payload_digest.as_deref() {
+            let delta_alias = parse_non_empty_string(
+                delta_obj.get("authorityPayloadDigest"),
+                "deltaSnapshot.authorityPayloadDigest",
+                &mut errors,
+            );
+            if delta_alias.as_deref() != Some(authority_payload_digest) {
+                errors.push(
+                    "authorityPayloadDigest mismatch between decision and delta snapshot"
+                        .to_string(),
+                );
+            }
+        }
+        if let Some(normalizer_id) = normalizer_id.as_deref() {
+            let delta_normalizer = parse_non_empty_string(
+                delta_obj.get("normalizerId"),
+                "deltaSnapshot.normalizerId",
+                &mut errors,
+            );
+            if delta_normalizer.as_deref() != Some(normalizer_id) {
+                errors
+                    .push("normalizerId mismatch between decision and delta snapshot".to_string());
+            }
+        }
+        if let Some(policy_digest) = policy_digest.as_deref() {
+            let delta_policy = parse_non_empty_string(
+                delta_obj.get("policyDigest"),
+                "deltaSnapshot.policyDigest",
+                &mut errors,
+            );
+            if delta_policy.as_deref() != Some(policy_digest) {
+                errors
+                    .push("policyDigest mismatch between decision and delta snapshot".to_string());
+            }
+        }
         if let Some(projection_digest) = projection_digest.as_deref() {
             let delta_projection = parse_non_empty_string(
                 delta_obj.get("projectionDigest"),
@@ -275,20 +411,36 @@ mod tests {
     use serde_json::json;
 
     fn accepted_request() -> RequiredDecisionVerifyRequest {
+        let typed = "ev1_demo";
+        let alias = "proj1_demo";
+        let normalizer = "normalizer.ci.required.v1";
+        let policy = "ci-topos-v0";
         RequiredDecisionVerifyRequest {
             decision: json!({
                 "decisionKind": "ci.required.decision.v1",
                 "decision": "accept",
                 "projectionDigest": "proj1_demo",
+                "typedCoreProjectionDigest": typed,
+                "authorityPayloadDigest": alias,
+                "normalizerId": normalizer,
+                "policyDigest": policy,
                 "requiredChecks": ["baseline"],
                 "witnessSha256": "witness_hash",
                 "deltaSha256": "delta_hash"
             }),
             witness: Some(json!({
+                "typedCoreProjectionDigest": typed,
+                "authorityPayloadDigest": alias,
+                "normalizerId": normalizer,
+                "policyDigest": policy,
                 "projectionDigest": "proj1_demo",
                 "requiredChecks": ["baseline"]
             })),
             delta_snapshot: Some(json!({
+                "typedCoreProjectionDigest": typed,
+                "authorityPayloadDigest": alias,
+                "normalizerId": normalizer,
+                "policyDigest": policy,
                 "projectionDigest": "proj1_demo",
                 "requiredChecks": ["baseline"]
             })),
@@ -317,6 +469,10 @@ mod tests {
     fn verify_required_decision_rejects_projection_mismatch() {
         let mut request = accepted_request();
         request.witness = Some(json!({
+            "typedCoreProjectionDigest": "ev1_demo",
+            "authorityPayloadDigest": "proj1_demo",
+            "normalizerId": "normalizer.ci.required.v1",
+            "policyDigest": "ci-topos-v0",
             "projectionDigest": "proj1_wrong",
             "requiredChecks": ["baseline"]
         }));

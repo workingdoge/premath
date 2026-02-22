@@ -1,4 +1,5 @@
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -173,9 +174,18 @@ fn write_instruction_runtime_input(dir: &Path, instruction_ref: &str, failed: bo
 }
 
 fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
+    let normalizer_id = "normalizer.ci.required.v1";
+    let projection_digest = "proj1_demo";
+    let typed_core_projection_digest = format!(
+        "ev1_{:x}",
+        Sha256::digest(format!(
+            "{projection_digest}\0{normalizer_id}\0{}\0",
+            "ci-topos-v0"
+        ))
+    );
     let runtime = serde_json::json!({
         "projectionPolicy": "ci-topos-v0",
-        "projectionDigest": "proj1_demo",
+        "projectionDigest": projection_digest,
         "changedPaths": ["README.md"],
         "requiredChecks": ["baseline"],
         "results": [{
@@ -199,7 +209,10 @@ fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
         "deltaSource": "explicit",
         "fromRef": "origin/main",
         "toRef": "HEAD",
+        "normalizerId": normalizer_id,
         "policyDigest": "ci-topos-v0",
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": projection_digest,
         "squeakSiteProfile": "local",
         "runStartedAt": "2026-02-22T00:00:00Z",
         "runFinishedAt": "2026-02-22T00:00:01Z",
@@ -323,19 +336,35 @@ fn write_required_decide_input(dir: &Path, failed: bool) -> PathBuf {
 }
 
 fn write_required_decision_verify_input(dir: &Path) -> PathBuf {
+    let typed_core_projection_digest = "ev1_demo";
+    let authority_payload_digest = "proj1_demo";
+    let normalizer_id = "normalizer.ci.required.v1";
+    let policy_digest = "ci-topos-v0";
     let decision = serde_json::json!({
         "decisionKind": "ci.required.decision.v1",
         "decision": "accept",
         "projectionDigest": "proj1_demo",
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": authority_payload_digest,
+        "normalizerId": normalizer_id,
+        "policyDigest": policy_digest,
         "requiredChecks": ["baseline"],
         "witnessSha256": "witness_hash",
         "deltaSha256": "delta_hash"
     });
     let witness = serde_json::json!({
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": authority_payload_digest,
+        "normalizerId": normalizer_id,
+        "policyDigest": policy_digest,
         "projectionDigest": "proj1_demo",
         "requiredChecks": ["baseline"]
     });
     let delta = serde_json::json!({
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": authority_payload_digest,
+        "normalizerId": normalizer_id,
+        "policyDigest": policy_digest,
         "projectionDigest": "proj1_demo",
         "requiredChecks": ["baseline"]
     });

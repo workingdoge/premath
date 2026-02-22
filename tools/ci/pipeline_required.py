@@ -128,10 +128,13 @@ def render_summary(
         raw_digest = _write_sha(witness_path, digest_path)
         checks = payload.get("requiredChecks", [])
         checks_line = ", ".join(checks) if isinstance(checks, list) and checks else "(none)"
+        typed_projection = payload.get("typedCoreProjectionDigest") or payload.get("projectionDigest")
+        authority_alias = payload.get("authorityPayloadDigest")
         lines.extend(
             [
                 "",
-                f"- projection digest: `{payload.get('projectionDigest', '(missing)')}`",
+                f"- projection digest: `{typed_projection or '(missing)'}`",
+                f"- compatibility alias digest: `{authority_alias or '(missing)'}`",
                 f"- witness verdict: `{payload.get('verdictClass', '(missing)')}`",
                 f"- required checks: `{checks_line}`",
                 f"- witness sha256: `{raw_digest}`",
@@ -158,10 +161,14 @@ def render_summary(
     else:
         decision = json.loads(decision_path.read_text(encoding="utf-8"))
         decision_digest = _write_sha(decision_path, decision_digest_path)
+        typed_projection = decision.get("typedCoreProjectionDigest") or decision.get("projectionDigest")
+        authority_alias = decision.get("authorityPayloadDigest")
         lines.extend(
             [
                 f"- decision: `{decision.get('decision', '(missing)')}`",
                 f"- decision reason: `{decision.get('reasonClass', '(missing)')}`",
+                f"- decision typed authority: `{typed_projection or '(missing)'}`",
+                f"- decision compatibility alias: `{authority_alias or '(missing)'}`",
                 f"- decision witness sha256: `{decision.get('witnessSha256', '(missing)')}`",
                 f"- decision delta sha256: `{decision.get('deltaSha256', '(missing)')}`",
                 f"- decision sha256: `{decision_digest}`",

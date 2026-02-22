@@ -147,6 +147,23 @@ def _validate_witness_payload(payload: Any) -> Dict[str, Any]:
             raise ValueError(
                 f"instruction-witness payload {key} must be a non-empty string or null"
             )
+    authority_payload_digest = payload.get("authorityPayloadDigest")
+    if not isinstance(authority_payload_digest, str) or not authority_payload_digest:
+        raise ValueError(
+            "instruction-witness payload authorityPayloadDigest must be a non-empty string"
+        )
+    typed_core_projection_digest = payload.get("typedCoreProjectionDigest")
+    if typed_core_projection_digest is not None and (
+        not isinstance(typed_core_projection_digest, str) or not typed_core_projection_digest
+    ):
+        raise ValueError(
+            "instruction-witness payload typedCoreProjectionDigest must be a non-empty string when present"
+        )
+    if payload.get("normalizerId") is not None and payload.get("policyDigest") is not None:
+        if not isinstance(typed_core_projection_digest, str) or not typed_core_projection_digest:
+            raise ValueError(
+                "instruction-witness payload missing typedCoreProjectionDigest for bound authority"
+            )
     if not isinstance(payload.get("results"), list):
         raise ValueError("instruction-witness payload results must be a list")
     if not isinstance(payload.get("failureClasses"), list):

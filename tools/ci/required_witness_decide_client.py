@@ -44,6 +44,24 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
         raise ValueError("required-witness-decide payload reasonClass must be a non-empty string")
     if not isinstance(payload.get("errors"), list):
         raise ValueError("required-witness-decide payload errors must be a list")
+    typed_fields = (
+        "typedCoreProjectionDigest",
+        "authorityPayloadDigest",
+        "normalizerId",
+        "policyDigest",
+    )
+    for key in typed_fields:
+        value = payload.get(key)
+        if value is None:
+            if decision == "accept":
+                raise ValueError(
+                    f"required-witness-decide payload missing {key} for accept decision"
+                )
+            continue
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"required-witness-decide payload {key} must be a non-empty string when present"
+            )
     return payload
 
 

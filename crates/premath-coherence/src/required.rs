@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 use thiserror::Error;
 
@@ -60,6 +61,7 @@ pub struct RequiredWitnessRuntime {
     pub delta_source: String,
     pub from_ref: Option<String>,
     pub to_ref: Option<String>,
+    pub normalizer_id: String,
     pub policy_digest: String,
     pub squeak_site_profile: String,
     pub run_started_at: String,
@@ -88,7 +90,10 @@ pub struct RequiredWitness {
     pub delta_source: String,
     pub from_ref: Option<String>,
     pub to_ref: Option<String>,
+    pub normalizer_id: String,
     pub policy_digest: String,
+    pub typed_core_projection_digest: String,
+    pub authority_payload_digest: String,
     pub squeak_site_profile: String,
     pub run_started_at: String,
     pub run_finished_at: String,
@@ -141,6 +146,19 @@ fn sorted_unique_non_empty(values: &[String]) -> Vec<String> {
     out.into_iter().collect()
 }
 
+pub fn compute_typed_core_projection_digest(
+    authority_payload_digest: &str,
+    normalizer_id: &str,
+    policy_digest: &str,
+) -> String {
+    let mut hasher = Sha256::new();
+    for part in [authority_payload_digest, normalizer_id, policy_digest] {
+        hasher.update(part.as_bytes());
+        hasher.update([0u8]);
+    }
+    format!("ev1_{:x}", hasher.finalize())
+}
+
 pub fn build_required_witness(
     runtime: RequiredWitnessRuntime,
 ) -> Result<RequiredWitness, RequiredWitnessError> {
@@ -150,6 +168,7 @@ pub fn build_required_witness(
     let required_checks = ensure_non_empty_list(runtime.required_checks, "requiredChecks")?;
     let reasons = ensure_non_empty_list(runtime.reasons, "reasons")?;
     let delta_source = ensure_non_empty(&runtime.delta_source, "deltaSource")?;
+    let normalizer_id = ensure_non_empty(&runtime.normalizer_id, "normalizerId")?;
     let policy_digest = ensure_non_empty(&runtime.policy_digest, "policyDigest")?;
     if policy_digest != projection_policy {
         return Err(RequiredWitnessError::new(
@@ -265,6 +284,13 @@ pub fn build_required_witness(
             .collect::<Vec<String>>(),
     );
 
+    let authority_payload_digest = projection_digest.clone();
+    let typed_core_projection_digest = compute_typed_core_projection_digest(
+        &authority_payload_digest,
+        &normalizer_id,
+        &policy_digest,
+    );
+
     Ok(RequiredWitness {
         ci_schema: 1,
         witness_kind: REQUIRED_WITNESS_KIND.to_string(),
@@ -288,7 +314,10 @@ pub fn build_required_witness(
         delta_source,
         from_ref,
         to_ref,
+        normalizer_id,
         policy_digest,
+        typed_core_projection_digest,
+        authority_payload_digest,
         squeak_site_profile,
         run_started_at,
         run_finished_at,
@@ -335,6 +364,7 @@ mod tests {
             delta_source: "explicit".to_string(),
             from_ref: Some("origin/main".to_string()),
             to_ref: Some("HEAD".to_string()),
+            normalizer_id: "normalizer.ci.required.v1".to_string(),
             policy_digest: "ci-topos-v0".to_string(),
             squeak_site_profile: "local".to_string(),
             run_started_at: "2026-02-22T00:00:00Z".to_string(),

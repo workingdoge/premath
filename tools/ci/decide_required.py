@@ -252,6 +252,12 @@ def main() -> int:
         "witnessSha256": witness_sha,
         "deltaSnapshotPath": str(delta_snapshot_path) if delta_snapshot_path is not None else None,
         "deltaSha256": delta_sha,
+        "typedCoreProjectionDigest": core_decision.get("typedCoreProjectionDigest")
+        or witness.get("typedCoreProjectionDigest"),
+        "authorityPayloadDigest": core_decision.get("authorityPayloadDigest")
+        or witness.get("authorityPayloadDigest"),
+        "normalizerId": core_decision.get("normalizerId") or witness.get("normalizerId"),
+        "policyDigest": core_decision.get("policyDigest") or witness.get("policyDigest"),
         "projectionDigest": core_decision.get("projectionDigest"),
         "requiredChecks": core_decision.get("requiredChecks"),
         "nativeRequiredChecks": native_required_checks,

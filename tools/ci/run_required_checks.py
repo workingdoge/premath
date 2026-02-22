@@ -267,6 +267,9 @@ def main() -> int:
         sys.stdout.write("\n")
 
     required_checks = list(plan["requiredChecks"])
+    normalizer_id = os.environ.get("PREMATH_REQUIRED_NORMALIZER_ID", "normalizer.ci.required.v1").strip()
+    if not normalizer_id:
+        normalizer_id = "normalizer.ci.required.v1"
     started_at = datetime.now(timezone.utc)
 
     out_dir = args.out_dir
@@ -274,7 +277,7 @@ def main() -> int:
         out_dir = (root / out_dir).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
     delta_snapshot_path = default_delta_snapshot_path(out_dir)
-    delta_snapshot_payload = make_delta_snapshot_payload(plan)
+    delta_snapshot_payload = make_delta_snapshot_payload({**plan, "normalizerId": normalizer_id})
     write_delta_snapshot(delta_snapshot_path, delta_snapshot_payload)
 
     results: List[Dict[str, Any]] = []
@@ -339,6 +342,7 @@ def main() -> int:
         "deltaSource": plan["deltaSource"],
         "fromRef": plan["fromRef"],
         "toRef": plan["toRef"],
+        "normalizerId": normalizer_id,
         "policyDigest": plan["projectionPolicy"],
         "squeakSiteProfile": os.environ.get(
             "PREMATH_SQUEAK_SITE_PROFILE",

@@ -136,6 +136,18 @@ def stable_hash(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def compute_typed_core_projection_digest(
+    authority_payload_digest: str,
+    normalizer_id: str,
+    policy_digest: str,
+) -> str:
+    h = hashlib.sha256()
+    for part in (authority_payload_digest, normalizer_id, policy_digest):
+        h.update(part.encode("utf-8"))
+        h.update(b"\x00")
+    return "ev1_" + h.hexdigest()
+
+
 def normalize_semantics(value: Any) -> Any:
     if isinstance(value, dict):
         return {k: normalize_semantics(value[k]) for k in sorted(value)}
@@ -1627,6 +1639,39 @@ def evaluate_ci_boundary_authority_lineage(case: Dict[str, Any]) -> VectorOutcom
     ci_witness_raw = artifacts.get("ciWitness")
     if not isinstance(ci_witness_raw, dict):
         raise ValueError("artifacts.ciWitness must be an object")
+    ci_typed_core_projection_digest = ensure_string(
+        ci_witness_raw.get("typedCoreProjectionDigest"),
+        "artifacts.ciWitness.typedCoreProjectionDigest",
+    )
+    ci_authority_payload_digest = ensure_string(
+        ci_witness_raw.get("authorityPayloadDigest"),
+        "artifacts.ciWitness.authorityPayloadDigest",
+    )
+    ci_normalizer_id = ensure_string(
+        ci_witness_raw.get("normalizerId"),
+        "artifacts.ciWitness.normalizerId",
+    )
+    ci_policy_digest = ensure_string(
+        ci_witness_raw.get("policyDigest"),
+        "artifacts.ciWitness.policyDigest",
+    )
+    expected_ci_typed_core_projection_digest = compute_typed_core_projection_digest(
+        ci_authority_payload_digest,
+        ci_normalizer_id,
+        ci_policy_digest,
+    )
+    if ci_typed_core_projection_digest != expected_ci_typed_core_projection_digest:
+        failures.append("boundary_authority_lineage_mismatch")
+    if ci_typed_core_projection_digest == ci_authority_payload_digest:
+        failures.append("boundary_authority_lineage_mismatch")
+    ci_projection_digest = ci_witness_raw.get("projectionDigest")
+    if ci_projection_digest is not None:
+        ci_projection_digest_value = ensure_string(
+            ci_projection_digest,
+            "artifacts.ciWitness.projectionDigest",
+        )
+        if ci_projection_digest_value != ci_authority_payload_digest:
+            failures.append("boundary_authority_lineage_mismatch")
     ci_semantic_failure_classes = canonical_check_set(
         ci_witness_raw.get("semanticFailureClasses", []),
         "artifacts.ciWitness.semanticFailureClasses",

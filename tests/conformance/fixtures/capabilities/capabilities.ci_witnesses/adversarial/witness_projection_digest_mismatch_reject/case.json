@@ -45,7 +45,10 @@
       "docsOnly": false,
       "reasons": [
         "rust_surface_changed"
-      ]
+      ],
+      "normalizerId": "normalizer.ci.required.v1",
+      "authorityPayloadDigest": "proj1_deadbeef",
+      "typedCoreProjectionDigest": "ev1_11868f3e5c0dc73a2b576c4ddf878e8ba50857c8edb279a642b4a5730a2003dd"
     }
   }
 }

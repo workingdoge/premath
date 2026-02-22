@@ -167,11 +167,27 @@ def main() -> int:
 
     derived = payload.get("derived", {})
     decision_value = derived.get("decision") or decision.get("decision")
-    projection_digest = derived.get("projectionDigest") or decision.get("projectionDigest")
+    typed_core_projection_digest = (
+        derived.get("typedCoreProjectionDigest")
+        or decision.get("typedCoreProjectionDigest")
+    )
+    projection_digest = (
+        typed_core_projection_digest
+        or derived.get("projectionDigest")
+        or decision.get("projectionDigest")
+    )
+    authority_payload_digest = (
+        derived.get("authorityPayloadDigest")
+        or decision.get("authorityPayloadDigest")
+    )
     print(
         "[verify-decision] OK "
         f"(decision={decision_value}, projection={projection_digest})"
     )
+    if typed_core_projection_digest:
+        print(f"[verify-decision] typed authority: {typed_core_projection_digest}")
+    if authority_payload_digest:
+        print(f"[verify-decision] compatibility alias: {authority_payload_digest}")
     print(f"[verify-decision] decision: {decision_path}")
     print(f"[verify-decision] witness: {witness_path}")
     print(f"[verify-decision] delta: {delta_path}")

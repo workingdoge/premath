@@ -185,13 +185,19 @@ def query_surface(
         required = latest.get("required")
         delta = latest.get("delta")
         decision = latest.get("decision")
+        def _matches_projection(row: Any) -> bool:
+            if not isinstance(row, dict):
+                return False
+            typed = row.get("typedCoreProjectionDigest")
+            alias = row.get("projectionDigest")
+            return typed == projection_digest or alias == projection_digest
 
         payload = {
             "mode": "projection",
             "projectionDigest": projection_digest,
-            "required": required if isinstance(required, dict) and required.get("projectionDigest") == projection_digest else None,
-            "delta": delta if isinstance(delta, dict) and delta.get("projectionDigest") == projection_digest else None,
-            "decision": decision if isinstance(decision, dict) and decision.get("projectionDigest") == projection_digest else None,
+            "required": required if _matches_projection(required) else None,
+            "delta": delta if _matches_projection(delta) else None,
+            "decision": decision if _matches_projection(decision) else None,
         }
         if payload["required"] is None and payload["delta"] is None and payload["decision"] is None:
             raise ValueError(f"projection not found in latest surface: {projection_digest}")

@@ -23,6 +23,10 @@ class RequiredWitnessDecideClientTests(unittest.TestCase):
             "decision": "accept",
             "reasonClass": "verified_accept",
             "projectionDigest": "proj1_demo",
+            "typedCoreProjectionDigest": "ev1_demo",
+            "authorityPayloadDigest": "proj1_demo",
+            "normalizerId": "normalizer.ci.required.v1",
+            "policyDigest": "ci-topos-v0",
             "requiredChecks": ["baseline"],
             "errors": [],
         }
@@ -65,7 +69,11 @@ class RequiredWitnessDecideClientTests(unittest.TestCase):
         self.assertEqual(exc.exception.failure_class, "required_witness_decide_invalid")
 
     def test_run_required_witness_decide_retries_on_stale_local_payload_shape(self) -> None:
-        stale_payload = {"decisionKind": "ci.required.decision.v1", "decision": "accept", "errors": []}
+        stale_payload = {
+            "decisionKind": "ci.required.decision.v1",
+            "decision": "accept",
+            "errors": [],
+        }
         first = subprocess.CompletedProcess(
             args=["premath", "required-witness-decide"],
             returncode=0,

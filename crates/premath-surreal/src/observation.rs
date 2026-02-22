@@ -37,6 +37,14 @@ pub struct DeltaSummary {
     pub r#ref: String,
     pub projection_policy: Option<String>,
     pub projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalizer_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy_digest: Option<String>,
     pub delta_source: Option<String>,
     pub from_ref: Option<String>,
     pub to_ref: Option<String>,
@@ -51,6 +59,14 @@ pub struct RequiredSummary {
     pub witness_kind: Option<String>,
     pub projection_policy: Option<String>,
     pub projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalizer_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy_digest: Option<String>,
     pub verdict_class: Option<String>,
     pub required_checks: Vec<String>,
     pub executed_checks: Vec<String>,
@@ -63,6 +79,14 @@ pub struct DecisionSummary {
     pub r#ref: String,
     pub decision_kind: Option<String>,
     pub projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub normalizer_id: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub policy_digest: Option<String>,
     pub decision: Option<String>,
     pub reason_class: Option<String>,
     pub witness_path: Option<String>,
@@ -77,6 +101,10 @@ pub struct InstructionSummary {
     pub witness_kind: Option<String>,
     pub instruction_id: String,
     pub instruction_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
     pub instruction_classification: Option<serde_json::Value>,
     pub intent: Option<String>,
     pub scope: Option<serde_json::Value>,
@@ -275,6 +303,10 @@ fn normalize_delta(payload: &serde_json::Map<String, Value>, rel_path: String) -
         r#ref: rel_path,
         projection_policy: string_opt(payload.get("projectionPolicy")),
         projection_digest: string_opt(payload.get("projectionDigest")),
+        typed_core_projection_digest: string_opt(payload.get("typedCoreProjectionDigest")),
+        authority_payload_digest: string_opt(payload.get("authorityPayloadDigest")),
+        normalizer_id: string_opt(payload.get("normalizerId")),
+        policy_digest: string_opt(payload.get("policyDigest")),
         delta_source: string_opt(payload.get("deltaSource")),
         from_ref: string_opt(payload.get("fromRef")),
         to_ref: string_opt(payload.get("toRef")),
@@ -292,6 +324,10 @@ fn normalize_required(
         witness_kind: string_opt(payload.get("witnessKind")),
         projection_policy: string_opt(payload.get("projectionPolicy")),
         projection_digest: string_opt(payload.get("projectionDigest")),
+        typed_core_projection_digest: string_opt(payload.get("typedCoreProjectionDigest")),
+        authority_payload_digest: string_opt(payload.get("authorityPayloadDigest")),
+        normalizer_id: string_opt(payload.get("normalizerId")),
+        policy_digest: string_opt(payload.get("policyDigest")),
         verdict_class: string_opt(payload.get("verdictClass")),
         required_checks: string_list(payload.get("requiredChecks")),
         executed_checks: string_list(payload.get("executedChecks")),
@@ -307,6 +343,10 @@ fn normalize_decision(
         r#ref: rel_path,
         decision_kind: string_opt(payload.get("decisionKind")),
         projection_digest: string_opt(payload.get("projectionDigest")),
+        typed_core_projection_digest: string_opt(payload.get("typedCoreProjectionDigest")),
+        authority_payload_digest: string_opt(payload.get("authorityPayloadDigest")),
+        normalizer_id: string_opt(payload.get("normalizerId")),
+        policy_digest: string_opt(payload.get("policyDigest")),
         decision: string_opt(payload.get("decision")),
         reason_class: string_opt(payload.get("reasonClass")),
         witness_path: string_opt(payload.get("witnessPath")),
@@ -335,6 +375,8 @@ fn normalize_instruction(
         witness_kind: string_opt(payload.get("witnessKind")),
         instruction_id,
         instruction_digest: string_opt(payload.get("instructionDigest")),
+        typed_core_projection_digest: string_opt(payload.get("typedCoreProjectionDigest")),
+        authority_payload_digest: string_opt(payload.get("authorityPayloadDigest")),
         instruction_classification: payload.get("instructionClassification").cloned(),
         intent: string_opt(payload.get("intent")),
         scope: payload.get("scope").cloned(),
@@ -412,16 +454,32 @@ fn coherence_policy_drift(
         projection_policies.insert(policy);
     }
 
-    let mut projection_digests = BTreeSet::new();
+    let mut typed_projection_digests = BTreeSet::new();
+    if let Some(digest) = delta.and_then(|row| row.typed_core_projection_digest.clone()) {
+        typed_projection_digests.insert(digest);
+    }
+    if let Some(digest) = required.and_then(|row| row.typed_core_projection_digest.clone()) {
+        typed_projection_digests.insert(digest);
+    }
+    if let Some(digest) = decision.and_then(|row| row.typed_core_projection_digest.clone()) {
+        typed_projection_digests.insert(digest);
+    }
+
+    let mut alias_projection_digests = BTreeSet::new();
     if let Some(digest) = delta.and_then(|row| row.projection_digest.clone()) {
-        projection_digests.insert(digest);
+        alias_projection_digests.insert(digest);
     }
     if let Some(digest) = required.and_then(|row| row.projection_digest.clone()) {
-        projection_digests.insert(digest);
+        alias_projection_digests.insert(digest);
     }
     if let Some(digest) = decision.and_then(|row| row.projection_digest.clone()) {
-        projection_digests.insert(digest);
+        alias_projection_digests.insert(digest);
     }
+    let effective_projection_digests = if typed_projection_digests.is_empty() {
+        alias_projection_digests.clone()
+    } else {
+        typed_projection_digests.clone()
+    };
 
     let mut instruction_policy_digests = BTreeSet::new();
     let mut missing_instruction_policy_ids = BTreeSet::new();
@@ -437,7 +495,7 @@ fn coherence_policy_drift(
     if projection_policies.len() > 1 {
         drift_classes.push("projection_policy_drift".to_string());
     }
-    if projection_digests.len() > 1 {
+    if effective_projection_digests.len() > 1 {
         drift_classes.push("projection_digest_drift".to_string());
     }
     if instruction_policy_digests.len() > 1 {
@@ -446,7 +504,9 @@ fn coherence_policy_drift(
 
     json!({
         "projectionPolicies": projection_policies.into_iter().collect::<Vec<_>>(),
-        "projectionDigests": projection_digests.into_iter().collect::<Vec<_>>(),
+        "projectionDigests": effective_projection_digests.into_iter().collect::<Vec<_>>(),
+        "typedCoreProjectionDigests": typed_projection_digests.into_iter().collect::<Vec<_>>(),
+        "aliasProjectionDigests": alias_projection_digests.into_iter().collect::<Vec<_>>(),
         "instructionPolicyDigests": instruction_policy_digests.into_iter().collect::<Vec<_>>(),
         "missingInstructionPolicyIds": missing_instruction_policy_ids.into_iter().collect::<Vec<_>>(),
         "driftClasses": drift_classes,
@@ -831,13 +891,25 @@ pub fn build_surface(
 
     let latest_projection_digest = decision
         .as_ref()
-        .and_then(|row| row.projection_digest.clone())
-        .or_else(|| {
-            required
-                .as_ref()
-                .and_then(|row| row.projection_digest.clone())
+        .and_then(|row| {
+            row.typed_core_projection_digest
+                .clone()
+                .or_else(|| row.projection_digest.clone())
         })
-        .or_else(|| delta.as_ref().and_then(|row| row.projection_digest.clone()));
+        .or_else(|| {
+            required.as_ref().and_then(|row| {
+                row.typed_core_projection_digest
+                    .clone()
+                    .or_else(|| row.projection_digest.clone())
+            })
+        })
+        .or_else(|| {
+            delta.as_ref().and_then(|row| {
+                row.typed_core_projection_digest
+                    .clone()
+                    .or_else(|| row.projection_digest.clone())
+            })
+        });
     let latest_instruction_id = instructions.last().map(|row| row.instruction_id.clone());
 
     let state = derive_state(required.as_ref(), decision.as_ref(), &instructions);
@@ -1005,24 +1077,28 @@ impl ObservationIndex {
     }
 
     pub fn projection(&self, projection_digest: &str) -> Option<ProjectionView> {
-        let required = self
-            .surface
-            .latest
-            .required
-            .clone()
-            .filter(|row| row.projection_digest.as_deref() == Some(projection_digest));
-        let delta = self
-            .surface
-            .latest
-            .delta
-            .clone()
-            .filter(|row| row.projection_digest.as_deref() == Some(projection_digest));
-        let decision = self
-            .surface
-            .latest
-            .decision
-            .clone()
-            .filter(|row| row.projection_digest.as_deref() == Some(projection_digest));
+        let matches_projection = |typed: Option<&String>, alias: Option<&String>| {
+            typed.is_some_and(|digest| digest == projection_digest)
+                || alias.is_some_and(|digest| digest == projection_digest)
+        };
+        let required = self.surface.latest.required.clone().filter(|row| {
+            matches_projection(
+                row.typed_core_projection_digest.as_ref(),
+                row.projection_digest.as_ref(),
+            )
+        });
+        let delta = self.surface.latest.delta.clone().filter(|row| {
+            matches_projection(
+                row.typed_core_projection_digest.as_ref(),
+                row.projection_digest.as_ref(),
+            )
+        });
+        let decision = self.surface.latest.decision.clone().filter(|row| {
+            matches_projection(
+                row.typed_core_projection_digest.as_ref(),
+                row.projection_digest.as_ref(),
+            )
+        });
 
         if required.is_none() && delta.is_none() && decision.is_none() {
             return None;
@@ -1063,6 +1139,10 @@ mod tests {
                     r#ref: "artifacts/ciwitness/latest-delta.json".to_string(),
                     projection_policy: Some("ci-topos-v0".to_string()),
                     projection_digest: Some("proj1_alpha".to_string()),
+                    typed_core_projection_digest: Some("ev1_alpha".to_string()),
+                    authority_payload_digest: Some("proj1_alpha".to_string()),
+                    normalizer_id: Some("normalizer.ci.required.v1".to_string()),
+                    policy_digest: Some("ci-topos-v0".to_string()),
                     delta_source: Some("git_diff+workspace".to_string()),
                     from_ref: Some("origin/main".to_string()),
                     to_ref: Some("HEAD".to_string()),
@@ -1074,6 +1154,10 @@ mod tests {
                     witness_kind: Some("ci.required.v1".to_string()),
                     projection_policy: Some("ci-topos-v0".to_string()),
                     projection_digest: Some("proj1_alpha".to_string()),
+                    typed_core_projection_digest: Some("ev1_alpha".to_string()),
+                    authority_payload_digest: Some("proj1_alpha".to_string()),
+                    normalizer_id: Some("normalizer.ci.required.v1".to_string()),
+                    policy_digest: Some("ci-topos-v0".to_string()),
                     verdict_class: Some("accepted".to_string()),
                     required_checks: vec!["baseline".to_string()],
                     executed_checks: vec!["baseline".to_string()],
@@ -1083,6 +1167,10 @@ mod tests {
                     r#ref: "artifacts/ciwitness/latest-decision.json".to_string(),
                     decision_kind: Some("ci.required.decision.v1".to_string()),
                     projection_digest: Some("proj1_alpha".to_string()),
+                    typed_core_projection_digest: Some("ev1_alpha".to_string()),
+                    authority_payload_digest: Some("proj1_alpha".to_string()),
+                    normalizer_id: Some("normalizer.ci.required.v1".to_string()),
+                    policy_digest: Some("ci-topos-v0".to_string()),
                     decision: Some("accept".to_string()),
                     reason_class: Some("verified_accept".to_string()),
                     witness_path: None,
@@ -1095,6 +1183,8 @@ mod tests {
                 witness_kind: Some("ci.instruction.v1".to_string()),
                 instruction_id: "20260221T010000Z-ci-wiring-golden".to_string(),
                 instruction_digest: Some("instr1_alpha".to_string()),
+                typed_core_projection_digest: Some("ev1_instr_alpha".to_string()),
+                authority_payload_digest: Some("instr1_alpha".to_string()),
                 instruction_classification: None,
                 intent: Some("validate wiring".to_string()),
                 scope: None,

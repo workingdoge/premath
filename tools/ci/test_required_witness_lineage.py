@@ -7,6 +7,7 @@ import unittest
 from typing import Any, Dict, List, Tuple
 
 from change_projection import PROJECTION_POLICY, project_required_checks
+from delta_snapshot import compute_typed_core_projection_digest
 from gate_witness_envelope import stable_sha256
 from required_witness import verify_required_witness_payload
 
@@ -41,12 +42,21 @@ def _lineage_fixture() -> Tuple[List[str], Dict[str, Any], Dict[str, Dict[str, A
         f"gates/{projection.projection_digest}/01-build.json": gate_build,
         f"gates/{projection.projection_digest}/02-test.json": gate_test,
     }
+    normalizer_id = "normalizer.ci.required.v1"
+    typed_core_projection_digest = compute_typed_core_projection_digest(
+        projection.projection_digest,
+        normalizer_id,
+        PROJECTION_POLICY,
+    )
 
     witness = {
         "ciSchema": 1,
         "witnessKind": "ci.required.v1",
         "projectionPolicy": PROJECTION_POLICY,
         "projectionDigest": projection.projection_digest,
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": projection.projection_digest,
+        "normalizerId": normalizer_id,
         "policyDigest": PROJECTION_POLICY,
         "changedPaths": changed_paths,
         "requiredChecks": required_checks,
