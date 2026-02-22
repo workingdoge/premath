@@ -1941,3 +1941,26 @@ classes.
   surface as required/proposal wrappers.
 - `instruction_envelope_invalid_shape` remains the parse/shape failure class for
   instruction-check payload decoding failures.
+
+---
+
+## 2026-02-22 — Decision 0067: Enforce CI client transport parity with executable tests
+
+### Decision
+Add deterministic parity enforcement for CI command wrapper transport surfaces:
+
+- introduce `tools/ci/test_client_transport_parity.py`,
+- require required/proposal/instruction clients to import and use
+  `tools/ci/core_cli_client.py`,
+- ban reintroduction of local transport loops in those clients
+  (tempfile command loops, inline stale-subcommand handling),
+- include this test in `mise run ci-pipeline-test`.
+
+### Rationale
+After transport consolidation, parity needed an executable guard so wrapper
+surfaces could not silently regress to duplicated local transport behavior.
+
+### Consequences
+- command-wrapper reduction has a concrete, merge-gated invariant.
+- bd-33 parity scope now includes wrapper transport surface checks, not only
+  docs/spec-level coherence.
