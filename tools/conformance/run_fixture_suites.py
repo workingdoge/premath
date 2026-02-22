@@ -101,6 +101,16 @@ SUITES: Tuple[Suite, ...] = (
         ),
     ),
     Suite(
+        suite_id="doctrine-inf",
+        domain="conformance.doctrine-inf",
+        command=("python3", "tools/conformance/run_doctrine_inf_vectors.py"),
+        input_paths=(
+            ROOT / "tools" / "conformance" / "run_fixture_suites.py",
+            ROOT / "tools" / "conformance" / "run_doctrine_inf_vectors.py",
+            ROOT / "tests" / "conformance" / "fixtures" / "doctrine-inf",
+        ),
+    ),
+    Suite(
         suite_id="tusk-core",
         domain="conformance.tusk-core",
         command=("python3", "tools/conformance/run_tusk_core_vectors.py"),

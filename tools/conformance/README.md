@@ -10,6 +10,7 @@ Runs the executable conformance fixture suites through one command surface:
 - `gate` (`run_gate_vectors.py`)
 - `witness-id` (`run_witness_id_vectors.py`)
 - `kernel-profile` (`run_kernel_profile_vectors.py`)
+- `doctrine-inf` (`run_doctrine_inf_vectors.py`)
 - `tusk-core` (`run_tusk_core_vectors.py`)
 - `capabilities` (`run_capability_vectors.py`)
 

@@ -6,6 +6,7 @@ Current status:
 
 - `fixtures/interop-core/` is executable.
 - `fixtures/gate/` is executable.
+- `fixtures/doctrine-inf/` is executable.
 - `fixtures/capabilities/` contains capability vectors.
   - `capabilities.normal_forms` is executable.
   - `capabilities.kcir_witnesses` is executable.
@@ -37,6 +38,12 @@ Run executable gate vectors with:
 
 ```bash
 python3 tools/conformance/run_gate_vectors.py
+```
+
+Run executable doctrine-inf vectors with:
+
+```bash
+python3 tools/conformance/run_doctrine_inf_vectors.py
 ```
 
 Run executable capability vectors with:
