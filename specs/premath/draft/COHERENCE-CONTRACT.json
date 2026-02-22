@@ -42,6 +42,22 @@
     {
       "id": "glue_or_witness_contractibility",
       "description": "Ensure descent outcomes are deterministic glue-or-obstruction witnesses (never neither, never both)."
+    },
+    {
+      "id": "cwf_substitution_identity",
+      "description": "Ensure strict CwF substitution identity equalities hold for types and terms."
+    },
+    {
+      "id": "cwf_substitution_composition",
+      "description": "Ensure strict CwF substitution composition equalities hold for types and terms."
+    },
+    {
+      "id": "cwf_comprehension_beta",
+      "description": "Ensure strict CwF comprehension beta equalities hold for generic term substitution."
+    },
+    {
+      "id": "cwf_comprehension_eta",
+      "description": "Ensure strict CwF comprehension eta equalities hold for substitution reconstruction."
     }
   ],
   "conditionalCapabilityDocs": [

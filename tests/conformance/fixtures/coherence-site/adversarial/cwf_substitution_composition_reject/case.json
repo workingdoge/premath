@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "cwf_substitution_composition",
+  "artifacts": {
+    "cwf": {
+      "substitution": {
+        "types": [
+          {
+            "label": "A",
+            "afterCompose": {"type": "A_after_fg"},
+            "afterStepwise": {"type": "A_after_fg"}
+          }
+        ],
+        "terms": [
+          {
+            "label": "t",
+            "afterCompose": {"term": "t_after_fg"},
+            "afterStepwise": {"term": "t_bad"}
+          }
+        ]
+      }
+    }
+  }
+}

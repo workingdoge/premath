@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "cwf_comprehension_beta",
+  "artifacts": {
+    "cwf": {
+      "comprehension": {
+        "beta": [
+          {
+            "label": "a",
+            "original": {"term": "a"},
+            "afterBeta": {"term": "a_bad"}
+          }
+        ]
+      }
+    }
+  }
+}

@@ -9,6 +9,14 @@
     "golden/glue_or_witness_glue_accept",
     "golden/glue_or_witness_obstruction_accept",
     "adversarial/glue_or_witness_missing_reject",
-    "invariance/glue_or_witness_permuted_glue_accept"
+    "invariance/glue_or_witness_permuted_glue_accept",
+    "golden/cwf_substitution_identity_accept",
+    "adversarial/cwf_substitution_identity_reject",
+    "golden/cwf_substitution_composition_accept",
+    "adversarial/cwf_substitution_composition_reject",
+    "golden/cwf_comprehension_beta_accept",
+    "adversarial/cwf_comprehension_beta_reject",
+    "golden/cwf_comprehension_eta_accept",
+    "adversarial/cwf_comprehension_eta_reject"
   ]
 }

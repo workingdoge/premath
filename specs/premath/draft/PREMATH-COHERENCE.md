@@ -73,6 +73,10 @@ A conforming checker MUST support at least the following obligation IDs:
 7. `coverage_base_change`
 8. `coverage_transitivity`
 9. `glue_or_witness_contractibility`
+10. `cwf_substitution_identity`
+11. `cwf_substitution_composition`
+12. `cwf_comprehension_beta`
+13. `cwf_comprehension_eta`
 
 Unknown obligation IDs in the contract MUST reject deterministically.
 Missing required obligation IDs MUST reject deterministically.
@@ -162,6 +166,40 @@ MUST reject when descent fixtures fail deterministic glue-or-obstruction shape:
 - glue and obstruction both absent, or
 - declared glue/obstruction evidence is structurally invalid for the fixture
   contract.
+
+### 4.10 `cwf_substitution_identity`
+
+MUST reject when strict substitution identity equalities fail on fixture
+rows:
+
+- `A[id] = A` for type rows, and
+- `t[id] = t` for term rows.
+
+This obligation is a strict (definitional) presentation boundary for
+substitution identity in the CwF operational lane.
+
+### 4.11 `cwf_substitution_composition`
+
+MUST reject when strict substitution composition equalities fail on fixture
+rows:
+
+- `A[f ∘ g] = A[f][g]` for type rows, and
+- `t[f ∘ g] = t[f][g]` for term rows.
+
+This obligation is a strict (definitional) presentation boundary for
+substitution composition in the CwF operational lane.
+
+### 4.12 `cwf_comprehension_beta`
+
+MUST reject when strict comprehension beta equalities fail on fixture rows:
+
+- `q[⟨id, a⟩] = a`.
+
+### 4.13 `cwf_comprehension_eta`
+
+MUST reject when strict comprehension eta equalities fail on fixture rows:
+
+- `⟨π ∘ σ, q[σ]⟩ = σ`.
 
 ## 5. Deterministic Failure Classes
 

@@ -1634,3 +1634,33 @@ drift risk.
 - traceability for `draft/LLM-PROPOSAL-CHECKING` now points to
   `test_instruction_check_client.py` + `test_instruction_reject_witness.py`.
 - instruction policy semantics remain single-path and checker-owned.
+
+---
+
+## 2026-02-22 — Decision 0056: Add CwF strict presentation obligations to coherence-check
+
+### Decision
+Extend `premath coherence-check` and `draft/COHERENCE-CONTRACT.json` with four
+strict CwF obligations:
+
+- `cwf_substitution_identity`
+- `cwf_substitution_composition`
+- `cwf_comprehension_beta`
+- `cwf_comprehension_eta`
+
+Bind them to executable vectors under
+`tests/conformance/fixtures/coherence-site/` and evaluate them through the same
+deterministic site-obligation runner already used for cover/glue obligations.
+
+### Rationale
+Premath already separates semantic `≈` (kernel/fibration/site) from operational
+`≡` surfaces used by deterministic CI/witness pipelines. CwF laws provide the
+minimal strict substitution/comprehension contract needed at that operational
+boundary without redefining kernel semantic authority.
+
+### Consequences
+- coherence contract required-obligation set grows by four CwF IDs.
+- coherence-site fixture manifest now includes golden/adversarial vectors for
+  strict substitution identity/composition and comprehension beta/eta.
+- `draft/PREMATH-COHERENCE` now specifies CwF strictification obligations
+  explicitly.

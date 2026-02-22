@@ -39,6 +39,10 @@ const REQUIRED_OBLIGATION_IDS: &[&str] = &[
     "coverage_base_change",
     "coverage_transitivity",
     "glue_or_witness_contractibility",
+    "cwf_substitution_identity",
+    "cwf_substitution_composition",
+    "cwf_comprehension_beta",
+    "cwf_comprehension_eta",
 ];
 
 #[derive(Debug, Error)]
@@ -386,6 +390,10 @@ fn execute_obligation(
         "glue_or_witness_contractibility" => {
             check_glue_or_witness_contractibility(repo_root, contract)
         }
+        "cwf_substitution_identity" => check_cwf_substitution_identity(repo_root, contract),
+        "cwf_substitution_composition" => check_cwf_substitution_composition(repo_root, contract),
+        "cwf_comprehension_beta" => check_cwf_comprehension_beta(repo_root, contract),
+        "cwf_comprehension_eta" => check_cwf_comprehension_eta(repo_root, contract),
         _ => Err(CoherenceError::Contract(format!(
             "unknown obligation id: {obligation_id}"
         ))),
@@ -992,6 +1000,54 @@ fn check_glue_or_witness_contractibility(
     )
 }
 
+fn check_cwf_substitution_identity(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "cwf_substitution_identity",
+        evaluate_site_case_cwf_substitution_identity,
+    )
+}
+
+fn check_cwf_substitution_composition(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "cwf_substitution_composition",
+        evaluate_site_case_cwf_substitution_composition,
+    )
+}
+
+fn check_cwf_comprehension_beta(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "cwf_comprehension_beta",
+        evaluate_site_case_cwf_comprehension_beta,
+    )
+}
+
+fn check_cwf_comprehension_eta(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "cwf_comprehension_eta",
+        evaluate_site_case_cwf_comprehension_eta,
+    )
+}
+
 fn check_site_obligation(
     repo_root: &Path,
     contract: &CoherenceContract,
@@ -1467,6 +1523,307 @@ fn evaluate_site_case_glue_or_witness_contractibility(
                 "compatibilityWitnessCount": compatibility_witnesses.len(),
                 "hasGlue": has_glue,
                 "hasObstruction": has_obstruction,
+            }
+        }),
+    })
+}
+
+fn evaluate_cwf_row_equalities(
+    rows: &[Value],
+    case_path: &Path,
+    field_prefix: &str,
+    left_key: &str,
+    right_key: &str,
+) -> Result<(Vec<String>, Vec<Value>), CoherenceError> {
+    let mut mismatch_labels = Vec::new();
+    let mut digest_rows = Vec::new();
+    for (index, row) in rows.iter().enumerate() {
+        let row_obj = row.as_object().ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: {field_prefix}[{index}] must be an object",
+                display_path(case_path)
+            ))
+        })?;
+        let label = row_obj
+            .get("label")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToString::to_string)
+            .unwrap_or_else(|| format!("{field_prefix}[{index}]"));
+        let left_value = require_value_field(row_obj, left_key, case_path)?;
+        let right_value = require_value_field(row_obj, right_key, case_path)?;
+        let left_digest = semantic_digest(left_value);
+        let right_digest = semantic_digest(right_value);
+        if left_digest != right_digest {
+            mismatch_labels.push(label.clone());
+        }
+        digest_rows.push(json!({
+            "label": label,
+            "leftDigest": left_digest,
+            "rightDigest": right_digest,
+        }));
+    }
+    Ok((mismatch_labels, digest_rows))
+}
+
+fn evaluate_site_case_cwf_substitution_identity(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let cwf = require_object_field(artifacts, "cwf", case_path)?;
+    let substitution = require_object_field(cwf, "substitution", case_path)?;
+    let type_rows = substitution
+        .get("types")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.cwf.substitution.types must be an array",
+                display_path(case_path)
+            ))
+        })?;
+    let term_rows = substitution
+        .get("terms")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.cwf.substitution.terms must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let (type_mismatch, type_digests) = evaluate_cwf_row_equalities(
+        type_rows,
+        case_path,
+        "artifacts.cwf.substitution.types",
+        "direct",
+        "afterIdentity",
+    )?;
+    let (term_mismatch, term_digests) = evaluate_cwf_row_equalities(
+        term_rows,
+        case_path,
+        "artifacts.cwf.substitution.terms",
+        "direct",
+        "afterIdentity",
+    )?;
+
+    let mut failure_classes = Vec::new();
+    if type_rows.is_empty()
+        || term_rows.is_empty()
+        || !type_mismatch.is_empty()
+        || !term_mismatch.is_empty()
+    {
+        failure_classes.push("coherence.cwf_substitution_identity.violation".to_string());
+    }
+
+    Ok(SiteEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "digests": {
+                "types": type_digests,
+                "terms": term_digests,
+            },
+            "shape": {
+                "typeRowCount": type_rows.len(),
+                "termRowCount": term_rows.len(),
+                "typeMismatchLabels": type_mismatch,
+                "termMismatchLabels": term_mismatch,
+            }
+        }),
+    })
+}
+
+fn evaluate_site_case_cwf_substitution_composition(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let cwf = require_object_field(artifacts, "cwf", case_path)?;
+    let substitution = require_object_field(cwf, "substitution", case_path)?;
+    let type_rows = substitution
+        .get("types")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.cwf.substitution.types must be an array",
+                display_path(case_path)
+            ))
+        })?;
+    let term_rows = substitution
+        .get("terms")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.cwf.substitution.terms must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let (type_mismatch, type_digests) = evaluate_cwf_row_equalities(
+        type_rows,
+        case_path,
+        "artifacts.cwf.substitution.types",
+        "afterCompose",
+        "afterStepwise",
+    )?;
+    let (term_mismatch, term_digests) = evaluate_cwf_row_equalities(
+        term_rows,
+        case_path,
+        "artifacts.cwf.substitution.terms",
+        "afterCompose",
+        "afterStepwise",
+    )?;
+
+    let mut failure_classes = Vec::new();
+    if type_rows.is_empty()
+        || term_rows.is_empty()
+        || !type_mismatch.is_empty()
+        || !term_mismatch.is_empty()
+    {
+        failure_classes.push("coherence.cwf_substitution_composition.violation".to_string());
+    }
+
+    Ok(SiteEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "digests": {
+                "types": type_digests,
+                "terms": term_digests,
+            },
+            "shape": {
+                "typeRowCount": type_rows.len(),
+                "termRowCount": term_rows.len(),
+                "typeMismatchLabels": type_mismatch,
+                "termMismatchLabels": term_mismatch,
+            }
+        }),
+    })
+}
+
+fn evaluate_site_case_cwf_comprehension_beta(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let cwf = require_object_field(artifacts, "cwf", case_path)?;
+    let comprehension = require_object_field(cwf, "comprehension", case_path)?;
+    let beta_rows = comprehension
+        .get("beta")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.cwf.comprehension.beta must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let (mismatch_labels, digest_rows) = evaluate_cwf_row_equalities(
+        beta_rows,
+        case_path,
+        "artifacts.cwf.comprehension.beta",
+        "original",
+        "afterBeta",
+    )?;
+
+    let mut failure_classes = Vec::new();
+    if beta_rows.is_empty() || !mismatch_labels.is_empty() {
+        failure_classes.push("coherence.cwf_comprehension_beta.violation".to_string());
+    }
+
+    Ok(SiteEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "digests": {
+                "beta": digest_rows,
+            },
+            "shape": {
+                "betaRowCount": beta_rows.len(),
+                "mismatchLabels": mismatch_labels,
+            }
+        }),
+    })
+}
+
+fn evaluate_site_case_cwf_comprehension_eta(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let cwf = require_object_field(artifacts, "cwf", case_path)?;
+    let comprehension = require_object_field(cwf, "comprehension", case_path)?;
+    let eta_rows = comprehension
+        .get("eta")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.cwf.comprehension.eta must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let (mismatch_labels, digest_rows) = evaluate_cwf_row_equalities(
+        eta_rows,
+        case_path,
+        "artifacts.cwf.comprehension.eta",
+        "original",
+        "afterEta",
+    )?;
+
+    let mut failure_classes = Vec::new();
+    if eta_rows.is_empty() || !mismatch_labels.is_empty() {
+        failure_classes.push("coherence.cwf_comprehension_eta.violation".to_string());
+    }
+
+    Ok(SiteEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "digests": {
+                "eta": digest_rows,
+            },
+            "shape": {
+                "etaRowCount": eta_rows.len(),
+                "mismatchLabels": mismatch_labels,
             }
         }),
     })
@@ -2134,6 +2491,108 @@ mod tests {
             evaluated
                 .failure_classes
                 .contains(&"coherence.glue_or_witness_contractibility.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_cwf_substitution_identity_detects_violation() {
+        let case = json!({
+            "cwf": {
+                "substitution": {
+                    "types": [
+                        {"label": "A", "direct": {"type": "A"}, "afterIdentity": {"type": "A_bad"}}
+                    ],
+                    "terms": [
+                        {"label": "t", "direct": {"term": "t"}, "afterIdentity": {"term": "t"}}
+                    ]
+                }
+            }
+        });
+        let evaluated = evaluate_site_case_cwf_substitution_identity(
+            &case,
+            Path::new("site-case-cwf-substitution-identity.json"),
+        )
+        .expect("cwf substitution identity should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.cwf_substitution_identity.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_cwf_substitution_composition_detects_violation() {
+        let case = json!({
+            "cwf": {
+                "substitution": {
+                    "types": [
+                        {"label": "A", "afterCompose": {"type": "A_fg"}, "afterStepwise": {"type": "A_fg"}}
+                    ],
+                    "terms": [
+                        {"label": "t", "afterCompose": {"term": "t_fg"}, "afterStepwise": {"term": "t_bad"}}
+                    ]
+                }
+            }
+        });
+        let evaluated = evaluate_site_case_cwf_substitution_composition(
+            &case,
+            Path::new("site-case-cwf-substitution-composition.json"),
+        )
+        .expect("cwf substitution composition should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.cwf_substitution_composition.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_cwf_comprehension_beta_detects_violation() {
+        let case = json!({
+            "cwf": {
+                "comprehension": {
+                    "beta": [
+                        {"label": "a", "original": {"term": "a"}, "afterBeta": {"term": "a_bad"}}
+                    ]
+                }
+            }
+        });
+        let evaluated = evaluate_site_case_cwf_comprehension_beta(
+            &case,
+            Path::new("site-case-cwf-comprehension-beta.json"),
+        )
+        .expect("cwf comprehension beta should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.cwf_comprehension_beta.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_cwf_comprehension_eta_detects_violation() {
+        let case = json!({
+            "cwf": {
+                "comprehension": {
+                    "eta": [
+                        {"label": "sigma", "original": {"subst": "sigma"}, "afterEta": {"subst": "sigma_bad"}}
+                    ]
+                }
+            }
+        });
+        let evaluated = evaluate_site_case_cwf_comprehension_eta(
+            &case,
+            Path::new("site-case-cwf-comprehension-eta.json"),
+        )
+        .expect("cwf comprehension eta should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.cwf_comprehension_eta.violation".to_string())
         );
     }
 }
