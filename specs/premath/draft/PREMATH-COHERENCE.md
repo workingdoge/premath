@@ -42,6 +42,10 @@ The checker is not a replacement for kernel authority (`draft/PREMATH-KERNEL`,
 2. discharges those obligations against declared operational/doc surfaces, and
 3. emits a deterministic witness (`premath.coherence.v1`).
 
+Within the control-plane layer, this checker is the **check role**. Execution
+and attestation transport roles are defined by `raw/PREMATH-CI` and
+`raw/CI-TOPOS`.
+
 ## 2. Coherence Contract Artifact
 
 The machine artifact is `draft/COHERENCE-CONTRACT.json`.
@@ -226,15 +230,20 @@ Not preserved:
 
 ## 10. Migration Profile: Python Adapters -> `premath-coherence` Core
 
-This section defines the phased migration contract for moving checker/gate
-semantics out of Python surfaces and into the Rust `premath-coherence` core.
+This section defines the phased migration contract for moving control-plane
+checker semantics out of Python surfaces and into the Rust
+`premath-coherence` core.
 
 ### 10.1 Authority boundary
 
 During and after migration:
 
-- semantic/check kernels MUST live in `premath-coherence` (or successor core
+- semantic admissibility authority MUST remain in
+  `draft/PREMATH-KERNEL` + `draft/GATE` + `draft/BIDIR-DESCENT`,
+- control-plane checker semantics MAY live in `premath-coherence` (or successor
   checker crates),
+- CI execution/attestation semantics MUST remain in
+  `raw/PREMATH-CI` + `raw/CI-TOPOS` and their operational command surfaces,
 - Python surfaces under `tools/ci/` MUST remain orchestration adapters
   (argument/env binding, command dispatch, summary shaping),
 - adapters MUST NOT define parallel canonicalization/typing/discharge logic.

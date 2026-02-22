@@ -59,6 +59,19 @@ Conforming implementations MUST preserve this split:
 
 Runner/tooling layers MUST NOT redefine semantic admissibility.
 
+### 2.1 Relationship to `draft/PREMATH-COHERENCE`
+
+`raw/PREMATH-CI` and `draft/PREMATH-COHERENCE` are two roles in one
+control-plane layer:
+
+- coherence checker role: deterministic consistency checking over declared
+  control-plane surfaces,
+- CI role: deterministic execution and attestation transport over required
+  checks and witnesses.
+
+Neither role is semantic admissibility authority. Kernel semantic authority
+remains in `draft/PREMATH-KERNEL`, `draft/GATE`, and `draft/BIDIR-DESCENT`.
+
 ## 3. Control-loop object
 
 Let:

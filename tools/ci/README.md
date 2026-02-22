@@ -1,5 +1,11 @@
 # CI SqueakSite Shim
 
+Role boundary:
+
+- CI tools in this directory implement control-plane execution/attestation.
+- `premath coherence-check` implements control-plane consistency checking.
+- semantic admissibility authority remains kernel/Gate/BIDIR, not CI wrappers.
+
 `tools/ci/run_required_checks.py` is the canonical closure gate entrypoint used
 by `mise run ci-required`.
 

@@ -21,11 +21,15 @@ Scope: design-level, non-normative
 - `specs/premath/raw/SQUEAK-CORE.md`
 - `specs/premath/raw/SQUEAK-SITE.md`
 
-`CI/Control` (closure and attestation):
+`CI/Control` (one layer, two roles):
 - `specs/premath/raw/PREMATH-CI.md`
 - `specs/premath/raw/CI-TOPOS.md`
 - `specs/premath/draft/PREMATH-COHERENCE.md`
 - `specs/premath/draft/COHERENCE-CONTRACT.json`
+
+Role split inside CI/Control:
+- check role: `PREMATH-COHERENCE` (`premath coherence-check`)
+- execute/attest role: `PREMATH-CI` + `CI-TOPOS` (`pipeline_*`, `run_*`, verify/decide)
 
 `Operational surfaces` (scripts/tasks):
 - `tools/ci/pipeline_required.py`
@@ -46,13 +50,14 @@ DOCTRINE-INF
   -> DOCTRINE-SITE (nodes/covers/edges)
   -> LLM-INSTRUCTION-DOCTRINE
   -> LLM-PROPOSAL-CHECKING
-  -> PREMATH-CI / CI-TOPOS
-  -> PREMATH-COHERENCE / COHERENCE-CONTRACT
-  -> tools/ci/pipeline_required.py / tools/ci/pipeline_instruction.py
-  -> tools/ci/run_required_checks.py
-  -> tools/ci/verify_required_witness.py
-  -> tools/ci/run_gate.sh
-  -> premath coherence-check
+  -> Control Plane
+     -> check role: PREMATH-COHERENCE / COHERENCE-CONTRACT
+        -> premath coherence-check
+     -> execute/attest role: PREMATH-CI / CI-TOPOS
+        -> tools/ci/pipeline_required.py / tools/ci/pipeline_instruction.py
+        -> tools/ci/run_required_checks.py
+        -> tools/ci/verify_required_witness.py
+        -> tools/ci/run_gate.sh
   -> tools/conformance/check_doctrine_site.py / run_doctrine_inf_vectors.py
   -> hk/mise tasks (.mise baseline + ci-required-attested)
   -> CIWitness artifacts
@@ -61,6 +66,7 @@ DOCTRINE-INF
 
 Authority rule:
 - semantic admissibility comes from kernel/gate contracts, not from runners or hooks.
+- coherence and CI are control-plane roles, not semantic authority layers.
 - runners/profiles (`local`, `external`, infra bindings) change execution substrate only.
 
 ## 3. Instruction Runtime Loop

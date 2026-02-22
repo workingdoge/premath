@@ -41,6 +41,15 @@ This document is the closure/projection specialization under `raw/PREMATH-CI`.
 Goal: minimize required checks per change while preserving Premath kernel
 invariance and capability conformance.
 
+### 1.1 Control-plane role
+
+This specification defines the CI **execution/projection role** inside the
+control-plane layer. The complementary **check role** is
+`draft/PREMATH-COHERENCE`.
+
+Both roles are downstream of kernel semantic authority and MUST NOT redefine
+admissibility.
+
 Design map reference (non-normative):
 
 - `../../../docs/design/ARCHITECTURE-MAP.md` (doctrine-to-operation path summary).
