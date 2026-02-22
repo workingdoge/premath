@@ -1167,6 +1167,8 @@ fn issue_backend_status_json_smoke() {
         "premath.surreal.issue_projection.v0"
     );
     assert_eq!(payload["queryProjection"]["exists"], true);
+    assert_eq!(payload["queryProjection"]["state"], "invalid");
+    assert!(payload["queryProjection"]["error"].is_string());
     assert!(payload["jj"]["available"].is_boolean());
     let jj_state = payload["jj"]["state"]
         .as_str()

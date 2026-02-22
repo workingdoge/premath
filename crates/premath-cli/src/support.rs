@@ -1,7 +1,8 @@
-use premath_bd::{DepType, MemoryStore};
+use premath_bd::{DepType, MemoryStore, store_snapshot_ref};
 use premath_jj::JjClient;
 use premath_kernel::{CoherenceLevel, ContextId, FiberSignature};
 use premath_surreal::QueryCache;
+use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::{BTreeSet, VecDeque};
 use std::fs;
@@ -9,6 +10,7 @@ use std::path::{Path, PathBuf};
 
 pub const CONFLICT_SAMPLE_LIMIT: usize = 25;
 pub const DEFAULT_ISSUES_PATH: &str = ".premath/issues.jsonl";
+pub const ISSUE_QUERY_PROJECTION_SCHEMA: u64 = 1;
 pub const ISSUE_QUERY_PROJECTION_KIND: &str = "premath.surreal.issue_projection.v0";
 const DEFAULT_ISSUES_SAMPLE_PATH: &str = ".premath/issues.jsonl.new";
 const LEGACY_ISSUES_PATH: &str = ".beads/issues.jsonl";
@@ -20,12 +22,35 @@ pub struct BackendStatus {
     pub repo_root: PathBuf,
     pub projection_path: PathBuf,
     pub issues_exists: bool,
+    pub authority_snapshot_ref: Option<String>,
+    pub authority_error: Option<String>,
     pub projection_exists: bool,
+    pub projection_state: &'static str,
+    pub projection_schema: Option<u64>,
+    pub projection_kind: Option<String>,
+    pub projection_source_issues_path: Option<String>,
+    pub projection_source_path_matches_authority: Option<bool>,
+    pub projection_source_snapshot_ref: Option<String>,
+    pub projection_snapshot_matches_authority: Option<bool>,
+    pub projection_error: Option<String>,
     pub jj_state: &'static str,
     pub jj_available: bool,
     pub jj_repo_root: Option<String>,
     pub jj_head_change_id: Option<String>,
     pub jj_error: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ProjectionHeader {
+    #[serde(default)]
+    schema: Option<u64>,
+    #[serde(default)]
+    kind: Option<String>,
+    #[serde(default)]
+    source_issues_path: Option<String>,
+    #[serde(default)]
+    source_snapshot_ref: Option<String>,
 }
 
 pub fn parse_level_or_exit(level: &str) -> CoherenceLevel {
@@ -157,6 +182,75 @@ pub fn collect_backend_status(
 
     let issues_exists = issues_path.exists();
     let projection_exists = projection_path.exists();
+    let mut authority_snapshot_ref: Option<String> = None;
+    let mut authority_error: Option<String> = None;
+    if issues_exists {
+        match MemoryStore::load_jsonl(&issues_path) {
+            Ok(store) => authority_snapshot_ref = Some(store_snapshot_ref(&store)),
+            Err(err) => authority_error = Some(err.to_string()),
+        }
+    }
+
+    let mut projection_state: &'static str = if projection_exists {
+        "unknown"
+    } else {
+        "missing"
+    };
+    let mut projection_schema: Option<u64> = None;
+    let mut projection_kind: Option<String> = None;
+    let mut projection_source_issues_path: Option<String> = None;
+    let mut projection_source_path_matches_authority: Option<bool> = None;
+    let mut projection_source_snapshot_ref: Option<String> = None;
+    let mut projection_snapshot_matches_authority: Option<bool> = None;
+    let mut projection_error: Option<String> = None;
+
+    if projection_exists {
+        match read_projection_header(&projection_path) {
+            Ok(header) => {
+                projection_schema = header.schema;
+                projection_kind = header.kind.clone();
+                projection_source_issues_path = header.source_issues_path.clone();
+                projection_source_snapshot_ref = header.source_snapshot_ref.clone();
+
+                let schema_ok = projection_schema == Some(ISSUE_QUERY_PROJECTION_SCHEMA);
+                let kind_ok = projection_kind.as_deref() == Some(ISSUE_QUERY_PROJECTION_KIND);
+                if !schema_ok || !kind_ok {
+                    projection_state = "invalid";
+                    projection_error = Some(format!(
+                        "projection metadata mismatch (expected schema={} kind={}, actual schema={:?} kind={:?})",
+                        ISSUE_QUERY_PROJECTION_SCHEMA,
+                        ISSUE_QUERY_PROJECTION_KIND,
+                        projection_schema,
+                        projection_kind
+                    ));
+                } else {
+                    if let Some(source_path) = projection_source_issues_path.as_deref() {
+                        projection_source_path_matches_authority =
+                            Some(paths_match(source_path, &issues_path));
+                    }
+                    if let (Some(source_ref), Some(authority_ref)) = (
+                        projection_source_snapshot_ref.as_deref(),
+                        authority_snapshot_ref.as_deref(),
+                    ) {
+                        projection_snapshot_matches_authority = Some(source_ref == authority_ref);
+                    }
+
+                    projection_state = match (
+                        projection_source_path_matches_authority,
+                        projection_snapshot_matches_authority,
+                    ) {
+                        (Some(false), _) | (_, Some(false)) => "stale",
+                        (Some(true), Some(true)) => "fresh",
+                        _ => "unknown",
+                    };
+                }
+            }
+            Err(err) => {
+                projection_state = "invalid";
+                projection_error = Some(err);
+            }
+        }
+    }
 
     let jj_available = JjClient::is_available();
     let mut jj_repo_root: Option<String> = None;
@@ -195,7 +289,17 @@ pub fn collect_backend_status(
         repo_root,
         projection_path,
         issues_exists,
+        authority_snapshot_ref,
+        authority_error,
         projection_exists,
+        projection_state,
+        projection_schema,
+        projection_kind,
+        projection_source_issues_path,
+        projection_source_path_matches_authority,
+        projection_source_snapshot_ref,
+        projection_snapshot_matches_authority,
+        projection_error,
         jj_state,
         jj_available,
         jj_repo_root,
@@ -216,19 +320,29 @@ pub fn backend_status_payload(
         "canonicalMemory": {
             "kind": "jsonl",
             "path": status.issues_path.display().to_string(),
-            "exists": status.issues_exists
+            "exists": status.issues_exists,
+            "snapshotRef": status.authority_snapshot_ref.clone(),
+            "error": status.authority_error.clone()
         },
         "queryProjection": {
             "kind": ISSUE_QUERY_PROJECTION_KIND,
             "path": status.projection_path.display().to_string(),
-            "exists": status.projection_exists
+            "exists": status.projection_exists,
+            "state": status.projection_state,
+            "schema": status.projection_schema,
+            "projectionKind": status.projection_kind.clone(),
+            "sourceIssuesPath": status.projection_source_issues_path.clone(),
+            "sourcePathMatchesAuthority": status.projection_source_path_matches_authority,
+            "sourceSnapshotRef": status.projection_source_snapshot_ref.clone(),
+            "snapshotRefMatchesAuthority": status.projection_snapshot_matches_authority,
+            "error": status.projection_error.clone()
         },
         "jj": {
             "state": status.jj_state,
             "available": status.jj_available,
-            "repoRoot": status.jj_repo_root,
-            "headChangeId": status.jj_head_change_id,
-            "error": status.jj_error
+            "repoRoot": status.jj_repo_root.clone(),
+            "headChangeId": status.jj_head_change_id.clone(),
+            "error": status.jj_error.clone()
         }
     });
 
@@ -242,6 +356,30 @@ pub fn backend_status_payload(
     }
 
     payload
+}
+
+fn read_projection_header(path: &Path) -> Result<ProjectionHeader, String> {
+    let bytes = fs::read(path).map_err(|e| format!("failed to read {}: {e}", path.display()))?;
+    serde_json::from_slice::<ProjectionHeader>(&bytes)
+        .map_err(|e| format!("failed to parse {}: {e}", path.display()))
+}
+
+fn paths_match(source_path: &str, authority_path: &Path) -> bool {
+    let source = PathBuf::from(source_path);
+    if source == authority_path {
+        return true;
+    }
+    normalize_path(&source) == normalize_path(authority_path)
+}
+
+fn normalize_path(path: &Path) -> PathBuf {
+    if path.is_absolute() {
+        return fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf());
+    }
+    let joined = std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(path);
+    fs::canonicalize(&joined).unwrap_or(joined)
 }
 
 pub fn read_json_file_or_exit<T>(path: &str, label: &str) -> T
