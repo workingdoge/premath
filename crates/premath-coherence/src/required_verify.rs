@@ -338,9 +338,7 @@ fn optional_string_list(
     label: &str,
     errors: &mut Vec<String>,
 ) -> Option<Vec<String>> {
-    if value.is_none() {
-        return None;
-    }
+    value?;
     Some(sorted_unique(&string_list(value, label, errors)))
 }
 
@@ -396,9 +394,7 @@ fn load_gate_witness_payload(
         return Some(payload.clone());
     }
 
-    let Some(root) = witness_root else {
-        return None;
-    };
+    let root = witness_root?;
     let target = root.join(artifact_rel_path);
     if !target.exists() || !target.is_file() {
         errors.push(format!(
