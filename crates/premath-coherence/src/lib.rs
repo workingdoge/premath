@@ -7,6 +7,7 @@ mod instruction;
 mod proposal;
 mod required;
 mod required_decide;
+mod required_decision_verify;
 mod required_projection;
 mod required_verify;
 
@@ -28,6 +29,10 @@ pub use required::{
 };
 pub use required_decide::{
     RequiredWitnessDecideRequest, RequiredWitnessDecideResult, decide_required_witness_request,
+};
+pub use required_decision_verify::{
+    RequiredDecisionVerifyDerived, RequiredDecisionVerifyRequest, RequiredDecisionVerifyResult,
+    verify_required_decision_request,
 };
 pub use required_projection::{
     PROJECTION_POLICY, PROJECTION_SCHEMA, RequiredProjectionRequest, RequiredProjectionResult,

@@ -124,6 +124,7 @@ run = [
   "python3 tools/ci/test_required_witness_client.py",
   "python3 tools/ci/test_required_witness_verify_client.py",
   "python3 tools/ci/test_required_witness_decide_client.py",
+  "python3 tools/ci/test_required_decision_verify_client.py",
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_proposal.py",

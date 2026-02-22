@@ -351,6 +351,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Verify one CI required decision against witness/delta attestation semantics
+    RequiredDecisionVerify {
+        /// Verify input JSON path (decision + witness + deltaSnapshot + actual sha values)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON

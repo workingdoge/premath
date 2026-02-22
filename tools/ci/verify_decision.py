@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Verify ci.required decision artifacts against witness/delta attestation chain."""
+"""Verify ci.required decision artifacts through core command semantics."""
 
 from __future__ import annotations
 
@@ -8,9 +8,12 @@ import hashlib
 import json
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
-from control_plane_contract import REQUIRED_DECISION_KIND
+from required_decision_verify_client import (
+    RequiredDecisionVerifyError,
+    run_required_decision_verify,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -62,17 +65,6 @@ def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def _string_list(value: Any, label: str) -> List[str]:
-    if not isinstance(value, list):
-        raise ValueError(f"{label} must be a list")
-    out: List[str] = []
-    for idx, item in enumerate(value):
-        if not isinstance(item, str):
-            raise ValueError(f"{label}[{idx}] must be a string")
-        out.append(item)
-    return out
-
-
 def _resolve_side_paths(
     root: Path,
     out_dir: Path,
@@ -97,7 +89,6 @@ def _resolve_side_paths(
             delta_path = _resolve_path(root, Path(delta_raw))
         else:
             delta_path = out_dir / "latest-delta.json"
-
     return (witness_path, delta_path)
 
 
@@ -121,13 +112,6 @@ def main() -> int:
         print(f"[verify-decision] invalid decision json: {exc}", file=sys.stderr)
         return 2
 
-    errors: List[str] = []
-    if decision.get("decisionKind") != REQUIRED_DECISION_KIND:
-        errors.append(f"decisionKind must be {REQUIRED_DECISION_KIND!r}")
-    decision_value = decision.get("decision")
-    if decision_value not in {"accept", "reject"}:
-        errors.append("decision must be 'accept' or 'reject'")
-
     try:
         witness_path, delta_path = _resolve_side_paths(
             root=root,
@@ -141,76 +125,52 @@ def main() -> int:
         return 2
 
     if not witness_path.exists() or not witness_path.is_file():
-        errors.append(f"witness not found: {witness_path}")
-        witness = None
-    else:
-        try:
-            witness = _load_json(witness_path)
-        except (ValueError, json.JSONDecodeError) as exc:
-            errors.append(f"invalid witness json: {exc}")
-            witness = None
-
+        print(f"[verify-decision] witness not found: {witness_path}", file=sys.stderr)
+        return 2
     if not delta_path.exists() or not delta_path.is_file():
-        errors.append(f"delta snapshot not found: {delta_path}")
-        delta = None
-    else:
-        try:
-            delta = _load_json(delta_path)
-        except (ValueError, json.JSONDecodeError) as exc:
-            errors.append(f"invalid delta snapshot json: {exc}")
-            delta = None
+        print(f"[verify-decision] delta snapshot not found: {delta_path}", file=sys.stderr)
+        return 2
 
-    witness_sha = decision.get("witnessSha256")
-    if not isinstance(witness_sha, str) or not witness_sha:
-        errors.append("decision.witnessSha256 must be a non-empty string")
-    elif witness is not None:
-        actual_witness_sha = _sha256_file(witness_path)
-        if witness_sha != actual_witness_sha:
-            errors.append(
-                f"witness sha mismatch (decision={witness_sha}, actual={actual_witness_sha})"
-            )
+    try:
+        witness = _load_json(witness_path)
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(f"[verify-decision] invalid witness json: {exc}", file=sys.stderr)
+        return 2
+    try:
+        delta_snapshot = _load_json(delta_path)
+    except (ValueError, json.JSONDecodeError) as exc:
+        print(f"[verify-decision] invalid delta snapshot json: {exc}", file=sys.stderr)
+        return 2
 
-    delta_sha = decision.get("deltaSha256")
-    if not isinstance(delta_sha, str) or not delta_sha:
-        errors.append("decision.deltaSha256 must be a non-empty string")
-    elif delta is not None:
-        actual_delta_sha = _sha256_file(delta_path)
-        if delta_sha != actual_delta_sha:
-            errors.append(
-                f"delta sha mismatch (decision={delta_sha}, actual={actual_delta_sha})"
-            )
+    verify_input = {
+        "decision": decision,
+        "witness": witness,
+        "deltaSnapshot": delta_snapshot,
+        "actualWitnessSha256": _sha256_file(witness_path),
+        "actualDeltaSha256": _sha256_file(delta_path),
+    }
+    try:
+        payload = run_required_decision_verify(root, verify_input)
+    except RequiredDecisionVerifyError as exc:
+        print(
+            f"[verify-decision] core verify failed: {exc.failure_class}: {exc.reason}",
+            file=sys.stderr,
+        )
+        return 2
 
-    if witness is not None:
-        if witness.get("projectionDigest") != decision.get("projectionDigest"):
-            errors.append("projectionDigest mismatch between decision and witness")
-        try:
-            decision_checks = _string_list(decision.get("requiredChecks", []), "decision.requiredChecks")
-            witness_checks = _string_list(witness.get("requiredChecks", []), "witness.requiredChecks")
-            if decision_checks != witness_checks:
-                errors.append("requiredChecks mismatch between decision and witness")
-        except ValueError as exc:
-            errors.append(str(exc))
-
-    if delta is not None:
-        if delta.get("projectionDigest") != decision.get("projectionDigest"):
-            errors.append("projectionDigest mismatch between decision and delta snapshot")
-        try:
-            decision_checks = _string_list(decision.get("requiredChecks", []), "decision.requiredChecks")
-            delta_checks = _string_list(delta.get("requiredChecks", []), "delta.requiredChecks")
-            if decision_checks != delta_checks:
-                errors.append("requiredChecks mismatch between decision and delta snapshot")
-        except ValueError as exc:
-            errors.append(str(exc))
-
+    errors = payload.get("errors", [])
     if errors:
         print(f"[verify-decision] FAIL ({len(errors)} errors)")
         for err in errors:
             print(f"  - {err}")
         return 1
 
+    derived = payload.get("derived", {})
+    decision_value = derived.get("decision") or decision.get("decision")
+    projection_digest = derived.get("projectionDigest") or decision.get("projectionDigest")
     print(
         "[verify-decision] OK "
-        f"(decision={decision.get('decision')}, projection={decision.get('projectionDigest')})"
+        f"(decision={decision_value}, projection={projection_digest})"
     )
     print(f"[verify-decision] decision: {decision_path}")
     print(f"[verify-decision] witness: {witness_path}")

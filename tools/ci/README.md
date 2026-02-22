@@ -62,6 +62,10 @@ It delegates decision semantics to core
 - decision hash bindings (`witnessSha256`, `deltaSha256`) match artifact bytes,
 - projection/required-check semantics align across decision, witness, and snapshot.
 
+It delegates attestation-chain semantics to core
+`premath required-decision-verify`; Python wrapper logic is path/artifact
+transport only.
+
 `tools/ci/check_ci_wiring.py` validates that CI workflow wiring uses the
 canonical attested gate chain entrypoint and does not split the required gate
 steps.

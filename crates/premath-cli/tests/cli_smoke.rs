@@ -322,6 +322,39 @@ fn write_required_decide_input(dir: &Path, failed: bool) -> PathBuf {
     input_path
 }
 
+fn write_required_decision_verify_input(dir: &Path) -> PathBuf {
+    let decision = serde_json::json!({
+        "decisionKind": "ci.required.decision.v1",
+        "decision": "accept",
+        "projectionDigest": "proj1_demo",
+        "requiredChecks": ["baseline"],
+        "witnessSha256": "witness_hash",
+        "deltaSha256": "delta_hash"
+    });
+    let witness = serde_json::json!({
+        "projectionDigest": "proj1_demo",
+        "requiredChecks": ["baseline"]
+    });
+    let delta = serde_json::json!({
+        "projectionDigest": "proj1_demo",
+        "requiredChecks": ["baseline"]
+    });
+    let input = serde_json::json!({
+        "decision": decision,
+        "witness": witness,
+        "deltaSnapshot": delta,
+        "actualWitnessSha256": "witness_hash",
+        "actualDeltaSha256": "delta_hash"
+    });
+    let input_path = dir.join("required-decision-verify-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("decision verify input should serialize"),
+    )
+    .expect("required decision verify input should be written");
+    input_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -741,6 +774,29 @@ fn required_witness_decide_json_smoke() {
                 .as_str()
                 .unwrap_or_default()
                 .contains("projectionDigest mismatch"))
+    );
+}
+
+#[test]
+fn required_decision_verify_json_smoke() {
+    let tmp = TempDirGuard::new("required-decision-verify-json");
+    let input = write_required_decision_verify_input(tmp.path());
+
+    let output = run_premath([
+        OsString::from("required-decision-verify"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["errors"], serde_json::json!([]));
+    assert_eq!(payload["derived"]["decision"], "accept");
+    assert_eq!(payload["derived"]["projectionDigest"], "proj1_demo");
+    assert_eq!(
+        payload["derived"]["requiredChecks"],
+        serde_json::json!(["baseline"])
     );
 }
 

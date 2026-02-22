@@ -1810,3 +1810,29 @@ decide consumers on the same deterministic delta semantics.
 - required-gate pipeline tests now include `test_required_delta_client.py`.
 - CLI smoke coverage now includes `required-delta` against a temporary git repo
   fixture.
+
+---
+
+## 2026-02-22 — Decision 0062: Move required decision attestation verification to core `premath required-decision-verify`
+
+### Decision
+Move decision-chain verification semantics (`decision + witness + delta +
+actual digest bindings`) into core:
+
+- add `premath-coherence` verifier
+  (`verify_required_decision_request`),
+- add `premath-cli required-decision-verify --input <json> --json`,
+- route `tools/ci/verify_decision.py` through
+  `tools/ci/required_decision_verify_client.py` and keep Python path as
+  filesystem/path transport only.
+
+### Rationale
+After projection/delta/witness/verify/decide migrations, `verify_decision.py`
+still carried cross-artifact semantic checks. This kept a second decision
+authority surface in Python. Moving those checks into core keeps attestation
+semantics checker-authoritative and reduces wrapper drift risk.
+
+### Consequences
+- decision-chain semantic checks now execute through one core command surface.
+- pipeline tests include `test_required_decision_verify_client.py`.
+- CLI smoke coverage includes `required-decision-verify`.
