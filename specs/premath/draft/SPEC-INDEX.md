@@ -252,6 +252,9 @@ Lane ownership note:
 - Unified evidence factoring MUST route control-plane artifact families through
   one attested surface (`draft/UNIFICATION-DOCTRINE` §10, including fail-closed
   factorization boundary in §10.5).
+- Typed evidence-object migration MUST follow staged internalization gates in
+  `draft/UNIFICATION-DOCTRINE` §10.6 (single authority artifact per stage with
+  deterministic compatibility/rollback boundaries).
 
 ## 6. Suggested reading order
 
@@ -322,7 +325,7 @@ If you are integrating SigPi + Squeak + spans in one system:
 7) `draft/UNIFICATION-DOCTRINE` (§9 lane separation)
 
 If you are implementing the Unified Evidence Plane:
-1) `draft/UNIFICATION-DOCTRINE` (§10)
+1) `draft/UNIFICATION-DOCTRINE` (§10, especially §10.6)
 2) `draft/CONTROL-PLANE-CONTRACT.json`
 3) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
 4) `draft/SPAN-SQUARE-CHECKING`

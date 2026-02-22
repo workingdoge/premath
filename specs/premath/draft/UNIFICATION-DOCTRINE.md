@@ -337,6 +337,56 @@ Minimum fail-closed classes:
 Equivalent implementation-local class names are permitted only when a
 deterministic mapping to these classes is documented and replay-stable.
 
+### 10.6 Typed evidence-object internalization stages (v0)
+
+Implementations MAY migrate from payload-first witness surfaces to Premath-typed
+`Ev` objects, but MUST do so through deterministic stage gates.
+
+At every stage, there MUST be exactly one authority artifact for admissibility
+outcomes. Derived compatibility payloads MAY exist, but MUST remain projections
+of that one authority artifact.
+
+Stage contract:
+
+1. Stage 0 (projection-locked):
+   - existing witness payloads remain the authority artifact,
+   - candidate typed `Ev` projections MAY be emitted for parity checking only,
+   - candidate typed projections MUST roundtrip deterministically to the current
+     authority payload comparison surface.
+2. Stage 1 (typed-core dual projection):
+   - implementations define a minimal typed evidence core profile
+     (`ev1_*`-style deterministic identity binding is RECOMMENDED),
+   - both authority artifact and typed core MUST be linked by deterministic
+     replayable projections,
+   - typed-core parity failures MUST fail closed before stage promotion.
+3. Stage 2 (canonical typed authority with compatibility alias):
+   - the typed evidence core becomes the authority artifact,
+   - legacy payloads MAY remain as compatibility aliases only,
+   - alias windows MUST be governed by one lifecycle table
+     (`draft/UNIFICATION-DOCTRINE` §5.1 +
+     `draft/CONTROL-PLANE-CONTRACT.json`).
+4. Stage 3 (typed-first cleanup):
+   - expired compatibility aliases MUST reject fail closed,
+   - all control-plane consumers MUST use typed evidence authority directly,
+   - no compatibility alias may reintroduce a parallel authority route.
+
+Stage-gate requirements:
+
+1. stage transitions MUST preserve the §10.2 factoring rule (`eta_F : F => Ev`)
+   for all claimed artifact families,
+2. stage transitions MUST preserve §10.3 deterministic binding
+   (`normalizerId + policyDigest`),
+3. stage transitions MUST preserve §10.5 fail-closed factorization behavior.
+
+Rollback requirements:
+
+1. if a stage fails deterministic parity or replay checks, rollback to the
+   previous accepted stage MUST be deterministic and MUST preserve prior
+   canonical identity bindings,
+2. rollback MUST NOT introduce a second authority artifact,
+3. rollback conditions and target stage MUST be decision-logged and issue-linked
+   before re-attempting promotion.
+
 ## 11. Cross-layer Obstruction Algebra (v0)
 
 Implementations MAY project failure classes into one typed obstruction algebra

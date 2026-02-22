@@ -3136,3 +3136,43 @@ transition.
   decision-log authority.
 - Lifecycle semantics are no longer CI-loader-only; coherence checker now
   enforces the same governance state boundary.
+
+---
+
+## 2026-02-22 — Decision 0106: Stage Unified Evidence Plane typed internalization with deterministic rollback
+
+### Decision
+Define a normative staged migration path for Premath-native typed evidence
+objects under `draft/UNIFICATION-DOCTRINE` §10.6.
+
+Implemented scope:
+
+1. add `§10.6 Typed evidence-object internalization stages (v0)` with four
+   stages:
+   - Stage 0: projection-locked parity,
+   - Stage 1: typed-core dual projection,
+   - Stage 2: canonical typed authority with compatibility alias,
+   - Stage 3: typed-first cleanup.
+2. require deterministic stage-gate preservation of:
+   - universal factoring (`eta_F : F => Ev`),
+   - deterministic bindings (`normalizerId + policyDigest`),
+   - fail-closed factorization boundaries.
+3. require deterministic rollback semantics:
+   - no second authority artifact,
+   - prior canonical identity bindings preserved,
+   - decision-log + issue linkage before re-promotion.
+4. cross-link migration guidance from `draft/SPEC-INDEX` lane ownership and the
+   Unified Evidence Plane reading path.
+5. enforce marker-level docs coherence checks for the new staged contract.
+
+### Rationale
+Unified Evidence Plane factorization was explicit, but migration from
+payload-first witnesses to typed evidence objects remained roadmap-level.
+Explicit staged gates and rollback constraints keep migration expressive while
+preserving the minimum-encoding authority boundary.
+
+### Consequences
+- Typed `Ev` migration is now normative and replay-auditable.
+- Compatibility windows remain lifecycle-governed rather than ad-hoc.
+- Stage failures are handled by deterministic rollback, not parallel authority
+  execution paths.

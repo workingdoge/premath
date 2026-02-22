@@ -46,6 +46,15 @@ UNIFICATION_EVIDENCE_MARKERS: Tuple[str, ...] = (
     "`unification.evidence_factorization.ambiguous`",
     "`unification.evidence_factorization.unbound`",
 )
+UNIFICATION_INTERNALIZATION_MARKERS: Tuple[str, ...] = (
+    "### 10.6 Typed evidence-object internalization stages (v0)",
+    "Stage 0 (projection-locked):",
+    "Stage 1 (typed-core dual projection):",
+    "Stage 2 (canonical typed authority with compatibility alias):",
+    "Stage 3 (typed-first cleanup):",
+    "Rollback requirements:",
+    "rollback MUST NOT introduce a second authority artifact,",
+)
 SPEC_INDEX_UNIFIED_FACTORIZATION_RE = re.compile(
     r"Unified evidence factoring MUST route control-plane artifact families through\s+"
     r"one attested surface"
@@ -342,6 +351,13 @@ def main() -> int:
     )
     for marker in missing_unification_markers:
         errors.append(f"UNIFICATION-DOCTRINE missing Unified Evidence marker: {marker}")
+    missing_internalization_markers = find_missing_markers(
+        unification_text, UNIFICATION_INTERNALIZATION_MARKERS
+    )
+    for marker in missing_internalization_markers:
+        errors.append(
+            f"UNIFICATION-DOCTRINE missing typed evidence internalization marker: {marker}"
+        )
     missing_span_square_markers = find_missing_markers(
         span_square_text, SPAN_SQUARE_COMPOSITION_MARKERS
     )

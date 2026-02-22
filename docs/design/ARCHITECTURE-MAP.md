@@ -156,16 +156,17 @@ Instruction doctrine is executable via:
 
 ## 7. Unification Execution Order (Current)
 
-Current sequencing is tracked in `.premath/issues.jsonl` with one active epic:
+Current sequencing is tracked in `.premath/issues.jsonl` with active unification
+work resolved dynamically via `premath issue ready`.
 
-- `bd-116` — Control-plane lifecycle coherence: one contract, one checker truth.
-- `bd-117` — schemaLifecycle checker enforcement in gate-chain parity.
-- `bd-118` — architecture map refresh + coherence pass.
-- `bd-119` — schemaLifecycle epoch-discipline enforcement in CI.
+Current follow-on work should remain focused on:
+
+- memory-lane hygiene and note compaction for long-running sessions,
+- governance/operations follow-ups that require human reviewer availability.
 
 Operational rule:
-- keep this section as a pointer to the issue graph, not a static duplicate task
-  backlog.
+- treat this section as a pointer only; use `premath issue ready` /
+  `premath issue list` for authoritative ordering.
 
 Execution notes:
 - keep semantic authority in kernel/gate paths; do not move admissibility into

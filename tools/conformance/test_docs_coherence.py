@@ -130,6 +130,21 @@ there MUST be one deterministic natural transformation:
             check_docs_coherence.SPEC_INDEX_UNIFIED_FACTORIZATION_RE.search(text)
         )
 
+    def test_unification_internalization_markers_all_present(self) -> None:
+        text = """
+### 10.6 Typed evidence-object internalization stages (v0)
+Stage 0 (projection-locked):
+Stage 1 (typed-core dual projection):
+Stage 2 (canonical typed authority with compatibility alias):
+Stage 3 (typed-first cleanup):
+Rollback requirements:
+rollback MUST NOT introduce a second authority artifact,
+"""
+        missing = check_docs_coherence.find_missing_markers(
+            text, check_docs_coherence.UNIFICATION_INTERNALIZATION_MARKERS
+        )
+        self.assertEqual(missing, [])
+
     def test_span_square_composition_markers_all_present(self) -> None:
         text = """
 ## 4. Composition Law Surface (Bicategory Profile)
