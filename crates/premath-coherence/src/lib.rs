@@ -33,6 +33,9 @@ const REQUIRED_OBLIGATION_IDS: &[&str] = &[
     "operation_reachability",
     "overlay_traceability",
     "transport_functoriality",
+    "coverage_base_change",
+    "coverage_transitivity",
+    "glue_or_witness_contractibility",
 ];
 
 const CAP_ASSIGN_PATTERN: &str =
@@ -119,6 +122,7 @@ pub struct CoherenceSurfaces {
     pub bidir_checker_map_name: String,
     pub informative_clause_needle: String,
     pub transport_fixture_root_path: String,
+    pub site_fixture_root_path: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -210,6 +214,34 @@ struct TransportManifest {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct TransportExpect {
+    schema: u32,
+    status: String,
+    result: String,
+    #[serde(default)]
+    expected_failure_classes: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SiteManifest {
+    schema: u32,
+    status: String,
+    #[serde(default)]
+    vectors: Vec<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SiteCase {
+    schema: u32,
+    status: String,
+    obligation_id: String,
+    artifacts: Value,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SiteExpect {
     schema: u32,
     status: String,
     result: String,
@@ -312,6 +344,11 @@ fn execute_obligation(
         "operation_reachability" => check_operation_reachability(repo_root, contract),
         "overlay_traceability" => check_overlay_traceability(repo_root, contract),
         "transport_functoriality" => check_transport_functoriality(repo_root, contract),
+        "coverage_base_change" => check_coverage_base_change(repo_root, contract),
+        "coverage_transitivity" => check_coverage_transitivity(repo_root, contract),
+        "glue_or_witness_contractibility" => {
+            check_glue_or_witness_contractibility(repo_root, contract)
+        }
         _ => Err(CoherenceError::Contract(format!(
             "unknown obligation id: {obligation_id}"
         ))),
@@ -776,6 +813,529 @@ fn check_transport_functoriality(
 }
 
 #[derive(Debug)]
+struct SiteEvaluation {
+    result: String,
+    failure_classes: Vec<String>,
+    details: Value,
+}
+
+fn check_coverage_base_change(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "coverage_base_change",
+        evaluate_site_case_coverage_base_change,
+    )
+}
+
+fn check_coverage_transitivity(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "coverage_transitivity",
+        evaluate_site_case_coverage_transitivity,
+    )
+}
+
+fn check_glue_or_witness_contractibility(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    check_site_obligation(
+        repo_root,
+        contract,
+        "glue_or_witness_contractibility",
+        evaluate_site_case_glue_or_witness_contractibility,
+    )
+}
+
+fn check_site_obligation(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+    obligation_id: &str,
+    evaluator: fn(&Value, &Path) -> Result<SiteEvaluation, CoherenceError>,
+) -> Result<ObligationCheck, CoherenceError> {
+    let fixture_root = resolve_path(repo_root, contract.surfaces.site_fixture_root_path.as_str());
+    let manifest_path = fixture_root.join("manifest.json");
+    let manifest: SiteManifest =
+        serde_json::from_slice(&read_bytes(&manifest_path)?).map_err(|source| {
+            CoherenceError::ParseJson {
+                path: display_path(&manifest_path),
+                source,
+            }
+        })?;
+
+    let mut failures = Vec::new();
+    if manifest.schema != 1 {
+        failures.push(format!("coherence.{obligation_id}.manifest_invalid_schema"));
+    }
+    if manifest.status != "executable" {
+        failures.push(format!("coherence.{obligation_id}.manifest_invalid_status"));
+    }
+    if manifest.vectors.is_empty() {
+        failures.push(format!("coherence.{obligation_id}.manifest_empty"));
+    }
+
+    let mut seen_vectors = BTreeSet::new();
+    let mut vector_rows: Vec<Value> = Vec::new();
+    let mut matched_count = 0usize;
+
+    for vector_id in &manifest.vectors {
+        if !seen_vectors.insert(vector_id.clone()) {
+            failures.push(format!("coherence.{obligation_id}.duplicate_vector_id"));
+        }
+
+        let vector_root = fixture_root.join(vector_id);
+        let case_path = vector_root.join("case.json");
+        let expect_path = vector_root.join("expect.json");
+
+        let case_bytes = match read_bytes(&case_path) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                failures.push(format!("coherence.{obligation_id}.vector_case_invalid"));
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": err.to_string(),
+                }));
+                continue;
+            }
+        };
+        let case_payload: SiteCase = match serde_json::from_slice(&case_bytes) {
+            Ok(payload) => payload,
+            Err(source) => {
+                failures.push(format!("coherence.{obligation_id}.vector_case_invalid"));
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": CoherenceError::ParseJson {
+                        path: display_path(&case_path),
+                        source,
+                    }.to_string(),
+                }));
+                continue;
+            }
+        };
+
+        if case_payload.obligation_id != obligation_id {
+            continue;
+        }
+        matched_count += 1;
+
+        if case_payload.schema != 1 {
+            failures.push(format!(
+                "coherence.{obligation_id}.vector_case_invalid_schema"
+            ));
+        }
+        if case_payload.status != "executable" {
+            failures.push(format!(
+                "coherence.{obligation_id}.vector_case_invalid_status"
+            ));
+        }
+
+        let expect_bytes = match read_bytes(&expect_path) {
+            Ok(bytes) => bytes,
+            Err(err) => {
+                failures.push(format!("coherence.{obligation_id}.vector_expect_invalid"));
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": err.to_string(),
+                }));
+                continue;
+            }
+        };
+        let expect_payload: SiteExpect = match serde_json::from_slice(&expect_bytes) {
+            Ok(payload) => payload,
+            Err(source) => {
+                failures.push(format!("coherence.{obligation_id}.vector_expect_invalid"));
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": CoherenceError::ParseJson {
+                        path: display_path(&expect_path),
+                        source,
+                    }.to_string(),
+                }));
+                continue;
+            }
+        };
+
+        let expected_result = expect_payload.result.as_str();
+        if expect_payload.schema != 1 {
+            failures.push(format!(
+                "coherence.{obligation_id}.vector_expect_invalid_schema"
+            ));
+        }
+        if expect_payload.status != "executable" {
+            failures.push(format!(
+                "coherence.{obligation_id}.vector_expect_invalid_status"
+            ));
+        }
+        if expected_result != "accepted" && expected_result != "rejected" {
+            failures.push(format!(
+                "coherence.{obligation_id}.vector_expect_invalid_result"
+            ));
+        }
+        let expected_failure_classes = dedupe_sorted(expect_payload.expected_failure_classes);
+
+        let evaluated = match evaluator(&case_payload.artifacts, &case_path) {
+            Ok(ok) => ok,
+            Err(err) => {
+                failures.push(format!("coherence.{obligation_id}.vector_invalid_shape"));
+                vector_rows.push(json!({
+                    "vectorId": vector_id,
+                    "result": "error",
+                    "error": err.to_string(),
+                }));
+                continue;
+            }
+        };
+
+        if expected_result == "accepted" || expected_result == "rejected" {
+            if evaluated.result != expected_result {
+                failures.push(format!("coherence.{obligation_id}.result_mismatch"));
+            }
+            if !expected_failure_classes.is_empty() {
+                let actual_failures = dedupe_sorted(evaluated.failure_classes.clone());
+                if expected_failure_classes != actual_failures {
+                    failures.push(format!("coherence.{obligation_id}.failure_class_mismatch"));
+                }
+            }
+        }
+
+        vector_rows.push(json!({
+            "vectorId": vector_id,
+            "expectedResult": expected_result,
+            "actualResult": evaluated.result,
+            "expectedFailureClasses": expected_failure_classes,
+            "actualFailureClasses": evaluated.failure_classes,
+            "details": evaluated.details,
+        }));
+    }
+
+    if matched_count == 0 {
+        failures.push(format!(
+            "coherence.{obligation_id}.manifest_missing_vectors"
+        ));
+    }
+
+    Ok(ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details: json!({
+            "fixtureRoot": to_repo_relative_or_absolute(repo_root, &fixture_root),
+            "manifestVectors": manifest.vectors,
+            "matchedVectors": matched_count,
+            "vectors": vector_rows,
+        }),
+    })
+}
+
+fn evaluate_site_case_coverage_base_change(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let coverage = require_object_field(artifacts, "coverage", case_path)?;
+    let base_cover = require_object_field(coverage, "baseCover", case_path)?;
+    let pullback_cover = require_object_field(coverage, "pullbackCover", case_path)?;
+
+    let base_parts = require_string_array_field(
+        base_cover,
+        "parts",
+        case_path,
+        "artifacts.coverage.baseCover",
+    )?;
+    let pullback_parts = require_string_array_field(
+        pullback_cover,
+        "parts",
+        case_path,
+        "artifacts.coverage.pullbackCover",
+    )?;
+
+    let pullback_of_parts = coverage
+        .get("pullbackOfParts")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.coverage.pullbackOfParts must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let mut source_parts: Vec<String> = Vec::new();
+    let mut mapped_pullback_parts: Vec<String> = Vec::new();
+    for item in pullback_of_parts {
+        let row = item.as_object().ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: pullbackOfParts entries must be objects",
+                display_path(case_path)
+            ))
+        })?;
+        let source = row
+            .get("source")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                CoherenceError::Contract(format!(
+                    "{}: pullbackOfParts[].source must be non-empty string",
+                    display_path(case_path)
+                ))
+            })?;
+        let pullback = row
+            .get("pullback")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                CoherenceError::Contract(format!(
+                    "{}: pullbackOfParts[].pullback must be non-empty string",
+                    display_path(case_path)
+                ))
+            })?;
+        source_parts.push(source.to_string());
+        mapped_pullback_parts.push(pullback.to_string());
+    }
+
+    let base_set: BTreeSet<String> = base_parts.iter().cloned().collect();
+    let source_set: BTreeSet<String> = source_parts.iter().cloned().collect();
+    let pullback_set: BTreeSet<String> = pullback_parts.iter().cloned().collect();
+    let mapped_pullback_set: BTreeSet<String> = mapped_pullback_parts.iter().cloned().collect();
+
+    let mut failure_classes = Vec::new();
+    if has_duplicates(&base_parts)
+        || has_duplicates(&pullback_parts)
+        || has_duplicates(&source_parts)
+        || has_duplicates(&mapped_pullback_parts)
+        || base_set != source_set
+        || pullback_set != mapped_pullback_set
+    {
+        failure_classes.push("coherence.coverage_base_change.violation".to_string());
+    }
+
+    Ok(SiteEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "digests": {
+                "baseCoverParts": semantic_digest(&json!(base_parts)),
+                "pullbackCoverParts": semantic_digest(&json!(pullback_parts)),
+                "pullbackMapping": semantic_digest(&json!(pullback_of_parts)),
+            },
+            "sets": {
+                "baseCoverParts": sorted_vec_from_set(&base_set),
+                "mappedSources": sorted_vec_from_set(&source_set),
+                "pullbackCoverParts": sorted_vec_from_set(&pullback_set),
+                "mappedPullbacks": sorted_vec_from_set(&mapped_pullback_set),
+            }
+        }),
+    })
+}
+
+fn evaluate_site_case_coverage_transitivity(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let coverage = require_object_field(artifacts, "coverage", case_path)?;
+    let outer_cover = require_object_field(coverage, "outerCover", case_path)?;
+    let composed_cover = require_object_field(coverage, "composedCover", case_path)?;
+
+    let outer_parts = require_string_array_field(
+        outer_cover,
+        "parts",
+        case_path,
+        "artifacts.coverage.outerCover",
+    )?;
+    let composed_parts = require_string_array_field(
+        composed_cover,
+        "parts",
+        case_path,
+        "artifacts.coverage.composedCover",
+    )?;
+
+    let refinement_covers = coverage
+        .get("refinementCovers")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.coverage.refinementCovers must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let mut coverage_by_outer: BTreeMap<String, usize> = BTreeMap::new();
+    let mut refinement_union: BTreeSet<String> = BTreeSet::new();
+    let outer_set: BTreeSet<String> = outer_parts.iter().cloned().collect();
+    for row in refinement_covers {
+        let row_obj = row.as_object().ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: refinementCovers entries must be objects",
+                display_path(case_path)
+            ))
+        })?;
+        let over = row_obj
+            .get("over")
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                CoherenceError::Contract(format!(
+                    "{}: refinementCovers[].over must be non-empty string",
+                    display_path(case_path)
+                ))
+            })?
+            .to_string();
+        let parts = require_string_array_field(row_obj, "parts", case_path, "refinementCovers[]")?;
+        *coverage_by_outer.entry(over).or_insert(0) += 1;
+        for part in parts {
+            refinement_union.insert(part);
+        }
+    }
+
+    let composed_set: BTreeSet<String> = composed_parts.iter().cloned().collect();
+    let covered_outer_set: BTreeSet<String> = coverage_by_outer.keys().cloned().collect();
+    let mut failure_classes = Vec::new();
+    if has_duplicates(&outer_parts)
+        || has_duplicates(&composed_parts)
+        || covered_outer_set.iter().any(|k| !outer_set.contains(k))
+        || outer_set
+            .iter()
+            .any(|outer| coverage_by_outer.get(outer).copied().unwrap_or(0) != 1)
+        || refinement_union != composed_set
+    {
+        failure_classes.push("coherence.coverage_transitivity.violation".to_string());
+    }
+
+    Ok(SiteEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "digests": {
+                "outerCoverParts": semantic_digest(&json!(outer_parts)),
+                "refinementCovers": semantic_digest(&json!(refinement_covers)),
+                "composedCoverParts": semantic_digest(&json!(composed_parts)),
+            },
+            "sets": {
+                "outerCoverParts": sorted_vec_from_set(&outer_set),
+                "coveredOuterParts": sorted_vec_from_set(&covered_outer_set),
+                "refinementUnion": sorted_vec_from_set(&refinement_union),
+                "composedCoverParts": sorted_vec_from_set(&composed_set),
+            },
+            "coverageMultiplicity": coverage_by_outer,
+        }),
+    })
+}
+
+fn evaluate_site_case_glue_or_witness_contractibility(
+    artifacts_payload: &Value,
+    case_path: &Path,
+) -> Result<SiteEvaluation, CoherenceError> {
+    let artifacts = artifacts_payload.as_object().ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: artifacts must be an object",
+            display_path(case_path)
+        ))
+    })?;
+    let descent = require_object_field(artifacts, "descent", case_path)?;
+
+    let locals = descent
+        .get("locals")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.descent.locals must be an array",
+                display_path(case_path)
+            ))
+        })?;
+    let compatibility_witnesses = descent
+        .get("compatibilityWitnesses")
+        .and_then(Value::as_array)
+        .ok_or_else(|| {
+            CoherenceError::Contract(format!(
+                "{}: artifacts.descent.compatibilityWitnesses must be an array",
+                display_path(case_path)
+            ))
+        })?;
+
+    let glue = descent.get("glue").cloned();
+    let obstruction = descent.get("obstruction").cloned();
+    let has_glue = glue.is_some() && glue != Some(Value::Null);
+    let has_obstruction = obstruction.is_some() && obstruction != Some(Value::Null);
+
+    let mut failure_classes = Vec::new();
+    if has_glue == has_obstruction {
+        failure_classes.push("coherence.glue_or_witness_contractibility.violation".to_string());
+    }
+    if has_glue && compatibility_witnesses.is_empty() {
+        failure_classes.push("coherence.glue_or_witness_contractibility.violation".to_string());
+    }
+    if has_obstruction {
+        let valid_obstruction_class = obstruction
+            .as_ref()
+            .and_then(Value::as_object)
+            .and_then(|row| row.get("class"))
+            .and_then(Value::as_str)
+            .map(str::trim)
+            .is_some_and(|v| !v.is_empty());
+        if !valid_obstruction_class {
+            failure_classes.push("coherence.glue_or_witness_contractibility.violation".to_string());
+        }
+    }
+    if locals.is_empty() {
+        failure_classes.push("coherence.glue_or_witness_contractibility.violation".to_string());
+    }
+
+    Ok(SiteEvaluation {
+        result: if failure_classes.is_empty() {
+            "accepted".to_string()
+        } else {
+            "rejected".to_string()
+        },
+        failure_classes: dedupe_sorted(failure_classes),
+        details: json!({
+            "digests": {
+                "locals": semantic_digest(&json!(locals)),
+                "compatibilityWitnesses": semantic_digest(&json!(compatibility_witnesses)),
+                "glue": semantic_digest(&glue.clone().unwrap_or(Value::Null)),
+                "obstruction": semantic_digest(&obstruction.clone().unwrap_or(Value::Null)),
+            },
+            "shape": {
+                "localsCount": locals.len(),
+                "compatibilityWitnessCount": compatibility_witnesses.len(),
+                "hasGlue": has_glue,
+                "hasObstruction": has_obstruction,
+            }
+        }),
+    })
+}
+
+#[derive(Debug)]
 struct TransportEvaluation {
     result: String,
     failure_classes: Vec<String>,
@@ -955,6 +1515,35 @@ fn require_non_empty_string_field(
             ))
         })?;
     Ok(value.to_string())
+}
+
+fn require_string_array_field(
+    parent: &Map<String, Value>,
+    key: &str,
+    path: &Path,
+    field_prefix: &str,
+) -> Result<Vec<String>, CoherenceError> {
+    let values = parent.get(key).and_then(Value::as_array).ok_or_else(|| {
+        CoherenceError::Contract(format!(
+            "{}: {field_prefix}.{key} must be an array of non-empty strings",
+            display_path(path)
+        ))
+    })?;
+    let mut out = Vec::new();
+    for item in values {
+        let value = item
+            .as_str()
+            .map(str::trim)
+            .filter(|v| !v.is_empty())
+            .ok_or_else(|| {
+                CoherenceError::Contract(format!(
+                    "{}: {field_prefix}.{key} must contain non-empty strings",
+                    display_path(path)
+                ))
+            })?;
+        out.push(value.to_string());
+    }
+    Ok(out)
 }
 
 fn validate_contract_obligation_set(contract_ids: &[String]) -> Vec<String> {
@@ -1372,6 +1961,11 @@ fn sorted_vec_from_set(values: &BTreeSet<String>) -> Vec<String> {
     values.iter().cloned().collect()
 }
 
+fn has_duplicates(values: &[String]) -> bool {
+    let set: BTreeSet<String> = values.iter().cloned().collect();
+    set.len() != values.len()
+}
+
 fn hex_sha256_from_bytes(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
@@ -1489,6 +2083,75 @@ const OBLIGATION_TO_GATE_FAILURE: &[(&str, &str)] = &[
             evaluated
                 .failure_classes
                 .contains(&"coherence.transport_functoriality.identity_violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_coverage_base_change_detects_violation() {
+        let case = json!({
+            "coverage": {
+                "baseCover": {"parts": ["U1", "U2"]},
+                "pullbackCover": {"parts": ["U1_pb", "WRONG_pb"]},
+                "pullbackOfParts": [
+                    {"source": "U1", "pullback": "U1_pb"},
+                    {"source": "U2", "pullback": "U2_pb"}
+                ]
+            }
+        });
+        let evaluated =
+            evaluate_site_case_coverage_base_change(&case, Path::new("site-case-base-change.json"))
+                .expect("site base-change case should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.coverage_base_change.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_coverage_transitivity_detects_violation() {
+        let case = json!({
+            "coverage": {
+                "outerCover": {"parts": ["U1", "U2"]},
+                "refinementCovers": [
+                    {"over": "U1", "parts": ["U11"]},
+                    {"over": "U3", "parts": ["U31"]}
+                ],
+                "composedCover": {"parts": ["U11"]}
+            }
+        });
+        let evaluated = evaluate_site_case_coverage_transitivity(
+            &case,
+            Path::new("site-case-transitivity.json"),
+        )
+        .expect("site transitivity case should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.coverage_transitivity.violation".to_string())
+        );
+    }
+
+    #[test]
+    fn evaluate_site_case_glue_or_witness_detects_missing_both() {
+        let case = json!({
+            "descent": {
+                "locals": [{"id": "s1"}, {"id": "s2"}],
+                "compatibilityWitnesses": []
+            }
+        });
+        let evaluated = evaluate_site_case_glue_or_witness_contractibility(
+            &case,
+            Path::new("site-case-glue-or-witness.json"),
+        )
+        .expect("site glue-or-witness case should evaluate");
+        assert_eq!(evaluated.result, "rejected");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"coherence.glue_or_witness_contractibility.violation".to_string())
         );
     }
 }

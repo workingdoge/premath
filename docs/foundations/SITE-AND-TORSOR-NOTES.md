@@ -39,3 +39,22 @@ For current repo work, this is primarily useful for:
 - specifying glue-or-witness surfaces for richer evidence types,
 - expressing non-canonical split behavior (extension classes) without leaking
   policy authority into proposal layers.
+
+## Current grounding in the codebase
+
+The abstract site language is already grounded in deterministic checker
+obligations and vectors:
+
+- `transport_functoriality`: identity/composition/naturality transport laws.
+- `coverage_base_change`: pullback stability of admissible covers.
+- `coverage_transitivity`: closure of cover-of-cover composition.
+- `glue_or_witness_contractibility`: deterministic "exactly one of glue or
+  obstruction" descent shape.
+
+These are executed through `premath coherence-check` using
+`specs/premath/draft/COHERENCE-CONTRACT.json` and fixtures under
+`tests/conformance/fixtures/coherence-site`.
+
+This keeps the foundation principle intact: minimum encoding, maximum
+expressiveness. Site/torsor terminology compresses reasoning while acceptance
+authority remains the existing checker + witness pipeline.

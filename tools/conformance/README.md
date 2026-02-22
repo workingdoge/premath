@@ -112,7 +112,10 @@ Checks include:
 - capability parity across executable/docs/manifest surfaces,
 - baseline and projected gate-chain parity,
 - doctrine operation reachability for required operation paths,
-- profile overlay traceability.
+- profile overlay traceability,
+- transport functoriality vectors (identity/composition/naturality),
+- coverage base-change/transitivity vectors over admissible covers,
+- glue-or-witness contractibility vectors for descent outcomes.
 
 Run via task:
 

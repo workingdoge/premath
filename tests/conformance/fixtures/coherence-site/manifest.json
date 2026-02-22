@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "vectors": [
+    "golden/base_change_cover_pullback_accept",
+    "adversarial/base_change_cover_pullback_reject",
+    "golden/transitivity_cover_composition_accept",
+    "adversarial/transitivity_cover_composition_reject",
+    "golden/glue_or_witness_glue_accept",
+    "golden/glue_or_witness_obstruction_accept",
+    "adversarial/glue_or_witness_missing_reject",
+    "invariance/glue_or_witness_permuted_glue_accept"
+  ]
+}

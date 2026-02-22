@@ -30,6 +30,18 @@
     {
       "id": "transport_functoriality",
       "description": "Ensure base/fibre transport fixtures satisfy identity, composition, and naturality equalities under deterministic canonicalization."
+    },
+    {
+      "id": "coverage_base_change",
+      "description": "Ensure admissible covers remain stable under base-change pullbacks over context refinements."
+    },
+    {
+      "id": "coverage_transitivity",
+      "description": "Ensure composed covers equal the deterministic union of refinement covers over an outer cover."
+    },
+    {
+      "id": "glue_or_witness_contractibility",
+      "description": "Ensure descent outcomes are deterministic glue-or-obstruction witnesses (never neither, never both)."
     }
   ],
   "conditionalCapabilityDocs": [
@@ -100,6 +112,7 @@
     "bidirCheckerPath": "crates/premath-coherence/src/proposal.rs",
     "bidirCheckerMapName": "OBLIGATION_TO_GATE_FAILURE",
     "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6",
-    "transportFixtureRootPath": "tests/conformance/fixtures/coherence-transport"
+    "transportFixtureRootPath": "tests/conformance/fixtures/coherence-transport",
+    "siteFixtureRootPath": "tests/conformance/fixtures/coherence-site"
   }
 }

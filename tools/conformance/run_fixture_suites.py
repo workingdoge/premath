@@ -130,6 +130,7 @@ SUITES: Tuple[Suite, ...] = (
             ROOT / "tools" / "conformance" / "run_fixture_suites.py",
             ROOT / "specs" / "premath" / "draft" / "COHERENCE-CONTRACT.json",
             ROOT / "tests" / "conformance" / "fixtures" / "coherence-transport",
+            ROOT / "tests" / "conformance" / "fixtures" / "coherence-site",
             ROOT / "crates" / "premath-coherence" / "src",
             ROOT / "crates" / "premath-cli" / "src" / "commands" / "coherence_check.rs",
         ),

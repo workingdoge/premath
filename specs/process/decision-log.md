@@ -1319,3 +1319,31 @@ witness`).
   foundations notes.
 - `draft/SPEC-INDEX` and `raw/README` now reference this lane explicitly so the
   abstraction path remains discoverable and coherent.
+
+---
+
+## 2026-02-22 — Decision 0046: Add site-coverage and glue-or-witness obligations to coherence-contract checker
+
+### Decision
+Extend `draft/COHERENCE-CONTRACT.json` and `premath-coherence` with three new
+required obligations:
+
+- `coverage_base_change`
+- `coverage_transitivity`
+- `glue_or_witness_contractibility`
+
+backed by executable vectors under `tests/conformance/fixtures/coherence-site`.
+
+### Rationale
+Transport functoriality alone does not cover the full site/descent contract.
+We need deterministic checks for cover pullback stability, cover transitivity,
+and explicit glue-or-obstruction outcomes to keep the checker aligned with the
+site/sheaf abstractions while preserving one acceptance authority path.
+
+### Consequences
+- coherence checker now enforces site-level coverage and descent outcome
+  invariants in addition to transport law.
+- cached `conformance-run` coherence-contract suite now depends on
+  `coherence-site` fixtures for deterministic cache invalidation and replay.
+- no new authority layer is introduced; all outcomes still flow through
+  `premath coherence-check` witness emission.

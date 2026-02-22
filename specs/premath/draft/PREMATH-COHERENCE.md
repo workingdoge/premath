@@ -65,6 +65,10 @@ A conforming checker MUST support at least the following obligation IDs:
 3. `gate_chain_parity`
 4. `operation_reachability`
 5. `overlay_traceability`
+6. `transport_functoriality`
+7. `coverage_base_change`
+8. `coverage_transitivity`
+9. `glue_or_witness_contractibility`
 
 Unknown obligation IDs in the contract MUST reject deterministically.
 Missing required obligation IDs MUST reject deterministically.
@@ -121,6 +125,34 @@ MUST reject when declared profile overlays are missing from:
 - profile file surface,
 - `SPEC-INDEX` overlay section,
 - profile README registry surface.
+
+### 4.6 `transport_functoriality`
+
+MUST reject when executable transport fixtures violate deterministic base/fibre
+transport laws:
+
+- identity preservation,
+- composition preservation,
+- naturality square equality.
+
+### 4.7 `coverage_base_change`
+
+MUST reject when admissible cover pullback fixtures violate base-change
+stability under refinement maps.
+
+### 4.8 `coverage_transitivity`
+
+MUST reject when composed-cover fixtures violate transitivity of covers under
+refinement-of-cover composition.
+
+### 4.9 `glue_or_witness_contractibility`
+
+MUST reject when descent fixtures fail deterministic glue-or-obstruction shape:
+
+- glue and obstruction both present, or
+- glue and obstruction both absent, or
+- declared glue/obstruction evidence is structurally invalid for the fixture
+  contract.
 
 ## 5. Deterministic Failure Classes
 

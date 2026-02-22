@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "glue_or_witness_contractibility",
+  "artifacts": {
+    "descent": {
+      "locals": [
+        {
+          "id": "s1"
+        },
+        {
+          "id": "s2"
+        }
+      ],
+      "compatibilityWitnesses": []
+    }
+  }
+}

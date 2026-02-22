@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "coverage_transitivity",
+  "artifacts": {
+    "coverage": {
+      "outerCover": {
+        "parts": [
+          "U1",
+          "U2"
+        ]
+      },
+      "refinementCovers": [
+        {
+          "over": "U1",
+          "parts": [
+            "U11"
+          ]
+        },
+        {
+          "over": "U3",
+          "parts": [
+            "U31"
+          ]
+        }
+      ],
+      "composedCover": {
+        "parts": [
+          "U11"
+        ]
+      }
+    }
+  }
+}

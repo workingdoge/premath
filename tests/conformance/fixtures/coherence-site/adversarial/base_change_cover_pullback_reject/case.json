@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "coverage_base_change",
+  "artifacts": {
+    "coverage": {
+      "baseCover": {
+        "parts": [
+          "U1",
+          "U2"
+        ]
+      },
+      "pullbackCover": {
+        "parts": [
+          "U1_pb",
+          "WRONG_pb"
+        ]
+      },
+      "pullbackOfParts": [
+        {
+          "source": "U1",
+          "pullback": "U1_pb"
+        },
+        {
+          "source": "U2",
+          "pullback": "U2_pb"
+        }
+      ]
+    }
+  }
+}

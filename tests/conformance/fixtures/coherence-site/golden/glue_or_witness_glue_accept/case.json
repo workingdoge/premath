@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "glue_or_witness_contractibility",
+  "artifacts": {
+    "descent": {
+      "locals": [
+        {
+          "id": "s1",
+          "value": {
+            "term": "a"
+          }
+        },
+        {
+          "id": "s2",
+          "value": {
+            "term": "a"
+          }
+        }
+      ],
+      "compatibilityWitnesses": [
+        {
+          "overlap": "s1_s2",
+          "witnessRef": "wit_overlap_12"
+        }
+      ],
+      "glue": {
+        "id": "g",
+        "value": {
+          "term": "a_global"
+        }
+      }
+    }
+  }
+}

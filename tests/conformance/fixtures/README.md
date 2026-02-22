@@ -8,6 +8,7 @@ Suggested layout (from `draft/CONFORMANCE.md`):
 - `kernel-profile/{golden,adversarial}`
 - `doctrine-inf/{golden,adversarial}`
 - `coherence-transport/{golden,adversarial,invariance}`
+- `coherence-site/{golden,adversarial,invariance}`
 - `capabilities/<capability-id>/{golden,adversarial,invariance}`
 
 Executable suite entrypoints include:
