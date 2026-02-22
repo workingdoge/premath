@@ -33,11 +33,9 @@ from instruction_policy import (  # type: ignore  # noqa: E402
 )
 from instruction_proposal import (  # type: ignore  # noqa: E402
     ProposalValidationError,
-    canonicalize_proposal,
     compile_proposal_obligations,
-    compute_proposal_digest,
-    compute_proposal_kcir_ref,
     discharge_proposal_obligations,
+    validate_proposal_payload,
 )
 from provider_env import map_github_to_premath_env, resolve_premath_ci_refs  # type: ignore  # noqa: E402
 from required_witness import verify_required_witness_payload  # type: ignore  # noqa: E402
@@ -911,9 +909,9 @@ def compute_instruction_digest(instruction: Dict[str, Any]) -> str:
     return "instr1_" + stable_hash(canonical_instruction_envelope(instruction))
 
 
-def canonical_llm_proposal(proposal: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
+def validated_llm_proposal(proposal: Dict[str, Any]) -> Tuple[Optional[Dict[str, Any]], Optional[str]]:
     try:
-        return canonicalize_proposal(proposal), None
+        return validate_proposal_payload(proposal), None
     except ProposalValidationError as exc:
         return None, exc.failure_class
 
@@ -1046,53 +1044,28 @@ def evaluate_instruction_proposal_checking(case: Dict[str, Any]) -> VectorOutcom
     if left["state"] == "unknown" and not allow_unknown:
         return VectorOutcome("rejected", "rejected", ["instruction_unknown_unroutable"])
 
-    canonical_a, err_a = canonical_llm_proposal(proposal_a)
+    proposal_view_a, err_a = validated_llm_proposal(proposal_a)
     if err_a is not None:
         return VectorOutcome("rejected", "rejected", [err_a])
-    canonical_b, err_b = canonical_llm_proposal(proposal_b)
+    proposal_view_b, err_b = validated_llm_proposal(proposal_b)
     if err_b is not None:
         return VectorOutcome("rejected", "rejected", [err_b])
+
+    canonical_a = proposal_view_a["canonical"]
+    canonical_b = proposal_view_b["canonical"]
+    computed_a = proposal_view_a["digest"]
+    computed_b = proposal_view_b["digest"]
+    computed_kcir_a = proposal_view_a["kcirRef"]
+    computed_kcir_b = proposal_view_b["kcirRef"]
 
     if canonical_a != canonical_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 
-    computed_a = compute_proposal_digest(canonical_a)
-    computed_b = compute_proposal_digest(canonical_b)
     if computed_a != computed_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
 
-    computed_kcir_a = compute_proposal_kcir_ref(canonical_a)
-    computed_kcir_b = compute_proposal_kcir_ref(canonical_b)
     if computed_kcir_a != computed_kcir_b:
         return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
-
-    declared_a = proposal_a.get("proposalDigest")
-    if declared_a is not None:
-        if not isinstance(declared_a, str) or not declared_a:
-            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
-        if declared_a != computed_a:
-            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
-
-    declared_b = proposal_b.get("proposalDigest")
-    if declared_b is not None:
-        if not isinstance(declared_b, str) or not declared_b:
-            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
-        if declared_b != computed_b:
-            return VectorOutcome("rejected", "rejected", ["proposal_nondeterministic"])
-
-    declared_kcir_a = proposal_a.get("proposalKcirRef")
-    if declared_kcir_a is not None:
-        if not isinstance(declared_kcir_a, str) or not declared_kcir_a:
-            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
-        if declared_kcir_a != computed_kcir_a:
-            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
-
-    declared_kcir_b = proposal_b.get("proposalKcirRef")
-    if declared_kcir_b is not None:
-        if not isinstance(declared_kcir_b, str) or not declared_kcir_b:
-            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
-        if declared_kcir_b != computed_kcir_b:
-            return VectorOutcome("rejected", "rejected", ["proposal_kcir_ref_mismatch"])
 
     obligations_a = compile_proposal_obligations(canonical_a)
     obligations_b = compile_proposal_obligations(canonical_b)
@@ -1176,12 +1149,15 @@ def evaluate_adjoints_sites_proposal(case: Dict[str, Any]) -> VectorOutcome:
     if not isinstance(proposal_a, dict) or not isinstance(proposal_b, dict):
         return VectorOutcome("rejected", "rejected", ["proposal_invalid_shape"])
 
-    canonical_a, err_a = canonical_llm_proposal(proposal_a)
+    proposal_view_a, err_a = validated_llm_proposal(proposal_a)
     if err_a is not None:
         return VectorOutcome("rejected", "rejected", [err_a])
-    canonical_b, err_b = canonical_llm_proposal(proposal_b)
+    proposal_view_b, err_b = validated_llm_proposal(proposal_b)
     if err_b is not None:
         return VectorOutcome("rejected", "rejected", [err_b])
+
+    canonical_a = proposal_view_a["canonical"]
+    canonical_b = proposal_view_b["canonical"]
 
     if canonical_a.get("proposalKind") != "refinementPlan" or canonical_b.get("proposalKind") != "refinementPlan":
         return VectorOutcome("rejected", "rejected", ["adjoints_sites_requires_refinement_plan"])

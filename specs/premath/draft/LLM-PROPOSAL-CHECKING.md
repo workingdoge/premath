@@ -148,6 +148,29 @@ same payload.
 If `proposalKcirRef` is present, it MUST equal the canonical KCIR ref derived
 from canonical proposal payload.
 
+### 5.1 Canonical KCIR projection payload
+
+The canonical proposal KCIR projection payload is:
+
+```text
+KCIRProposalProjection {
+  kind: "kcir.proposal.v1",
+  canonicalProposal: <canonical LLMProposal payload from Section 2>
+}
+```
+
+`proposalKcirRef` MUST be derived as:
+
+```text
+"kcir1_" + SHA256(JCS(KCIRProposalProjection))
+```
+
+### 5.2 Witness lineage requirements
+
+When instruction/proposal checking emits proposal-ingest witness material, that
+material SHOULD include `proposalKcirRef` so instruction, proposal, and
+coherence/parity surfaces can reference one deterministic proposal identity.
+
 Migration guidance (minimum encoding):
 
 - new witness/API surfaces SHOULD treat `proposalKcirRef` as the canonical

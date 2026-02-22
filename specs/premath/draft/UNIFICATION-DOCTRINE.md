@@ -126,3 +126,49 @@ This doctrine constrains how existing specs compose:
 - `draft/PREMATH-COHERENCE` (cross-surface parity obligations),
 - `draft/CHANGE-MORPHISMS` (deterministic change projections),
 - `draft/KCIR-CORE`, `draft/NF`, `draft/NORMALIZER` (interop identity surfaces).
+
+## 8. KCIR Boundary Profile (v0)
+
+This profile pins one KCIR-compatible identity path for proposal-bearing
+instruction/checking boundaries.
+
+### 8.1 Canonical proposal KCIR projection
+
+Implementations exposing `proposalKcirRef` MUST derive it from:
+
+```text
+KCIRProposalProjection {
+  kind: "kcir.proposal.v1",
+  canonicalProposal: <Section 2 canonical proposal payload from LLM-PROPOSAL-CHECKING>
+}
+```
+
+`proposalKcirRef` is:
+
+```text
+"kcir1_" + SHA256(JCS(KCIRProposalProjection))
+```
+
+### 8.2 Boundary map
+
+| Boundary | Canonical payload | Canonical identity |
+| --- | --- | --- |
+| instruction envelope proposal field | `LLMProposal` canonical payload | `proposalKcirRef` (preferred) + `proposalDigest` (compatibility alias) |
+| proposal ingest witness | canonical proposal + obligation/discharge projection | `proposalKcirRef` in witness lineage |
+| coherence parity and migration witnesses | deterministic parity tuple containing proposal identity keys when present | `proposalKcirRef` |
+| capability/conformance vectors | deterministic replay payload over the same canonical proposal | `proposalKcirRef` and deterministic reject on mismatch |
+
+Derived profiles MAY add projection metadata, but MUST NOT fork this canonical
+proposal KCIR projection.
+
+### 8.3 Duplicate encoding deprecation rule
+
+When multiple code paths validate proposal identity:
+
+1. one shared validator module MUST own canonicalization and declared-ref
+   validation,
+2. other paths MUST call that module and MUST NOT re-encode independent
+   validation semantics,
+3. compatibility identities (`proposalDigest`) MAY remain while migration is in
+   progress, but MUST stay bound to the same canonical proposal payload as
+   `proposalKcirRef`.

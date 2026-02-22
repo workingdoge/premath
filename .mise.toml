@@ -113,6 +113,7 @@ run = [
   "python3 tools/ci/test_run_required_checks.py",
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_policy.py",
+  "python3 tools/ci/test_instruction_proposal.py",
   "python3 tools/ci/test_instruction_reject_witness.py",
   "python3 tools/ci/test_repo_hygiene.py",
   "python3 tools/conformance/test_docs_coherence.py",

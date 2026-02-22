@@ -223,11 +223,8 @@ def extract_instruction_proposal(envelope: Dict[str, Any]) -> Optional[Dict[str,
     return None
 
 
-def validate_instruction_proposal(envelope: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-    raw = extract_instruction_proposal(envelope)
-    if raw is None:
-        return None
-
+def validate_proposal_payload(raw: Any) -> Dict[str, Any]:
+    """Canonicalize and validate one proposal payload."""
     canonical = canonicalize_proposal(raw)
     digest = compute_proposal_digest(canonical)
     kcir_ref = compute_proposal_kcir_ref(canonical)
@@ -263,6 +260,13 @@ def validate_instruction_proposal(envelope: Dict[str, Any]) -> Optional[Dict[str
         "digest": digest,
         "kcirRef": kcir_ref,
     }
+
+
+def validate_instruction_proposal(envelope: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    raw = extract_instruction_proposal(envelope)
+    if raw is None:
+        return None
+    return validate_proposal_payload(raw)
 
 
 def _proposal_subject_ref(canonical_proposal: Dict[str, Any]) -> str:

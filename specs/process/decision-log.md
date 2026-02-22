@@ -1195,3 +1195,34 @@ document lifecycle-raw.
   outcomes.
 - lifecycle authority remains coherent: contract text can iterate, while
   failure mapping behavior is pinned by deterministic vectors and merge gates.
+
+---
+
+## 2026-02-22 — Decision 0042: Unify proposal identity validation through one KCIR-bound authority path
+
+### Decision
+Complete the next `bd-31` unification slice by enforcing one shared proposal
+identity validator and documenting the explicit KCIR boundary profile:
+
+- add `validate_proposal_payload(...)` in `tools/ci/instruction_proposal.py` as
+  the single validator for canonical proposal payload + declared
+  `proposalDigest`/`proposalKcirRef` checks,
+- route capability vector proposal checks through that shared validator (remove
+  duplicated in-file declared-ref validation),
+- publish explicit KCIR proposal projection mapping and deprecation rule in
+  `draft/UNIFICATION-DOCTRINE` and `draft/LLM-PROPOSAL-CHECKING`,
+- add dedicated unit tests for proposal validator behavior and include them in
+  `ci-pipeline-test`.
+
+### Rationale
+Duplicate proposal identity validation logic across CI and conformance surfaces
+creates unnecessary degrees of freedom and drift risk. A single validation path
+keeps minimum encoding at the authority boundary while preserving expressive
+projections.
+
+### Consequences
+- proposal identity checks now have one authoritative implementation path
+  reused by instruction and conformance surfaces.
+- KCIR proposal projection shape is explicit and portable (`kcir.proposal.v1`).
+- migration away from duplicate proposal identity encodings is now concrete and
+  test-gated.
