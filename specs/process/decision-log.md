@@ -1964,3 +1964,32 @@ surfaces could not silently regress to duplicated local transport behavior.
 - command-wrapper reduction has a concrete, merge-gated invariant.
 - bd-33 parity scope now includes wrapper transport surface checks, not only
   docs/spec-level coherence.
+
+---
+
+## 2026-02-22 — Decision 0068: Add PREMATH-COHERENCE obligation-set parity to scope checker
+
+### Decision
+Extend `scope_noncontradiction` in `premath-coherence` to enforce parity between:
+
+- required coherence obligation IDs implemented by the checker, and
+- obligation IDs listed in `draft/PREMATH-COHERENCE` §3.
+
+Add explicit contract surface bindings for the PREMATH-COHERENCE obligation
+section bounds (`coherenceSpecPath`, `coherenceSpecObligationStart`,
+`coherenceSpecObligationEnd`) and fail with deterministic classes when drift is
+detected (`coherence_spec_missing_obligation`,
+`coherence_spec_unknown_obligation`).
+
+### Rationale
+The checker already enforced parity between BIDIR obligation vocabulary and
+kernel registry exports, but the coherence-obligation normative list itself was
+not executable. This created a doc/runtime drift gap in the same obligation
+family.
+
+### Consequences
+- coherence checker now guards PREMATH-COHERENCE §3 as an executable parity
+  surface.
+- contract surfaces explicitly bind both BIDIR and PREMATH-COHERENCE obligation
+  sections.
+- bd-33 parity coverage includes required coherence obligation vocabulary drift.

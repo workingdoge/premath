@@ -95,7 +95,9 @@ Minimum checks:
 - informative fallback clause remains present,
 - bidirectional checker surface stays aligned with `draft/BIDIR-DESCENT`
   obligation vocabulary for the required set declared in the contract, sourced
-  from kernel authority registry export (`premath obligation-registry --json`).
+  from kernel authority registry export (`premath obligation-registry --json`),
+- this spec's required obligation list in §3 stays aligned with the executable
+  required obligation set used by `premath coherence-check`.
 
 The bidirectional checker alignment is a parity check over obligation kinds; it
 does not authorize or alter discharge semantics.

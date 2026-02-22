@@ -149,6 +149,9 @@ pub struct CoherenceSurfaces {
     pub bidir_spec_path: String,
     pub bidir_spec_section_start: String,
     pub bidir_spec_section_end: String,
+    pub coherence_spec_path: String,
+    pub coherence_spec_obligation_start: String,
+    pub coherence_spec_obligation_end: String,
     pub obligation_registry_kind: String,
     pub informative_clause_needle: String,
     pub transport_fixture_root_path: String,
@@ -507,6 +510,25 @@ fn check_scope_noncontradiction(
         }
     }
 
+    let coherence_spec_path =
+        resolve_path(repo_root, contract.surfaces.coherence_spec_path.as_str());
+    let coherence_spec_text = read_text(&coherence_spec_path)?;
+    let coherence_spec_obligation_section = extract_section_between(
+        &coherence_spec_text,
+        contract.surfaces.coherence_spec_obligation_start.as_str(),
+        contract.surfaces.coherence_spec_obligation_end.as_str(),
+    )?;
+    let coherence_spec_obligations =
+        parse_backtick_obligation_tokens(coherence_spec_obligation_section)?;
+    let required_coherence_obligations: BTreeSet<String> = REQUIRED_OBLIGATION_IDS
+        .iter()
+        .map(|id| (*id).to_string())
+        .collect();
+    failures.extend(validate_required_obligation_parity(
+        &coherence_spec_obligations,
+        &required_coherence_obligations,
+    ));
+
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
         details: json!({
@@ -515,6 +537,8 @@ fn check_scope_noncontradiction(
             "requiredBidirObligations": contract.required_bidir_obligations,
             "bidirSpecObligations": bidir_spec_obligations,
             "bidirCheckerObligations": bidir_checker_obligations,
+            "requiredCoherenceObligations": required_coherence_obligations,
+            "coherenceSpecObligations": coherence_spec_obligations,
             "obligationRegistryKind": obligation_registry_kind,
         }),
     })
@@ -2093,6 +2117,28 @@ fn validate_contract_obligation_set(contract_ids: &[String]) -> Vec<String> {
     dedupe_sorted(failures)
 }
 
+fn validate_required_obligation_parity(
+    declared: &BTreeSet<String>,
+    required: &BTreeSet<String>,
+) -> Vec<String> {
+    let mut failures = Vec::new();
+    for obligation_id in required {
+        if !declared.contains(obligation_id) {
+            failures.push(
+                "coherence.scope_noncontradiction.coherence_spec_missing_obligation".to_string(),
+            );
+        }
+    }
+    for obligation_id in declared {
+        if !required.contains(obligation_id) {
+            failures.push(
+                "coherence.scope_noncontradiction.coherence_spec_unknown_obligation".to_string(),
+            );
+        }
+    }
+    dedupe_sorted(failures)
+}
+
 fn compute_doctrine_reachability(site: &DoctrineSite, root: &str) -> BTreeSet<String> {
     let mut adjacency: BTreeMap<String, Vec<String>> = BTreeMap::new();
     for edge in &site.edges {
@@ -2623,5 +2669,26 @@ mod tests {
                 .failure_classes
                 .contains(&"coherence.cwf_comprehension_eta.violation".to_string())
         );
+    }
+
+    #[test]
+    fn validate_required_obligation_parity_reports_missing_and_unknown() {
+        let declared: BTreeSet<String> = ["scope_noncontradiction", "unknown_obligation"]
+            .iter()
+            .map(|value| (*value).to_string())
+            .collect();
+        let required: BTreeSet<String> = ["scope_noncontradiction", "capability_parity"]
+            .iter()
+            .map(|value| (*value).to_string())
+            .collect();
+
+        let failures = validate_required_obligation_parity(&declared, &required);
+
+        assert!(failures.contains(
+            &"coherence.scope_noncontradiction.coherence_spec_missing_obligation".to_string()
+        ));
+        assert!(failures.contains(
+            &"coherence.scope_noncontradiction.coherence_spec_unknown_obligation".to_string()
+        ));
     }
 }
