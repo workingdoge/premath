@@ -144,6 +144,8 @@ Control-plane schema lifecycle discipline:
 - aliases are epoch-bounded under `activeEpoch`; expired aliases reject
   deterministically as
   `coherence.gate_chain_parity.schema_lifecycle_invalid`.
+- operator runbook for lifecycle/coherence flow:
+  `docs/design/LIFECYCLE-COHERENCE-FLOWS.md`.
 
 Instruction doctrine is executable via:
 - `capabilities.instruction_typing`
