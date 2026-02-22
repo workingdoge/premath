@@ -101,6 +101,14 @@ def load_coherence_contract_input_paths() -> Tuple[Path, ...]:
             if isinstance(value, str):
                 base_paths.append(resolve_rooted_path(value))
 
+    overlay_docs = contract_payload.get("overlayDocs", [])
+    if isinstance(overlay_docs, list):
+        for value in overlay_docs:
+            if isinstance(value, str) and value.strip():
+                base_paths.append(
+                    resolve_rooted_path(f"specs/premath/{value}.md")
+                )
+
     return unique_paths(base_paths)
 
 

@@ -34,6 +34,10 @@ class RunFixtureSuitesTests(unittest.TestCase):
             paths,
         )
         self.assertIn(root / "tools" / "ci" / "run_gate.sh", paths)
+        self.assertIn(
+            root / "specs" / "premath" / "profile" / "ADJOINTS-AND-SITES.md",
+            paths,
+        )
 
     def test_coherence_contract_input_closure_is_duplicate_free(self) -> None:
         paths = run_fixture_suites.load_coherence_contract_input_paths()

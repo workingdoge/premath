@@ -2072,3 +2072,26 @@ surface and cannot produce stale cache hits.
 - cache drift on coherence-spec edits is now explicitly regression-tested.
 - `bd-33` gains stronger cache correctness evidence without expanding command
   surface.
+
+---
+
+## 2026-02-22 — Decision 0072: Add overlayDocs-derived files to coherence cache input closure
+
+### Decision
+Extend `load_coherence_contract_input_paths()` so `coherence-contract` cache
+inputs include overlay markdown files derived from contract `overlayDocs`:
+
+- each `overlayDocs` entry `x` maps to `specs/premath/{x}.md`.
+
+Add unit coverage asserting inclusion of
+`specs/premath/profile/ADJOINTS-AND-SITES.md`.
+
+### Rationale
+`coherence-check` evaluates overlay file existence in
+`overlay_traceability`, but prior cache-input closure did not include those
+derived file paths. That could allow stale cache hits when overlay files drift.
+
+### Consequences
+- coherence-contract cache bindings now include overlay file surfaces read by
+  checker semantics.
+- cache hits remain invalidated when overlay docs change or disappear.
