@@ -318,6 +318,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Decide one CI required witness (accept/reject) through core checker semantics
+    RequiredWitnessDecide {
+        /// Decide input JSON path (witness + optional compare paths + optional gate payload map)
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON

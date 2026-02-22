@@ -6,6 +6,7 @@
 mod instruction;
 mod proposal;
 mod required;
+mod required_decide;
 mod required_verify;
 
 pub use instruction::{
@@ -23,6 +24,9 @@ pub use proposal::{
 pub use required::{
     ExecutedRequiredCheck, RequiredGateWitnessRef, RequiredWitness, RequiredWitnessError,
     RequiredWitnessRuntime, build_required_witness,
+};
+pub use required_decide::{
+    RequiredWitnessDecideRequest, RequiredWitnessDecideResult, decide_required_witness_request,
 };
 pub use required_verify::{
     RequiredWitnessVerifyDerived, RequiredWitnessVerifyRequest, RequiredWitnessVerifyResult,

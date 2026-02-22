@@ -238,6 +238,30 @@ fn write_required_verify_input(dir: &Path, failed: bool) -> PathBuf {
     input_path
 }
 
+fn write_required_decide_input(dir: &Path, failed: bool) -> PathBuf {
+    let runtime = write_required_runtime_input(dir, failed);
+    let witness_output = run_premath([
+        OsString::from("required-witness"),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&witness_output);
+    let witness = parse_json_stdout(&witness_output);
+    let input = serde_json::json!({
+        "witness": witness,
+        "expectedChangedPaths": ["README.md"],
+        "nativeRequiredChecks": []
+    });
+    let input_path = dir.join("required-decide-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&input).expect("decide input should serialize"),
+    )
+    .expect("required decide input should be written");
+    input_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -553,6 +577,35 @@ fn required_witness_verify_json_smoke() {
             .starts_with("proj1_")
     );
     assert_eq!(payload["derived"]["expectedVerdict"], "accepted");
+}
+
+#[test]
+fn required_witness_decide_json_smoke() {
+    let tmp = TempDirGuard::new("required-witness-decide-json");
+    let input = write_required_decide_input(tmp.path(), false);
+
+    let output = run_premath([
+        OsString::from("required-witness-decide"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["decisionKind"], "ci.required.decision.v1");
+    assert_eq!(payload["decision"], "reject");
+    assert_eq!(payload["reasonClass"], "verification_reject");
+    assert!(
+        payload["errors"]
+            .as_array()
+            .expect("errors should be an array")
+            .iter()
+            .any(|row| row
+                .as_str()
+                .unwrap_or_default()
+                .contains("projectionDigest mismatch"))
+    );
 }
 
 #[test]
