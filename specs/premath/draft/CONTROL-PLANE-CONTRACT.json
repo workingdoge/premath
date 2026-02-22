@@ -210,5 +210,41 @@
       "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
       "unbound": "unification.evidence_stage1.rollback.unbound"
     }
+  },
+  "evidenceStage2Authority": {
+    "profileKind": "ev.stage2.authority.v1",
+    "activeStage": "stage2",
+    "typedAuthority": {
+      "kindRef": "ev.stage1.core.v1",
+      "digestRef": "typedCoreProjectionDigest",
+      "normalizerIdRef": "normalizerId",
+      "policyDigestRef": "policyDigest"
+    },
+    "compatibilityAlias": {
+      "kindRef": "ev.legacy.payload.v1",
+      "digestRef": "authorityPayloadDigest",
+      "role": "projection_only",
+      "supportUntilEpoch": "2026-06"
+    },
+    "kernelComplianceSentinel": {
+      "requiredObligations": [
+        "stability",
+        "locality",
+        "descent_exists",
+        "descent_contractible",
+        "adjoint_triple",
+        "ext_gap",
+        "ext_ambiguous"
+      ],
+      "failureClasses": {
+        "missing": "unification.evidence_stage2.kernel_compliance_missing",
+        "drift": "unification.evidence_stage2.kernel_compliance_drift"
+      }
+    },
+    "failureClasses": {
+      "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+      "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+      "unbound": "unification.evidence_stage2.unbound"
+    }
   }
 }

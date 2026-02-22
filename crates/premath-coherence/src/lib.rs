@@ -109,6 +109,35 @@ const STAGE1_ROLLBACK_CLASS_PRECONDITION: &str =
 const STAGE1_ROLLBACK_CLASS_IDENTITY_DRIFT: &str =
     "unification.evidence_stage1.rollback.identity_drift";
 const STAGE1_ROLLBACK_CLASS_UNBOUND: &str = "unification.evidence_stage1.rollback.unbound";
+const GATE_CHAIN_STAGE2_AUTHORITY_INVALID_FAILURE: &str =
+    "coherence.gate_chain_parity.stage2_authority_invalid";
+const GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_VIOLATION_FAILURE: &str =
+    "coherence.gate_chain_parity.stage2_authority_alias_violation";
+const GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE: &str =
+    "coherence.gate_chain_parity.stage2_authority_alias_window_violation";
+const GATE_CHAIN_STAGE2_AUTHORITY_UNBOUND_FAILURE: &str =
+    "coherence.gate_chain_parity.stage2_authority_unbound";
+const GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE: &str =
+    "coherence.gate_chain_parity.stage2_kernel_compliance_missing";
+const GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE: &str =
+    "coherence.gate_chain_parity.stage2_kernel_compliance_drift";
+const STAGE2_AUTHORITY_CLASS_ALIAS_VIOLATION: &str =
+    "unification.evidence_stage2.authority_alias_violation";
+const STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION: &str =
+    "unification.evidence_stage2.alias_window_violation";
+const STAGE2_AUTHORITY_CLASS_UNBOUND: &str = "unification.evidence_stage2.unbound";
+const STAGE2_KERNEL_CLASS_MISSING: &str = "unification.evidence_stage2.kernel_compliance_missing";
+const STAGE2_KERNEL_CLASS_DRIFT: &str = "unification.evidence_stage2.kernel_compliance_drift";
+const STAGE2_AUTHORITY_ALIAS_ROLE: &str = "projection_only";
+const STAGE2_REQUIRED_KERNEL_OBLIGATIONS: &[&str] = &[
+    "stability",
+    "locality",
+    "descent_exists",
+    "descent_contractible",
+    "adjoint_triple",
+    "ext_gap",
+    "ext_ambiguous",
+];
 const REQUIRED_SCHEMA_LIFECYCLE_FAMILIES: &[&str] = &[
     "controlPlaneContractKind",
     "requiredWitnessKind",
@@ -222,6 +251,8 @@ struct ControlPlaneProjectionContract {
     evidence_stage1_parity: Option<ControlPlaneStage1Parity>,
     #[serde(default)]
     evidence_stage1_rollback: Option<ControlPlaneStage1Rollback>,
+    #[serde(default)]
+    evidence_stage2_authority: Option<ControlPlaneStage2Authority>,
     #[serde(default)]
     evidence_lanes: Option<ControlPlaneEvidenceLanes>,
     #[serde(default)]
@@ -396,6 +427,78 @@ struct ControlPlaneStage1RollbackFailureClasses {
     identity_drift: String,
     #[serde(default)]
     unbound: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2Authority {
+    #[serde(default)]
+    profile_kind: String,
+    #[serde(default)]
+    active_stage: String,
+    #[serde(default)]
+    typed_authority: ControlPlaneStage2TypedAuthority,
+    #[serde(default)]
+    compatibility_alias: ControlPlaneStage2CompatibilityAlias,
+    #[serde(default)]
+    kernel_compliance_sentinel: ControlPlaneStage2KernelComplianceSentinel,
+    #[serde(default)]
+    failure_classes: ControlPlaneStage2FailureClasses,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2TypedAuthority {
+    #[serde(default)]
+    kind_ref: String,
+    #[serde(default)]
+    digest_ref: String,
+    #[serde(default)]
+    normalizer_id_ref: String,
+    #[serde(default)]
+    policy_digest_ref: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2CompatibilityAlias {
+    #[serde(default)]
+    kind_ref: String,
+    #[serde(default)]
+    digest_ref: String,
+    #[serde(default)]
+    role: String,
+    #[serde(default)]
+    support_until_epoch: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2FailureClasses {
+    #[serde(default)]
+    authority_alias_violation: String,
+    #[serde(default)]
+    alias_window_violation: String,
+    #[serde(default)]
+    unbound: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2KernelComplianceSentinel {
+    #[serde(default)]
+    required_obligations: Vec<String>,
+    #[serde(default)]
+    failure_classes: ControlPlaneStage2KernelComplianceFailureClasses,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneStage2KernelComplianceFailureClasses {
+    #[serde(default)]
+    missing: String,
+    #[serde(default)]
+    drift: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1428,6 +1531,10 @@ fn check_gate_chain_parity(
     let stage1_rollback_check = evaluate_control_plane_stage1_rollback(&control_plane_contract);
     failures.extend(stage1_rollback_check.failure_classes.clone());
 
+    let stage2_authority_check =
+        evaluate_control_plane_stage2_authority(&control_plane_contract, contract);
+    failures.extend(stage2_authority_check.failure_classes.clone());
+
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     failures.extend(lane_registry_check.failure_classes.clone());
 
@@ -1466,6 +1573,7 @@ fn check_gate_chain_parity(
             "schemaLifecycle": schema_lifecycle_check.details,
             "stage1Parity": stage1_parity_check.details,
             "stage1Rollback": stage1_rollback_check.details,
+            "stage2Authority": stage2_authority_check.details,
             "laneRegistry": lane_registry_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
         }),
@@ -1737,6 +1845,320 @@ fn evaluate_control_plane_stage1_rollback(
         failures.push(GATE_CHAIN_STAGE1_ROLLBACK_MISMATCH_FAILURE.to_string());
         reasons.push(format!(
             "evidenceStage1Rollback.failureClasses must map to canonical classes ({STAGE1_ROLLBACK_CLASS_PRECONDITION}, {STAGE1_ROLLBACK_CLASS_IDENTITY_DRIFT}, {STAGE1_ROLLBACK_CLASS_UNBOUND})"
+        ));
+    }
+
+    details["reasons"] = json!(dedupe_sorted(reasons));
+
+    ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details,
+    }
+}
+
+fn schema_lifecycle_rollover_epoch(
+    control_plane_contract: &ControlPlaneProjectionContract,
+) -> Option<String> {
+    let schema_lifecycle = control_plane_contract.schema_lifecycle.as_ref()?;
+    let mut support_epochs: BTreeSet<String> = BTreeSet::new();
+    for family in schema_lifecycle.kind_families.values() {
+        for alias in &family.compatibility_aliases {
+            let epoch = alias.support_until_epoch.trim();
+            if !epoch.is_empty() {
+                support_epochs.insert(epoch.to_string());
+            }
+        }
+    }
+    if support_epochs.len() == 1 {
+        support_epochs.into_iter().next()
+    } else {
+        None
+    }
+}
+
+fn evaluate_control_plane_stage2_authority(
+    control_plane_contract: &ControlPlaneProjectionContract,
+    coherence_contract: &CoherenceContract,
+) -> ObligationCheck {
+    let required_failure_classes = json!({
+        "authorityAliasViolation": STAGE2_AUTHORITY_CLASS_ALIAS_VIOLATION,
+        "aliasWindowViolation": STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION,
+        "unbound": STAGE2_AUTHORITY_CLASS_UNBOUND,
+    });
+    let required_kernel_failure_classes = json!({
+        "missing": STAGE2_KERNEL_CLASS_MISSING,
+        "drift": STAGE2_KERNEL_CLASS_DRIFT,
+    });
+    let canonical_kernel_obligations: Vec<String> = STAGE2_REQUIRED_KERNEL_OBLIGATIONS
+        .iter()
+        .map(|obligation| (*obligation).to_string())
+        .collect();
+    let required_bidir_obligations = dedupe_sorted(
+        coherence_contract
+            .required_bidir_obligations
+            .iter()
+            .map(|obligation| obligation.trim().to_string())
+            .filter(|obligation| !obligation.is_empty())
+            .collect(),
+    );
+    let required_bidir_set: BTreeSet<String> = required_bidir_obligations.iter().cloned().collect();
+    let canonical_kernel_set: BTreeSet<String> =
+        canonical_kernel_obligations.iter().cloned().collect();
+    let kernel_registry_obligations: BTreeSet<String> = obligation_gate_registry()
+        .into_iter()
+        .map(|row| row.obligation_kind.to_string())
+        .collect();
+
+    let lifecycle_rollover_epoch = schema_lifecycle_rollover_epoch(control_plane_contract);
+    let active_epoch = control_plane_contract
+        .schema_lifecycle
+        .as_ref()
+        .map(|lifecycle| lifecycle.active_epoch.trim().to_string());
+
+    let mut details = json!({
+        "present": control_plane_contract.evidence_stage2_authority.is_some(),
+        "profileKind": null,
+        "activeStage": null,
+        "typedAuthority": null,
+        "compatibilityAlias": null,
+        "failureClasses": null,
+        "kernelComplianceSentinel": null,
+        "lifecycleActiveEpoch": active_epoch,
+        "lifecycleRolloverEpoch": lifecycle_rollover_epoch,
+        "requiredFailureClasses": required_failure_classes,
+        "requiredKernelComplianceFailureClasses": required_kernel_failure_classes,
+        "requiredBidirObligations": required_bidir_obligations,
+        "canonicalKernelObligations": canonical_kernel_obligations,
+        "kernelRegistryObligations": sorted_vec_from_set(&kernel_registry_obligations),
+        "reasons": [],
+    });
+
+    let Some(stage2) = &control_plane_contract.evidence_stage2_authority else {
+        return ObligationCheck {
+            failure_classes: Vec::new(),
+            details,
+        };
+    };
+
+    details["profileKind"] = json!(&stage2.profile_kind);
+    details["activeStage"] = json!(&stage2.active_stage);
+    details["typedAuthority"] = json!(&stage2.typed_authority);
+    details["compatibilityAlias"] = json!(&stage2.compatibility_alias);
+    details["failureClasses"] = json!(&stage2.failure_classes);
+    details["kernelComplianceSentinel"] = json!(&stage2.kernel_compliance_sentinel);
+
+    let mut failures = Vec::new();
+    let mut reasons = Vec::new();
+
+    if stage2.profile_kind.trim().is_empty() {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_INVALID_FAILURE.to_string());
+        reasons.push("evidenceStage2Authority.profileKind must be non-empty".to_string());
+    }
+    if stage2.active_stage.trim() != "stage2" {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_INVALID_FAILURE.to_string());
+        reasons.push("evidenceStage2Authority.activeStage must be `stage2`".to_string());
+    }
+
+    if stage2.typed_authority.kind_ref.trim().is_empty()
+        || stage2.typed_authority.digest_ref.trim().is_empty()
+    {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_UNBOUND_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage2Authority.typedAuthority kind/digest refs must be non-empty".to_string(),
+        );
+    }
+
+    let typed_normalizer_ref = stage2.typed_authority.normalizer_id_ref.trim();
+    let typed_policy_ref = stage2.typed_authority.policy_digest_ref.trim();
+    if typed_normalizer_ref.is_empty() || typed_policy_ref.is_empty() {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_UNBOUND_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage2Authority.typedAuthority normalizer/policy refs must be non-empty"
+                .to_string(),
+        );
+    } else {
+        if typed_normalizer_ref != "normalizerId" {
+            failures.push(GATE_CHAIN_STAGE2_AUTHORITY_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceStage2Authority.typedAuthority.normalizerIdRef must be `normalizerId` (got `{typed_normalizer_ref}`)"
+            ));
+        }
+        if typed_policy_ref != "policyDigest" {
+            failures.push(GATE_CHAIN_STAGE2_AUTHORITY_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceStage2Authority.typedAuthority.policyDigestRef must be `policyDigest` (got `{typed_policy_ref}`)"
+            ));
+        }
+    }
+
+    if stage2.compatibility_alias.kind_ref.trim().is_empty()
+        || stage2.compatibility_alias.digest_ref.trim().is_empty()
+    {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_VIOLATION_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage2Authority.compatibilityAlias kind/digest refs must be non-empty"
+                .to_string(),
+        );
+    }
+    if stage2.compatibility_alias.role.trim() != STAGE2_AUTHORITY_ALIAS_ROLE {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_VIOLATION_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceStage2Authority.compatibilityAlias.role must be `{STAGE2_AUTHORITY_ALIAS_ROLE}`"
+        ));
+    }
+    if stage2
+        .compatibility_alias
+        .support_until_epoch
+        .trim()
+        .is_empty()
+        || !is_valid_epoch(stage2.compatibility_alias.support_until_epoch.trim())
+    {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage2Authority.compatibilityAlias.supportUntilEpoch must be a valid YYYY-MM epoch"
+                .to_string(),
+        );
+    }
+    if stage2.typed_authority.digest_ref.trim() == stage2.compatibility_alias.digest_ref.trim() {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_VIOLATION_FAILURE.to_string());
+        reasons.push("evidenceStage2Authority typed/alias digest refs must differ".to_string());
+    }
+
+    let alias_support_epoch = stage2.compatibility_alias.support_until_epoch.trim();
+    if let Some(rollover_epoch) = lifecycle_rollover_epoch.as_deref() {
+        if alias_support_epoch != rollover_epoch {
+            failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE.to_string());
+            reasons.push(
+                "evidenceStage2Authority.compatibilityAlias.supportUntilEpoch must align with schemaLifecycle rolloverEpoch"
+                    .to_string(),
+            );
+        }
+    } else {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE.to_string());
+        reasons
+            .push("evidenceStage2Authority requires one schemaLifecycle rolloverEpoch".to_string());
+    }
+    if let Some(active_epoch_value) = active_epoch.as_deref() {
+        match (
+            epoch_to_month_index(active_epoch_value),
+            epoch_to_month_index(alias_support_epoch),
+        ) {
+            (Some(active), Some(support)) if active > support => {
+                failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE.to_string());
+                reasons.push(format!(
+                    "evidenceStage2Authority compatibility alias expired (activeEpoch=`{active_epoch_value}`, supportUntilEpoch=`{alias_support_epoch}`)"
+                ));
+            }
+            (Some(_), Some(_)) => {}
+            _ => {
+                failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE.to_string());
+                reasons.push(
+                    "evidenceStage2Authority alias-window comparison could not be evaluated"
+                        .to_string(),
+                );
+            }
+        }
+    } else {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE.to_string());
+        reasons.push("evidenceStage2Authority requires schemaLifecycle.activeEpoch".to_string());
+    }
+
+    let declared_failure_classes = [
+        stage2
+            .failure_classes
+            .authority_alias_violation
+            .trim()
+            .to_string(),
+        stage2
+            .failure_classes
+            .alias_window_violation
+            .trim()
+            .to_string(),
+        stage2.failure_classes.unbound.trim().to_string(),
+    ];
+    let declared_failure_set: BTreeSet<String> = declared_failure_classes
+        .iter()
+        .filter(|class_id| !class_id.is_empty())
+        .cloned()
+        .collect();
+    if declared_failure_set.len() != 3
+        || stage2.failure_classes.authority_alias_violation.trim()
+            != STAGE2_AUTHORITY_CLASS_ALIAS_VIOLATION
+        || stage2.failure_classes.alias_window_violation.trim()
+            != STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION
+        || stage2.failure_classes.unbound.trim() != STAGE2_AUTHORITY_CLASS_UNBOUND
+    {
+        failures.push(GATE_CHAIN_STAGE2_AUTHORITY_INVALID_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceStage2Authority.failureClasses must map to canonical classes ({STAGE2_AUTHORITY_CLASS_ALIAS_VIOLATION}, {STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION}, {STAGE2_AUTHORITY_CLASS_UNBOUND})"
+        ));
+    }
+
+    let sentinel_required = dedupe_sorted(
+        stage2
+            .kernel_compliance_sentinel
+            .required_obligations
+            .iter()
+            .map(|obligation| obligation.trim().to_string())
+            .filter(|obligation| !obligation.is_empty())
+            .collect(),
+    );
+    let sentinel_required_set: BTreeSet<String> = sentinel_required.iter().cloned().collect();
+    if sentinel_required.is_empty() {
+        failures.push(GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must be non-empty"
+                .to_string(),
+        );
+    } else {
+        for required in &required_bidir_obligations {
+            if !sentinel_required_set.contains(required) {
+                failures.push(GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE.to_string());
+                reasons.push(format!(
+                    "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations missing required BIDIR obligation `{required}`"
+                ));
+            }
+        }
+    }
+    if sentinel_required_set != required_bidir_set {
+        failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match requiredBidirObligations"
+                .to_string(),
+        );
+    }
+    if sentinel_required_set != canonical_kernel_set {
+        failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+        reasons.push(
+            "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match canonical Stage 2 kernel obligations"
+                .to_string(),
+        );
+    }
+    for obligation in &sentinel_required {
+        if !kernel_registry_obligations.contains(obligation) {
+            failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations contains unknown kernel obligation `{obligation}`"
+            ));
+        }
+    }
+
+    let sentinel_missing_class = stage2
+        .kernel_compliance_sentinel
+        .failure_classes
+        .missing
+        .trim();
+    let sentinel_drift_class = stage2
+        .kernel_compliance_sentinel
+        .failure_classes
+        .drift
+        .trim();
+    if sentinel_missing_class != STAGE2_KERNEL_CLASS_MISSING
+        || sentinel_drift_class != STAGE2_KERNEL_CLASS_DRIFT
+    {
+        failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must map to canonical classes ({STAGE2_KERNEL_CLASS_MISSING}, {STAGE2_KERNEL_CLASS_DRIFT})"
         ));
     }
 
@@ -4700,6 +5122,42 @@ Current deterministic projected check IDs include:
                     "unbound": "unification.evidence_stage1.rollback.unbound"
                 }
             },
+            "evidenceStage2Authority": {
+                "profileKind": "ev.stage2.authority.v1",
+                "activeStage": "stage2",
+                "typedAuthority": {
+                    "kindRef": "ev.stage1.core.v1",
+                    "digestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest"
+                },
+                "compatibilityAlias": {
+                    "kindRef": "ev.legacy.payload.v1",
+                    "digestRef": "authorityPayloadDigest",
+                    "role": "projection_only",
+                    "supportUntilEpoch": "2026-06"
+                },
+                "kernelComplianceSentinel": {
+                    "requiredObligations": [
+                        "stability",
+                        "locality",
+                        "descent_exists",
+                        "descent_contractible",
+                        "adjoint_triple",
+                        "ext_gap",
+                        "ext_ambiguous"
+                    ],
+                    "failureClasses": {
+                        "missing": "unification.evidence_stage2.kernel_compliance_missing",
+                        "drift": "unification.evidence_stage2.kernel_compliance_drift"
+                    }
+                },
+                "failureClasses": {
+                    "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+                    "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+                    "unbound": "unification.evidence_stage2.unbound"
+                }
+            },
             "evidenceLanes": {
                 "semanticDoctrine": "semantic_doctrine",
                 "strictChecker": "strict_checker",
@@ -5021,7 +5479,15 @@ Current deterministic projected check IDs include:
             conditional_capability_docs: Vec::new(),
             expected_operation_paths: Vec::new(),
             overlay_docs: Vec::new(),
-            required_bidir_obligations: Vec::new(),
+            required_bidir_obligations: vec![
+                "stability".to_string(),
+                "locality".to_string(),
+                "descent_exists".to_string(),
+                "descent_contractible".to_string(),
+                "adjoint_triple".to_string(),
+                "ext_gap".to_string(),
+                "ext_ambiguous".to_string(),
+            ],
         }
     }
 
@@ -5163,6 +5629,10 @@ Current deterministic projected check IDs include:
                 family["compatibilityAliases"] = json!([]);
             }
         }
+        payload
+            .as_object_mut()
+            .expect("payload should be object")
+            .remove("evidenceStage2Authority");
         write_json_file(
             &temp
                 .path()
@@ -5452,6 +5922,160 @@ Current deterministic projected check IDs include:
             evaluated
                 .failure_classes
                 .contains(&GATE_CHAIN_STAGE1_ROLLBACK_MISMATCH_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage2_alias_role_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-alias-role-mismatch");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage2Authority"]["compatibilityAlias"]["role"] = json!("authority");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_VIOLATION_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage2_alias_window_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-alias-window-mismatch");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage2Authority"]["compatibilityAlias"]["supportUntilEpoch"] =
+            json!("2026-07");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE2_AUTHORITY_ALIAS_WINDOW_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage2_unbound_binding_tuple() {
+        let temp = TempDirGuard::new("gate-chain-stage2-unbound-binding");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage2Authority"]["typedAuthority"]["policyDigestRef"] = json!("policy");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE2_AUTHORITY_UNBOUND_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage2_failure_class_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-failure-class-mismatch");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage2Authority"]["failureClasses"]["unbound"] =
+            json!("unification.evidence_stage2.not_bound");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE2_AUTHORITY_INVALID_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage2_kernel_sentinel_obligation_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-kernel-sentinel-obligation-mismatch");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage2Authority"]["kernelComplianceSentinel"]["requiredObligations"] =
+            json!(["stability"]);
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_stage2_kernel_sentinel_failure_class_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-kernel-sentinel-class-mismatch");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceStage2Authority"]["kernelComplianceSentinel"]["failureClasses"]["drift"] =
+            json!("unification.evidence_stage2.kernel_drift");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string())
         );
     }
 

@@ -73,6 +73,15 @@ run = "echo ok"
                 "projectionPolicy": "ci-topos-v0",
                 "checkOrder": ["baseline"],
             },
+            "schemaLifecycle": {
+                "kindFamilies": {
+                    "controlPlaneContractKind": {
+                        "compatibilityAliases": [
+                            {"supportUntilEpoch": "2026-06"}
+                        ]
+                    }
+                }
+            },
             "evidenceStage1Parity": {
                 "profileKind": "ev.stage1.core.v1",
                 "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
@@ -110,6 +119,42 @@ run = "echo ok"
                     "unbound": "unification.evidence_stage1.rollback.unbound",
                 },
             },
+            "evidenceStage2Authority": {
+                "profileKind": "ev.stage2.authority.v1",
+                "activeStage": "stage2",
+                "typedAuthority": {
+                    "kindRef": "ev.stage1.core.v1",
+                    "digestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "compatibilityAlias": {
+                    "kindRef": "ev.legacy.payload.v1",
+                    "digestRef": "authorityPayloadDigest",
+                    "role": "projection_only",
+                    "supportUntilEpoch": "2026-06",
+                },
+                "kernelComplianceSentinel": {
+                    "requiredObligations": [
+                        "stability",
+                        "locality",
+                        "descent_exists",
+                        "descent_contractible",
+                        "adjoint_triple",
+                        "ext_gap",
+                        "ext_ambiguous",
+                    ],
+                    "failureClasses": {
+                        "missing": "unification.evidence_stage2.kernel_compliance_missing",
+                        "drift": "unification.evidence_stage2.kernel_compliance_drift",
+                    },
+                },
+                "failureClasses": {
+                    "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+                    "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+                    "unbound": "unification.evidence_stage2.unbound",
+                },
+            },
         }
         with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-stage1-") as tmp:
             path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
@@ -117,6 +162,8 @@ run = "echo ok"
             stage1 = check_docs_coherence.parse_control_plane_stage1_contract(path)
             self.assertEqual(stage1["parity"]["profileKind"], "ev.stage1.core.v1")
             self.assertEqual(stage1["rollback"]["witnessKind"], "ev.stage1.rollback.witness.v1")
+            self.assertEqual(stage1["stage2"]["activeStage"], "stage2")
+            self.assertIn("stability", stage1["stage2"]["requiredObligations"])
 
     def test_parse_control_plane_stage1_contract_rejects_missing_trigger_class(self) -> None:
         payload = {
@@ -125,6 +172,15 @@ run = "echo ok"
             "requiredGateProjection": {
                 "projectionPolicy": "ci-topos-v0",
                 "checkOrder": ["baseline"],
+            },
+            "schemaLifecycle": {
+                "kindFamilies": {
+                    "controlPlaneContractKind": {
+                        "compatibilityAliases": [
+                            {"supportUntilEpoch": "2026-06"}
+                        ]
+                    }
+                }
             },
             "evidenceStage1Parity": {
                 "profileKind": "ev.stage1.core.v1",
@@ -166,6 +222,192 @@ run = "echo ok"
             path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
             path.write_text(json.dumps(payload), encoding="utf-8")
             with self.assertRaisesRegex(ValueError, "triggerFailureClasses missing canonical"):
+                check_docs_coherence.parse_control_plane_stage1_contract(path)
+
+    def test_parse_control_plane_stage1_contract_rejects_stage2_alias_epoch_mismatch(self) -> None:
+        payload = {
+            "schema": 1,
+            "contractKind": "premath.control_plane.contract.v1",
+            "requiredGateProjection": {
+                "projectionPolicy": "ci-topos-v0",
+                "checkOrder": ["baseline"],
+            },
+            "schemaLifecycle": {
+                "kindFamilies": {
+                    "controlPlaneContractKind": {
+                        "compatibilityAliases": [
+                            {"supportUntilEpoch": "2026-06"}
+                        ]
+                    }
+                }
+            },
+            "evidenceStage1Parity": {
+                "profileKind": "ev.stage1.core.v1",
+                "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+                "comparisonTuple": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "typedCoreDigestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "missing": "unification.evidence_stage1.parity.missing",
+                    "mismatch": "unification.evidence_stage1.parity.mismatch",
+                    "unbound": "unification.evidence_stage1.parity.unbound",
+                },
+            },
+            "evidenceStage1Rollback": {
+                "profileKind": "ev.stage1.rollback.v1",
+                "witnessKind": "ev.stage1.rollback.witness.v1",
+                "fromStage": "stage1",
+                "toStage": "stage0",
+                "triggerFailureClasses": [
+                    "unification.evidence_stage1.parity.missing",
+                    "unification.evidence_stage1.parity.mismatch",
+                    "unification.evidence_stage1.parity.unbound",
+                ],
+                "identityRefs": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "precondition": "unification.evidence_stage1.rollback.precondition",
+                    "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+                    "unbound": "unification.evidence_stage1.rollback.unbound",
+                },
+            },
+            "evidenceStage2Authority": {
+                "profileKind": "ev.stage2.authority.v1",
+                "activeStage": "stage2",
+                "typedAuthority": {
+                    "kindRef": "ev.stage1.core.v1",
+                    "digestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "compatibilityAlias": {
+                    "kindRef": "ev.legacy.payload.v1",
+                    "digestRef": "authorityPayloadDigest",
+                    "role": "projection_only",
+                    "supportUntilEpoch": "2026-07",
+                },
+                "kernelComplianceSentinel": {
+                    "requiredObligations": [
+                        "stability",
+                        "locality",
+                        "descent_exists",
+                        "descent_contractible",
+                        "adjoint_triple",
+                        "ext_gap",
+                        "ext_ambiguous",
+                    ],
+                    "failureClasses": {
+                        "missing": "unification.evidence_stage2.kernel_compliance_missing",
+                        "drift": "unification.evidence_stage2.kernel_compliance_drift",
+                    },
+                },
+                "failureClasses": {
+                    "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+                    "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+                    "unbound": "unification.evidence_stage2.unbound",
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-stage2-invalid-") as tmp:
+            path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "supportUntilEpoch must align"):
+                check_docs_coherence.parse_control_plane_stage1_contract(path)
+
+    def test_parse_control_plane_stage1_contract_rejects_stage2_kernel_sentinel_mismatch(self) -> None:
+        payload = {
+            "schema": 1,
+            "contractKind": "premath.control_plane.contract.v1",
+            "requiredGateProjection": {
+                "projectionPolicy": "ci-topos-v0",
+                "checkOrder": ["baseline"],
+            },
+            "schemaLifecycle": {
+                "kindFamilies": {
+                    "controlPlaneContractKind": {
+                        "compatibilityAliases": [
+                            {"supportUntilEpoch": "2026-06"}
+                        ]
+                    }
+                }
+            },
+            "evidenceStage1Parity": {
+                "profileKind": "ev.stage1.core.v1",
+                "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+                "comparisonTuple": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "typedCoreDigestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "missing": "unification.evidence_stage1.parity.missing",
+                    "mismatch": "unification.evidence_stage1.parity.mismatch",
+                    "unbound": "unification.evidence_stage1.parity.unbound",
+                },
+            },
+            "evidenceStage1Rollback": {
+                "profileKind": "ev.stage1.rollback.v1",
+                "witnessKind": "ev.stage1.rollback.witness.v1",
+                "fromStage": "stage1",
+                "toStage": "stage0",
+                "triggerFailureClasses": [
+                    "unification.evidence_stage1.parity.missing",
+                    "unification.evidence_stage1.parity.mismatch",
+                    "unification.evidence_stage1.parity.unbound",
+                ],
+                "identityRefs": {
+                    "authorityDigestRef": "authorityPayloadDigest",
+                    "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "failureClasses": {
+                    "precondition": "unification.evidence_stage1.rollback.precondition",
+                    "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+                    "unbound": "unification.evidence_stage1.rollback.unbound",
+                },
+            },
+            "evidenceStage2Authority": {
+                "profileKind": "ev.stage2.authority.v1",
+                "activeStage": "stage2",
+                "typedAuthority": {
+                    "kindRef": "ev.stage1.core.v1",
+                    "digestRef": "typedCoreProjectionDigest",
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest",
+                },
+                "compatibilityAlias": {
+                    "kindRef": "ev.legacy.payload.v1",
+                    "digestRef": "authorityPayloadDigest",
+                    "role": "projection_only",
+                    "supportUntilEpoch": "2026-06",
+                },
+                "kernelComplianceSentinel": {
+                    "requiredObligations": ["stability"],
+                    "failureClasses": {
+                        "missing": "unification.evidence_stage2.kernel_compliance_missing",
+                        "drift": "unification.evidence_stage2.kernel_compliance_drift",
+                    },
+                },
+                "failureClasses": {
+                    "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+                    "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+                    "unbound": "unification.evidence_stage2.unbound",
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-stage2-sentinel-invalid-") as tmp:
+            path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            with self.assertRaisesRegex(ValueError, "canonical Stage 2 kernel obligations"):
                 check_docs_coherence.parse_control_plane_stage1_contract(path)
 
     def test_parse_doctrine_check_commands(self) -> None:

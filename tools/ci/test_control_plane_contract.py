@@ -166,6 +166,42 @@ def _base_payload() -> dict:
                 "unbound": "unification.evidence_stage1.rollback.unbound",
             },
         },
+        "evidenceStage2Authority": {
+            "profileKind": "ev.stage2.authority.v1",
+            "activeStage": "stage2",
+            "typedAuthority": {
+                "kindRef": "ev.stage1.core.v1",
+                "digestRef": "typedCoreProjectionDigest",
+                "normalizerIdRef": "normalizerId",
+                "policyDigestRef": "policyDigest",
+            },
+            "compatibilityAlias": {
+                "kindRef": "ev.legacy.payload.v1",
+                "digestRef": "authorityPayloadDigest",
+                "role": "projection_only",
+                "supportUntilEpoch": "2026-06",
+            },
+            "kernelComplianceSentinel": {
+                "requiredObligations": [
+                    "stability",
+                    "locality",
+                    "descent_exists",
+                    "descent_contractible",
+                    "adjoint_triple",
+                    "ext_gap",
+                    "ext_ambiguous",
+                ],
+                "failureClasses": {
+                    "missing": "unification.evidence_stage2.kernel_compliance_missing",
+                    "drift": "unification.evidence_stage2.kernel_compliance_drift",
+                },
+            },
+            "failureClasses": {
+                "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+                "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+                "unbound": "unification.evidence_stage2.unbound",
+            },
+        },
         "harnessRetry": {
             "policyKind": "ci.harness.retry.policy.v1",
             "policyPath": "policies/control/harness-retry-policy-v1.json",
@@ -266,6 +302,20 @@ class ControlPlaneContractTests(unittest.TestCase):
             loaded["evidenceStage1Rollback"]["witnessKind"],
             "ev.stage1.rollback.witness.v1",
         )
+        self.assertEqual(
+            loaded["evidenceStage2Authority"]["profileKind"],
+            "ev.stage2.authority.v1",
+        )
+        self.assertEqual(
+            loaded["evidenceStage2Authority"]["compatibilityAlias"]["role"],
+            "projection_only",
+        )
+        self.assertIn(
+            "stability",
+            loaded["evidenceStage2Authority"]["kernelComplianceSentinel"][
+                "requiredObligations"
+            ],
+        )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())
@@ -346,6 +396,34 @@ class ControlPlaneContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "authority/rollback refs must differ"):
             self._load(payload)
 
+    def test_load_rejects_stage2_alias_role_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["compatibilityAlias"]["role"] = "authority"
+        with self.assertRaisesRegex(ValueError, "projection_only"):
+            self._load(payload)
+
+    def test_load_rejects_stage2_alias_window_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["compatibilityAlias"]["supportUntilEpoch"] = "2026-07"
+        with self.assertRaisesRegex(ValueError, "rolloverEpoch"):
+            self._load(payload)
+
+    def test_load_rejects_stage2_failure_class_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["failureClasses"]["unbound"] = (
+            "unification.evidence_stage2.not_bound"
+        )
+        with self.assertRaisesRegex(ValueError, "canonical Stage 2 classes"):
+            self._load(payload)
+
+    def test_load_rejects_stage2_kernel_sentinel_obligation_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["kernelComplianceSentinel"][
+            "requiredObligations"
+        ] = ["stability"]
+        with self.assertRaisesRegex(ValueError, "canonical Stage 2 kernel obligations"):
+            self._load(payload)
+
     def test_load_rejects_rollover_without_cadence(self) -> None:
         payload = _base_payload()
         payload["schemaLifecycle"]["governance"].pop("rolloverCadenceMonths", None)
@@ -373,6 +451,7 @@ class ControlPlaneContractTests(unittest.TestCase):
         }
         for family in payload["schemaLifecycle"]["kindFamilies"].values():
             family["compatibilityAliases"] = []
+        payload.pop("evidenceStage2Authority", None)
         loaded = self._load(payload)
         self.assertEqual(loaded["schemaLifecycle"]["governance"]["mode"], "freeze")
         self.assertEqual(

@@ -39,6 +39,25 @@ _STAGE1_ROLLBACK_FAILURE_CLASSES = (
     "unification.evidence_stage1.rollback.identity_drift",
     "unification.evidence_stage1.rollback.unbound",
 )
+_STAGE2_AUTHORITY_FAILURE_CLASSES = (
+    "unification.evidence_stage2.authority_alias_violation",
+    "unification.evidence_stage2.alias_window_violation",
+    "unification.evidence_stage2.unbound",
+)
+_STAGE2_KERNEL_COMPLIANCE_FAILURE_CLASSES = (
+    "unification.evidence_stage2.kernel_compliance_missing",
+    "unification.evidence_stage2.kernel_compliance_drift",
+)
+_STAGE2_REQUIRED_KERNEL_OBLIGATIONS = (
+    "stability",
+    "locality",
+    "descent_exists",
+    "descent_contractible",
+    "adjoint_triple",
+    "ext_gap",
+    "ext_ambiguous",
+)
+_STAGE2_COMPATIBILITY_ALIAS_ROLE = "projection_only"
 
 
 def _require_non_empty_string(value: Any, label: str) -> str:
@@ -482,6 +501,183 @@ def _validate_stage1_rollback_contract(payload: Any) -> Dict[str, Any]:
     }
 
 
+def _validate_stage2_authority_contract(
+    payload: Any,
+    *,
+    active_epoch: str,
+    schema_epoch_discipline: Dict[str, Any],
+) -> Dict[str, Any]:
+    stage2 = _require_object(payload, "evidenceStage2Authority")
+    profile_kind = _require_non_empty_string(
+        stage2.get("profileKind"),
+        "evidenceStage2Authority.profileKind",
+    )
+    active_stage = _require_non_empty_string(
+        stage2.get("activeStage"),
+        "evidenceStage2Authority.activeStage",
+    )
+    if active_stage != "stage2":
+        raise ValueError("evidenceStage2Authority.activeStage must be `stage2`")
+
+    typed_authority = _require_object(
+        stage2.get("typedAuthority"),
+        "evidenceStage2Authority.typedAuthority",
+    )
+    typed_kind_ref = _require_non_empty_string(
+        typed_authority.get("kindRef"),
+        "evidenceStage2Authority.typedAuthority.kindRef",
+    )
+    typed_digest_ref = _require_non_empty_string(
+        typed_authority.get("digestRef"),
+        "evidenceStage2Authority.typedAuthority.digestRef",
+    )
+    typed_normalizer_id_ref = _require_non_empty_string(
+        typed_authority.get("normalizerIdRef"),
+        "evidenceStage2Authority.typedAuthority.normalizerIdRef",
+    )
+    typed_policy_digest_ref = _require_non_empty_string(
+        typed_authority.get("policyDigestRef"),
+        "evidenceStage2Authority.typedAuthority.policyDigestRef",
+    )
+    if typed_normalizer_id_ref != "normalizerId":
+        raise ValueError(
+            "evidenceStage2Authority.typedAuthority.normalizerIdRef must be `normalizerId`"
+        )
+    if typed_policy_digest_ref != "policyDigest":
+        raise ValueError(
+            "evidenceStage2Authority.typedAuthority.policyDigestRef must be `policyDigest`"
+        )
+
+    compatibility_alias = _require_object(
+        stage2.get("compatibilityAlias"),
+        "evidenceStage2Authority.compatibilityAlias",
+    )
+    alias_kind_ref = _require_non_empty_string(
+        compatibility_alias.get("kindRef"),
+        "evidenceStage2Authority.compatibilityAlias.kindRef",
+    )
+    alias_digest_ref = _require_non_empty_string(
+        compatibility_alias.get("digestRef"),
+        "evidenceStage2Authority.compatibilityAlias.digestRef",
+    )
+    alias_role = _require_non_empty_string(
+        compatibility_alias.get("role"),
+        "evidenceStage2Authority.compatibilityAlias.role",
+    )
+    if alias_role != _STAGE2_COMPATIBILITY_ALIAS_ROLE:
+        raise ValueError(
+            "evidenceStage2Authority.compatibilityAlias.role must be "
+            f"`{_STAGE2_COMPATIBILITY_ALIAS_ROLE}`"
+        )
+    alias_support_until_epoch = _require_epoch(
+        compatibility_alias.get("supportUntilEpoch"),
+        "evidenceStage2Authority.compatibilityAlias.supportUntilEpoch",
+    )
+    if typed_digest_ref == alias_digest_ref:
+        raise ValueError(
+            "evidenceStage2Authority typed/alias digest refs must differ"
+        )
+
+    rollover_epoch = schema_epoch_discipline.get("rolloverEpoch")
+    if not isinstance(rollover_epoch, str) or not rollover_epoch:
+        raise ValueError(
+            "evidenceStage2Authority requires schemaLifecycle.epochDiscipline.rolloverEpoch"
+        )
+    if alias_support_until_epoch != rollover_epoch:
+        raise ValueError(
+            "evidenceStage2Authority.compatibilityAlias.supportUntilEpoch must match "
+            "schemaLifecycle.epochDiscipline.rolloverEpoch"
+        )
+    if active_epoch > alias_support_until_epoch:
+        raise ValueError(
+            "evidenceStage2Authority compatibility alias expired at "
+            f"supportUntilEpoch={alias_support_until_epoch!r} (activeEpoch={active_epoch!r})"
+        )
+
+    kernel_compliance_sentinel = _require_object(
+        stage2.get("kernelComplianceSentinel"),
+        "evidenceStage2Authority.kernelComplianceSentinel",
+    )
+    required_obligations = _require_string_list(
+        kernel_compliance_sentinel.get("requiredObligations"),
+        "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations",
+    )
+    if set(required_obligations) != set(_STAGE2_REQUIRED_KERNEL_OBLIGATIONS):
+        raise ValueError(
+            "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match canonical Stage 2 kernel obligations"
+        )
+    sentinel_failure_classes = _require_object(
+        kernel_compliance_sentinel.get("failureClasses"),
+        "evidenceStage2Authority.kernelComplianceSentinel.failureClasses",
+    )
+    parsed_sentinel_failure_classes = (
+        _require_non_empty_string(
+            sentinel_failure_classes.get("missing"),
+            "evidenceStage2Authority.kernelComplianceSentinel.failureClasses.missing",
+        ),
+        _require_non_empty_string(
+            sentinel_failure_classes.get("drift"),
+            "evidenceStage2Authority.kernelComplianceSentinel.failureClasses.drift",
+        ),
+    )
+    if parsed_sentinel_failure_classes != _STAGE2_KERNEL_COMPLIANCE_FAILURE_CLASSES:
+        raise ValueError(
+            "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must map to canonical Stage 2 kernel-compliance classes"
+        )
+
+    failure_classes = _require_object(
+        stage2.get("failureClasses"),
+        "evidenceStage2Authority.failureClasses",
+    )
+    parsed_failure_classes = (
+        _require_non_empty_string(
+            failure_classes.get("authorityAliasViolation"),
+            "evidenceStage2Authority.failureClasses.authorityAliasViolation",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("aliasWindowViolation"),
+            "evidenceStage2Authority.failureClasses.aliasWindowViolation",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("unbound"),
+            "evidenceStage2Authority.failureClasses.unbound",
+        ),
+    )
+    if parsed_failure_classes != _STAGE2_AUTHORITY_FAILURE_CLASSES:
+        raise ValueError(
+            "evidenceStage2Authority.failureClasses must map to canonical Stage 2 classes"
+        )
+
+    return {
+        "profileKind": profile_kind,
+        "activeStage": active_stage,
+        "typedAuthority": {
+            "kindRef": typed_kind_ref,
+            "digestRef": typed_digest_ref,
+            "normalizerIdRef": typed_normalizer_id_ref,
+            "policyDigestRef": typed_policy_digest_ref,
+        },
+        "compatibilityAlias": {
+            "kindRef": alias_kind_ref,
+            "digestRef": alias_digest_ref,
+            "role": alias_role,
+            "supportUntilEpoch": alias_support_until_epoch,
+        },
+        "kernelComplianceSentinel": {
+            "requiredObligations": required_obligations,
+            "failureClasses": {
+                "missing": parsed_sentinel_failure_classes[0],
+                "drift": parsed_sentinel_failure_classes[1],
+            },
+        },
+        "failureClasses": {
+            "authorityAliasViolation": parsed_failure_classes[0],
+            "aliasWindowViolation": parsed_failure_classes[1],
+            "unbound": parsed_failure_classes[2],
+        },
+    }
+
+
 def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -733,6 +929,16 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     )
     stage1_parity = _validate_stage1_parity_contract(root.get("evidenceStage1Parity"))
     stage1_rollback = _validate_stage1_rollback_contract(root.get("evidenceStage1Rollback"))
+    stage2_authority_raw = root.get("evidenceStage2Authority")
+    stage2_authority = (
+        _validate_stage2_authority_contract(
+            stage2_authority_raw,
+            active_epoch=active_epoch,
+            schema_epoch_discipline=schema_epoch_discipline,
+        )
+        if stage2_authority_raw is not None
+        else None
+    )
 
     return {
         "schema": schema,
@@ -776,6 +982,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         },
         "evidenceStage1Parity": stage1_parity,
         "evidenceStage1Rollback": stage1_rollback,
+        "evidenceStage2Authority": stage2_authority,
     }
 
 
@@ -926,4 +1133,38 @@ EVIDENCE_STAGE1_ROLLBACK_FAILURE_CLASSES: Tuple[str, ...] = tuple(
     .get("failureClasses", {})
     .get(key, "")
     for key in ("precondition", "identityDrift", "unbound")
+)
+EVIDENCE_STAGE2_AUTHORITY_PROFILE_KIND: str = _CONTRACT.get(
+    "evidenceStage2Authority", {}
+).get("profileKind", "")
+EVIDENCE_STAGE2_AUTHORITY_ACTIVE_STAGE: str = _CONTRACT.get(
+    "evidenceStage2Authority", {}
+).get("activeStage", "")
+EVIDENCE_STAGE2_AUTHORITY_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("evidenceStage2Authority", {})
+    .get("failureClasses", {})
+    .get(key, "")
+    for key in ("authorityAliasViolation", "aliasWindowViolation", "unbound")
+)
+EVIDENCE_STAGE2_ALIAS_ROLE: str = (
+    _CONTRACT.get("evidenceStage2Authority", {})
+    .get("compatibilityAlias", {})
+    .get("role", "")
+)
+EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH: str = (
+    _CONTRACT.get("evidenceStage2Authority", {})
+    .get("compatibilityAlias", {})
+    .get("supportUntilEpoch", "")
+)
+EVIDENCE_STAGE2_KERNEL_REQUIRED_OBLIGATIONS: Tuple[str, ...] = tuple(
+    _CONTRACT.get("evidenceStage2Authority", {})
+    .get("kernelComplianceSentinel", {})
+    .get("requiredObligations", ())
+)
+EVIDENCE_STAGE2_KERNEL_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("evidenceStage2Authority", {})
+    .get("kernelComplianceSentinel", {})
+    .get("failureClasses", {})
+    .get(key, "")
+    for key in ("missing", "drift")
 )

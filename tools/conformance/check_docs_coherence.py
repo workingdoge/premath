@@ -126,6 +126,24 @@ STAGE1_ROLLBACK_CANONICAL_CLASSES: Tuple[str, str, str] = (
     "unification.evidence_stage1.rollback.identity_drift",
     "unification.evidence_stage1.rollback.unbound",
 )
+STAGE2_AUTHORITY_CANONICAL_CLASSES: Tuple[str, str, str] = (
+    "unification.evidence_stage2.authority_alias_violation",
+    "unification.evidence_stage2.alias_window_violation",
+    "unification.evidence_stage2.unbound",
+)
+STAGE2_KERNEL_COMPLIANCE_CANONICAL_CLASSES: Tuple[str, str] = (
+    "unification.evidence_stage2.kernel_compliance_missing",
+    "unification.evidence_stage2.kernel_compliance_drift",
+)
+STAGE2_REQUIRED_KERNEL_OBLIGATIONS: Tuple[str, ...] = (
+    "stability",
+    "locality",
+    "descent_exists",
+    "descent_contractible",
+    "adjoint_triple",
+    "ext_gap",
+    "ext_ambiguous",
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -266,6 +284,26 @@ def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[s
         raise ValueError(f"{contract_path}: schema must be 1")
     if payload.get("contractKind") != "premath.control_plane.contract.v1":
         raise ValueError(f"{contract_path}: contractKind mismatch")
+    lifecycle_rollover_epoch: str | None = None
+    schema_lifecycle = payload.get("schemaLifecycle")
+    if isinstance(schema_lifecycle, dict):
+        kind_families = schema_lifecycle.get("kindFamilies")
+        if isinstance(kind_families, dict):
+            support_epochs = set()
+            for family in kind_families.values():
+                if not isinstance(family, dict):
+                    continue
+                aliases = family.get("compatibilityAliases")
+                if not isinstance(aliases, list):
+                    continue
+                for alias in aliases:
+                    if not isinstance(alias, dict):
+                        continue
+                    epoch = alias.get("supportUntilEpoch")
+                    if isinstance(epoch, str) and epoch.strip():
+                        support_epochs.add(epoch.strip())
+            if len(support_epochs) == 1:
+                lifecycle_rollover_epoch = next(iter(support_epochs))
 
     stage1_parity = payload.get("evidenceStage1Parity")
     if not isinstance(stage1_parity, dict):
@@ -376,7 +414,7 @@ def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[s
             f"{contract_path}: evidenceStage1Rollback.failureClasses must map to canonical Stage 1 rollback classes"
         )
 
-    return {
+    out: Dict[str, Dict[str, object]] = {
         "parity": {
             "profileKind": profile_kind.strip(),
             "authorityToTypedCoreRoute": route.strip(),
@@ -389,6 +427,125 @@ def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[s
             "failureClasses": parsed_rollback_classes,
         },
     }
+
+    stage2_authority = payload.get("evidenceStage2Authority")
+    if stage2_authority is not None:
+        if not isinstance(stage2_authority, dict):
+            raise ValueError(f"{contract_path}: evidenceStage2Authority must be an object")
+        stage2_profile_kind = stage2_authority.get("profileKind")
+        stage2_active_stage = stage2_authority.get("activeStage")
+        if not isinstance(stage2_profile_kind, str) or not stage2_profile_kind.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.profileKind must be a non-empty string"
+            )
+        if stage2_active_stage != "stage2":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.activeStage must be `stage2`"
+            )
+        typed_authority = stage2_authority.get("typedAuthority")
+        if not isinstance(typed_authority, dict):
+            raise ValueError(f"{contract_path}: evidenceStage2Authority.typedAuthority must be an object")
+        for key in ("kindRef", "digestRef", "normalizerIdRef", "policyDigestRef"):
+            value = typed_authority.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.typedAuthority.{key} must be a non-empty string"
+                )
+        if typed_authority.get("normalizerIdRef") != "normalizerId":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.typedAuthority.normalizerIdRef must be `normalizerId`"
+            )
+        if typed_authority.get("policyDigestRef") != "policyDigest":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.typedAuthority.policyDigestRef must be `policyDigest`"
+            )
+
+        compatibility_alias = stage2_authority.get("compatibilityAlias")
+        if not isinstance(compatibility_alias, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.compatibilityAlias must be an object"
+            )
+        for key in ("kindRef", "digestRef", "role", "supportUntilEpoch"):
+            value = compatibility_alias.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.compatibilityAlias.{key} must be a non-empty string"
+                )
+        if compatibility_alias.get("role") != "projection_only":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.compatibilityAlias.role must be `projection_only`"
+            )
+        if lifecycle_rollover_epoch is None:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority requires one lifecycle rollover epoch"
+            )
+        if compatibility_alias.get("supportUntilEpoch") != lifecycle_rollover_epoch:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.compatibilityAlias.supportUntilEpoch must align with lifecycle rollover epoch"
+            )
+
+        kernel_sentinel = stage2_authority.get("kernelComplianceSentinel")
+        if not isinstance(kernel_sentinel, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel must be an object"
+            )
+        required_obligations = kernel_sentinel.get("requiredObligations")
+        if not isinstance(required_obligations, list) or not required_obligations:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must be a non-empty list"
+            )
+        parsed_required_obligations: List[str] = []
+        for idx, item in enumerate(required_obligations):
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations[{idx}] must be a non-empty string"
+                )
+            parsed_required_obligations.append(item.strip())
+        if len(set(parsed_required_obligations)) != len(parsed_required_obligations):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must not contain duplicates"
+            )
+        if set(parsed_required_obligations) != set(STAGE2_REQUIRED_KERNEL_OBLIGATIONS):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match canonical Stage 2 kernel obligations"
+            )
+        kernel_sentinel_failure_classes = kernel_sentinel.get("failureClasses")
+        if not isinstance(kernel_sentinel_failure_classes, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must be an object"
+            )
+        parsed_kernel_sentinel_classes = (
+            kernel_sentinel_failure_classes.get("missing"),
+            kernel_sentinel_failure_classes.get("drift"),
+        )
+        if parsed_kernel_sentinel_classes != STAGE2_KERNEL_COMPLIANCE_CANONICAL_CLASSES:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must map to canonical Stage 2 kernel-compliance classes"
+            )
+
+        stage2_failure_classes = stage2_authority.get("failureClasses")
+        if not isinstance(stage2_failure_classes, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.failureClasses must be an object"
+            )
+        parsed_stage2_classes = (
+            stage2_failure_classes.get("authorityAliasViolation"),
+            stage2_failure_classes.get("aliasWindowViolation"),
+            stage2_failure_classes.get("unbound"),
+        )
+        if parsed_stage2_classes != STAGE2_AUTHORITY_CANONICAL_CLASSES:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.failureClasses must map to canonical Stage 2 classes"
+            )
+        out["stage2"] = {
+            "profileKind": stage2_profile_kind.strip(),
+            "activeStage": "stage2",
+            "requiredObligations": parsed_required_obligations,
+            "failureClasses": parsed_stage2_classes,
+            "kernelComplianceFailureClasses": parsed_kernel_sentinel_classes,
+        }
+
+    return out
 
 
 def parse_spec_index_capability_doc_map(section_54: str) -> Dict[str, str]:
