@@ -1040,14 +1040,14 @@ fn evaluate_control_plane_schema_lifecycle(
                         .to_string(),
                 );
             }
-            if let Some(freeze_reason) = governance.freeze_reason.as_deref() {
-                if !freeze_reason.trim().is_empty() {
-                    failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
-                    reasons.push(
-                        "schemaLifecycle.governance.freezeReason is only allowed when mode=freeze"
-                            .to_string(),
-                    );
-                }
+            if let Some(freeze_reason) = governance.freeze_reason.as_deref()
+                && !freeze_reason.trim().is_empty()
+            {
+                failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
+                reasons.push(
+                    "schemaLifecycle.governance.freezeReason is only allowed when mode=freeze"
+                        .to_string(),
+                );
             }
             if alias_support_epochs.is_empty() {
                 failures.push(GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string());
