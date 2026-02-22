@@ -1664,3 +1664,32 @@ boundary without redefining kernel semantic authority.
   strict substitution identity/composition and comprehension beta/eta.
 - `draft/PREMATH-COHERENCE` now specifies CwF strictification obligations
   explicitly.
+
+---
+
+## 2026-02-22 — Decision 0057: Make instruction digest checker-authoritative on the instruction path
+
+### Decision
+Extend `premath instruction-check` output with canonical
+`instructionDigest` (`instr1_<sha256(canonical-json)>`) and consume that value
+directly in `tools/ci/run_instruction.py` when building instruction witnesses.
+
+Keep Python wrappers as transport adapters only:
+
+- no Python-side canonical digest recomputation on accepted instruction paths,
+- stale local binary payload-shape drift is auto-healed by retrying through
+  `cargo run --package premath-cli -- instruction-check ...`.
+
+### Rationale
+`bd-34` targets one authority path for checker semantics. Instruction digest
+computation duplicated in Python was an avoidable parallel encoding surface.
+Moving digest authority to core reduces drift risk and tightens deterministic
+lineage from envelope check to witness emission.
+
+### Consequences
+- `ValidatedInstructionEnvelope` now includes `instructionDigest`.
+- `run_instruction.py` now uses core-emitted digest for witness runtime payloads
+  on accepted envelopes.
+- `instruction_check_client.py` validates presence of `instructionDigest` and
+  retries through cargo when a stale local binary emits older payload shape.
+- instruction-path smoke and client/unit tests cover this fallback behavior.

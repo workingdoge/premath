@@ -157,7 +157,7 @@ It separates:
 - input: `instructions/<ts>-<id>.json`
 - delegates instruction typing/proposal ingestion to core
   `premath instruction-check` (typed `instructionClassification` +
-  authoritative `executionDecision`)
+  authoritative `executionDecision` + canonical `instructionDigest`)
 - rejects unroutable `unknown(reason)` unless `typingPolicy.allowUnknown=true`
 - carries optional `capabilityClaims` from envelope into witness artifacts for
   downstream mutation-policy gating surfaces

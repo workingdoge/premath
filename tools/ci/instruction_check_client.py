@@ -56,7 +56,7 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
             "instruction_envelope_invalid_shape",
             "instruction-check payload must be an object",
         )
-    required_string_fields = ("intent", "normalizerId", "policyDigest")
+    required_string_fields = ("intent", "normalizerId", "policyDigest", "instructionDigest")
     for key in required_string_fields:
         if not isinstance(payload.get(key), str) or not payload.get(key):
             raise InstructionCheckError(
@@ -158,46 +158,31 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
 
 
 def run_instruction_check(root: Path, instruction_path: Path) -> Dict[str, Any]:
+    def run_check(cli_prefix: List[str]) -> subprocess.CompletedProcess[str]:
+        cmd = [
+            *cli_prefix,
+            "instruction-check",
+            "--instruction",
+            str(instruction_path),
+            "--repo-root",
+            str(root),
+            "--json",
+        ]
+        return subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+        )
+
     cli_prefix = resolve_premath_cli(root)
-    cmd = [
-        *cli_prefix,
-        "instruction-check",
-        "--instruction",
-        str(instruction_path),
-        "--repo-root",
-        str(root),
-        "--json",
-    ]
-    completed = subprocess.run(
-        cmd,
-        cwd=root,
-        capture_output=True,
-        text=True,
-    )
+    completed = run_check(cli_prefix)
 
     # If a stale local `target/debug/premath` lacks this subcommand, retry through cargo.
     if completed.returncode != 0 and cli_prefix and Path(cli_prefix[0]).name == "premath":
         stderr = completed.stderr + "\n" + completed.stdout
         if "unrecognized subcommand 'instruction-check'" in stderr:
-            cmd = [
-                "cargo",
-                "run",
-                "--package",
-                "premath-cli",
-                "--",
-                "instruction-check",
-                "--instruction",
-                str(instruction_path),
-                "--repo-root",
-                str(root),
-                "--json",
-            ]
-            completed = subprocess.run(
-                cmd,
-                cwd=root,
-                capture_output=True,
-                text=True,
-            )
+            completed = run_check(["cargo", "run", "--package", "premath-cli", "--"])
 
     if completed.returncode != 0:
         message = _extract_failure_message(completed)
@@ -215,7 +200,33 @@ def run_instruction_check(root: Path, instruction_path: Path) -> Dict[str, Any]:
             "instruction_envelope_invalid_shape",
             "instruction-check returned invalid JSON",
         ) from exc
-    return _validate_payload(payload)
+    try:
+        return _validate_payload(payload)
+    except InstructionCheckError as exc:
+        # If a stale local binary emits an older payload shape, retry via cargo.
+        if (
+            cli_prefix
+            and Path(cli_prefix[0]).name == "premath"
+            and exc.failure_class == "instruction_envelope_invalid_shape"
+        ):
+            completed = run_check(["cargo", "run", "--package", "premath-cli", "--"])
+            if completed.returncode != 0:
+                message = _extract_failure_message(completed)
+                match = re.match(r"^(?P<class>[a-z0-9_]+):\s*(?P<reason>.*)$", message)
+                if match:
+                    failure_class = match.group("class")
+                    reason = match.group("reason").strip() or message
+                    raise InstructionCheckError(failure_class, reason) from exc
+                raise InstructionCheckError("instruction_envelope_invalid", message) from exc
+            try:
+                payload = json.loads(completed.stdout)
+            except json.JSONDecodeError as json_exc:
+                raise InstructionCheckError(
+                    "instruction_envelope_invalid_shape",
+                    "instruction-check returned invalid JSON",
+                ) from json_exc
+            return _validate_payload(payload)
+        raise
 
 
 def _validate_witness_payload(payload: Any) -> Dict[str, Any]:
