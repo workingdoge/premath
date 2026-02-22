@@ -524,6 +524,7 @@ fn issue_replay_events_json_smoke() {
     let issues = tmp.path().join("issues.jsonl");
     let replayed_issues = tmp.path().join("replayed-issues.jsonl");
     let events = tmp.path().join("events.jsonl");
+    let replay_cache = tmp.path().join("replay-cache.json");
 
     let out_add_root = run_premath([
         OsString::from("issue"),
@@ -580,14 +581,38 @@ fn issue_replay_events_json_smoke() {
         events.as_os_str().to_os_string(),
         OsString::from("--issues"),
         replayed_issues.as_os_str().to_os_string(),
+        OsString::from("--cache"),
+        replay_cache.as_os_str().to_os_string(),
         OsString::from("--json"),
     ]);
     assert_success(&out_replay_first);
     let replay_first = parse_json_stdout(&out_replay_first);
     assert_eq!(replay_first["action"], "issue.replay-events");
+    assert_eq!(replay_first["cacheHit"], false);
     assert_eq!(replay_first["eventCount"], 3);
     assert_eq!(replay_first["issueCount"], 2);
     assert_eq!(replay_first["equivalentToExisting"], Value::Null);
+    assert_eq!(
+        replay_first["cachePath"],
+        replay_cache.display().to_string()
+    );
+    let event_ref_first = replay_first["eventStreamRef"]
+        .as_str()
+        .expect("eventStreamRef should be a string")
+        .to_string();
+    let snapshot_ref_first = replay_first["snapshotRef"]
+        .as_str()
+        .expect("snapshotRef should be a string")
+        .to_string();
+    assert!(event_ref_first.starts_with("ev1_"));
+    assert!(snapshot_ref_first.starts_with("iss1_"));
+    let replay_cache_payload = serde_json::from_str::<Value>(
+        &fs::read_to_string(&replay_cache).expect("replay cache should exist"),
+    )
+    .expect("replay cache should parse");
+    assert_eq!(replay_cache_payload["schema"], "issue.replay.cache.v1");
+    assert_eq!(replay_cache_payload["eventStreamRef"], event_ref_first);
+    assert_eq!(replay_cache_payload["snapshotRef"], snapshot_ref_first);
 
     let out_replay_second = run_premath([
         OsString::from("issue"),
@@ -596,11 +621,16 @@ fn issue_replay_events_json_smoke() {
         events.as_os_str().to_os_string(),
         OsString::from("--issues"),
         replayed_issues.as_os_str().to_os_string(),
+        OsString::from("--cache"),
+        replay_cache.as_os_str().to_os_string(),
         OsString::from("--json"),
     ]);
     assert_success(&out_replay_second);
     let replay_second = parse_json_stdout(&out_replay_second);
+    assert_eq!(replay_second["cacheHit"], true);
     assert_eq!(replay_second["equivalentToExisting"], true);
+    assert_eq!(replay_second["eventStreamRef"], event_ref_first);
+    assert_eq!(replay_second["snapshotRef"], snapshot_ref_first);
 
     let out_ready = run_premath([
         OsString::from("issue"),

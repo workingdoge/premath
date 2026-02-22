@@ -27,9 +27,10 @@ pub mod memory;
 
 pub use dependency::{DepType, Dependency, DependencyProjection, DependencyView};
 pub use events::{
-    EventError, ISSUE_EVENT_SCHEMA, IssueEvent, IssueEventAction, migrate_store_to_events,
-    read_events, read_events_from_path, replay_events, replay_events_from_path, stores_equivalent,
-    write_events, write_events_to_path,
+    EventError, ISSUE_EVENT_REF_PREFIX, ISSUE_EVENT_SCHEMA, ISSUE_SNAPSHOT_REF_PREFIX, IssueEvent,
+    IssueEventAction, event_stream_ref, migrate_store_to_events, read_events,
+    read_events_from_path, replay_events, replay_events_from_path, store_snapshot_ref,
+    stores_equivalent, write_events, write_events_to_path,
 };
 pub use issue::{Issue, IssueLease, IssueLeaseState};
 pub use memory::{MemoryStore, MemoryStoreError};

@@ -944,3 +944,34 @@ rebuilds, cache invalidation, and reproducible substrate recovery.
 ### Consequences
 - issue memory CLI now supports deterministic snapshot/event round-trips.
 - replay idempotence and projection behavior are smoke-tested.
+
+---
+
+## 2026-02-22 — Decision 0033: Bind replay-cache hits to deterministic event and snapshot refs
+
+### Decision
+For event-memory replay, add deterministic cache binding and executable
+conformance coverage:
+
+- `premath issue replay-events` now accepts `--cache` (default derived from the
+  target issues path) and emits:
+  - `eventStreamRef` (`ev1_*`)
+  - `snapshotRef` (`iss1_*`)
+  - `cacheHit` and `cachePath`.
+- cache hits are only valid when `(eventsPath, issuesPath, eventStreamRef,
+  snapshotRef)` agree with current surfaces.
+- replay writes are skipped on cache hit and on equivalent pre-existing
+  snapshots.
+- `capabilities.change_morphisms` gains replay-cache vectors:
+  - golden stable hit,
+  - adversarial ref mismatch reject,
+  - local/external invariance pair.
+
+### Rationale
+Replay caching should reduce work without introducing hidden authority. The
+cache must be a deterministic witness-bound optimization, not a separate state
+oracle.
+
+### Consequences
+- replay projections are content-addressed and auditable.
+- conformance enforces replay-cache binding semantics and invariance profiles.

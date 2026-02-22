@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "adversarial/issue_event_replay_cache_ref_mismatch_reject",
+  "description": "Replay cache rejects when declared refs are not bound to deterministic event/snapshot payloads.",
+  "semanticScenarioId": "change_projection_issue_event_replay_cache_02",
+  "artifacts": {
+    "request": {
+      "mode": "issue_event_replay_cache",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "events": [
+      {
+        "schema": "issue.event.v1",
+        "action": "upsert_issue",
+        "issue": {
+          "id": "bd-a",
+          "status": "open"
+        }
+      },
+      {
+        "schema": "issue.event.v1",
+        "action": "upsert_issue",
+        "issue": {
+          "id": "bd-b",
+          "status": "closed"
+        }
+      }
+    ],
+    "snapshot": {
+      "issues": [
+        {
+          "id": "bd-a",
+          "status": "open"
+        },
+        {
+          "id": "bd-b",
+          "status": "closed"
+        }
+      ]
+    },
+    "eventStreamRef": "ev1_0ee848b7fcbc85e388374ea7463e6a59e9845c9c16100341cb2f687c70b8e912",
+    "snapshotRef": "iss1_deadbeef",
+    "cacheEntry": {
+      "eventStreamRef": "ev1_0ee848b7fcbc85e388374ea7463e6a59e9845c9c16100341cb2f687c70b8e912",
+      "snapshotRef": "iss1_deadbeef"
+    },
+    "expectedCacheHit": true
+  }
+}

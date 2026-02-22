@@ -16,6 +16,7 @@
     "golden/issue_lease_release_reopens_issue",
     "golden/issue_lease_projection_stale_and_contended",
     "golden/issue_ready_blocked_partition_coherent",
+    "golden/issue_event_replay_cache_hit_stable",
     "golden/provider_env_mapping_github_equiv",
     "adversarial/change_morphisms_requires_claim",
     "adversarial/issue_claim_rejects_active_lease_contention",
@@ -27,10 +28,13 @@
     "adversarial/issue_ready_blocked_partition_mismatch_reject",
     "adversarial/issue_ready_blocked_set_mismatch_reject",
     "adversarial/issue_lease_projection_mismatch_reject",
+    "adversarial/issue_event_replay_cache_ref_mismatch_reject",
     "adversarial/issue_discover_rejects_parent_missing",
     "invariance/same_delta_local_profile",
     "invariance/same_delta_external_profile",
     "invariance/same_provider_wrapper_local_env",
-    "invariance/same_provider_wrapper_github_env"
+    "invariance/same_provider_wrapper_github_env",
+    "invariance/same_issue_event_replay_cache_local",
+    "invariance/same_issue_event_replay_cache_external"
   ]
 }

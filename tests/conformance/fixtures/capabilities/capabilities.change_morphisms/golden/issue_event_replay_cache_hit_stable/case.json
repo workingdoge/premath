@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_event_replay_cache_hit_stable",
+  "description": "Replay cache deterministically hits when event and snapshot refs are stable.",
+  "semanticScenarioId": "change_projection_issue_event_replay_cache_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_event_replay_cache",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "events": [
+      {
+        "schema": "issue.event.v1",
+        "action": "upsert_issue",
+        "issue": {
+          "id": "bd-a",
+          "status": "open"
+        }
+      },
+      {
+        "schema": "issue.event.v1",
+        "action": "upsert_issue",
+        "issue": {
+          "id": "bd-b",
+          "status": "closed"
+        }
+      }
+    ],
+    "snapshot": {
+      "issues": [
+        {
+          "id": "bd-a",
+          "status": "open"
+        },
+        {
+          "id": "bd-b",
+          "status": "closed"
+        }
+      ]
+    },
+    "eventStreamRef": "ev1_0ee848b7fcbc85e388374ea7463e6a59e9845c9c16100341cb2f687c70b8e912",
+    "snapshotRef": "iss1_129f00afec2d36d8b5454dd2bed37501f180b50dc51555fc3a04931b46341e32",
+    "cacheEntry": {
+      "eventStreamRef": "ev1_0ee848b7fcbc85e388374ea7463e6a59e9845c9c16100341cb2f687c70b8e912",
+      "snapshotRef": "iss1_129f00afec2d36d8b5454dd2bed37501f180b50dc51555fc3a04931b46341e32"
+    },
+    "expectedCacheHit": true
+  }
+}

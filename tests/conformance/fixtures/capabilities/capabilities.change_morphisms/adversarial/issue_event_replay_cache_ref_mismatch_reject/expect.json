@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "issue_event_replay_ref_mismatch"
+  ],
+  "assertions": [
+    "mismatched deterministic replay refs are rejected"
+  ]
+}

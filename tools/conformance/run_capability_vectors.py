@@ -2012,6 +2012,92 @@ def evaluate_change_projection_issue_lease_projection(case: Dict[str, Any]) -> V
     return VectorOutcome("accepted", "accepted", [])
 
 
+def compute_issue_event_stream_ref(events_payload: Any) -> str:
+    return "ev1_" + stable_hash(events_payload)
+
+
+def compute_issue_snapshot_ref(snapshot_payload: Any) -> str:
+    return "iss1_" + stable_hash(snapshot_payload)
+
+
+def evaluate_change_projection_issue_event_replay_cache(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    request = artifacts.get("request")
+    if not isinstance(request, dict):
+        raise ValueError("artifacts.request must be an object")
+    mode = ensure_string(request.get("mode"), "artifacts.request.mode")
+    claimed = set(
+        ensure_string_list(request.get("claimedCapabilities", []), "artifacts.request.claimedCapabilities")
+    )
+    if mode == "issue_event_replay_cache" and CAPABILITY_CHANGE_MORPHISMS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    events_payload = artifacts.get("events")
+    if not isinstance(events_payload, list):
+        raise ValueError("artifacts.events must be a list")
+    snapshot_payload = artifacts.get("snapshot")
+    if not isinstance(snapshot_payload, dict):
+        raise ValueError("artifacts.snapshot must be an object")
+
+    declared_event_ref = ensure_string(artifacts.get("eventStreamRef"), "artifacts.eventStreamRef")
+    declared_snapshot_ref = ensure_string(artifacts.get("snapshotRef"), "artifacts.snapshotRef")
+    expected_event_ref = compute_issue_event_stream_ref(events_payload)
+    expected_snapshot_ref = compute_issue_snapshot_ref(snapshot_payload)
+    if declared_event_ref != expected_event_ref or declared_snapshot_ref != expected_snapshot_ref:
+        return VectorOutcome("rejected", "rejected", ["issue_event_replay_ref_mismatch"])
+
+    expected_cache_hit = artifacts.get("expectedCacheHit")
+    if not isinstance(expected_cache_hit, bool):
+        raise ValueError("artifacts.expectedCacheHit must be a boolean")
+
+    cache_entry = artifacts.get("cacheEntry")
+    actual_cache_hit = False
+    if cache_entry is not None:
+        if not isinstance(cache_entry, dict):
+            raise ValueError("artifacts.cacheEntry must be an object when present")
+        cache_event_ref = ensure_string(cache_entry.get("eventStreamRef"), "artifacts.cacheEntry.eventStreamRef")
+        cache_snapshot_ref = ensure_string(cache_entry.get("snapshotRef"), "artifacts.cacheEntry.snapshotRef")
+        actual_cache_hit = (
+            cache_event_ref == declared_event_ref and cache_snapshot_ref == declared_snapshot_ref
+        )
+
+    if actual_cache_hit != expected_cache_hit:
+        return VectorOutcome("rejected", "rejected", ["issue_event_replay_cache_hit_mismatch"])
+
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_issue_event_replay_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    profile = ensure_string(case.get("profile"), "profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = ensure_string_list(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+
+    if profile != "local":
+        claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+        if CAPABILITY_CHANGE_MORPHISMS not in claimed:
+            return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    replay_outcome = evaluate_change_projection_issue_event_replay_cache(case)
+    if replay_outcome.result != "accepted":
+        return replay_outcome
+
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_change_projection_invariance(case: Dict[str, Any]) -> VectorOutcome:
     profile = ensure_string(case.get("profile"), "profile")
     artifacts = case.get("artifacts")
@@ -2123,6 +2209,8 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_ready_blocked(case)
     if vector_id == "golden/issue_lease_projection_stale_and_contended":
         return evaluate_change_projection_issue_lease_projection(case)
+    if vector_id == "golden/issue_event_replay_cache_hit_stable":
+        return evaluate_change_projection_issue_event_replay_cache(case)
     if vector_id == "golden/provider_env_mapping_github_equiv":
         return evaluate_change_projection_provider_env_mapping(case)
     if vector_id in {
@@ -2152,6 +2240,13 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "adversarial/issue_lease_projection_mismatch_reject":
         return evaluate_change_projection_issue_lease_projection(case)
+    if vector_id == "adversarial/issue_event_replay_cache_ref_mismatch_reject":
+        return evaluate_change_projection_issue_event_replay_cache(case)
+    if vector_id in {
+        "invariance/same_issue_event_replay_cache_local",
+        "invariance/same_issue_event_replay_cache_external",
+    }:
+        return evaluate_change_projection_issue_event_replay_invariance(case)
     if vector_id.startswith("invariance/"):
         return evaluate_change_projection_invariance(case)
     raise ValueError(f"unsupported change_morphisms vector id: {vector_id}")

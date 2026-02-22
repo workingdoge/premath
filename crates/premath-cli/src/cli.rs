@@ -495,6 +495,10 @@ pub enum IssueCommands {
         #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
+        /// Path to replay cache metadata
+        #[arg(long)]
+        cache: Option<String>,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,

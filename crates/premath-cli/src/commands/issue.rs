@@ -1,9 +1,11 @@
 use crate::cli::IssueCommands;
 use premath_bd::{
-    DepType, Issue, MemoryStore, migrate_store_to_events, read_events_from_path,
-    replay_events_from_path, stores_equivalent, write_events_to_path,
+    DepType, Issue, MemoryStore, event_stream_ref, migrate_store_to_events, read_events_from_path,
+    replay_events, replay_events_from_path, store_snapshot_ref, stores_equivalent,
+    write_events_to_path,
 };
 use premath_surreal::QueryCache;
+use serde::{Deserialize, Serialize};
 use serde_json::json;
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -109,8 +111,9 @@ pub fn run(command: IssueCommands) {
         IssueCommands::ReplayEvents {
             events,
             issues,
+            cache,
             json,
-        } => run_replay_events(events, issues, json),
+        } => run_replay_events(events, issues, cache, json),
     }
 }
 
@@ -692,44 +695,128 @@ fn run_migrate_events(issues: String, events: String, json_output: bool) {
     }
 }
 
-fn run_replay_events(events: String, issues: String, json_output: bool) {
+const ISSUE_REPLAY_CACHE_SCHEMA: &str = "issue.replay.cache.v1";
+const ISSUE_REPLAY_CACHE_BASENAME: &str = "replay-cache.json";
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReplayCacheEntry {
+    schema: String,
+    events_path: String,
+    issues_path: String,
+    event_stream_ref: String,
+    snapshot_ref: String,
+    event_count: usize,
+    issue_count: usize,
+}
+
+fn run_replay_events(events: String, issues: String, cache: Option<String>, json_output: bool) {
     let events_path = PathBuf::from(events);
     if !events_path.exists() {
         eprintln!("error: events file not found: {}", events_path.display());
         std::process::exit(1);
     }
 
-    let event_count = read_events_from_path(&events_path)
-        .unwrap_or_else(|e| {
-            eprintln!("error: failed to load {}: {e}", events_path.display());
-            std::process::exit(1);
-        })
-        .len();
-    let replayed = replay_events_from_path(&events_path).unwrap_or_else(|e| {
-        eprintln!("error: failed to replay {}: {e}", events_path.display());
+    let events_data = read_events_from_path(&events_path).unwrap_or_else(|e| {
+        eprintln!("error: failed to load {}: {e}", events_path.display());
         std::process::exit(1);
     });
+    let event_count = events_data.len();
+    let event_ref = event_stream_ref(&events_data);
 
     let issues_path = PathBuf::from(issues);
-    let equivalent_to_existing = if issues_path.exists() {
+    let cache_path = resolve_replay_cache_path(&issues_path, cache);
+    let events_path_str = events_path.display().to_string();
+    let issues_path_str = issues_path.display().to_string();
+
+    let existing_store = if issues_path.exists() {
         let existing = MemoryStore::load_jsonl(&issues_path).unwrap_or_else(|e| {
             eprintln!("error: failed to load {}: {e}", issues_path.display());
             std::process::exit(1);
         });
-        Some(stores_equivalent(&existing, &replayed))
+        Some(existing)
     } else {
         None
     };
 
-    save_store_or_exit(&replayed, &issues_path);
+    let mut cache_hit = false;
+    let issue_count: usize;
+    let snapshot_ref: String;
+    let equivalent_to_existing: Option<bool>;
+
+    if let Some(existing) = existing_store.as_ref() {
+        let existing_snapshot_ref = store_snapshot_ref(existing);
+        if let Some(entry) = load_replay_cache_or_none(&cache_path) {
+            if entry.events_path == events_path_str
+                && entry.issues_path == issues_path_str
+                && entry.event_stream_ref == event_ref
+                && entry.snapshot_ref == existing_snapshot_ref
+            {
+                cache_hit = true;
+                issue_count = existing.len();
+                snapshot_ref = existing_snapshot_ref;
+                equivalent_to_existing = Some(true);
+            } else {
+                let replayed = replay_events(&events_data).unwrap_or_else(|e| {
+                    eprintln!("error: failed to replay {}: {e}", events_path.display());
+                    std::process::exit(1);
+                });
+                snapshot_ref = store_snapshot_ref(&replayed);
+                issue_count = replayed.len();
+                let equivalent = stores_equivalent(existing, &replayed);
+                if !equivalent {
+                    save_store_or_exit(&replayed, &issues_path);
+                }
+                equivalent_to_existing = Some(equivalent);
+            }
+        } else {
+            let replayed = replay_events(&events_data).unwrap_or_else(|e| {
+                eprintln!("error: failed to replay {}: {e}", events_path.display());
+                std::process::exit(1);
+            });
+            snapshot_ref = store_snapshot_ref(&replayed);
+            issue_count = replayed.len();
+            let equivalent = stores_equivalent(existing, &replayed);
+            if !equivalent {
+                save_store_or_exit(&replayed, &issues_path);
+            }
+            equivalent_to_existing = Some(equivalent);
+        }
+    } else {
+        let replayed = replay_events(&events_data).unwrap_or_else(|e| {
+            eprintln!("error: failed to replay {}: {e}", events_path.display());
+            std::process::exit(1);
+        });
+        snapshot_ref = store_snapshot_ref(&replayed);
+        issue_count = replayed.len();
+        save_store_or_exit(&replayed, &issues_path);
+        equivalent_to_existing = None;
+    }
+
+    if !cache_hit {
+        let cache_entry = ReplayCacheEntry {
+            schema: ISSUE_REPLAY_CACHE_SCHEMA.to_string(),
+            events_path: events_path_str,
+            issues_path: issues_path_str,
+            event_stream_ref: event_ref.clone(),
+            snapshot_ref: snapshot_ref.clone(),
+            event_count,
+            issue_count,
+        };
+        save_replay_cache_or_exit(&cache_path, &cache_entry);
+    }
 
     if json_output {
         let payload = json!({
             "action": "issue.replay-events",
             "eventsPath": events_path.display().to_string(),
             "issuesPath": issues_path.display().to_string(),
+            "cachePath": cache_path.display().to_string(),
+            "cacheHit": cache_hit,
             "eventCount": event_count,
-            "issueCount": replayed.len(),
+            "issueCount": issue_count,
+            "eventStreamRef": event_ref,
+            "snapshotRef": snapshot_ref,
             "equivalentToExisting": equivalent_to_existing
         });
         println!(
@@ -741,14 +828,70 @@ fn run_replay_events(events: String, issues: String, json_output: bool) {
             .map(|value| value.to_string())
             .unwrap_or_else(|| "n/a".to_string());
         println!(
-            "premath issue replay-events\n  Events: {}\n  Issues: {}\n  Event count: {}\n  Issue count: {}\n  Equivalent to existing: {}",
+            "premath issue replay-events\n  Events: {}\n  Issues: {}\n  Cache: {}\n  Cache hit: {}\n  Event count: {}\n  Issue count: {}\n  Event stream ref: {}\n  Snapshot ref: {}\n  Equivalent to existing: {}",
             events_path.display(),
             issues_path.display(),
+            cache_path.display(),
+            cache_hit,
             event_count,
-            replayed.len(),
+            issue_count,
+            event_ref,
+            snapshot_ref,
             equivalent_label
         );
     }
+}
+
+fn resolve_replay_cache_path(issues_path: &Path, cache: Option<String>) -> PathBuf {
+    if let Some(cache_path) = cache {
+        return PathBuf::from(cache_path);
+    }
+    if let Some(parent) = issues_path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        return parent.join(ISSUE_REPLAY_CACHE_BASENAME);
+    }
+    PathBuf::from(ISSUE_REPLAY_CACHE_BASENAME)
+}
+
+fn load_replay_cache_or_none(path: &Path) -> Option<ReplayCacheEntry> {
+    if !path.exists() {
+        return None;
+    }
+    let raw = fs::read_to_string(path).ok()?;
+    let entry: ReplayCacheEntry = serde_json::from_str(&raw).ok()?;
+    if entry.schema != ISSUE_REPLAY_CACHE_SCHEMA {
+        return None;
+    }
+    Some(entry)
+}
+
+fn save_replay_cache_or_exit(path: &Path, entry: &ReplayCacheEntry) {
+    if let Some(parent) = path.parent()
+        && !parent.as_os_str().is_empty()
+    {
+        fs::create_dir_all(parent).unwrap_or_else(|e| {
+            eprintln!(
+                "error: failed to create replay cache directory {}: {e}",
+                parent.display()
+            );
+            std::process::exit(1);
+        });
+    }
+    let payload = serde_json::to_vec_pretty(entry).unwrap_or_else(|e| {
+        eprintln!(
+            "error: failed to serialize replay cache {}: {e}",
+            path.display()
+        );
+        std::process::exit(1);
+    });
+    fs::write(path, payload).unwrap_or_else(|e| {
+        eprintln!(
+            "error: failed to write replay cache {}: {e}",
+            path.display()
+        );
+        std::process::exit(1);
+    });
 }
 
 fn load_store_existing_or_exit(issues: &str) -> (MemoryStore, PathBuf) {

@@ -6,6 +6,7 @@
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::fs::File;
 use std::io::{BufRead, Write};
 use std::path::Path;
@@ -15,6 +16,8 @@ use crate::issue::Issue;
 use crate::memory::MemoryStore;
 
 pub const ISSUE_EVENT_SCHEMA: &str = "issue.event.v1";
+pub const ISSUE_EVENT_REF_PREFIX: &str = "ev1_";
+pub const ISSUE_SNAPSHOT_REF_PREFIX: &str = "iss1_";
 
 fn default_issue_event_schema() -> String {
     ISSUE_EVENT_SCHEMA.to_string()
@@ -130,6 +133,16 @@ pub fn write_events_to_path(
 pub fn replay_events_from_path(path: impl AsRef<Path>) -> Result<MemoryStore, EventError> {
     let events = read_events_from_path(path)?;
     replay_events(&events)
+}
+
+pub fn event_stream_ref(events: &[IssueEvent]) -> String {
+    let mut hasher = Sha256::new();
+    for event in events {
+        let line = serde_json::to_string(event).expect("event should serialize");
+        hasher.update(line.as_bytes());
+        hasher.update(b"\n");
+    }
+    format!("{ISSUE_EVENT_REF_PREFIX}{:x}", hasher.finalize())
 }
 
 pub fn migrate_store_to_events(store: &MemoryStore) -> Vec<IssueEvent> {
@@ -271,6 +284,15 @@ fn try_apply_dependency(
 
 pub fn stores_equivalent(left: &MemoryStore, right: &MemoryStore) -> bool {
     canonical_store(left) == canonical_store(right)
+}
+
+pub fn store_snapshot_ref(store: &MemoryStore) -> String {
+    let mut hasher = Sha256::new();
+    for line in canonical_store(store) {
+        hasher.update(line.as_bytes());
+        hasher.update(b"\n");
+    }
+    format!("{ISSUE_SNAPSHOT_REF_PREFIX}{:x}", hasher.finalize())
 }
 
 fn canonical_store(store: &MemoryStore) -> Vec<String> {
@@ -424,5 +446,24 @@ mod tests {
             serde_json::to_string(&events).expect("events serialize"),
             serde_json::to_string(&parsed).expect("events serialize"),
         );
+    }
+
+    #[test]
+    fn refs_are_deterministic_for_same_projection() {
+        let store = MemoryStore::from_issues(vec![
+            issue("bd-a", "open", vec![]),
+            issue("bd-b", "closed", vec![]),
+        ])
+        .expect("store should build");
+        let events = migrate_store_to_events(&store);
+        let replayed = replay_events(&events).expect("replay should succeed");
+
+        let events_ref_a = event_stream_ref(&events);
+        let events_ref_b = event_stream_ref(&events);
+        assert_eq!(events_ref_a, events_ref_b);
+
+        let snapshot_ref_a = store_snapshot_ref(&store);
+        let snapshot_ref_b = store_snapshot_ref(&replayed);
+        assert_eq!(snapshot_ref_a, snapshot_ref_b);
     }
 }

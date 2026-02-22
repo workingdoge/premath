@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "matching deterministic event and snapshot refs produce a replay cache hit"
+  ]
+}

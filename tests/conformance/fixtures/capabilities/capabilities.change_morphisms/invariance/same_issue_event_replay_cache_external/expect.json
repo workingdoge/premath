@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "kernel verdict matches paired replay-cache profile",
+    "Gate failure classes match paired replay-cache profile"
+  ]
+}
