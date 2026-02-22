@@ -218,7 +218,7 @@ MUST reject when strict comprehension eta equalities fail on fixture rows:
 
 - `⟨π ∘ σ, q[σ]⟩ = σ`.
 
-### 4.15 Site Vector Polarity Coverage
+### 4.15 Fixture Vector Polarity and Invariance Coverage
 
 For obligations discharged from `coherence-site` fixtures, checker input MUST
 include at least one matched `golden/` vector and at least one matched
@@ -237,14 +237,22 @@ site obligation id to the exact vector ids discharged by that obligation.
 Checkers MUST scope vector parsing/evaluation to that map so malformed vectors
 outside an obligation scope do not fail unrelated obligations.
 
-For vectors with `invariance/` prefix, case payloads MUST include non-empty:
+For vectors with `invariance/` prefix in both fixture families
+(`coherence-site` and `coherence-transport`), case payloads MUST include
+non-empty:
 
 - `semanticScenarioId`
 - `profile`
 
-For each obligation id and each `semanticScenarioId`, checker input MUST include
-exactly two invariance vectors with distinct `profile` values. Those two vectors
-MUST evaluate to the same `actualResult` and the same
+For each obligation scope and each `semanticScenarioId`, checker input MUST
+include exactly two invariance vectors with distinct `profile` values.
+
+Obligation scope is:
+
+- one `coherence-site` obligation id under `obligationVectors`, or
+- `transport_functoriality` for `coherence-transport`.
+
+Those two vectors MUST evaluate to the same `actualResult` and the same
 `actualFailureClasses` set.
 
 Violations of this invariance-pair contract MUST reject deterministically.

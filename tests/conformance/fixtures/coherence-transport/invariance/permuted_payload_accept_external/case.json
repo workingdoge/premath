@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "status": "executable",
-  "vectorId": "invariance/permuted_payload_accept",
+  "vectorId": "invariance/permuted_payload_accept_external",
   "semanticScenarioId": "transport_functoriality_invariance_01",
-  "profile": "local",
+  "profile": "external",
   "artifacts": {
     "binding": {
       "policyDigest": "policy.coherence.v1",

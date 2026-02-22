@@ -338,6 +338,14 @@ struct ObligationCheck {
 type InvarianceRow = (String, String, String, Vec<String>);
 type InvarianceGroups = BTreeMap<String, Vec<InvarianceRow>>;
 
+struct InvarianceObservation<'a> {
+    vector_id: &'a str,
+    semantic_scenario_id: Option<&'a str>,
+    profile: Option<&'a str>,
+    result: &'a str,
+    failure_classes: &'a [String],
+}
+
 pub fn run_coherence_check(
     repo_root: impl AsRef<Path>,
     contract_path: impl AsRef<Path>,
@@ -906,6 +914,7 @@ fn check_transport_functoriality(
 
     let mut seen_vectors = BTreeSet::new();
     let mut vector_rows: Vec<Value> = Vec::new();
+    let mut invariance_groups: InvarianceGroups = BTreeMap::new();
 
     for vector_id in &manifest.vectors {
         if !seen_vectors.insert(vector_id.clone()) {
@@ -1001,8 +1010,27 @@ fn check_transport_functoriality(
             }
         }
 
+        if vector_id.starts_with("invariance/") {
+            record_invariance_row(
+                &mut failures,
+                "coherence.transport_functoriality",
+                &mut invariance_groups,
+                InvarianceObservation {
+                    vector_id,
+                    semantic_scenario_id: case_payload
+                        .get("semanticScenarioId")
+                        .and_then(Value::as_str),
+                    profile: case_payload.get("profile").and_then(Value::as_str),
+                    result: &evaluated.result,
+                    failure_classes: &evaluated.failure_classes,
+                },
+            );
+        }
+
         vector_rows.push(json!({
             "vectorId": vector_id,
+            "semanticScenarioId": case_payload.get("semanticScenarioId"),
+            "profile": case_payload.get("profile"),
             "expectedResult": expected_result,
             "actualResult": evaluated.result,
             "expectedFailureClasses": expected_failure_classes,
@@ -1011,11 +1039,18 @@ fn check_transport_functoriality(
         }));
     }
 
+    let invariance_rows = validate_invariance_groups(
+        &mut failures,
+        "coherence.transport_functoriality",
+        &invariance_groups,
+    );
+
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
         details: json!({
             "fixtureRoot": to_repo_relative_or_absolute(repo_root, &fixture_root),
             "manifestVectors": manifest.vectors,
+            "invariance": invariance_rows,
             "vectors": vector_rows,
         }),
     })
@@ -1181,6 +1216,7 @@ fn check_site_obligation(
     let mut matched_expected_accepted_count = 0usize;
     let mut matched_expected_rejected_count = 0usize;
     let mut invariance_groups: InvarianceGroups = BTreeMap::new();
+    let invariance_failure_prefix = format!("coherence.{obligation_id}");
 
     for vector_id in &scoped_vectors {
         if !seen_vectors.insert(vector_id.clone()) {
@@ -1321,38 +1357,18 @@ fn check_site_obligation(
         }
 
         if vector_id.starts_with("invariance/") {
-            let semantic_scenario_id = case_payload
-                .semantic_scenario_id
-                .as_deref()
-                .map(str::trim)
-                .filter(|value| !value.is_empty());
-            let profile = case_payload
-                .profile
-                .as_deref()
-                .map(str::trim)
-                .filter(|value| !value.is_empty());
-
-            if semantic_scenario_id.is_none() {
-                failures.push(format!(
-                    "coherence.{obligation_id}.invariance_missing_semantic_scenario"
-                ));
-            }
-            if profile.is_none() {
-                failures.push(format!(
-                    "coherence.{obligation_id}.invariance_missing_profile"
-                ));
-            }
-            if let (Some(scenario_id), Some(profile)) = (semantic_scenario_id, profile) {
-                invariance_groups
-                    .entry(scenario_id.to_string())
-                    .or_default()
-                    .push((
-                        vector_id.clone(),
-                        profile.to_string(),
-                        evaluated.result.clone(),
-                        dedupe_sorted(evaluated.failure_classes.clone()),
-                    ));
-            }
+            record_invariance_row(
+                &mut failures,
+                invariance_failure_prefix.as_str(),
+                &mut invariance_groups,
+                InvarianceObservation {
+                    vector_id,
+                    semantic_scenario_id: case_payload.semantic_scenario_id.as_deref(),
+                    profile: case_payload.profile.as_deref(),
+                    result: &evaluated.result,
+                    failure_classes: &evaluated.failure_classes,
+                },
+            );
         }
 
         vector_rows.push(json!({
@@ -1367,47 +1383,11 @@ fn check_site_obligation(
         }));
     }
 
-    let mut invariance_rows: Vec<Value> = Vec::new();
-    for (scenario_id, rows) in &invariance_groups {
-        if rows.len() != 2 {
-            failures.push(format!(
-                "coherence.{obligation_id}.invariance_pair_count_mismatch"
-            ));
-        } else {
-            let profile_set: BTreeSet<String> = rows.iter().map(|row| row.1.clone()).collect();
-            if profile_set.len() < 2 {
-                failures.push(format!(
-                    "coherence.{obligation_id}.invariance_profile_not_distinct"
-                ));
-            }
-            let result_set: BTreeSet<String> = rows.iter().map(|row| row.2.clone()).collect();
-            if result_set.len() != 1 {
-                failures.push(format!(
-                    "coherence.{obligation_id}.invariance_result_mismatch"
-                ));
-            }
-            let failure_class_set: BTreeSet<Vec<String>> =
-                rows.iter().map(|row| row.3.clone()).collect();
-            if failure_class_set.len() != 1 {
-                failures.push(format!(
-                    "coherence.{obligation_id}.invariance_failure_class_mismatch"
-                ));
-            }
-        }
-        invariance_rows.push(json!({
-            "semanticScenarioId": scenario_id,
-            "rowCount": rows.len(),
-            "rows": rows
-                .iter()
-                .map(|(vector_id, profile, result, failure_classes)| json!({
-                    "vectorId": vector_id,
-                    "profile": profile,
-                    "result": result,
-                    "failureClasses": failure_classes,
-                }))
-                .collect::<Vec<Value>>(),
-        }));
-    }
+    let invariance_rows = validate_invariance_groups(
+        &mut failures,
+        invariance_failure_prefix.as_str(),
+        &invariance_groups,
+    );
 
     if matched_count == 0 {
         failures.push(format!(
@@ -2777,6 +2757,84 @@ fn dedupe_sorted(values: Vec<String>) -> Vec<String> {
     set.into_iter().collect()
 }
 
+fn non_empty_trimmed(value: Option<&str>) -> Option<String> {
+    value
+        .map(str::trim)
+        .filter(|item| !item.is_empty())
+        .map(str::to_string)
+}
+
+fn record_invariance_row(
+    failures: &mut Vec<String>,
+    failure_prefix: &str,
+    invariance_groups: &mut InvarianceGroups,
+    observation: InvarianceObservation<'_>,
+) {
+    let semantic_scenario_id = non_empty_trimmed(observation.semantic_scenario_id);
+    let profile = non_empty_trimmed(observation.profile);
+
+    if semantic_scenario_id.is_none() {
+        failures.push(format!(
+            "{failure_prefix}.invariance_missing_semantic_scenario"
+        ));
+    }
+    if profile.is_none() {
+        failures.push(format!("{failure_prefix}.invariance_missing_profile"));
+    }
+
+    if let (Some(scenario_id), Some(profile)) = (semantic_scenario_id, profile) {
+        invariance_groups.entry(scenario_id).or_default().push((
+            observation.vector_id.to_string(),
+            profile,
+            observation.result.to_string(),
+            dedupe_sorted(observation.failure_classes.to_vec()),
+        ));
+    }
+}
+
+fn validate_invariance_groups(
+    failures: &mut Vec<String>,
+    failure_prefix: &str,
+    invariance_groups: &InvarianceGroups,
+) -> Vec<Value> {
+    let mut invariance_rows: Vec<Value> = Vec::new();
+    for (scenario_id, rows) in invariance_groups {
+        if rows.len() != 2 {
+            failures.push(format!("{failure_prefix}.invariance_pair_count_mismatch"));
+        } else {
+            let profile_set: BTreeSet<String> = rows.iter().map(|row| row.1.clone()).collect();
+            if profile_set.len() < 2 {
+                failures.push(format!("{failure_prefix}.invariance_profile_not_distinct"));
+            }
+            let result_set: BTreeSet<String> = rows.iter().map(|row| row.2.clone()).collect();
+            if result_set.len() != 1 {
+                failures.push(format!("{failure_prefix}.invariance_result_mismatch"));
+            }
+            let failure_class_set: BTreeSet<Vec<String>> =
+                rows.iter().map(|row| row.3.clone()).collect();
+            if failure_class_set.len() != 1 {
+                failures.push(format!(
+                    "{failure_prefix}.invariance_failure_class_mismatch"
+                ));
+            }
+        }
+        invariance_rows.push(json!({
+            "semanticScenarioId": scenario_id,
+            "rowCount": rows.len(),
+            "rows": rows
+                .iter()
+                .map(|(vector_id, profile, result, failure_classes)| json!({
+                    "vectorId": vector_id,
+                    "profile": profile,
+                    "result": result,
+                    "failureClasses": failure_classes,
+                }))
+                .collect::<Vec<Value>>(),
+        }));
+    }
+    invariance_rows
+}
+
 fn sorted_vec_from_set(values: &BTreeSet<String>) -> Vec<String> {
     values.iter().cloned().collect()
 }
@@ -2836,6 +2894,89 @@ mod tests {
         }
         let bytes = serde_json::to_vec_pretty(payload).expect("json should serialize");
         fs::write(path, bytes).expect("json fixture should be writable");
+    }
+
+    fn write_transport_manifest(fixture_root: &Path, vectors: &[&str]) {
+        write_json_file(
+            &fixture_root.join("manifest.json"),
+            &json!({
+                "schema": 1,
+                "status": "executable",
+                "vectors": vectors,
+            }),
+        );
+    }
+
+    fn write_transport_vector_with_metadata(
+        fixture_root: &Path,
+        vector_id: &str,
+        expected_result: &str,
+        semantic_scenario_id: Option<&str>,
+        profile: Option<&str>,
+    ) {
+        let (f_identity_arrow, expected_failure_classes) = if expected_result == "accepted" {
+            ("id_fx", json!([]))
+        } else if expected_result == "rejected" {
+            (
+                "id_fx_bad",
+                json!(["coherence.transport_functoriality.identity_violation"]),
+            )
+        } else {
+            panic!("unsupported expected_result in write_transport_vector: {expected_result}");
+        };
+
+        let vector_root = fixture_root.join(vector_id);
+        let mut case_payload = serde_json::Map::new();
+        case_payload.insert("schema".to_string(), json!(1));
+        case_payload.insert("status".to_string(), json!("executable"));
+        case_payload.insert("vectorId".to_string(), json!(vector_id));
+        case_payload.insert(
+            "artifacts".to_string(),
+            json!({
+                "binding": {
+                    "normalizerId": "normalizer.coherence.v1",
+                    "policyDigest": "policy.coherence.v1",
+                },
+                "base": {
+                    "identity": {"arrow": "id_x"},
+                    "f": {"arrow": "f"},
+                    "g": {"arrow": "g"},
+                    "gAfterF": {"arrow": "g_after_f"},
+                },
+                "fibre": {
+                    "identity": {"arrow": "id_fx"},
+                    "FIdentity": {"arrow": f_identity_arrow},
+                    "FF": {"arrow": "f_f"},
+                    "FG": {"arrow": "f_g"},
+                    "FGAfterF": {"arrow": "f_g_after_f"},
+                    "FGAfterFF": {"arrow": "f_g_after_f"},
+                },
+                "naturality": {
+                    "left": {"square": {"bottom": "g_f"}},
+                    "right": {"square": {"bottom": "g_f"}},
+                },
+            }),
+        );
+        if let Some(value) = semantic_scenario_id {
+            case_payload.insert("semanticScenarioId".to_string(), json!(value));
+        }
+        if let Some(value) = profile {
+            case_payload.insert("profile".to_string(), json!(value));
+        }
+        write_json_file(&vector_root.join("case.json"), &Value::Object(case_payload));
+        write_json_file(
+            &vector_root.join("expect.json"),
+            &json!({
+                "schema": 1,
+                "status": "executable",
+                "result": expected_result,
+                "expectedFailureClasses": expected_failure_classes,
+            }),
+        );
+    }
+
+    fn write_transport_vector(fixture_root: &Path, vector_id: &str, expected_result: &str) {
+        write_transport_vector_with_metadata(fixture_root, vector_id, expected_result, None, None);
     }
 
     fn write_site_manifest(fixture_root: &Path, vectors: &[&str], obligation_vectors: &[&str]) {
@@ -2980,7 +3121,10 @@ mod tests {
         );
     }
 
-    fn test_contract_with_site_fixture_root(site_fixture_root_path: &str) -> CoherenceContract {
+    fn test_contract_with_fixture_roots(
+        transport_fixture_root_path: &str,
+        site_fixture_root_path: &str,
+    ) -> CoherenceContract {
         CoherenceContract {
             schema: 1,
             contract_kind: "premath.coherence.contract.v1".to_string(),
@@ -3019,7 +3163,7 @@ mod tests {
                 coherence_spec_obligation_end: String::new(),
                 obligation_registry_kind: String::new(),
                 informative_clause_needle: String::new(),
-                transport_fixture_root_path: String::new(),
+                transport_fixture_root_path: transport_fixture_root_path.to_string(),
                 site_fixture_root_path: site_fixture_root_path.to_string(),
             },
             conditional_capability_docs: Vec::new(),
@@ -3027,6 +3171,16 @@ mod tests {
             overlay_docs: Vec::new(),
             required_bidir_obligations: Vec::new(),
         }
+    }
+
+    fn test_contract_with_transport_fixture_root(
+        transport_fixture_root_path: &str,
+    ) -> CoherenceContract {
+        test_contract_with_fixture_roots(transport_fixture_root_path, "")
+    }
+
+    fn test_contract_with_site_fixture_root(site_fixture_root_path: &str) -> CoherenceContract {
+        test_contract_with_fixture_roots("", site_fixture_root_path)
     }
 
     #[test]
@@ -3086,6 +3240,136 @@ mod tests {
                 .failure_classes
                 .contains(&"coherence.transport_functoriality.identity_violation".to_string())
         );
+    }
+
+    #[test]
+    fn check_transport_functoriality_requires_invariance_pair_count() {
+        let temp = TempDirGuard::new("transport-invariance-pair-count");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(
+            &fixture_root,
+            &[
+                "golden/functorial_transport_accept",
+                "adversarial/identity_violation_reject",
+                "invariance/permuted_payload_local_accept",
+            ],
+        );
+        write_transport_vector(
+            &fixture_root,
+            "golden/functorial_transport_accept",
+            "accepted",
+        );
+        write_transport_vector(
+            &fixture_root,
+            "adversarial/identity_violation_reject",
+            "rejected",
+        );
+        write_transport_vector_with_metadata(
+            &fixture_root,
+            "invariance/permuted_payload_local_accept",
+            "accepted",
+            Some("transport_functoriality_invariance_pair"),
+            Some("local"),
+        );
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(evaluated.failure_classes.contains(
+            &"coherence.transport_functoriality.invariance_pair_count_mismatch".to_string()
+        ));
+    }
+
+    #[test]
+    fn check_transport_functoriality_requires_invariance_pair_result_match() {
+        let temp = TempDirGuard::new("transport-invariance-result-mismatch");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(
+            &fixture_root,
+            &[
+                "golden/functorial_transport_accept",
+                "adversarial/identity_violation_reject",
+                "invariance/permuted_payload_local_accept",
+                "invariance/permuted_payload_external_reject",
+            ],
+        );
+        write_transport_vector(
+            &fixture_root,
+            "golden/functorial_transport_accept",
+            "accepted",
+        );
+        write_transport_vector(
+            &fixture_root,
+            "adversarial/identity_violation_reject",
+            "rejected",
+        );
+        write_transport_vector_with_metadata(
+            &fixture_root,
+            "invariance/permuted_payload_local_accept",
+            "accepted",
+            Some("transport_functoriality_invariance_pair"),
+            Some("local"),
+        );
+        write_transport_vector_with_metadata(
+            &fixture_root,
+            "invariance/permuted_payload_external_reject",
+            "rejected",
+            Some("transport_functoriality_invariance_pair"),
+            Some("external"),
+        );
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(
+            evaluated.failure_classes.contains(
+                &"coherence.transport_functoriality.invariance_result_mismatch".to_string()
+            )
+        );
+    }
+
+    #[test]
+    fn check_transport_functoriality_accepts_with_invariance_pair() {
+        let temp = TempDirGuard::new("transport-invariance-pair-pass");
+        let fixture_root = temp.path().join("fixtures");
+        write_transport_manifest(
+            &fixture_root,
+            &[
+                "golden/functorial_transport_accept",
+                "adversarial/identity_violation_reject",
+                "invariance/permuted_payload_local_accept",
+                "invariance/permuted_payload_external_accept",
+            ],
+        );
+        write_transport_vector(
+            &fixture_root,
+            "golden/functorial_transport_accept",
+            "accepted",
+        );
+        write_transport_vector(
+            &fixture_root,
+            "adversarial/identity_violation_reject",
+            "rejected",
+        );
+        write_transport_vector_with_metadata(
+            &fixture_root,
+            "invariance/permuted_payload_local_accept",
+            "accepted",
+            Some("transport_functoriality_invariance_pair"),
+            Some("local"),
+        );
+        write_transport_vector_with_metadata(
+            &fixture_root,
+            "invariance/permuted_payload_external_accept",
+            "accepted",
+            Some("transport_functoriality_invariance_pair"),
+            Some("external"),
+        );
+        let contract = test_contract_with_transport_fixture_root("fixtures");
+
+        let evaluated = check_transport_functoriality(temp.path(), &contract)
+            .expect("transport should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
     }
 
     #[test]

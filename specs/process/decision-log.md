@@ -2292,3 +2292,30 @@ but not actually tested across profile choices.
   invariance scenarios.
 - unit tests now cover pair-count mismatch, pair-result mismatch, and passing
   invariance pairs.
+
+---
+
+## 2026-02-22 — Decision 0081: Harmonize invariance-pair contract across coherence fixture families
+
+### Decision
+Apply the same invariance-pair contract used by `coherence-site` to
+`coherence-transport`:
+
+- `invariance/` transport vectors MUST declare non-empty
+  `semanticScenarioId` and `profile`,
+- for each `semanticScenarioId` under `transport_functoriality`, checker input
+  MUST include exactly two invariance vectors with distinct profiles,
+- paired vectors MUST evaluate to identical result and failure-class sets.
+
+### Rationale
+Coherence fixture families were drifting: site vectors had enforced invariance
+pair semantics while transport vectors only had single-vector invariance
+coverage. One shared contract keeps the checker surface minimal and expressive.
+
+### Consequences
+- transport checker now emits deterministic invariance-pair failure classes
+  aligned with site semantics.
+- transport fixtures now include explicit local/external invariance pair vectors
+  for the same semantic scenario.
+- unit coverage now includes transport invariance pair-count mismatch,
+  pair-result mismatch, and passing pair cases.
