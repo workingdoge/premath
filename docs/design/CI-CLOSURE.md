@@ -22,13 +22,31 @@ This is the load-bearing invariant for optional capabilities.
 
 ## 3. Gate entrypoints (current)
 
-Current full baseline gate:
+Operational source of truth:
 
-1. workspace build
-2. Rust tests
-3. semantic toy vectors
-4. KCIR toy vectors
-5. conformance capability stub invariance check
+- `.mise.toml` (`[tasks.baseline]`, `[tasks.ci-required*]`, `[tasks.doctrine-check]`)
+- `tools/ci/pipeline_required.py`
+- `tools/ci/pipeline_instruction.py`
+
+Current full baseline gate (`mise run baseline`) includes:
+
+1. setup + language hygiene (`py-setup`, `rust-setup`, `fmt`, `lint`)
+2. build/test closure (`build`, `test`, `test-toy`, `test-kcir-toy`)
+3. conformance/docs closure
+   - `conformance-check`
+   - `traceability-check`
+   - `doctrine-check` (site coherence + doctrine-inf vectors)
+   - `conformance-run` (cached fixture suite runner)
+4. CI/control-plane closure
+   - `ci-command-surface-check`
+   - `ci-hygiene-check`
+   - `ci-pipeline-check`
+   - `ci-pipeline-test`
+   - `ci-observation-test`
+   - `ci-observation-check`
+   - `ci-wiring-check`
+   - `ci-instruction-check`
+   - `ci-instruction-smoke`
 
 Local command:
 
@@ -105,6 +123,17 @@ Suggested v0 projection:
 
 Implemented in `tools/ci/change_projection.py` and executed via
 `tools/ci/run_required_checks.py`.
+
+Current deterministic projected check IDs include:
+
+- `baseline`
+- `build`
+- `test`
+- `test-toy`
+- `test-kcir-toy`
+- `conformance-check`
+- `conformance-run`
+- `doctrine-check`
 
 ## 5. Variants and capability projection
 

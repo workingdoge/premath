@@ -9,6 +9,7 @@ Scope: design-level, non-normative
 - `specs/premath/draft/DOCTRINE-INF.md`
 - `specs/premath/draft/DOCTRINE-SITE.md`
 - `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
+- `specs/premath/draft/LLM-PROPOSAL-CHECKING.md`
 
 `Kernel` (semantic authority):
 - `specs/premath/draft/PREMATH-KERNEL.md`
@@ -25,11 +26,14 @@ Scope: design-level, non-normative
 - `specs/premath/raw/CI-TOPOS.md`
 
 `Operational surfaces` (scripts/tasks):
-- `tools/ci/project_checks.py`
+- `tools/ci/pipeline_required.py`
+- `tools/ci/pipeline_instruction.py`
 - `tools/ci/run_required_checks.py`
 - `tools/ci/verify_required_witness.py`
-- `tools/ci/run_instruction.py`
+- `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
+- `tools/conformance/check_doctrine_site.py`
+- `tools/conformance/run_doctrine_inf_vectors.py`
 - `hk.pkl`, `.mise.toml`
 
 ## 2. Doctrine to Operation Path
@@ -38,12 +42,14 @@ Scope: design-level, non-normative
 DOCTRINE-INF
   -> DOCTRINE-SITE (nodes/covers/edges)
   -> LLM-INSTRUCTION-DOCTRINE
+  -> LLM-PROPOSAL-CHECKING
   -> PREMATH-CI / CI-TOPOS
-  -> tools/ci/project_checks.py
+  -> tools/ci/pipeline_required.py / tools/ci/pipeline_instruction.py
   -> tools/ci/run_required_checks.py
   -> tools/ci/verify_required_witness.py
   -> tools/ci/run_gate.sh
-  -> hk/mise tasks
+  -> tools/conformance/check_doctrine_site.py / run_doctrine_inf_vectors.py
+  -> hk/mise tasks (.mise baseline + ci-required-attested)
   -> CIWitness artifacts
   -> conformance + doctrine-site checks
 ```
@@ -100,9 +106,13 @@ Loop intent:
 ## 6. Conformance Closure
 
 Baseline gate (`mise run baseline`) enforces:
-- build/test/toy suites,
-- doctrine-site coherence (`tools/conformance/check_doctrine_site.py`),
-- executable capability vectors (`tools/conformance/run_capability_vectors.py`).
+- setup/lint/build/test/toy suites,
+- conformance + traceability + doctrine closure,
+- CI/control-plane wiring, pipeline, observation, and instruction checks,
+- executable fixture-suite closure (`mise run conformance-run`).
+
+Operational source of truth for baseline composition is `.mise.toml`
+(`[tasks.baseline]`).
 
 Projected required gate (`mise run ci-required`) enforces:
 - deterministic `Delta -> requiredChecks` projection,
@@ -117,4 +127,5 @@ Authoritative verification (`mise run ci-verify-required`) enforces:
 Instruction doctrine is executable via:
 - `capabilities.instruction_typing`
 - `capabilities.ci_witnesses`
+- `draft/LLM-PROPOSAL-CHECKING` proposal ingest/discharge path
 - `capabilities.change_morphisms`

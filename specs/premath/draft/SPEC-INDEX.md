@@ -144,22 +144,29 @@ Normative requirements apply only when the corresponding capability is claimed.
 
 ### 5.5 Informative and optional
 
+The entries below are informative/default reading surfaces unless they are
+explicitly claimed under §5.4 or §5.6.
+
 - `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
   (`draft/DOCTRINE-SITE.json`).
 - `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
   explicit gap targets.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
-  instruction flows.
+  instruction flows (normative only when `capabilities.instruction_typing` is
+  claimed).
 - `draft/LLM-PROPOSAL-CHECKING` — proposal ingestion/checking contract for LLM
-  proposal artifacts.
+  proposal artifacts (normative only when
+  `capabilities.instruction_typing` is claimed).
 - `raw/SEMANTICS-INFTOPOS` — presentation-free model sketch (informational).
 - `raw/HYPERDESCENT` — optional strengthening: hyperdescent.
 - `raw/UNIVERSE` — optional extension: universe + comprehension (Tarski-style).
 - `raw/SPLIT-PRESENTATION` — guidance: strict IR vs. semantic equality.
 - `raw/TUSK-CORE` — single-world operational runtime contracts (informational/raw).
 - `raw/SQUEAK-CORE` — inter-world transport/composition contracts (informational/raw).
-- `raw/SQUEAK-SITE` — runtime-location site contracts for Squeak/Cheese (informational/raw).
-- `raw/PREMATH-CI` — higher-order CI/CD control-loop contract (informational/raw).
+- `raw/SQUEAK-SITE` — runtime-location site contracts for Squeak/Cheese
+  (normative only when `capabilities.squeak_site` is claimed).
+- `raw/PREMATH-CI` — higher-order CI/CD control-loop contract (normative only
+  when `capabilities.ci_witnesses` is claimed).
 - `raw/CI-TOPOS` — closure-style CI projection discipline (informational/raw).
 - `docs/foundations/` — explanatory notes (non-normative).
 
