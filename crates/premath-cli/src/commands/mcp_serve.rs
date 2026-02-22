@@ -709,6 +709,12 @@ struct IssueGraphView {
     query_source: &'static str,
 }
 
+struct ProjectionLoad {
+    store: MemoryStore,
+    source_path_matches_authority: bool,
+    source_snapshot_ref_present: bool,
+}
+
 fn lease_state_label(issue: &Issue, now: DateTime<Utc>) -> &'static str {
     match issue.lease_state_at(now) {
         IssueLeaseState::Unleased => "unleased",
@@ -2158,7 +2164,9 @@ fn load_issue_graph_from_projection(
     let projection_is_stale = projection_needs_refresh(issues_path, &projection_path);
     let store = if projection_path.exists() && !projection_is_stale {
         match load_store_from_projection(&projection_path, issues_path) {
-            Ok((store, source_path_matches_authority)) if source_path_matches_authority => store,
+            Ok(load) if load.source_path_matches_authority && load.source_snapshot_ref_present => {
+                load.store
+            }
             Ok(_) | Err(_) => {
                 let refreshed = load_store_existing(issues_path)?;
                 write_issue_query_projection(&projection_path, issues_path, &refreshed)?;
@@ -2219,7 +2227,7 @@ fn file_modified(path: &Path) -> Option<SystemTime> {
 fn load_store_from_projection(
     path: &Path,
     authority_issues_path: &Path,
-) -> std::result::Result<(MemoryStore, bool), CallToolError> {
+) -> std::result::Result<ProjectionLoad, CallToolError> {
     let bytes = fs::read(path)
         .map_err(|e| call_tool_error(format!("failed to read {}: {e}", path.display())))?;
     let payload = serde_json::from_slice::<IssueQueryProjection>(&bytes)
@@ -2240,6 +2248,7 @@ fn load_store_from_projection(
             payload.kind
         )));
     }
+    let source_snapshot_ref_present = payload.source_snapshot_ref.is_some();
     let source_path_matches_authority = paths_equivalent(
         Path::new(&payload.source_issues_path),
         authority_issues_path,
@@ -2261,7 +2270,11 @@ fn load_store_from_projection(
             )));
         }
     }
-    Ok((store, source_path_matches_authority))
+    Ok(ProjectionLoad {
+        store,
+        source_path_matches_authority,
+        source_snapshot_ref_present,
+    })
 }
 
 fn write_issue_query_projection(
@@ -3089,6 +3102,70 @@ mod tests {
             serde_json::from_slice(&refreshed_bytes).expect("projection should parse");
         assert_eq!(refreshed.source_issues_path, issues.display().to_string());
         assert_eq!(refreshed.issue_count, 1);
+    }
+
+    #[test]
+    fn surreal_issue_backend_refreshes_when_projection_missing_source_snapshot_ref() {
+        let root = temp_dir("surreal-projection-missing-source-snapshot-ref");
+        let issues = root.join("issues.jsonl");
+        let mut config = test_config(&root, &issues, &root.join("surface.json"));
+        config.issue_query_backend = IssueQueryBackend::Surreal;
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Root".to_string(),
+                id: Some("bd-root".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(1),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("root issue should add");
+
+        let projection_path = resolve_issue_query_projection_path(&config);
+        if let Some(parent) = projection_path.parent() {
+            fs::create_dir_all(parent).expect("projection parent should exist");
+        }
+        let authority = load_store_existing(&issues).expect("authority should load");
+        let projection_issues: Vec<Issue> = authority.issues().cloned().collect();
+        let legacy_payload = IssueQueryProjection {
+            schema: ISSUE_QUERY_PROJECTION_SCHEMA,
+            kind: ISSUE_QUERY_PROJECTION_KIND.to_string(),
+            source_issues_path: issues.display().to_string(),
+            source_snapshot_ref: None,
+            generated_at_unix_ms: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap_or_default()
+                .as_millis(),
+            issue_count: projection_issues.len(),
+            issues: projection_issues,
+        };
+        fs::write(
+            &projection_path,
+            serde_json::to_vec_pretty(&legacy_payload).expect("projection should serialize"),
+        )
+        .expect("legacy projection should write");
+
+        let ready = call_issue_ready(&config, IssueReadyTool { issues_path: None })
+            .expect("ready query should succeed");
+        let payload = parse_tool_json(ready);
+        assert_eq!(payload["queryBackend"], "surreal");
+        assert_eq!(payload["querySource"], "surreal-projection");
+        assert_eq!(payload["count"], 1);
+        assert_eq!(payload["items"][0]["id"], "bd-root");
+
+        let refreshed_bytes = fs::read(&projection_path).expect("projection should be refreshed");
+        let refreshed: IssueQueryProjection =
+            serde_json::from_slice(&refreshed_bytes).expect("projection should parse");
+        assert_eq!(refreshed.source_issues_path, issues.display().to_string());
+        assert_eq!(refreshed.issue_count, 1);
+        assert!(refreshed.source_snapshot_ref.is_some());
     }
 
     #[test]
