@@ -32,3 +32,6 @@ This file captures repeatable operational conventions and rollout evidence.
 | 2026-02-22 | Fix branch and PR created for checker fallback/admin-bypass hardening. | https://github.com/workingdoge/premath/pull/8 |
 | 2026-02-22 | `branch-policy` workflow passed after checker fix on PR branch. | https://github.com/workingdoge/premath/actions/runs/22272381740 |
 | 2026-02-22 | `branch-policy` workflow passed on latest PR head (`658b72f`). | https://github.com/workingdoge/premath/actions/runs/22272407035 |
+| 2026-02-22 | Set bootstrap review mode (`required_approving_review_count=0`) while retaining PR-only + `ci-required` + `enforce_admins=true`. | Transition tracked by `bd-67`. |
+| 2026-02-22 | PR #8 merged to `main` (`98988bd`). | https://github.com/workingdoge/premath/pull/8 |
+| 2026-02-22 | `branch-policy` workflow passed on `main` post-merge (`98988bd`). | https://github.com/workingdoge/premath/actions/runs/22272487569 |
