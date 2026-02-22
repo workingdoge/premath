@@ -1,23 +1,18 @@
 #!/usr/bin/env python3
-"""Unit tests for shared instruction proposal validation."""
+"""Unit tests for instruction proposal extraction shim."""
 
 from __future__ import annotations
 
 import unittest
-from copy import deepcopy
 
 from instruction_proposal import (
     ProposalValidationError,
-    canonicalize_proposal,
-    compute_proposal_digest,
-    compute_proposal_kcir_ref,
-    validate_instruction_proposal,
-    validate_proposal_payload,
+    extract_instruction_proposal,
 )
 
 
 class InstructionProposalTests(unittest.TestCase):
-    def _base_proposal(self) -> dict:
+    def _proposal(self) -> dict:
         return {
             "proposalKind": "value",
             "targetCtxRef": "ctx:demo",
@@ -32,38 +27,28 @@ class InstructionProposalTests(unittest.TestCase):
             },
         }
 
-    def test_validate_proposal_payload_accepts_matching_declared_refs(self) -> None:
-        proposal = self._base_proposal()
-        canonical = canonicalize_proposal(proposal)
-        proposal["proposalDigest"] = compute_proposal_digest(canonical)
-        proposal["proposalKcirRef"] = compute_proposal_kcir_ref(canonical)
+    def test_extract_instruction_proposal_prefers_proposal_field(self) -> None:
+        proposal = self._proposal()
+        envelope = {"proposal": proposal}
+        self.assertEqual(extract_instruction_proposal(envelope), proposal)
 
-        validated = validate_proposal_payload(proposal)
-        self.assertEqual(validated["canonical"], canonical)
-        self.assertEqual(validated["digest"], proposal["proposalDigest"])
-        self.assertEqual(validated["kcirRef"], proposal["proposalKcirRef"])
+    def test_extract_instruction_proposal_accepts_legacy_alias(self) -> None:
+        proposal = self._proposal()
+        envelope = {"llmProposal": proposal}
+        self.assertEqual(extract_instruction_proposal(envelope), proposal)
 
-    def test_validate_proposal_payload_rejects_declared_digest_mismatch(self) -> None:
-        proposal = self._base_proposal()
-        proposal["proposalDigest"] = "prop1_deadbeef"
-
+    def test_extract_instruction_proposal_rejects_dual_fields(self) -> None:
+        proposal = self._proposal()
+        envelope = {"proposal": proposal, "llmProposal": proposal}
         with self.assertRaises(ProposalValidationError) as exc:
-            validate_proposal_payload(proposal)
-        self.assertEqual(exc.exception.failure_class, "proposal_nondeterministic")
+            extract_instruction_proposal(envelope)
+        self.assertEqual(exc.exception.failure_class, "proposal_invalid_shape")
 
-    def test_validate_proposal_payload_rejects_declared_kcir_ref_mismatch(self) -> None:
-        proposal = self._base_proposal()
-        proposal["proposalKcirRef"] = "kcir1_deadbeef"
-
+    def test_extract_instruction_proposal_rejects_non_object(self) -> None:
+        envelope = {"proposal": "not-an-object"}
         with self.assertRaises(ProposalValidationError) as exc:
-            validate_proposal_payload(proposal)
-        self.assertEqual(exc.exception.failure_class, "proposal_kcir_ref_mismatch")
-
-    def test_validate_instruction_proposal_accepts_legacy_alias(self) -> None:
-        envelope = {"llmProposal": deepcopy(self._base_proposal())}
-        validated = validate_instruction_proposal(envelope)
-        self.assertIsNotNone(validated)
-        self.assertEqual(validated["canonical"]["proposalKind"], "value")
+            extract_instruction_proposal(envelope)
+        self.assertEqual(exc.exception.failure_class, "proposal_invalid_shape")
 
 
 if __name__ == "__main__":
