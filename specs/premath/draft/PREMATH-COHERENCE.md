@@ -277,6 +277,22 @@ Those two vectors MUST evaluate to the same `actualResult` and the same
 
 Violations of this invariance-pair contract MUST reject deterministically.
 
+### 4.16 CwF <-> SigPi bridge ownership boundary
+
+The CwF obligations in §4.11-§4.14 are strict operational equalities (`≡`) and
+MAY be used as bridge inputs to semantic obligations (`stability`, `locality`,
+`descent_exists`, `descent_contractible`) in kernel/profile discharge paths.
+
+This bridge is vocabulary-preserving:
+
+- checker obligations remain `cwf_*` only in this spec,
+- semantic adjoint/site obligations remain in `draft/BIDIR-DESCENT` and
+  `profile/ADJOINTS-AND-SITES`,
+- bridge routing MUST NOT introduce new coherence obligation IDs.
+
+Any bridge drift MUST reject deterministically through existing obligation/fail
+surfaces (no bridge-local admissibility authority).
+
 ## 5. Deterministic Failure Classes
 
 The checker MUST emit deterministic failure classes prefixed by:

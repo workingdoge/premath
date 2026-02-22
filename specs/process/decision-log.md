@@ -2795,3 +2795,38 @@ surface, not as implicit prose-only laws.
   - `invariance/span_square_commutation_composition_accept_external`
 - docs coherence checks now enforce composition-law markers in
   `SPAN-SQUARE-CHECKING` and `PREMATH-COHERENCE`.
+
+---
+
+## 2026-02-22 — Decision 0097: Define CwF <-> sig\Pi bridge as vocabulary-preserving boundary
+
+### Decision
+Specify an explicit bridge contract between strict CwF checker equalities and
+semantic SigPi obligations without changing ownership lanes.
+
+Implemented scope:
+
+1. add normative bridge section to `profile/ADJOINTS-AND-SITES`:
+   - strict vs semantic authority split,
+   - admissible bridge morphisms,
+   - CwF->semantic law mapping table,
+   - deterministic failure/ownership constraints;
+2. add checker-boundary clause in `draft/PREMATH-COHERENCE` requiring bridge
+   routing to preserve existing obligation IDs;
+3. add lane-reference updates in `draft/SPEC-INDEX` and
+   `draft/UNIFICATION-DOCTRINE` so bridge behavior remains explicit in the
+   canonical unification path.
+
+### Rationale
+CwF strict equalities and SigPi semantic obligations were already present but
+their translation boundary was implicit. Explicit bridge mapping closes a drift
+gap while preserving the minimum-encoding rule: no new authority vocabulary and
+no re-ownership of checker/semantic lanes.
+
+### Consequences
+- CwF bridge semantics are now explicit and traceable in normative docs.
+- Bridge mapping is fail-closed and vocabulary-preserving:
+  checker keeps `cwf_*`; semantic lane keeps
+  `stability/locality/descent_*/adjoint_*`.
+- `tools/conformance/check_docs_coherence.py` now enforces bridge markers in
+  `ADJOINTS-AND-SITES`, `PREMATH-COHERENCE`, and `SPEC-INDEX`.

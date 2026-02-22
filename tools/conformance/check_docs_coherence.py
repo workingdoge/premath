@@ -63,6 +63,22 @@ PREMATH_COHERENCE_SPAN_COMPOSITION_RE = re.compile(
     r"compatibility, and interchange",
     re.IGNORECASE,
 )
+ADJOINTS_CWF_SIGPI_BRIDGE_MARKERS: Tuple[str, ...] = (
+    "## 11. CwF <-> sig\\Pi Bridge Contract (Strict vs Semantic)",
+    "`bridge.reindex`",
+    "`bridge.comprehension`",
+    "`bridge.adjoint_reflection`",
+    "bridge rules MUST NOT add new coherence",
+)
+PREMATH_COHERENCE_CWF_SIGPI_BRIDGE_RE = re.compile(
+    r"bridge routing MUST NOT introduce new coherence obligation IDs",
+    re.IGNORECASE,
+)
+SPEC_INDEX_CWF_SIGPI_BRIDGE_RE = re.compile(
+    r"CwF<->sig\\Pi bridge mapping is normative in\s+"
+    r"`profile/ADJOINTS-AND-SITES` §11",
+    re.IGNORECASE,
+)
 
 
 def parse_args() -> argparse.Namespace:
@@ -234,6 +250,7 @@ def main() -> int:
     unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
     span_square_checking = root / "specs" / "premath" / "draft" / "SPAN-SQUARE-CHECKING.md"
     pre_math_coherence = root / "specs" / "premath" / "draft" / "PREMATH-COHERENCE.md"
+    adjoints_profile = root / "specs" / "premath" / "profile" / "ADJOINTS-AND-SITES.md"
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
@@ -257,6 +274,7 @@ def main() -> int:
     unification_text = load_text(unification_doctrine)
     span_square_text = load_text(span_square_checking)
     coherence_text = load_text(pre_math_coherence)
+    adjoints_text = load_text(adjoints_profile)
     section_54 = extract_heading_section(spec_index_text, "5.4")
     section_55 = extract_heading_section(spec_index_text, "5.5")
     spec_index_caps = set(BACKTICK_CAP_RE.findall(section_54))
@@ -316,6 +334,21 @@ def main() -> int:
         errors.append(
             "PREMATH-COHERENCE §4.7 must require composition-law coverage "
             "(identity/associativity/h-v/interchange)"
+        )
+    missing_adjoints_bridge_markers = find_missing_markers(
+        adjoints_text, ADJOINTS_CWF_SIGPI_BRIDGE_MARKERS
+    )
+    for marker in missing_adjoints_bridge_markers:
+        errors.append(f"ADJOINTS-AND-SITES missing CwF/SigPi bridge marker: {marker}")
+    if PREMATH_COHERENCE_CWF_SIGPI_BRIDGE_RE.search(coherence_text) is None:
+        errors.append(
+            "PREMATH-COHERENCE must keep CwF/SigPi bridge fail-closed and "
+            "vocabulary-preserving"
+        )
+    if SPEC_INDEX_CWF_SIGPI_BRIDGE_RE.search(spec_index_text) is None:
+        errors.append(
+            "SPEC-INDEX lane ownership note must include CwF<->sig\\Pi bridge "
+            "normative reference"
         )
 
     mise_text = load_text(mise_toml)

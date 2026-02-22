@@ -153,6 +153,34 @@ digest = "sqlw1_" + SHA256(JCS(LawCore))
             check_docs_coherence.PREMATH_COHERENCE_SPAN_COMPOSITION_RE.search(text)
         )
 
+    def test_adjoints_cwf_sigpi_bridge_markers_all_present(self) -> None:
+        text = """
+## 11. CwF <-> sig\\Pi Bridge Contract (Strict vs Semantic)
+`bridge.reindex`
+`bridge.comprehension`
+`bridge.adjoint_reflection`
+bridge rules MUST NOT add new coherence
+"""
+        missing = check_docs_coherence.find_missing_markers(
+            text, check_docs_coherence.ADJOINTS_CWF_SIGPI_BRIDGE_MARKERS
+        )
+        self.assertEqual(missing, [])
+
+    def test_premath_coherence_cwf_sigpi_bridge_regex_matches(self) -> None:
+        text = "bridge routing MUST NOT introduce new coherence obligation IDs."
+        self.assertIsNotNone(
+            check_docs_coherence.PREMATH_COHERENCE_CWF_SIGPI_BRIDGE_RE.search(text)
+        )
+
+    def test_spec_index_cwf_sigpi_bridge_regex_matches(self) -> None:
+        text = (
+            "CwF<->sig\\Pi bridge mapping is normative in\n"
+            "`profile/ADJOINTS-AND-SITES` §11 and MUST preserve existing obligation vocabularies."
+        )
+        self.assertIsNotNone(
+            check_docs_coherence.SPEC_INDEX_CWF_SIGPI_BRIDGE_RE.search(text)
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

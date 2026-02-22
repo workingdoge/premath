@@ -22,7 +22,8 @@ Current overlays:
 
 - `ADJOINTS-AND-SITES.md` — capability-scoped adjoint/site obligations over the
   kernel context-site base, discharged under `(normalizerId, policyDigest)`,
-  with composed SigPi + spans + Squeak routing guidance in Section 10.
+  with composed SigPi + spans + Squeak routing guidance in Section 10 and
+  CwF<->sig\Pi bridge mapping in Section 11.
 
 Related:
 

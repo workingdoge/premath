@@ -239,6 +239,9 @@ Lane ownership note:
 
 - CwF strict substitution/comprehension obligations are checker-core
   (`draft/PREMATH-COHERENCE`) and are not profile-scoped.
+- CwF<->sig\Pi bridge mapping is normative in
+  `profile/ADJOINTS-AND-SITES` §11 and MUST preserve existing obligation
+  vocabularies (no new bridge-owned obligation IDs).
 - Span/square commutation is a typed witness contract
   (`draft/SPAN-SQUARE-CHECKING`) that composed profiles MUST route through for
   cross-lane pullback/base-change claims, including composition-law witness
@@ -304,7 +307,7 @@ If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`
 2) `draft/GATE`
 3) `draft/BIDIR-DESCENT`
-4) `profile/ADJOINTS-AND-SITES`
+4) `profile/ADJOINTS-AND-SITES` (§11 for CwF<->sig\Pi bridge)
 
 If you are integrating SigPi + Squeak + spans in one system:
 1) `draft/PREMATH-KERNEL`

@@ -244,6 +244,18 @@ transport obligations are composed in one implementation profile:
 4. derived projections MAY vary by workflow, but MUST remain replayable to one
    canonical authority artifact.
 
+### 9.4 CwF/SigPi bridge rule
+
+When strict CwF equalities are bridged into SigPi semantic obligations:
+
+1. bridge morphisms MUST compile into existing obligation vocabularies
+   (`cwf_*`, `stability`, `locality`, `descent_*`, `adjoint_triple`,
+   `beck_chevalley_*`) instead of creating new authority vocabularies,
+2. strict (`≡`) and semantic (`~=`) equality notions MUST remain lane-local and
+   explicitly labeled in witness lineage,
+3. bridge outputs MAY reduce search cost, but MUST NOT reduce discharge
+   obligations or bypass checker/Gate authority.
+
 ## 10. Unified Evidence Plane Contract (v0)
 
 Implementations claiming the Unified Evidence Plane MUST model attested evidence
