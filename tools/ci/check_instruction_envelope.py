@@ -13,7 +13,8 @@ from instruction_policy import (
     validate_proposal_binding_matches_envelope,
     validate_requested_checks,
 )
-from instruction_proposal import ProposalValidationError, validate_instruction_proposal
+from instruction_proposal import ProposalValidationError, extract_instruction_proposal
+from proposal_check_client import ProposalCheckError, run_proposal_check
 
 
 DEFAULT_GLOBS = (
@@ -44,7 +45,7 @@ def ensure_nonempty_string_list(value: Any, label: str) -> List[str]:
     return out
 
 
-def validate_envelope(path: Path, payload: Dict[str, Any]) -> None:
+def validate_envelope(path: Path, payload: Dict[str, Any], repo_root: Path) -> None:
     stem = path.stem
     if path.suffix != ".json":
         raise ValueError("filename must end with .json")
@@ -94,10 +95,15 @@ def validate_envelope(path: Path, payload: Dict[str, Any]) -> None:
             raise ValueError("capabilityClaims must not contain duplicates")
 
     try:
-        proposal = validate_instruction_proposal(payload)
+        raw_proposal = extract_instruction_proposal(payload)
+        proposal = None
+        if raw_proposal is not None:
+            proposal = run_proposal_check(repo_root, raw_proposal)
         validate_proposal_binding_matches_envelope(normalizer_id, policy_digest, proposal)
     except ProposalValidationError as exc:
         raise ValueError(f"{exc.failure_class}: {exc}") from exc
+    except ProposalCheckError as exc:
+        raise ValueError(str(exc)) from exc
     except PolicyValidationError as exc:
         raise ValueError(f"{exc.failure_class}: {exc}") from exc
 
@@ -153,7 +159,7 @@ def main() -> int:
             payload = json.loads(path.read_text(encoding="utf-8"))
             if not isinstance(payload, dict):
                 raise ValueError("root must be a JSON object")
-            validate_envelope(path, payload)
+            validate_envelope(path, payload, root)
         except Exception as exc:
             errors.append(f"{path}: {exc}")
 
