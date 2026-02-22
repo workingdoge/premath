@@ -936,6 +936,105 @@ fn observe_instruction_json_smoke() {
 }
 
 #[test]
+fn observe_build_json_smoke() {
+    let tmp = TempDirGuard::new("observe-build-json");
+    let repo_root = tmp.path();
+    let ciwitness = repo_root.join("artifacts/ciwitness");
+    let issues = repo_root.join(".premath/issues.jsonl");
+    fs::create_dir_all(&ciwitness).expect("ciwitness dir should be created");
+    fs::create_dir_all(issues.parent().expect("issues parent should exist"))
+        .expect("issues parent should be created");
+
+    fs::write(
+        ciwitness.join("latest-delta.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "projectionPolicy": "ci-topos-v0",
+            "projectionDigest": "proj1_alpha",
+            "deltaSource": "explicit",
+            "changedPaths": ["README.md"]
+        }))
+        .expect("delta should serialize"),
+    )
+    .expect("delta should write");
+    fs::write(
+        ciwitness.join("latest-required.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "witnessKind": "ci.required.v1",
+            "projectionPolicy": "ci-topos-v0",
+            "projectionDigest": "proj1_alpha",
+            "verdictClass": "accepted",
+            "requiredChecks": ["baseline"],
+            "executedChecks": ["baseline"],
+            "failureClasses": []
+        }))
+        .expect("required should serialize"),
+    )
+    .expect("required should write");
+    fs::write(
+        ciwitness.join("latest-decision.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "decisionKind": "ci.required.decision.v1",
+            "projectionDigest": "proj1_alpha",
+            "decision": "accept",
+            "reasonClass": "verified_accept"
+        }))
+        .expect("decision should serialize"),
+    )
+    .expect("decision should write");
+    fs::write(
+        ciwitness.join("20260222T010000Z-ci.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "witnessKind": "ci.instruction.v1",
+            "instructionId": "20260222T010000Z-ci",
+            "instructionDigest": "instr1_alpha",
+            "policyDigest": "pol1_alpha",
+            "verdictClass": "accepted",
+            "requiredChecks": ["baseline"],
+            "executedChecks": ["baseline"],
+            "failureClasses": [],
+            "runFinishedAt": "2026-02-22T01:00:00Z"
+        }))
+        .expect("instruction should serialize"),
+    )
+    .expect("instruction should write");
+    fs::write(
+        &issues,
+        "{\"id\":\"bd-root\",\"title\":\"Root\",\"status\":\"open\"}\n",
+    )
+    .expect("issues should write");
+
+    let out_json = repo_root.join("artifacts/observation/latest.json");
+    let out_jsonl = repo_root.join("artifacts/observation/events.jsonl");
+    let output = run_premath([
+        OsString::from("observe-build"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--ciwitness-dir"),
+        OsString::from("artifacts/ciwitness"),
+        OsString::from("--issues-path"),
+        OsString::from(".premath/issues.jsonl"),
+        OsString::from("--out-json"),
+        OsString::from("artifacts/observation/latest.json"),
+        OsString::from("--out-jsonl"),
+        OsString::from("artifacts/observation/events.jsonl"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["summary"]["state"], "accepted");
+    assert_eq!(payload["summary"]["latestProjectionDigest"], "proj1_alpha");
+    assert_eq!(payload["summary"]["requiredCheckCount"], 1);
+    assert!(payload["summary"]["coherence"].is_object());
+    assert!(out_json.exists());
+    assert!(out_jsonl.exists());
+
+    let events_raw = fs::read_to_string(out_jsonl).expect("events jsonl should read");
+    assert!(events_raw.contains("\"kind\":\"ci.required.v1.summary\""));
+    assert!(events_raw.contains("\"kind\":\"ci.observation.surface.v0.summary\""));
+}
+
+#[test]
 fn ref_project_json_smoke() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = crate_dir
@@ -1445,6 +1544,135 @@ fn dep_project_views_json_smoke() {
     let groupoid = parse_json_stdout(&out_groupoid);
     assert_eq!(groupoid["view"], "groupoid");
     assert_eq!(groupoid["items"][0]["role"], "constraint");
+}
+
+#[test]
+fn dep_remove_replace_and_diagnostics_json_smoke() {
+    let tmp = TempDirGuard::new("dep-remove-replace");
+    let issues = tmp.path().join("issues.jsonl");
+
+    let out_add_root = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Root issue"),
+        OsString::from("--id"),
+        OsString::from("bd-root"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_root);
+
+    let out_add_child = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Child issue"),
+        OsString::from("--id"),
+        OsString::from("bd-child"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_child);
+
+    let out_dep_add = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep_add);
+
+    let out_dep_replace = run_premath([
+        OsString::from("dep"),
+        OsString::from("replace"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--from-type"),
+        OsString::from("blocks"),
+        OsString::from("--to-type"),
+        OsString::from("related"),
+        OsString::from("--created-by"),
+        OsString::from("codex"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep_replace);
+    let replace_payload = parse_json_stdout(&out_dep_replace);
+    assert_eq!(replace_payload["action"], "dep.replace");
+    assert_eq!(replace_payload["dependency"]["fromType"], "blocks");
+    assert_eq!(replace_payload["dependency"]["toType"], "related");
+
+    let out_dep_remove = run_premath([
+        OsString::from("dep"),
+        OsString::from("remove"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("related"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep_remove);
+    let remove_payload = parse_json_stdout(&out_dep_remove);
+    assert_eq!(remove_payload["action"], "dep.remove");
+    assert_eq!(remove_payload["dependency"]["type"], "related");
+
+    let out_diag = run_premath([
+        OsString::from("dep"),
+        OsString::from("diagnostics"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_diag);
+    let diag_payload = parse_json_stdout(&out_diag);
+    assert_eq!(diag_payload["action"], "dep.diagnostics");
+    assert_eq!(diag_payload["integrity"]["hasCycle"], false);
+    assert_eq!(diag_payload["integrity"]["cyclePath"], Value::Null);
+
+    let out_dep_root_child = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-root"),
+        OsString::from("bd-child"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_dep_root_child);
+
+    let out_cycle = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_cycle.status.success(),
+        "expected cycle add to fail, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out_cycle.stdout),
+        String::from_utf8_lossy(&out_cycle.stderr)
+    );
+    assert!(
+        String::from_utf8_lossy(&out_cycle.stderr).contains("dependency cycle detected"),
+        "expected cycle diagnostic in stderr, got:\n{}",
+        String::from_utf8_lossy(&out_cycle.stderr)
+    );
 }
 
 #[test]

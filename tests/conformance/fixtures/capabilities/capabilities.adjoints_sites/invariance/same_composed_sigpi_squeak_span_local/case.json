@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.adjoints_sites",
+  "vectorId": "invariance/same_composed_sigpi_squeak_span_local",
+  "profile": "local",
+  "semanticScenarioId": "adjoints_sites_composed_invariance_01",
+  "description": "Local composed SigPi + Squeak + span-square baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "overlay": "adjoints-sites-composed"
+      }
+    },
+    "claimedCapabilities": [
+      "capabilities.adjoints_sites",
+      "capabilities.squeak_site"
+    ],
+    "crossLaneRoute": {
+      "pullbackBaseChange": "span_square_commutation"
+    },
+    "spanSquareWitness": {
+      "squareId": "sq_sigpi_squeak_01",
+      "route": "span_square_commutation",
+      "digest": "sqw1_5d5a2eb23e40035644e5fdf84bf56011c5a91e2f8b7ed0f9c3ceef7604c2192f"
+    },
+    "locationDescriptor": {
+      "worldId": "world.dev",
+      "runtimeProfile": "local",
+      "capabilityVector": [
+        "hk",
+        "mise",
+        "rust",
+        "squeak-site"
+      ],
+      "substrateBindingRef": "runner://local/sigpi"
+    },
+    "expectedLocRef": "loc1_2cdc17797ec81b86247825f33fb5f9d2250dce463085108643d09c80bb6c7797"
+  }
+}

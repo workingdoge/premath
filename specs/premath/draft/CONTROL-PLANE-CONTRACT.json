@@ -2,6 +2,123 @@
   "schema": 1,
   "contractKind": "premath.control_plane.contract.v1",
   "contractId": "control-plane.default.v1",
+  "schemaLifecycle": {
+    "activeEpoch": "2026-02",
+    "kindFamilies": {
+      "controlPlaneContractKind": {
+        "canonicalKind": "premath.control_plane.contract.v1",
+        "compatibilityAliases": [
+          {
+            "aliasKind": "premath.control_plane.contract.v0",
+            "supportUntilEpoch": "2026-06",
+            "replacementKind": "premath.control_plane.contract.v1"
+          }
+        ]
+      },
+      "requiredWitnessKind": {
+        "canonicalKind": "ci.required.v1",
+        "compatibilityAliases": [
+          {
+            "aliasKind": "ci.required.v0",
+            "supportUntilEpoch": "2026-06",
+            "replacementKind": "ci.required.v1"
+          }
+        ]
+      },
+      "requiredDecisionKind": {
+        "canonicalKind": "ci.required.decision.v1",
+        "compatibilityAliases": [
+          {
+            "aliasKind": "ci.required.decision.v0",
+            "supportUntilEpoch": "2026-06",
+            "replacementKind": "ci.required.decision.v1"
+          }
+        ]
+      },
+      "instructionWitnessKind": {
+        "canonicalKind": "ci.instruction.v1",
+        "compatibilityAliases": [
+          {
+            "aliasKind": "ci.instruction.v0",
+            "supportUntilEpoch": "2026-06",
+            "replacementKind": "ci.instruction.v1"
+          }
+        ]
+      },
+      "instructionPolicyKind": {
+        "canonicalKind": "ci.instruction.policy.v1",
+        "compatibilityAliases": [
+          {
+            "aliasKind": "ci.instruction.policy.v0",
+            "supportUntilEpoch": "2026-06",
+            "replacementKind": "ci.instruction.policy.v1"
+          }
+        ]
+      },
+      "requiredProjectionPolicy": {
+        "canonicalKind": "ci-topos-v0",
+        "compatibilityAliases": [
+          {
+            "aliasKind": "ci-topos-v0-preview",
+            "supportUntilEpoch": "2026-06",
+            "replacementKind": "ci-topos-v0"
+          }
+        ]
+      },
+      "requiredDeltaKind": {
+        "canonicalKind": "ci.required.delta.v1",
+        "compatibilityAliases": [
+          {
+            "aliasKind": "ci.delta.v1",
+            "supportUntilEpoch": "2026-06",
+            "replacementKind": "ci.required.delta.v1"
+          }
+        ]
+      }
+    }
+  },
+  "evidenceLanes": {
+    "semanticDoctrine": "semantic_doctrine",
+    "strictChecker": "strict_checker",
+    "witnessCommutation": "witness_commutation",
+    "runtimeTransport": "runtime_transport"
+  },
+  "laneArtifactKinds": {
+    "semantic_doctrine": [
+      "kernel_obligation",
+      "gate_failure_class",
+      "adjoint_site_obligation"
+    ],
+    "strict_checker": [
+      "coherence_obligation",
+      "cwf_strict_equality"
+    ],
+    "witness_commutation": [
+      "span_ref",
+      "square_witness"
+    ],
+    "runtime_transport": [
+      "squeak_transport_witness",
+      "squeak_site_witness"
+    ]
+  },
+  "laneOwnership": {
+    "checkerCoreOnlyObligations": [
+      "cwf_substitution_identity",
+      "cwf_substitution_composition",
+      "cwf_comprehension_beta",
+      "cwf_comprehension_eta"
+    ],
+    "requiredCrossLaneWitnessRoute": {
+      "pullbackBaseChange": "span_square_commutation"
+    }
+  },
+  "laneFailureClasses": [
+    "lane_unknown",
+    "lane_kind_unbound",
+    "lane_ownership_violation",
+    "lane_route_missing"
+  ],
   "requiredGateProjection": {
     "projectionPolicy": "ci-topos-v0",
     "checkIds": {

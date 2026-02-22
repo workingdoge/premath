@@ -400,6 +400,9 @@ mod tests {
                     required_checks: vec![],
                     executed_checks: vec![],
                     failure_classes: vec![],
+                    run_started_at: None,
+                    run_finished_at: None,
+                    proposal_ingest: None,
                 })
             } else {
                 None

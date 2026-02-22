@@ -157,8 +157,10 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
-  (projection policy/check order + CI witness kinds) consumed by CI/coherence
-  adapter surfaces.
+  (projection policy/check order + CI witness kinds + schema lifecycle table
+  for contract/witness/projection kind families) consumed by CI/coherence
+  adapter surfaces; lifecycle semantics follow
+  `draft/UNIFICATION-DOCTRINE` §5.1.
 - `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability
   registry consumed by conformance/docs/coherence parity surfaces.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
@@ -168,7 +170,8 @@ explicitly claimed under §5.4 or §5.6.
   proposal artifacts (normative only when
   `capabilities.instruction_typing` is claimed).
 - `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
-  architecture doctrine for canonical boundaries and deterministic projections.
+  architecture doctrine for canonical boundaries and deterministic projections
+  (including Unified Evidence Plane contract in §10).
 - `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
   pipeline/base-change commutation in coherence checker surfaces.
 - `raw/CTX-SITE` — informational site base (`Ctx`) + coverage (`J`) model for
@@ -218,8 +221,27 @@ Current tracked promotion queue:
 Joint capability note:
 
 - Implementations MAY jointly claim `capabilities.adjoints_sites` and
-  `capabilities.squeak_site`; such compositions SHOULD follow lane separation
-  and single-authority encoding rules in `draft/UNIFICATION-DOCTRINE` §9.
+  `capabilities.squeak_site`; composed systems SHOULD also route cross-lane
+  pullback/base-change claims through `draft/SPAN-SQUARE-CHECKING` and MUST
+  follow lane separation/single-authority encoding rules in
+  `draft/UNIFICATION-DOCTRINE` §9 (see `profile/ADJOINTS-AND-SITES` §10 for
+  composed overlay routing).
+
+Notation convention:
+
+- Use `SigPi` in prose/identifiers; render the adjoint triple as
+  `\Sigma_f -| f* -| \Pi_f` (or shorthand `sig\Pi` when compact notation is
+  needed).
+
+Lane ownership note:
+
+- CwF strict substitution/comprehension obligations are checker-core
+  (`draft/PREMATH-COHERENCE`) and are not profile-scoped.
+- Span/square commutation is a typed witness contract
+  (`draft/SPAN-SQUARE-CHECKING`) that composed profiles MUST route through for
+  cross-lane pullback/base-change claims.
+- Unified evidence factoring SHOULD route control-plane artifact families through
+  one attested surface (`draft/UNIFICATION-DOCTRINE` §10).
 
 ## 6. Suggested reading order
 
@@ -280,14 +302,21 @@ If you are implementing the adjoints-and-sites overlay:
 3) `draft/BIDIR-DESCENT`
 4) `profile/ADJOINTS-AND-SITES`
 
-If you are integrating Sig/Pi + Squeak in one system:
+If you are integrating SigPi + Squeak + spans in one system:
 1) `draft/PREMATH-KERNEL`
 2) `draft/BIDIR-DESCENT` + `draft/GATE`
-3) `profile/ADJOINTS-AND-SITES`
+3) `profile/ADJOINTS-AND-SITES` (§10)
 4) `raw/SQUEAK-CORE` + `raw/SQUEAK-SITE`
 5) `draft/SPAN-SQUARE-CHECKING`
 6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
 7) `draft/UNIFICATION-DOCTRINE` (§9 lane separation)
+
+If you are implementing the Unified Evidence Plane:
+1) `draft/UNIFICATION-DOCTRINE` (§10)
+2) `draft/CONTROL-PLANE-CONTRACT.json`
+3) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+4) `draft/SPAN-SQUARE-CHECKING`
+5) `profile/ADJOINTS-AND-SITES` + `raw/SQUEAK-SITE` (only when those capabilities are claimed)
 
 ## 7. Notes on restrictiveness
 

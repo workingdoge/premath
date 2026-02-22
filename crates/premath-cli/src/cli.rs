@@ -182,6 +182,33 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Build Observation Surface v0 from canonical CI witness and issue memory substrates
+    ObserveBuild {
+        /// Repository root used to resolve relative inputs/outputs
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// CI witness directory
+        #[arg(long, default_value = "artifacts/ciwitness")]
+        ciwitness_dir: String,
+
+        /// Issue memory JSONL path
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues_path: String,
+
+        /// Observation surface JSON output path
+        #[arg(long, default_value = "artifacts/observation/latest.json")]
+        out_json: String,
+
+        /// Observation events JSONL output path
+        #[arg(long, default_value = "artifacts/observation/events.jsonl")]
+        out_jsonl: String,
+
+        /// Output built surface as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Serve Observation Surface v0 as a tiny HTTP read API
     ObserveServe {
         /// Observation surface JSON path
@@ -694,12 +721,73 @@ pub enum DepCommands {
         json: bool,
     },
 
+    /// Remove a dependency edge
+    Remove {
+        /// Source issue ID
+        issue_id: String,
+
+        /// Target dependency issue ID
+        depends_on_id: String,
+
+        /// Dependency type
+        #[arg(long = "type", default_value = "blocks")]
+        dep_type: DepTypeArg,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Replace one dependency edge type with another
+    Replace {
+        /// Source issue ID
+        issue_id: String,
+
+        /// Target dependency issue ID
+        depends_on_id: String,
+
+        /// Current dependency type
+        #[arg(long = "from-type", default_value = "blocks")]
+        from_dep_type: DepTypeArg,
+
+        /// Replacement dependency type
+        #[arg(long = "to-type")]
+        to_dep_type: DepTypeArg,
+
+        /// Optional created_by annotation for the updated edge
+        #[arg(long, default_value = "")]
+        created_by: String,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Project dependencies into one semantic view
     Project {
         /// View: execution, gtd, or groupoid
         #[arg(long, default_value = "execution")]
         view: DepViewArg,
 
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Report dependency graph integrity diagnostics
+    Diagnostics {
         /// Path to issues JSONL
         #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,

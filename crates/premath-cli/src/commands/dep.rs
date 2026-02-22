@@ -20,10 +20,41 @@ pub fn run(command: DepCommands) {
             issues,
             json,
         ),
+        DepCommands::Remove {
+            issue_id,
+            depends_on_id,
+            dep_type,
+            issues,
+            json,
+        } => run_remove(
+            issue_id,
+            depends_on_id,
+            map_dep_type(dep_type),
+            issues,
+            json,
+        ),
+        DepCommands::Replace {
+            issue_id,
+            depends_on_id,
+            from_dep_type,
+            to_dep_type,
+            created_by,
+            issues,
+            json,
+        } => run_replace(
+            issue_id,
+            depends_on_id,
+            map_dep_type(from_dep_type),
+            map_dep_type(to_dep_type),
+            created_by,
+            issues,
+            json,
+        ),
 
         DepCommands::Project { view, issues, json } => {
             run_project(map_dep_view(view), issues, json)
         }
+        DepCommands::Diagnostics { issues, json } => run_diagnostics(issues, json),
     }
 }
 
@@ -36,15 +67,7 @@ fn run_add(
     json_output: bool,
 ) {
     let path = PathBuf::from(issues);
-    if !path.exists() {
-        eprintln!("error: issues file not found: {}", path.display());
-        std::process::exit(1);
-    }
-
-    let mut store = MemoryStore::load_jsonl(&path).unwrap_or_else(|e| {
-        eprintln!("error: failed to load {}: {e}", path.display());
-        std::process::exit(1);
-    });
+    let mut store = load_store_required(&path);
 
     store
         .add_dependency(&issue_id, &depends_on_id, dep_type.clone(), created_by)
@@ -53,10 +76,7 @@ fn run_add(
             std::process::exit(1);
         });
 
-    store.save_jsonl(&path).unwrap_or_else(|e| {
-        eprintln!("error: failed to save {}: {e}", path.display());
-        std::process::exit(1);
-    });
+    save_store_or_exit(&store, &path);
 
     if json_output {
         let payload = json!({
@@ -78,6 +98,101 @@ fn run_add(
             issue_id,
             depends_on_id,
             dep_type.as_str(),
+            path.display()
+        );
+    }
+}
+
+fn run_remove(
+    issue_id: String,
+    depends_on_id: String,
+    dep_type: DepType,
+    issues: String,
+    json_output: bool,
+) {
+    let path = PathBuf::from(issues);
+    let mut store = load_store_required(&path);
+    store
+        .remove_dependency(&issue_id, &depends_on_id, dep_type.clone())
+        .unwrap_or_else(|e| {
+            eprintln!("error: failed to remove dependency: {e}");
+            std::process::exit(1);
+        });
+    save_store_or_exit(&store, &path);
+
+    if json_output {
+        let payload = json!({
+            "action": "dep.remove",
+            "issuesPath": path.display().to_string(),
+            "dependency": {
+                "issueId": issue_id,
+                "dependsOnId": depends_on_id,
+                "type": dep_type.as_str()
+            }
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else {
+        println!(
+            "premath dep remove\n  Removed: {} -> {} ({})\n  Path: {}",
+            issue_id,
+            depends_on_id,
+            dep_type.as_str(),
+            path.display()
+        );
+    }
+}
+
+fn run_replace(
+    issue_id: String,
+    depends_on_id: String,
+    from_dep_type: DepType,
+    to_dep_type: DepType,
+    created_by: String,
+    issues: String,
+    json_output: bool,
+) {
+    let path = PathBuf::from(issues);
+    let mut store = load_store_required(&path);
+    store
+        .replace_dependency(
+            &issue_id,
+            &depends_on_id,
+            from_dep_type.clone(),
+            to_dep_type.clone(),
+            created_by.clone(),
+        )
+        .unwrap_or_else(|e| {
+            eprintln!("error: failed to replace dependency: {e}");
+            std::process::exit(1);
+        });
+    save_store_or_exit(&store, &path);
+
+    if json_output {
+        let payload = json!({
+            "action": "dep.replace",
+            "issuesPath": path.display().to_string(),
+            "dependency": {
+                "issueId": issue_id,
+                "dependsOnId": depends_on_id,
+                "fromType": from_dep_type.as_str(),
+                "toType": to_dep_type.as_str(),
+                "createdBy": created_by
+            }
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else {
+        println!(
+            "premath dep replace\n  Replaced: {} -> {} ({} -> {})\n  Path: {}",
+            issue_id,
+            depends_on_id,
+            from_dep_type.as_str(),
+            to_dep_type.as_str(),
             path.display()
         );
     }
@@ -108,15 +223,7 @@ fn map_dep_view(arg: DepViewArg) -> DependencyView {
 
 fn run_project(view: DependencyView, issues: String, json_output: bool) {
     let path = PathBuf::from(issues);
-    if !path.exists() {
-        eprintln!("error: issues file not found: {}", path.display());
-        std::process::exit(1);
-    }
-
-    let store = MemoryStore::load_jsonl(&path).unwrap_or_else(|e| {
-        eprintln!("error: failed to load {}: {e}", path.display());
-        std::process::exit(1);
-    });
+    let store = load_store_required(&path);
 
     let mut dependencies: Vec<Dependency> = store
         .issues()
@@ -141,6 +248,11 @@ fn run_project(view: DependencyView, issues: String, json_output: bool) {
         .iter()
         .map(|dependency| dependency.project(view))
         .collect::<Vec<_>>();
+    let cycle = store.find_any_dependency_cycle();
+    let integrity = json!({
+        "hasCycle": cycle.is_some(),
+        "cyclePath": cycle
+    });
 
     if json_output {
         let payload = json!({
@@ -148,6 +260,7 @@ fn run_project(view: DependencyView, issues: String, json_output: bool) {
             "issuesPath": path.display().to_string(),
             "view": view.as_str(),
             "count": items.len(),
+            "integrity": integrity,
             "items": items.iter().map(|item| {
                 json!({
                     "issueId": item.issue_id,
@@ -171,6 +284,11 @@ fn run_project(view: DependencyView, issues: String, json_output: bool) {
             path.display(),
             items.len()
         );
+        if let Some(cycle_path) = cycle {
+            println!("  Integrity: cycle detected ({})", cycle_path.join(" -> "));
+        } else {
+            println!("  Integrity: no cycles detected");
+        }
         for item in items {
             println!(
                 "  - {} -> {} ({}, role={}, blocking={})",
@@ -182,4 +300,53 @@ fn run_project(view: DependencyView, issues: String, json_output: bool) {
             );
         }
     }
+}
+
+fn run_diagnostics(issues: String, json_output: bool) {
+    let path = PathBuf::from(issues);
+    let store = load_store_required(&path);
+    let cycle = store.find_any_dependency_cycle();
+    if json_output {
+        let payload = json!({
+            "action": "dep.diagnostics",
+            "issuesPath": path.display().to_string(),
+            "integrity": {
+                "hasCycle": cycle.is_some(),
+                "cyclePath": cycle
+            }
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else if let Some(cycle_path) = cycle {
+        println!(
+            "premath dep diagnostics\n  Path: {}\n  Integrity: cycle detected ({})",
+            path.display(),
+            cycle_path.join(" -> ")
+        );
+    } else {
+        println!(
+            "premath dep diagnostics\n  Path: {}\n  Integrity: no cycles detected",
+            path.display()
+        );
+    }
+}
+
+fn load_store_required(path: &PathBuf) -> MemoryStore {
+    if !path.exists() {
+        eprintln!("error: issues file not found: {}", path.display());
+        std::process::exit(1);
+    }
+    MemoryStore::load_jsonl(path).unwrap_or_else(|e| {
+        eprintln!("error: failed to load {}: {e}", path.display());
+        std::process::exit(1);
+    })
+}
+
+fn save_store_or_exit(store: &MemoryStore, path: &PathBuf) {
+    store.save_jsonl(path).unwrap_or_else(|e| {
+        eprintln!("error: failed to save {}: {e}", path.display());
+        std::process::exit(1);
+    });
 }

@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.adjoints_sites",
+  "vectorId": "invariance/same_composed_sigpi_squeak_span_external",
+  "profile": "external",
+  "semanticScenarioId": "adjoints_sites_composed_invariance_01",
+  "description": "External composed SigPi + Squeak + span-square profile paired with local baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "overlay": "adjoints-sites-composed"
+      }
+    },
+    "claimedCapabilities": [
+      "capabilities.adjoints_sites",
+      "capabilities.squeak_site"
+    ],
+    "crossLaneRoute": {
+      "pullbackBaseChange": "span_square_commutation"
+    },
+    "spanSquareWitness": {
+      "squareId": "sq_sigpi_squeak_01",
+      "route": "span_square_commutation",
+      "digest": "sqw1_5d5a2eb23e40035644e5fdf84bf56011c5a91e2f8b7ed0f9c3ceef7604c2192f"
+    },
+    "locationDescriptor": {
+      "worldId": "world.dev",
+      "runtimeProfile": "external",
+      "capabilityVector": [
+        "hk",
+        "mise",
+        "rust",
+        "squeak-site"
+      ],
+      "substrateBindingRef": "runner://terraform/external"
+    },
+    "expectedLocRef": "loc1_8aaff2a49c2c09ed159902aaafe4932a05e62287f03be8c2d7d074cb2e246dc8"
+  }
+}

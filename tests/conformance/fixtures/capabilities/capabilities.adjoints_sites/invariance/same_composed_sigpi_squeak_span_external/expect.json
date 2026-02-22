@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "composed external profile preserves kernel verdict for paired scenario",
+    "composed external profile preserves Gate failure classes for paired scenario"
+  ]
+}

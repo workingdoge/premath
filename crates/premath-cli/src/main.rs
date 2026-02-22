@@ -95,6 +95,22 @@ fn main() {
             json,
         }),
 
+        Commands::ObserveBuild {
+            repo_root,
+            ciwitness_dir,
+            issues_path,
+            out_json,
+            out_jsonl,
+            json,
+        } => commands::observe_build::run(commands::observe_build::Args {
+            repo_root,
+            ciwitness_dir,
+            issues_path,
+            out_json,
+            out_jsonl,
+            json,
+        }),
+
         Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
 
         Commands::McpServe {

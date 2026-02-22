@@ -34,6 +34,7 @@ class RunFixtureSuitesTests(unittest.TestCase):
             paths,
         )
         self.assertIn(root / "tools" / "ci" / "run_gate.sh", paths)
+        self.assertIn(root / "tools" / "ci" / "control_plane_contract.py", paths)
         self.assertIn(
             root / "specs" / "premath" / "profile" / "ADJOINTS-AND-SITES.md",
             paths,

@@ -12,6 +12,7 @@ from core_cli_client import (
     resolve_premath_cli as _resolve_premath_cli,
     run_core_json_command,
 )
+from control_plane_contract import resolve_schema_kind
 
 class RequiredDeltaError(ValueError):
     """Required-delta failure with deterministic failure class."""
@@ -33,7 +34,13 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
     if payload.get("schema") != 1:
         raise ValueError("required-delta payload schema must be 1")
 
-    for key in ("deltaKind", "source", "toRef"):
+    payload["deltaKind"] = resolve_schema_kind(
+        "requiredDeltaKind",
+        payload.get("deltaKind"),
+        label="required-delta payload deltaKind",
+    )
+
+    for key in ("source", "toRef"):
         value = payload.get(key)
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"required-delta payload missing {key}")

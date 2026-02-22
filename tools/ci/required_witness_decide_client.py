@@ -12,6 +12,7 @@ from core_cli_client import (
     resolve_premath_cli as _resolve_premath_cli,
     run_core_json_command,
 )
+from control_plane_contract import resolve_schema_kind
 
 
 class RequiredWitnessDecideError(ValueError):
@@ -30,8 +31,11 @@ def resolve_premath_cli(root: Path) -> List[str]:
 def _validate_payload(payload: Any) -> Dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError("required-witness-decide payload must be an object")
-    if payload.get("decisionKind") != "ci.required.decision.v1":
-        raise ValueError("required-witness-decide payload decisionKind must be ci.required.decision.v1")
+    payload["decisionKind"] = resolve_schema_kind(
+        "requiredDecisionKind",
+        payload.get("decisionKind"),
+        label="required-witness-decide payload decisionKind",
+    )
     decision = payload.get("decision")
     if decision not in {"accept", "reject"}:
         raise ValueError("required-witness-decide payload decision must be accept|reject")

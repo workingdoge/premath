@@ -2352,7 +2352,7 @@ without adding new surface types.
 
 ---
 
-## 2026-02-22 — Decision 0083: Clarify lane separation for Sig/Pi, CwF, spans, and Squeak
+## 2026-02-22 — Decision 0083: Clarify lane separation for SigPi, CwF, spans, and Squeak
 
 ### Decision
 Adopt an explicit lane-separation contract for architectural composition:
@@ -2362,7 +2362,8 @@ Adopt an explicit lane-separation contract for architectural composition:
 3. witness commutation lane: span/square typed commutation artifacts,
 4. runtime transport lane: Squeak world/location transport and site checks.
 
-Sig/Pi (`Sigma_f -| f* -| Pi_f`) obligations remain semantic-lane authority.
+SigPi (`\Sigma_f -| f* -| \Pi_f`, shorthand `sig\Pi`) obligations remain
+semantic-lane authority.
 Squeak transport/site evidence remains capability-scoped transport lane.
 Composition between these lanes MUST route through one canonical obligation and
 witness authority boundary; no second semantic authority schema is allowed.
@@ -2377,9 +2378,346 @@ minimum canonical encoding, maximum derived expressiveness.
 
 ### Consequences
 - `draft/UNIFICATION-DOCTRINE` now includes a normative lane map and composition
-  constraints for Sig/Pi + Squeak integration.
+  constraints for SigPi + Squeak integration.
 - `draft/SPEC-INDEX` now documents joint capability guidance and reading order
-  for composed Sig/Pi + Squeak systems.
+  for composed SigPi + Squeak systems.
 - Future composed profiles should add vectors/contracts by routing through
   existing obligation/witness authority, not by adding parallel semantic
   encodings.
+
+---
+
+## 2026-02-22 — Decision 0084: Normalize SigPi naming and require spans in composed overlays
+
+### Decision
+Adopt one naming/notation convention and one composition boundary rule:
+
+1. prose and identifier surfaces MUST use `SigPi` (not `Sig/Pi`),
+2. mathematical rendering SHOULD use `\Sigma_f -| f* -| \Pi_f`
+   (shorthand `sig\Pi` allowed),
+3. composed SigPi + Squeak systems MUST route cross-lane pullback/base-change
+   claims through typed span/square witnesses (`draft/SPAN-SQUARE-CHECKING`).
+
+### Rationale
+Topos/site and profile docs now rely on one composed semantic story. Keeping
+names aligned and making spans explicit prevents drift where composition is
+described semantically but under-specified operationally.
+
+### Consequences
+- `profile/ADJOINTS-AND-SITES` now includes explicit SigPi naming/notation and
+  span/square projection boundary text.
+- `draft/UNIFICATION-DOCTRINE` and `draft/SPEC-INDEX` now state SigPi +
+  Squeak + spans composition in the same lane-separation language.
+- Open issue wording should align with the same convention (`SigPi`, spans
+  explicit in composition scope).
+
+---
+
+## 2026-02-22 — Decision 0085: Clarify Unified Evidence Plane contract and lane registry scaffold
+
+### Decision
+Clarify unification direction by adding two explicit artifacts:
+
+1. `draft/UNIFICATION-DOCTRINE` §10 now defines a Unified Evidence Plane
+   contract (`Ev : Ctx^op -> V`) with:
+   - canonical attested evidence surface semantics,
+   - universal factoring rule (`F => Ev`) for control-plane artifact families,
+   - compact law set (transport, descent/glue-or-witness, determinism binding,
+     authority-boundary non-bypass),
+   - explicit span/square routing for cross-lane pullback/base-change claims.
+2. `draft/CONTROL-PLANE-CONTRACT.json` now carries a machine-readable lane
+   registry scaffold:
+   - `evidenceLanes`,
+   - `laneArtifactKinds`,
+   - `laneOwnership`,
+   - `laneFailureClasses`.
+
+### Rationale
+Unification intent was distributed across lane-separation prose and issue notes.
+Adding an explicit `Ev` contract and lane constants reduces ambiguity and gives
+one stable reference for future checker/conformance integration.
+
+### Consequences
+- `draft/SPEC-INDEX` now points to the Unified Evidence Plane contract in
+  `UNIFICATION-DOCTRINE` §10 and adds a dedicated reading path.
+- `tools/ci/control_plane_contract.py` now validates and exports optional lane
+  registry fields for deterministic adapter use.
+- Full lane-registry enforcement in `premath-coherence` remains tracked as
+  implementation work (contract constants exist; checker parity enforcement is
+  a follow-up).
+
+---
+
+## 2026-02-22 — Decision 0086: Add composed overlay execution contract and ordering guidance
+
+### Decision
+Clarify the composed SigPi + spans + Squeak path by adding one explicit profile
+execution contract:
+
+1. `profile/ADJOINTS-AND-SITES` adds Section 10 with:
+   - capability/required-check routing guidance,
+   - composed obligation boundary language,
+   - authority mapping table across kernel/coherence/span-square/profile/runtime,
+   - deterministic witness-lineage requirements.
+2. `draft/SPEC-INDEX` reading guidance now points composed integrations to
+   `profile/ADJOINTS-AND-SITES` Section 10.
+3. `docs/design/ARCHITECTURE-MAP` includes a current unification execution
+   order to keep issue execution aligned with one authority path.
+
+### Rationale
+Lane-separation and Unified Evidence Plane rules existed, but composed-overlay
+execution details were split across multiple docs. A single composed profile
+section plus explicit ordering guidance reduces drift during active unification
+work.
+
+### Consequences
+- composed overlay ownership and required-check routing are now explicit in one
+  profile location.
+- architecture-level docs now show an operational sequence that matches active
+  unification issues.
+- no semantic authority moved: kernel/gate remain admissibility authority.
+
+---
+
+## 2026-02-22 — Decision 0087: Consolidate design docs into explicit runtime/control lanes
+
+### Decision
+Consolidate non-normative design surfaces into explicit lanes and add a
+canonical Squeak transport/placement design entrypoint:
+
+1. `docs/design/README.md` now defines lane groups:
+   - Tusk runtime (inside one world),
+   - Squeak/SigPi transport+placement (between worlds),
+   - control/CI architecture composition.
+2. Add `docs/design/SQUEAK-DESIGN.md` as canonical design guidance for Squeak
+   transport/placement.
+3. Retain `docs/design/TUSK-SIGPI.md` as a compatibility alias that points to
+   `SQUEAK-DESIGN.md`.
+
+### Rationale
+`docs/design` mixed Tusk-specific and cross-layer control/transport material in
+one presentation, which made boundary ownership unclear and increased drift risk
+between runtime and transport guidance.
+
+### Consequences
+- design docs now have one explicit canonical path for Squeak transport and
+  runtime placement.
+- legacy references to `TUSK-SIGPI.md` continue to resolve without breakage.
+- normative authority remains unchanged under `specs/`.
+
+---
+
+## 2026-02-22 — Decision 0088: Enforce lane-registry parity in coherence gate-chain checks
+
+### Decision
+Close the contract-to-checker gap for lane registry scaffolding by enforcing
+optional `CONTROL-PLANE-CONTRACT` lane fields in `gate_chain_parity`:
+
+1. when lane fields are present, `premath-coherence` MUST validate lane IDs for
+   non-empty uniqueness,
+2. `laneArtifactKinds` MUST bind only to declared lane IDs with non-empty kind
+   sets,
+3. `laneOwnership` MUST preserve checker-core CwF ownership boundaries and
+   require cross-lane witness routing through `span_square_commutation`,
+4. `laneFailureClasses` MUST include the required lane-boundary class surface.
+
+### Rationale
+Decision 0085 introduced the lane-registry scaffold as a typed contract
+artifact, but checker parity enforcement remained a follow-up. Leaving this gap
+open risked contract drift where lane boundaries existed in schema only.
+
+### Consequences
+- `crates/premath-coherence` now emits deterministic
+  `coherence.gate_chain_parity.*` failures for lane registry violations.
+- unit tests cover accept/reject cases for duplicate lane IDs, unknown lane-kind
+  bindings, missing cross-lane routes, and ownership boundary violations.
+- `draft/PREMATH-COHERENCE` §4.3 now states lane-registry fail-closed parity
+  behavior when lane fields are present.
+
+---
+
+## 2026-02-22 — Decision 0089: Add executable lane-ownership vectors to gate-chain parity
+
+### Decision
+Extend `gate_chain_parity` with executable vector coverage for lane-ownership
+boundaries by routing it through the existing coherence-site fixture harness:
+
+1. add `gate_chain_parity` vector scope to
+   `tests/conformance/fixtures/coherence-site/manifest.json`,
+2. add smoke vectors for:
+   - accepted canonical lane ownership + span/square route,
+   - rejected checker-core ownership violation,
+   - rejected missing cross-lane route,
+3. add invariance pair vectors (`local`/`external`) for the same semantic lane
+   ownership scenario.
+
+### Rationale
+Unit tests covered lane-registry enforcement, but boundary behavior still lacked
+fixture-level executable evidence in the same conformance path used by other
+coherence obligations.
+
+### Consequences
+- `gate_chain_parity` now emits `laneOwnershipVectors` witness details with
+  matched polarity/invariance accounting.
+- conformance closure validates lane-ownership boundaries through
+  `premath coherence-check` and `mise run conformance-run`.
+
+---
+
+## 2026-02-22 — Decision 0090: Add composed SigPi+Squeak+span capability vectors
+
+### Decision
+Extend `capabilities.adjoints_sites` vectors with a composed cross-lane slice
+that requires:
+
+1. combined capability claim surface (`capabilities.adjoints_sites` +
+   `capabilities.squeak_site`),
+2. cross-lane pullback/base-change routing through
+   `span_square_commutation`,
+3. deterministic span-square witness digest material,
+4. deterministic runtime transport location binding (`loc1_*` refs),
+5. local/external invariance for the same composed semantic scenario.
+
+### Rationale
+Composed overlay contract text existed in profile/spec docs, but executable
+capability vectors were still lane-local. Adding composed vectors closes the
+traceability gap between profile doctrine and conformance execution.
+
+### Consequences
+- `tools/conformance/run_capability_vectors.py` now evaluates composed
+  adjoints-site vectors with deterministic failure classes:
+  `cross_lane_capability_missing`, `cross_lane_route_missing`,
+  `cross_lane_witness_mismatch`, and `cross_lane_transport_mismatch`.
+- `tests/conformance/fixtures/capabilities/capabilities.adjoints_sites/`
+  includes composed golden/adversarial/invariance vectors.
+- `draft/CAPABILITY-VECTORS` and
+  `profile/ADJOINTS-AND-SITES` now explicitly require composed route/transport
+  vector coverage.
+
+---
+
+## 2026-02-22 — Decision 0091: Route Observation projection through one core projector path
+
+### Decision
+Unify Observation Surface projection for CI/CLI consumers through one core
+projector command path:
+
+1. add `premath observe-build` as the canonical projector entrypoint,
+2. implement projection/build logic in `premath-surreal` (`build_surface`,
+   `build_events`) with deterministic fail-closed behavior,
+3. migrate `mise run ci-observation-build` to `premath observe-build`,
+4. migrate semantic invariance check to compare against a fresh
+   `premath observe-build` result,
+5. keep `tools/ci/observation_surface.py` as a compatibility wrapper that calls
+   the core projector command (no parallel reducer authority).
+
+### Rationale
+Observation projection semantics were previously encoded in Python while CLI/MCP
+query surfaces consumed a separate Rust path. That duplicated projector logic
+and created drift risk in summary/coherence projections.
+
+### Consequences
+- CI build/check and CLI observation surfaces now share one projector authority
+  path.
+- deterministic observation projection remains available to scripts/tests via a
+  compatibility wrapper.
+- new CLI smoke coverage and `premath-surreal` unit coverage guard the unified
+  projector behavior.
+
+---
+
+## 2026-02-22 — Decision 0092: Add fail-closed drift-budget sentinel gate
+
+### Decision
+Add one deterministic drift-budget checker task to the baseline closure:
+
+1. introduce `tools/ci/check_drift_budget.py` and `mise run ci-drift-budget-check`,
+2. fail closed with deterministic `driftClasses` across:
+   - SPEC-INDEX capability map vs CAPABILITY-REGISTRY/COHERENCE-CONTRACT docs map,
+   - CONTROL-PLANE lane bindings vs coherence checker lane expectations,
+   - COHERENCE-CONTRACT required obligation sets vs checker-exported required sets,
+   - canonical SigPi notation policy in normative docs,
+   - coherence-suite cache input closure for coherence/control-plane loaders.
+
+### Rationale
+`coherence-check` and docs-coherence checks validate many invariants, but drift
+signals were distributed across outputs and not exposed as one compact control
+plane sentinel surface. A single fail-closed drift-budget check tightens
+unification execution and gives one deterministic summary for CI consumption.
+
+### Consequences
+- baseline now includes `ci-drift-budget-check`,
+- CI tooling docs and command surfaces include the new gate,
+- added deterministic unit tests (`tools/ci/test_drift_budget.py`) covering each
+  drift class and cache-closure input scope expectations.
+
+---
+
+## 2026-02-22 — Decision 0093: Add control-plane schema lifecycle contract and alias-window enforcement
+
+### Decision
+Adopt one typed schema lifecycle table in
+`draft/CONTROL-PLANE-CONTRACT.json` and route client-side kind validation
+through it.
+
+Implemented scope:
+
+1. add `schemaLifecycle` with canonical kind families for:
+   - `*.contract.v*` control-plane kind,
+   - required/instruction witness kinds,
+   - required decision kind,
+   - required projection policy kind,
+   - required delta kind;
+2. allow compatibility aliases only with explicit `supportUntilEpoch` and
+   canonical `replacementKind`,
+3. resolve accepted aliases to canonical kind during validation,
+4. fail closed deterministically when alias windows are expired or kinds are
+   unsupported.
+
+### Rationale
+Version and alias handling existed as ad-hoc string checks across CI clients.
+That made compatibility policy implicit and harder to audit. A single lifecycle
+table keeps minimum encoding while preserving controlled compatibility windows.
+
+### Consequences
+- `tools/ci/control_plane_contract.py` is now the canonical lifecycle resolver
+  for schema kind families.
+- required witness/decision/projection/delta and instruction witness client
+  validators now consume the shared resolver.
+- tests now cover:
+  - accepted legacy alias behavior inside support window,
+  - deterministic rejection past support window (`expired` failure path).
+- `draft/UNIFICATION-DOCTRINE` now states normative lifecycle/deprecation rules
+  for contract/witness/projection kind families and migration witness
+  expectations.
+
+---
+
+## 2026-02-22 — Decision 0094: Enforce schema lifecycle epoch discipline in CI loader paths
+
+### Decision
+Tighten `schemaLifecycle` validation in `tools/ci/control_plane_contract.py`
+with one deterministic rollover policy:
+
+1. all compatibility aliases in one lifecycle table MUST share one
+   `supportUntilEpoch` rollover epoch,
+2. rollover runway (`supportUntilEpoch - activeEpoch`) MUST be strictly
+   positive,
+3. rollover runway MUST be bounded to 12 months in the CI implementation
+   profile.
+
+Validation remains fail-closed during control-plane contract load.
+
+### Rationale
+Alias-window checks were present, but rollover discipline across families was
+implicit. Without one shared epoch and bounded runway, compatibility windows can
+drift and silently accumulate long-lived aliases.
+
+### Consequences
+- CI loader/import surfaces now reject mixed rollover epochs and unbounded alias
+  runway at contract load time.
+- exported lifecycle metadata now includes deterministic epoch-discipline fields
+  (`rolloverEpoch`, `aliasRunwayMonths`, `maxAliasRunwayMonths`) for downstream
+  diagnostics.
+- unit coverage in `tools/ci/test_control_plane_contract.py` now includes
+  mixed-epoch and overlong-runway rejection paths.

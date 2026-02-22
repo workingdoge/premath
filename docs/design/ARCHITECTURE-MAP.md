@@ -26,6 +26,7 @@ Scope: design-level, non-normative
 - `specs/premath/raw/CI-TOPOS.md`
 - `specs/premath/draft/PREMATH-COHERENCE.md`
 - `specs/premath/draft/COHERENCE-CONTRACT.json`
+- `specs/premath/draft/UNIFICATION-DOCTRINE.md` (lane split + Unified Evidence Plane §10)
 
 Role split inside CI/Control:
 - check role: `PREMATH-COHERENCE` (`premath coherence-check`)
@@ -67,6 +68,8 @@ DOCTRINE-INF
 Authority rule:
 - semantic admissibility comes from kernel/gate contracts, not from runners or hooks.
 - coherence and CI are control-plane roles, not semantic authority layers.
+- control-plane artifact families should factor through one attested evidence
+  surface (`Ev`) per `UNIFICATION-DOCTRINE` §10.
 - runners/profiles (`local`, `external`, infra bindings) change execution substrate only.
 
 ## 3. Instruction Runtime Loop
@@ -119,7 +122,7 @@ Loop intent:
 Baseline gate (`mise run baseline`) enforces:
 - setup/lint/build/test/toy suites,
 - conformance + traceability + coherence-check + docs-coherence + doctrine closure,
-- CI/control-plane wiring, pipeline, observation, and instruction checks,
+- CI/control-plane wiring, pipeline, observation, instruction, and drift-budget checks,
 - executable fixture-suite closure (`mise run conformance-run`).
 
 Operational source of truth for baseline composition is `.mise.toml`
@@ -135,8 +138,36 @@ Authoritative verification (`mise run ci-verify-required`) enforces:
 - required/executed check-set consistency,
 - verdict/failure-class consistency with check results.
 
+Control-plane schema lifecycle discipline:
+- coherence gate-chain parity enforces `schemaLifecycle` resolution over
+  contract/projection/witness kind families.
+- aliases are epoch-bounded under `activeEpoch`; expired aliases reject
+  deterministically as
+  `coherence.gate_chain_parity.schema_lifecycle_invalid`.
+- operator runbook for lifecycle/coherence flow:
+  `docs/design/LIFECYCLE-COHERENCE-FLOWS.md`.
+
 Instruction doctrine is executable via:
 - `capabilities.instruction_typing`
 - `capabilities.ci_witnesses`
 - `draft/LLM-PROPOSAL-CHECKING` proposal ingest/discharge path
 - `capabilities.change_morphisms`
+
+## 7. Unification Execution Order (Current)
+
+Current sequencing is tracked in `.premath/issues.jsonl` with one active epic:
+
+- `bd-116` — Control-plane lifecycle coherence: one contract, one checker truth.
+- `bd-117` — schemaLifecycle checker enforcement in gate-chain parity.
+- `bd-118` — architecture map refresh + coherence pass.
+- `bd-119` — schemaLifecycle epoch-discipline enforcement in CI.
+
+Operational rule:
+- keep this section as a pointer to the issue graph, not a static duplicate task
+  backlog.
+
+Execution notes:
+- keep semantic authority in kernel/gate paths; do not move admissibility into
+  checker/profile/CI wrappers.
+- keep cross-lane pullback/base-change claims routed through typed
+  span/square witnesses.

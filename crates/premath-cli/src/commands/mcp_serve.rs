@@ -224,6 +224,8 @@ impl ServerHandler for PremathMcpHandler {
             PremathTools::IssueDiscoverTool(tool) => call_issue_discover(&self.config, tool),
             PremathTools::IssueUpdateTool(tool) => call_issue_update(&self.config, tool),
             PremathTools::DepAddTool(tool) => call_dep_add(&self.config, tool),
+            PremathTools::DepRemoveTool(tool) => call_dep_remove(&self.config, tool),
+            PremathTools::DepReplaceTool(tool) => call_dep_replace(&self.config, tool),
             PremathTools::InitTool(tool) => call_init_tool(&self.config, tool),
             PremathTools::IssueLeaseProjectionTool(tool) => {
                 call_issue_lease_projection(&self.config, tool)
@@ -472,6 +474,47 @@ struct DepAddTool {
 }
 
 #[mcp_tool(
+    name = "dep_remove",
+    description = "Remove a dependency edge between issues",
+    read_only_hint = false,
+    idempotent_hint = false
+)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct DepRemoveTool {
+    issue_id: String,
+    depends_on_id: String,
+    #[serde(default)]
+    dep_type: Option<String>,
+    #[serde(default)]
+    instruction_id: Option<String>,
+    #[serde(default)]
+    issues_path: Option<String>,
+}
+
+#[mcp_tool(
+    name = "dep_replace",
+    description = "Replace one dependency edge type with another",
+    read_only_hint = false,
+    idempotent_hint = false
+)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
+#[serde(rename_all = "camelCase")]
+struct DepReplaceTool {
+    issue_id: String,
+    depends_on_id: String,
+    #[serde(default)]
+    from_dep_type: Option<String>,
+    to_dep_type: String,
+    #[serde(default)]
+    created_by: Option<String>,
+    #[serde(default)]
+    instruction_id: Option<String>,
+    #[serde(default)]
+    issues_path: Option<String>,
+}
+
+#[mcp_tool(
     name = "init_tool",
     description = "Initialize premath local substrate (.premath/issues.jsonl), migrating legacy .beads store when present",
     read_only_hint = false,
@@ -585,6 +628,8 @@ tool_box!(
         IssueDiscoverTool,
         IssueUpdateTool,
         DepAddTool,
+        DepRemoveTool,
+        DepReplaceTool,
         InitTool,
         IssueLeaseProjectionTool,
         ObserveLatestTool,
@@ -630,6 +675,8 @@ enum MutationAction {
     IssueDiscover,
     IssueUpdate,
     DepAdd,
+    DepRemove,
+    DepReplace,
 }
 
 impl MutationAction {
@@ -642,6 +689,8 @@ impl MutationAction {
             Self::IssueDiscover => "issue.discover",
             Self::IssueUpdate => "issue.update",
             Self::DepAdd => "dep.add",
+            Self::DepRemove => "dep.remove",
+            Self::DepReplace => "dep.replace",
         }
     }
 
@@ -654,6 +703,8 @@ impl MutationAction {
             Self::IssueDiscover => "capabilities.change_morphisms.issue_discover",
             Self::IssueUpdate => "capabilities.change_morphisms.issue_update",
             Self::DepAdd => "capabilities.change_morphisms.dep_add",
+            Self::DepRemove => "capabilities.change_morphisms.dep_remove",
+            Self::DepReplace => "capabilities.change_morphisms.dep_replace",
         }
     }
 }
@@ -1633,6 +1684,104 @@ fn call_dep_add(
     }))
 }
 
+fn call_dep_remove(
+    config: &PremathMcpConfig,
+    tool: DepRemoveTool,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    let path = resolve_path(tool.issues_path, &config.issues_path);
+    let mut store = load_store_existing(&path)?;
+    let dep_type = parse_dep_type(tool.dep_type)?;
+    let instruction =
+        resolve_instruction_link(config, tool.instruction_id, MutationAction::DepRemove)?;
+    let write_witness = build_write_witness(
+        config,
+        "dep.remove",
+        &tool.issue_id,
+        &path,
+        instruction.as_ref(),
+    );
+
+    store
+        .remove_dependency(&tool.issue_id, &tool.depends_on_id, dep_type.clone())
+        .map_err(|e| call_tool_error(format!("failed to remove dependency: {e}")))?;
+    let issue = store.issue_mut(&tool.issue_id).ok_or_else(|| {
+        call_tool_error(format!(
+            "issue not found after dep remove: {}",
+            tool.issue_id
+        ))
+    })?;
+    issue_attach_write_witness(issue, write_witness.clone());
+    save_store(&store, &path)?;
+    refresh_issue_query_projection(config, &path, &store)?;
+
+    json_result(json!({
+        "action": "dep.remove",
+        "issuesPath": path.display().to_string(),
+        "queryBackend": config.issue_query_backend.as_str(),
+        "dependency": {
+            "issueId": tool.issue_id,
+            "dependsOnId": tool.depends_on_id,
+            "type": dep_type.as_str()
+        },
+        "instruction": instruction.map(|link| link.to_json()),
+        "writeWitness": write_witness
+    }))
+}
+
+fn call_dep_replace(
+    config: &PremathMcpConfig,
+    tool: DepReplaceTool,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    let path = resolve_path(tool.issues_path, &config.issues_path);
+    let mut store = load_store_existing(&path)?;
+    let from_dep_type = parse_dep_type(tool.from_dep_type)?;
+    let to_dep_type = parse_dep_type(Some(tool.to_dep_type.clone()))?;
+    let created_by = tool.created_by.unwrap_or_default();
+    let instruction =
+        resolve_instruction_link(config, tool.instruction_id, MutationAction::DepReplace)?;
+    let write_witness = build_write_witness(
+        config,
+        "dep.replace",
+        &tool.issue_id,
+        &path,
+        instruction.as_ref(),
+    );
+
+    store
+        .replace_dependency(
+            &tool.issue_id,
+            &tool.depends_on_id,
+            from_dep_type.clone(),
+            to_dep_type.clone(),
+            created_by.clone(),
+        )
+        .map_err(|e| call_tool_error(format!("failed to replace dependency: {e}")))?;
+    let issue = store.issue_mut(&tool.issue_id).ok_or_else(|| {
+        call_tool_error(format!(
+            "issue not found after dep replace: {}",
+            tool.issue_id
+        ))
+    })?;
+    issue_attach_write_witness(issue, write_witness.clone());
+    save_store(&store, &path)?;
+    refresh_issue_query_projection(config, &path, &store)?;
+
+    json_result(json!({
+        "action": "dep.replace",
+        "issuesPath": path.display().to_string(),
+        "queryBackend": config.issue_query_backend.as_str(),
+        "dependency": {
+            "issueId": tool.issue_id,
+            "dependsOnId": tool.depends_on_id,
+            "fromType": from_dep_type.as_str(),
+            "toType": to_dep_type.as_str(),
+            "createdBy": created_by
+        },
+        "instruction": instruction.map(|link| link.to_json()),
+        "writeWitness": write_witness
+    }))
+}
+
 fn call_init_tool(
     config: &PremathMcpConfig,
     tool: InitTool,
@@ -2462,6 +2611,166 @@ mod tests {
         assert_eq!(
             blocked_payload["items"][0]["blockers"][0]["dependsOnId"],
             "bd-root"
+        );
+    }
+
+    #[test]
+    fn dep_replace_and_remove_update_ready_status() {
+        let root = temp_dir("dep-replace-remove-ready");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Root".to_string(),
+                id: Some("bd-root".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("first issue should be added");
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Child".to_string(),
+                id: Some("bd-child".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("second issue should be added");
+
+        let _ = call_dep_add(
+            &config,
+            DepAddTool {
+                issue_id: "bd-child".to_string(),
+                depends_on_id: "bd-root".to_string(),
+                dep_type: Some("blocks".to_string()),
+                created_by: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("dependency should be added");
+
+        let _ = call_dep_replace(
+            &config,
+            DepReplaceTool {
+                issue_id: "bd-child".to_string(),
+                depends_on_id: "bd-root".to_string(),
+                from_dep_type: Some("blocks".to_string()),
+                to_dep_type: "related".to_string(),
+                created_by: Some("codex".to_string()),
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("dependency type should be replaced");
+
+        let ready = call_issue_ready(&config, IssueReadyTool { issues_path: None })
+            .expect("ready query should succeed");
+        let payload = parse_tool_json(ready);
+        assert_eq!(payload["count"], 2);
+
+        let _ = call_dep_remove(
+            &config,
+            DepRemoveTool {
+                issue_id: "bd-child".to_string(),
+                depends_on_id: "bd-root".to_string(),
+                dep_type: Some("related".to_string()),
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("dependency should be removed");
+
+        let blocked = call_issue_blocked(&config, IssueBlockedTool { issues_path: None })
+            .expect("blocked query should succeed");
+        let blocked_payload = parse_tool_json(blocked);
+        assert_eq!(blocked_payload["count"], 0);
+    }
+
+    #[test]
+    fn dep_add_rejects_cycle_edges() {
+        let root = temp_dir("dep-add-cycle-reject");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "A".to_string(),
+                id: Some("bd-a".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("issue A should add");
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "B".to_string(),
+                id: Some("bd-b".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("issue B should add");
+
+        let _ = call_dep_add(
+            &config,
+            DepAddTool {
+                issue_id: "bd-a".to_string(),
+                depends_on_id: "bd-b".to_string(),
+                dep_type: Some("blocks".to_string()),
+                created_by: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("first edge should add");
+
+        let err = call_dep_add(
+            &config,
+            DepAddTool {
+                issue_id: "bd-b".to_string(),
+                depends_on_id: "bd-a".to_string(),
+                dep_type: Some("blocks".to_string()),
+                created_by: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect_err("cycle edge should reject");
+        assert!(
+            err.to_string().contains("dependency cycle detected"),
+            "expected cycle diagnostic, got: {err}"
         );
     }
 

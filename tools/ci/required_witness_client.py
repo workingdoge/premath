@@ -12,6 +12,7 @@ from core_cli_client import (
     resolve_premath_cli as _resolve_premath_cli,
     run_core_json_command,
 )
+from control_plane_contract import resolve_schema_kind
 
 
 class RequiredWitnessError(ValueError):
@@ -33,8 +34,16 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
 
     if payload.get("ciSchema") != 1:
         raise ValueError("required-witness payload ciSchema must be 1")
-    if payload.get("witnessKind") != "ci.required.v1":
-        raise ValueError("required-witness payload witnessKind must be ci.required.v1")
+    payload["witnessKind"] = resolve_schema_kind(
+        "requiredWitnessKind",
+        payload.get("witnessKind"),
+        label="required-witness payload witnessKind",
+    )
+    payload["projectionPolicy"] = resolve_schema_kind(
+        "requiredProjectionPolicy",
+        payload.get("projectionPolicy"),
+        label="required-witness payload projectionPolicy",
+    )
 
     required_string_fields = (
         "projectionPolicy",

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "cross_lane_transport_mismatch"
+  ],
+  "assertions": [
+    "runtime transport lane bindings MUST preserve deterministic location references"
+  ]
+}

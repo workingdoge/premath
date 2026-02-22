@@ -171,6 +171,7 @@ This enforces the current invariant gate:
 - conformance capability invariance-stub validation,
 - coherence-contract obligation discharge validation,
 - docs-to-executable coherence validation,
+- drift-budget sentinel validation across docs/contracts/checkers/cache-closure,
 - doctrine-to-operation site coherence validation,
 - executable capability conformance vectors
   (`capabilities.normal_forms`, `capabilities.kcir_witnesses`,
@@ -201,6 +202,7 @@ mise run ci-observation-query
 mise run ci-observation-serve
 mise run mcp-serve
 mise run ci-observation-check
+mise run ci-drift-budget-check
 mise run ci-required
 mise run ci-verify-required
 mise run ci-verify-required-strict
@@ -281,6 +283,8 @@ Observation surface (frontend/query projection):
 - `mise run ci-observation-build` builds
   - `artifacts/observation/latest.json` (deterministic read model),
   - `artifacts/observation/events.jsonl` (append-friendly projection feed).
+- projection now routes through one core command surface:
+  - `cargo run --package premath-cli -- observe-build --repo-root .`
 - `mise run ci-observation-query` returns judgment-oriented views
   (`latest`, `needs_attention`, `instruction`, `projection`).
 - `mise run ci-observation-serve` starts a tiny UX HTTP read API over the same
@@ -430,8 +434,9 @@ surface.
   - data-plane tools: `init_tool`, `issue_ready`, `issue_list`,
     `issue_backend_status`, `issue_blocked`, `issue_add`, `issue_claim`,
     `issue_lease_renew`, `issue_lease_release`, `issue_lease_projection`,
-    `issue_discover`, `issue_update`, `dep_add`, `observe_latest`,
-    `observe_needs_attention`, `observe_instruction`, `observe_projection`.
+    `issue_discover`, `issue_update`, `dep_add`, `dep_remove`, `dep_replace`,
+    `observe_latest`, `observe_needs_attention`, `observe_instruction`,
+    `observe_projection`.
   - doctrine-gated tools: `instruction_check`, `instruction_run`
     (runs `tools/ci/pipeline_instruction.py` and emits CI witness artifacts).
 - `premath issue add "Title" --issues .premath/issues.jsonl --json`
@@ -452,6 +457,12 @@ surface.
   - updates mutable issue fields and persists JSONL.
 - `premath dep add <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json`
   - adds a typed dependency edge between existing issues.
+- `premath dep remove <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json`
+  - removes one typed dependency edge.
+- `premath dep replace <issue-id> <depends-on-id> --from-type blocks --to-type related --issues .premath/issues.jsonl --json`
+  - replaces one dependency edge type without manual JSONL edits.
+- `premath dep diagnostics --issues .premath/issues.jsonl --json`
+  - reports dependency graph integrity diagnostics (`hasCycle`, `cyclePath`).
 
 ### MCP Client Config Snippets
 

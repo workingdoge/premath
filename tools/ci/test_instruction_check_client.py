@@ -130,6 +130,44 @@ class InstructionCheckClientTests(unittest.TestCase):
             )
         self.assertEqual(witness["witnessKind"], "ci.instruction.v1")
 
+    def test_run_instruction_witness_accepts_legacy_alias_kind(self) -> None:
+        payload = {
+            "ciSchema": 1,
+            "witnessKind": "ci.instruction.v0",
+            "instructionId": "20260221T010000Z-ci-wiring-golden",
+            "instructionRef": "tests/ci/fixtures/instructions/20260221T010000Z-ci-wiring-golden.json",
+            "instructionDigest": "instr1_demo",
+            "verdictClass": "accepted",
+            "normalizerId": "normalizer.ci.v1",
+            "policyDigest": "pol1_demo",
+            "results": [],
+            "failureClasses": [],
+            "operationalFailureClasses": [],
+            "semanticFailureClasses": [],
+        }
+        completed = subprocess.CompletedProcess(
+            args=["premath", "instruction-witness"],
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+        with patch("instruction_check_client.subprocess.run", return_value=completed):
+            witness = run_instruction_witness(
+                Path("."),
+                Path("instructions/demo.json"),
+                {
+                    "instructionId": "20260221T010000Z-ci-wiring-golden",
+                    "instructionRef": "instructions/demo.json",
+                    "instructionDigest": "instr1_demo",
+                    "squeakSiteProfile": "local",
+                    "runStartedAt": "2026-02-22T00:00:00Z",
+                    "runFinishedAt": "2026-02-22T00:00:01Z",
+                    "runDurationMs": 1000,
+                    "results": [],
+                },
+            )
+        self.assertEqual(witness["witnessKind"], "ci.instruction.v1")
+
     def test_run_instruction_witness_propagates_failure_class(self) -> None:
         completed = subprocess.CompletedProcess(
             args=["premath", "instruction-witness"],

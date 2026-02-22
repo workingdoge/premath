@@ -36,6 +36,19 @@ class RequiredDeltaClientTests(unittest.TestCase):
         self.assertEqual(payload["changedPaths"], ["README.md"])
         self.assertEqual(payload["toRef"], "HEAD")
 
+    def test_run_required_delta_accepts_legacy_alias_kind(self) -> None:
+        payload = self._payload()
+        payload["deltaKind"] = "ci.delta.v1"
+        completed = subprocess.CompletedProcess(
+            args=["premath", "required-delta"],
+            returncode=0,
+            stdout=json.dumps(payload),
+            stderr="",
+        )
+        with patch("required_delta_client.subprocess.run", return_value=completed):
+            out = run_required_delta(Path("."), {"repoRoot": "."})
+        self.assertEqual(out["deltaKind"], "ci.required.delta.v1")
+
     def test_run_required_delta_propagates_failure_class(self) -> None:
         completed = subprocess.CompletedProcess(
             args=["premath", "required-delta"],

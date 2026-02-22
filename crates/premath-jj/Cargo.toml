@@ -8,4 +8,4 @@ description = "JJ (Jujutsu) backend: versioning, branches, conflicts-as-values"
 [dependencies]
 thiserror = { workspace = true }
 serde = { workspace = true }
-# jj-lib = "0.28"  # TODO: pin when stabilized
+# Optional integration placeholder (jj-lib intentionally not enabled yet).

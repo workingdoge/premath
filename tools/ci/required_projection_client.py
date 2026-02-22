@@ -12,6 +12,7 @@ from core_cli_client import (
     resolve_premath_cli as _resolve_premath_cli,
     run_core_json_command,
 )
+from control_plane_contract import resolve_schema_kind
 
 
 class RequiredProjectionError(ValueError):
@@ -34,10 +35,14 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
     if payload.get("schema") != 1:
         raise ValueError("required-projection payload schema must be 1")
 
-    for key in ("projectionPolicy", "projectionDigest"):
-        value = payload.get(key)
-        if not isinstance(value, str) or not value.strip():
-            raise ValueError(f"required-projection payload missing {key}")
+    payload["projectionPolicy"] = resolve_schema_kind(
+        "requiredProjectionPolicy",
+        payload.get("projectionPolicy"),
+        label="required-projection payload projectionPolicy",
+    )
+    projection_digest = payload.get("projectionDigest")
+    if not isinstance(projection_digest, str) or not projection_digest.strip():
+        raise ValueError("required-projection payload missing projectionDigest")
 
     for key in ("changedPaths", "requiredChecks", "reasons"):
         if not isinstance(payload.get(key), list):

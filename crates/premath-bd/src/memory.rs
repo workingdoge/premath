@@ -9,7 +9,7 @@ use crate::dependency::DepType;
 use crate::dependency::Dependency;
 use crate::issue::Issue;
 use crate::jsonl::{JsonlError, read_issues_from_path, write_issues_to_path};
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 
 /// Errors raised while loading or querying the memory store.
@@ -26,6 +26,26 @@ pub enum MemoryStoreError {
         issue_id: String,
         depends_on_id: String,
         dep_type: String,
+    },
+
+    #[error("dependency not found: {issue_id} -> {depends_on_id} ({dep_type})")]
+    DependencyNotFound {
+        issue_id: String,
+        depends_on_id: String,
+        dep_type: String,
+    },
+
+    #[error("dependency self-loop is not allowed: {issue_id} ({dep_type})")]
+    DependencySelfLoop { issue_id: String, dep_type: String },
+
+    #[error(
+        "dependency cycle detected: {issue_id} -> {depends_on_id} ({dep_type}); path: {cycle_path}"
+    )]
+    DependencyCycle {
+        issue_id: String,
+        depends_on_id: String,
+        dep_type: String,
+        cycle_path: String,
     },
 }
 
@@ -106,11 +126,16 @@ impl MemoryStore {
         if self.issue(depends_on_id).is_none() {
             return Err(MemoryStoreError::IssueNotFound(depends_on_id.to_string()));
         }
+        if issue_id == depends_on_id {
+            return Err(MemoryStoreError::DependencySelfLoop {
+                issue_id: issue_id.to_string(),
+                dep_type: dep_type.as_str().to_string(),
+            });
+        }
 
         let issue = self
-            .issue_mut(issue_id)
+            .issue(issue_id)
             .ok_or_else(|| MemoryStoreError::IssueNotFound(issue_id.to_string()))?;
-
         if issue
             .dependencies
             .iter()
@@ -122,6 +147,20 @@ impl MemoryStore {
                 dep_type: dep_type.as_str().to_string(),
             });
         }
+        if let Some(path) = self.find_dependency_path(depends_on_id, issue_id) {
+            let mut cycle_path = vec![issue_id.to_string()];
+            cycle_path.extend(path);
+            return Err(MemoryStoreError::DependencyCycle {
+                issue_id: issue_id.to_string(),
+                depends_on_id: depends_on_id.to_string(),
+                dep_type: dep_type.as_str().to_string(),
+                cycle_path: cycle_path.join(" -> "),
+            });
+        }
+
+        let issue = self
+            .issue_mut(issue_id)
+            .ok_or_else(|| MemoryStoreError::IssueNotFound(issue_id.to_string()))?;
 
         issue.dependencies.push(Dependency {
             issue_id: issue_id.to_string(),
@@ -131,6 +170,157 @@ impl MemoryStore {
         });
         issue.touch_updated_at();
         Ok(())
+    }
+
+    /// Remove one typed dependency edge from an issue.
+    pub fn remove_dependency(
+        &mut self,
+        issue_id: &str,
+        depends_on_id: &str,
+        dep_type: DepType,
+    ) -> Result<(), MemoryStoreError> {
+        let issue = self
+            .issue_mut(issue_id)
+            .ok_or_else(|| MemoryStoreError::IssueNotFound(issue_id.to_string()))?;
+        let before = issue.dependencies.len();
+        issue
+            .dependencies
+            .retain(|dep| !(dep.depends_on_id == depends_on_id && dep.dep_type == dep_type));
+        if issue.dependencies.len() == before {
+            return Err(MemoryStoreError::DependencyNotFound {
+                issue_id: issue_id.to_string(),
+                depends_on_id: depends_on_id.to_string(),
+                dep_type: dep_type.as_str().to_string(),
+            });
+        }
+        issue.touch_updated_at();
+        Ok(())
+    }
+
+    /// Replace dependency type for one existing edge.
+    pub fn replace_dependency(
+        &mut self,
+        issue_id: &str,
+        depends_on_id: &str,
+        from_dep_type: DepType,
+        to_dep_type: DepType,
+        created_by: String,
+    ) -> Result<(), MemoryStoreError> {
+        if self.issue(issue_id).is_none() {
+            return Err(MemoryStoreError::IssueNotFound(issue_id.to_string()));
+        }
+        if self.issue(depends_on_id).is_none() {
+            return Err(MemoryStoreError::IssueNotFound(depends_on_id.to_string()));
+        }
+        if issue_id == depends_on_id {
+            return Err(MemoryStoreError::DependencySelfLoop {
+                issue_id: issue_id.to_string(),
+                dep_type: to_dep_type.as_str().to_string(),
+            });
+        }
+        let issue = self
+            .issue_mut(issue_id)
+            .ok_or_else(|| MemoryStoreError::IssueNotFound(issue_id.to_string()))?;
+
+        let Some(index) = issue
+            .dependencies
+            .iter()
+            .position(|dep| dep.depends_on_id == depends_on_id && dep.dep_type == from_dep_type)
+        else {
+            return Err(MemoryStoreError::DependencyNotFound {
+                issue_id: issue_id.to_string(),
+                depends_on_id: depends_on_id.to_string(),
+                dep_type: from_dep_type.as_str().to_string(),
+            });
+        };
+
+        if issue.dependencies.iter().enumerate().any(|(idx, dep)| {
+            idx != index && dep.depends_on_id == depends_on_id && dep.dep_type == to_dep_type
+        }) {
+            return Err(MemoryStoreError::DependencyAlreadyExists {
+                issue_id: issue_id.to_string(),
+                depends_on_id: depends_on_id.to_string(),
+                dep_type: to_dep_type.as_str().to_string(),
+            });
+        }
+
+        issue.dependencies[index].dep_type = to_dep_type;
+        if !created_by.trim().is_empty() {
+            issue.dependencies[index].created_by = created_by;
+        }
+        issue.touch_updated_at();
+        Ok(())
+    }
+
+    /// Return one deterministic dependency path `start -> ... -> target` if reachable.
+    pub fn find_dependency_path(&self, start: &str, target: &str) -> Option<Vec<String>> {
+        if self.issue(start).is_none() || self.issue(target).is_none() {
+            return None;
+        }
+        if start == target {
+            return Some(vec![start.to_string()]);
+        }
+
+        let mut queue: VecDeque<Vec<String>> = VecDeque::new();
+        let mut visited: BTreeSet<String> = BTreeSet::new();
+        queue.push_back(vec![start.to_string()]);
+        visited.insert(start.to_string());
+
+        while let Some(path) = queue.pop_front() {
+            let current = path.last()?.clone();
+            let Some(issue) = self.issue(&current) else {
+                continue;
+            };
+            let mut next_ids: Vec<String> = issue
+                .dependencies
+                .iter()
+                .map(|dep| dep.depends_on_id.clone())
+                .collect();
+            next_ids.sort();
+            next_ids.dedup();
+
+            for next in next_ids {
+                if next == target {
+                    let mut found = path.clone();
+                    found.push(next);
+                    return Some(found);
+                }
+                if visited.insert(next.clone()) {
+                    let mut next_path = path.clone();
+                    next_path.push(next);
+                    queue.push_back(next_path);
+                }
+            }
+        }
+
+        None
+    }
+
+    /// Return one deterministic cycle path if any cycle exists.
+    pub fn find_any_dependency_cycle(&self) -> Option<Vec<String>> {
+        for issue in self.issues() {
+            let mut deps = issue.dependencies.clone();
+            deps.sort_by(|left, right| {
+                (
+                    left.depends_on_id.as_str(),
+                    left.dep_type.as_str(),
+                    left.created_by.as_str(),
+                )
+                    .cmp(&(
+                        right.depends_on_id.as_str(),
+                        right.dep_type.as_str(),
+                        right.created_by.as_str(),
+                    ))
+            });
+            for dep in deps {
+                if let Some(path) = self.find_dependency_path(&dep.depends_on_id, &issue.id) {
+                    let mut cycle = vec![issue.id.clone()];
+                    cycle.extend(path);
+                    return Some(cycle);
+                }
+            }
+        }
+        None
     }
 
     /// Iterate all issues in deterministic ID order.
@@ -315,5 +505,163 @@ mod tests {
                 ..
             } if issue_id == "bd-a" && depends_on_id == "bd-b"
         ));
+    }
+
+    #[test]
+    fn add_dependency_rejects_self_loop() {
+        let mut store = MemoryStore::from_issues(vec![issue("bd-a", "open", vec![])])
+            .expect("store should build");
+
+        let err = store
+            .add_dependency(
+                "bd-a",
+                "bd-a",
+                crate::dependency::DepType::Blocks,
+                String::new(),
+            )
+            .expect_err("self loop must error");
+        assert!(matches!(
+            err,
+            MemoryStoreError::DependencySelfLoop { issue_id, .. } if issue_id == "bd-a"
+        ));
+    }
+
+    #[test]
+    fn add_dependency_rejects_cycles() {
+        let mut store = MemoryStore::from_issues(vec![
+            issue("bd-a", "open", vec![]),
+            issue("bd-b", "open", vec![]),
+        ])
+        .expect("store should build");
+
+        store
+            .add_dependency(
+                "bd-a",
+                "bd-b",
+                crate::dependency::DepType::Blocks,
+                String::new(),
+            )
+            .expect("first edge should add");
+
+        let err = store
+            .add_dependency(
+                "bd-b",
+                "bd-a",
+                crate::dependency::DepType::Blocks,
+                String::new(),
+            )
+            .expect_err("cycle edge must error");
+        assert!(matches!(
+            err,
+            MemoryStoreError::DependencyCycle {
+                issue_id,
+                depends_on_id,
+                ..
+            } if issue_id == "bd-b" && depends_on_id == "bd-a"
+        ));
+    }
+
+    #[test]
+    fn remove_dependency_removes_edge() {
+        let mut store = MemoryStore::from_issues(vec![
+            issue("bd-a", "open", vec![]),
+            issue("bd-b", "open", vec![]),
+        ])
+        .expect("store should build");
+        store
+            .add_dependency(
+                "bd-a",
+                "bd-b",
+                crate::dependency::DepType::Blocks,
+                String::new(),
+            )
+            .expect("edge should add");
+
+        store
+            .remove_dependency("bd-a", "bd-b", crate::dependency::DepType::Blocks)
+            .expect("edge should remove");
+        assert!(
+            store
+                .dependencies_of("bd-a")
+                .all(|dep| dep.depends_on_id != "bd-b")
+        );
+    }
+
+    #[test]
+    fn replace_dependency_updates_edge_type() {
+        let mut store = MemoryStore::from_issues(vec![
+            issue("bd-a", "open", vec![]),
+            issue("bd-b", "open", vec![]),
+        ])
+        .expect("store should build");
+        store
+            .add_dependency(
+                "bd-a",
+                "bd-b",
+                crate::dependency::DepType::Related,
+                String::new(),
+            )
+            .expect("edge should add");
+
+        store
+            .replace_dependency(
+                "bd-a",
+                "bd-b",
+                crate::dependency::DepType::Related,
+                crate::dependency::DepType::Blocks,
+                "codex".to_string(),
+            )
+            .expect("edge type should replace");
+
+        let deps: Vec<_> = store.dependencies_of("bd-a").collect();
+        assert_eq!(deps.len(), 1);
+        assert_eq!(deps[0].dep_type, crate::dependency::DepType::Blocks);
+        assert_eq!(deps[0].created_by, "codex");
+    }
+
+    #[test]
+    fn find_any_dependency_cycle_returns_deterministic_path() {
+        let mut store = MemoryStore::from_issues(vec![
+            issue("bd-a", "open", vec![]),
+            issue("bd-b", "open", vec![]),
+            issue("bd-c", "open", vec![]),
+        ])
+        .expect("store should build");
+        store
+            .add_dependency(
+                "bd-a",
+                "bd-b",
+                crate::dependency::DepType::Blocks,
+                String::new(),
+            )
+            .expect("edge a->b should add");
+        store
+            .add_dependency(
+                "bd-b",
+                "bd-c",
+                crate::dependency::DepType::Blocks,
+                String::new(),
+            )
+            .expect("edge b->c should add");
+        let issue_c = store.issue_mut("bd-c").expect("bd-c exists");
+        issue_c.dependencies.push(Dependency {
+            issue_id: "bd-c".to_string(),
+            depends_on_id: "bd-a".to_string(),
+            dep_type: crate::dependency::DepType::Blocks,
+            created_by: String::new(),
+        });
+
+        let cycle = store
+            .find_any_dependency_cycle()
+            .expect("cycle should be detected");
+        assert_eq!(
+            cycle,
+            vec![
+                "bd-a".to_string(),
+                "bd-b".to_string(),
+                "bd-c".to_string(),
+                "bd-a".to_string()
+            ]
+        );
     }
 }

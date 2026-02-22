@@ -126,7 +126,15 @@ Minimum parity set includes:
   required-gate projection order vs CI closure docs),
 - shared control-plane witness/policy identifiers are present and well-formed
   in `draft/CONTROL-PLANE-CONTRACT.json` (`requiredWitness`,
-  `instructionWitness`).
+  `instructionWitness`),
+- control-plane schema lifecycle table is present and deterministic
+  (`schemaLifecycle`): canonical kind families + alias windows +
+  fail-closed expiry semantics for contract/witness/projection kinds,
+- when lane-registry fields are present in
+  `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
+  unknown/duplicate lane IDs, unbound lane artifact-kind mappings, lane
+  ownership violations (including checker-core CwF ownership boundaries), and
+  missing required cross-lane witness routes.
 
 ### 4.4 `operation_reachability`
 
