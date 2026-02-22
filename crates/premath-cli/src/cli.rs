@@ -296,6 +296,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Build one CI required witness through core checker semantics
+    RequiredWitness {
+        /// Runtime JSON path (projection/results/gate refs/timestamps/profile bindings)
+        #[arg(long)]
+        runtime: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON

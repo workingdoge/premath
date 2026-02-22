@@ -12,5 +12,6 @@ pub mod observe;
 pub mod observe_serve;
 pub mod proposal_check;
 pub mod ref_binding;
+pub mod required_witness;
 pub mod tusk_eval;
 pub mod verify;

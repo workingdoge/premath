@@ -19,7 +19,6 @@ from change_projection import (
     project_required_checks,
     projection_plan_payload,
 )
-from control_plane_contract import REQUIRED_WITNESS_KIND
 from delta_snapshot import (
     default_delta_snapshot_path,
     make_delta_snapshot_payload,
@@ -30,6 +29,7 @@ from gate_witness_envelope import (
     sanitize_check_id,
     stable_sha256,
 )
+from required_witness_client import RequiredWitnessError, run_required_witness
 
 
 def parse_args() -> argparse.Namespace:
@@ -334,34 +334,15 @@ def main() -> int:
         )
 
     failed = [row for row in results if row["exitCode"] != 0]
-    verdict_class = "accepted" if not failed else "rejected"
-    operational_failure_classes = ["check_failed"] if failed else []
-    semantic_failure_classes: List[str] = []
-    for ref in gate_witness_refs:
-        classes_raw = ref.get("failureClasses")
-        if not isinstance(classes_raw, list):
-            continue
-        for class_name in classes_raw:
-            if isinstance(class_name, str) and class_name.strip():
-                semantic_failure_classes.append(class_name.strip())
-    semantic_failure_classes = sorted(set(semantic_failure_classes))
-    failure_classes = sorted(set(operational_failure_classes + semantic_failure_classes))
 
     finished_at = datetime.now(timezone.utc)
-    witness = {
-        "ciSchema": 1,
-        "witnessKind": REQUIRED_WITNESS_KIND,
+    runtime_payload = {
         "projectionPolicy": plan["projectionPolicy"],
         "projectionDigest": plan["projectionDigest"],
         "changedPaths": plan["changedPaths"],
-        "requiredChecks": required_checks,
-        "executedChecks": [row["checkId"] for row in results],
+        "requiredChecks": list(required_checks),
         "results": results,
         "gateWitnessRefs": gate_witness_refs,
-        "verdictClass": verdict_class,
-        "operationalFailureClasses": operational_failure_classes,
-        "semanticFailureClasses": semantic_failure_classes,
-        "failureClasses": failure_classes,
         "docsOnly": plan["docsOnly"],
         "reasons": plan["reasons"],
         "deltaSource": plan["deltaSource"],
@@ -376,6 +357,14 @@ def main() -> int:
         "runFinishedAt": finished_at.isoformat(),
         "runDurationMs": int((finished_at - started_at).total_seconds() * 1000),
     }
+    try:
+        witness = run_required_witness(root, runtime_payload)
+    except RequiredWitnessError as exc:
+        print(
+            f"[error] required witness build failed: {exc.failure_class}: {exc.reason}",
+            file=sys.stderr,
+        )
+        return 2
 
     out_path = out_dir / f"{plan['projectionDigest']}.json"
     with out_path.open("w", encoding="utf-8") as f:
@@ -398,7 +387,7 @@ def main() -> int:
     print(f"[ci-required] latest witness: {latest_path}")
     print(f"[ci-required] latest delta: {delta_snapshot_path}")
 
-    if verdict_class == "rejected" and not args.allow_failure:
+    if witness.get("verdictClass") == "rejected" and not args.allow_failure:
         return 1
     return 0
 

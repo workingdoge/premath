@@ -172,6 +172,48 @@ fn write_instruction_runtime_input(dir: &Path, instruction_ref: &str, failed: bo
     runtime_path
 }
 
+fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
+    let runtime = serde_json::json!({
+        "projectionPolicy": "ci-topos-v0",
+        "projectionDigest": "proj1_demo",
+        "changedPaths": ["README.md"],
+        "requiredChecks": ["baseline"],
+        "results": [{
+            "checkId": "baseline",
+            "status": if failed { "failed" } else { "passed" },
+            "exitCode": if failed { 1 } else { 0 },
+            "durationMs": 25
+        }],
+        "gateWitnessRefs": [{
+            "checkId": "baseline",
+            "artifactRelPath": "gates/proj1_demo/01-baseline.json",
+            "sha256": "abc123",
+            "source": "native",
+            "runId": "run1_demo",
+            "witnessKind": "gate",
+            "result": if failed { "rejected" } else { "accepted" },
+            "failureClasses": if failed { vec!["descent_failure"] } else { Vec::<&str>::new() }
+        }],
+        "docsOnly": false,
+        "reasons": ["kernel_or_ci_or_governance_change"],
+        "deltaSource": "explicit",
+        "fromRef": "origin/main",
+        "toRef": "HEAD",
+        "policyDigest": "ci-topos-v0",
+        "squeakSiteProfile": "local",
+        "runStartedAt": "2026-02-22T00:00:00Z",
+        "runFinishedAt": "2026-02-22T00:00:01Z",
+        "runDurationMs": 1000
+    });
+    let runtime_path = dir.join("required-runtime.json");
+    fs::write(
+        &runtime_path,
+        serde_json::to_vec_pretty(&runtime).expect("runtime should serialize"),
+    )
+    .expect("required runtime should be written");
+    runtime_path
+}
+
 fn write_observation_surface(path: &Path) {
     let payload = serde_json::json!({
         "schema": 1,
@@ -431,6 +473,29 @@ fn instruction_witness_json_smoke() {
     );
     assert_eq!(payload["verdictClass"], "accepted");
     assert_eq!(payload["failureClasses"], serde_json::json!([]));
+}
+
+#[test]
+fn required_witness_json_smoke() {
+    let tmp = TempDirGuard::new("required-witness-json");
+    let runtime = write_required_runtime_input(tmp.path(), true);
+
+    let output = run_premath([
+        OsString::from("required-witness"),
+        OsString::from("--runtime"),
+        runtime.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["witnessKind"], "ci.required.v1");
+    assert_eq!(payload["projectionDigest"], "proj1_demo");
+    assert_eq!(payload["verdictClass"], "rejected");
+    assert_eq!(
+        payload["failureClasses"],
+        serde_json::json!(["check_failed", "descent_failure"])
+    );
 }
 
 #[test]

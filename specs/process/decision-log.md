@@ -1693,3 +1693,31 @@ lineage from envelope check to witness emission.
 - `instruction_check_client.py` validates presence of `instructionDigest` and
   retries through cargo when a stale local binary emits older payload shape.
 - instruction-path smoke and client/unit tests cover this fallback behavior.
+
+---
+
+## 2026-02-22 — Decision 0058: Move ci.required witness assembly to core `premath required-witness`
+
+### Decision
+Add a core `required-witness` command path and route
+`tools/ci/run_required_checks.py` witness assembly through it.
+
+This introduces:
+
+- `premath-coherence` required witness runtime/output types and deterministic
+  lineage assembly (`verdictClass`, operational/semantic failure unions),
+- `premath-cli required-witness --runtime <json> --json`,
+- `tools/ci/required_witness_client.py` as a thin transport adapter with
+  stale-local-binary fallback to cargo.
+
+### Rationale
+`bd-34` requires reducing Python semantic authority in gate/check pipelines.
+`run_required_checks.py` previously built `ci.required.v1` witness semantics
+locally; that duplicated authority with the checker layer. Moving witness
+assembly to core keeps wrappers transport-only and reduces drift risk.
+
+### Consequences
+- `run_required_checks.py` now sends runtime payload to core and consumes one
+  authoritative `ci.required.v1` witness JSON output.
+- CI pipeline test surface now includes dedicated required-witness client tests.
+- CLI smoke coverage now includes `required-witness` JSON command surface.

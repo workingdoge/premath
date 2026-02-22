@@ -5,6 +5,7 @@
 
 mod instruction;
 mod proposal;
+mod required;
 
 pub use instruction::{
     ExecutedInstructionCheck, InstructionError, InstructionProposalIngest, InstructionTypingPolicy,
@@ -17,6 +18,10 @@ pub use proposal::{
     ProposalStep, ProposalTargetJudgment, ValidatedProposal, compile_proposal_obligations,
     compute_proposal_digest, compute_proposal_kcir_ref, discharge_proposal_obligations,
     validate_proposal_payload,
+};
+pub use required::{
+    ExecutedRequiredCheck, RequiredGateWitnessRef, RequiredWitness, RequiredWitnessError,
+    RequiredWitnessRuntime, build_required_witness,
 };
 
 use premath_kernel::{obligation_gate_registry, obligation_gate_registry_json};
