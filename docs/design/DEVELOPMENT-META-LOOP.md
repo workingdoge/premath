@@ -1,0 +1,112 @@
+# Development Meta Loop
+
+Status: draft
+Scope: design-level, non-normative
+
+## 1. Purpose
+
+Capture one canonical development workflow so we do not repeatedly re-derive
+process shape while building.
+
+This document is the operational meta contract for:
+
+- issue sequencing,
+- multithread worker discipline,
+- lane/authority boundaries,
+- and gate cadence.
+
+## 2. First Principles
+
+1. Minimum encoding, maximum expressiveness.
+2. One authority artifact per boundary (no parallel semantics).
+3. Architecture/spec glue before implementation.
+4. Implementation before conformance vectors.
+5. Conformance before docs/traceability closure.
+
+Authority references:
+
+- `specs/premath/draft/SPEC-INDEX.md`
+- `specs/premath/draft/UNIFICATION-DOCTRINE.md`
+- `specs/premath/draft/PREMATH-COHERENCE.md`
+- `docs/design/MEMORY-LANES-CONTRACT.md`
+
+## 3. Canonical Work Order (per epic)
+
+Default order for any non-trivial epic:
+
+1. Architecture contract slice
+2. Spec/index/doctrine-site glue slice
+3. Control-plane typed contract + parity slice
+4. Core implementation slice
+5. Conformance vector slice
+6. Observation/UX projection slice (if needed)
+7. Docs/traceability closure slice
+
+If an epic skips a layer, record why in issue notes and keep dependency edges
+explicit.
+
+## 4. Multithread Operating Model
+
+### 4.1 Roles
+
+- Coordinator: owns prioritization and dependency updates in issue memory.
+- Worker: executes one bounded issue at a time.
+
+### 4.2 Current write discipline
+
+Until lock-safe distributed claim primitives are fully shipped, prefer one
+coordinator as the effective writer for issue-graph sequencing updates.
+
+Worker mutation authority remains instruction-linked by default.
+
+### 4.3 Worker loop (single-issue discipline)
+
+1. `issue_ready` (select target via dependency/priority order)
+2. claim/lease target
+3. execute bounded change
+4. run required verification commands
+5. if new work discovered: `issue_discover` + dependency edge
+6. write concise notes + refs, then close/release
+
+Never run multi-issue implicit sessions.
+
+## 5. Lane Discipline
+
+- Issue lane (`.premath/issues.jsonl`): task state, dependencies, acceptance,
+  verification commands.
+- Operations lane (`.premath/OPERATIONS.md`): runbooks and rollout evidence.
+- Doctrine/decision lane (`specs/*`, `decision-log.md`): contract authority and
+  lifecycle decisions.
+
+Do not move semantic authority into operations or issue notes.
+
+## 6. Gate Cadence
+
+Minimum gate cadence by change class:
+
+- Docs/spec glue: `mise run docs-coherence-check` + `mise run traceability-check`
+- Control-plane/checker: `mise run coherence-check` + `mise run ci-pipeline-test`
+- Mutation/concurrency/core: `cargo test -p premath-bd` + `cargo test -p premath-cli`
+- Capability/conformance: `mise run conformance-run`
+
+Always finish with:
+
+- `python3 tools/ci/check_issue_graph.py`
+
+## 7. Definition of Done (issue-level)
+
+An issue is done when:
+
+1. acceptance criteria are satisfied,
+2. verification commands have been run successfully,
+3. issue notes are concise and reference artifacts/commits/decisions,
+4. dependency graph is updated for discovered follow-up work.
+
+## 8. Anti-Patterns
+
+Avoid:
+
+- architecture changes without issue dependency updates,
+- adding new operational surfaces without doctrine-site/spec-index mapping,
+- parallel mutation semantics outside instruction-linked routes,
+- long-lived sessions with unrecorded discovered work.

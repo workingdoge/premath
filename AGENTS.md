@@ -146,6 +146,23 @@
 - Keep issue notes compact and reference operations/spec artifacts instead of pasting large transcripts.
 - Use `docs/design/MEMORY-LANES-CONTRACT.md` as the canonical write-discipline reference.
 
+## Development Meta Workflow
+
+- Do not re-derive process shape per task; use:
+  - `docs/design/DEVELOPMENT-META-LOOP.md`
+  - `.premath/OPERATIONS.md` (`Development Meta Loop (Default)`)
+- For non-trivial epics, keep dependency order explicit:
+  1. architecture contract
+  2. spec/index + doctrine-site glue
+  3. control-plane parity
+  4. implementation
+  5. conformance vectors
+  6. docs/traceability closure
+- Maintain one bounded issue per worker session by default; discovered work must
+  be captured through issue-memory surfaces (`issue_discover` + dependency edges).
+- Keep mutation authority instruction-linked for agent workers unless an
+  explicit, auditable override mode is selected.
+
 ## Coding Style & Naming Conventions
 
 - Rust style: `cargo fmt --all`; lint with `cargo clippy --workspace --all-targets -- -D warnings`.

@@ -29,6 +29,28 @@ For `Ev` Stage 3 execution order, gate cadence, and issue hygiene workflow, use:
 
 - `docs/design/EV-STAGE3-EXECUTION-RUNBOOK.md`
 
+## Development Meta Loop (Default)
+
+To avoid re-deriving process shape, use:
+
+- `docs/design/DEVELOPMENT-META-LOOP.md`
+
+Default execution order for non-trivial work:
+
+1. architecture contract
+2. spec/index + doctrine-site glue
+3. control-plane parity
+4. implementation
+5. conformance vectors
+6. docs/traceability closure
+
+Default close-out checks:
+
+- `mise run docs-coherence-check`
+- `mise run traceability-check`
+- `mise run coherence-check`
+- `python3 tools/ci/check_issue_graph.py`
+
 ## Evidence Log
 
 | Date (UTC) | Operation | Issue | Decision | Evidence |

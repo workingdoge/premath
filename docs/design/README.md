@@ -45,6 +45,9 @@ Authority rule:
   (typed-core dual projection) delivery.
 - `EV-STAGE3-EXECUTION-RUNBOOK.md`: deterministic Stage 3 execution order,
   per-task gate set, and commit/issue hygiene cadence.
+- `DEVELOPMENT-META-LOOP.md`: canonical development workflow contract
+  (architecture-first ordering, multithread worker loop, and lane/gate
+  discipline).
 - `LIFECYCLE-COHERENCE-FLOWS.md`: operator flow for schema lifecycle policy and
   coherence gate-chain enforcement.
 - `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move
