@@ -51,6 +51,36 @@ class _RunRecorder:
         )
 
 
+class _RunSequence:
+    def __init__(self, responses: Sequence[dict]) -> None:
+        self.responses = list(responses)
+        self.calls: list[list[str]] = []
+
+    def __call__(
+        self,
+        cmd: Sequence[str],
+        cwd: Path,
+        capture_output: bool,
+        text: bool,
+    ) -> subprocess.CompletedProcess[str]:
+        self.calls.append(list(cmd))
+        if not self.responses:
+            raise AssertionError("unexpected extra command invocation")
+        response = self.responses.pop(0)
+        returncode = int(response.get("returncode", 0))
+        stderr = str(response.get("stderr", ""))
+        payload = response.get("payload")
+        stdout = ""
+        if returncode == 0:
+            stdout = json.dumps(payload if payload is not None else {}) + "\n"
+        return subprocess.CompletedProcess(
+            list(cmd),
+            returncode,
+            stdout=stdout,
+            stderr=stderr,
+        )
+
+
 class HarnessEscalationTests(unittest.TestCase):
     def test_stop_action_produces_terminal_result(self) -> None:
         repo_root = Path(__file__).resolve().parents[2]
@@ -139,19 +169,32 @@ class HarnessEscalationTests(unittest.TestCase):
             self.assertIn("seed", notes_arg)
             self.assertIn("[harness-escalation]", notes_arg)
 
-    def test_missing_active_issue_context_is_skipped(self) -> None:
-        repo_root = Path(__file__).resolve().parents[2]
-        witness = repo_root / "artifacts/ciwitness/latest-required.json"
-        result = harness_escalation.apply_terminal_escalation(
-            repo_root,
-            scope="required",
-            decision=_decision("issue_discover"),
-            policy={"policyId": "policy.harness.retry.v1", "policyDigest": "pol1_x"},
-            witness_path=witness,
-            env={},
-        )
-        self.assertEqual(result.outcome, "skipped_missing_issue_context")
-        self.assertIsNone(result.issue_id)
+    def test_missing_active_issue_context_is_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-missing-context-") as tmp:
+            root = Path(tmp)
+            witness = root / "artifacts/ciwitness/latest-required.json"
+            witness.parent.mkdir(parents=True, exist_ok=True)
+            witness.write_text("{}", encoding="utf-8")
+            issues = root / ".premath/issues.jsonl"
+            issues.parent.mkdir(parents=True, exist_ok=True)
+            issues.write_text("", encoding="utf-8")
+            recorder = _RunSequence(
+                [
+                    {"payload": {"action": "issue.ready", "items": []}},
+                ]
+            )
+            with self.assertRaises(harness_escalation.EscalationError) as exc:
+                harness_escalation.apply_terminal_escalation(
+                    root,
+                    scope="required",
+                    decision=_decision("issue_discover"),
+                    policy={"policyId": "policy.harness.retry.v1", "policyDigest": "pol1_x"},
+                    witness_path=witness,
+                    env={},
+                    run_process=recorder,
+                    issues_path=issues,
+                )
+            self.assertEqual(exc.exception.failure_class, "escalation_issue_context_unbound")
 
     def test_active_issue_falls_back_to_harness_session(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-session-") as tmp:
@@ -200,6 +243,91 @@ class HarnessEscalationTests(unittest.TestCase):
             self.assertEqual(result.outcome, "applied")
             self.assertEqual(result.issue_id, "bd-parent")
             self.assertIn("issueSource=session:", result.details or "")
+
+    def test_active_issue_falls_back_to_ready_frontier(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-ready-") as tmp:
+            root = Path(tmp)
+            witness = root / "artifacts/ciwitness/latest-required.json"
+            witness.parent.mkdir(parents=True, exist_ok=True)
+            witness.write_text("{}", encoding="utf-8")
+            issues = root / ".premath/issues.jsonl"
+            issues.parent.mkdir(parents=True, exist_ok=True)
+            issues.write_text(
+                json.dumps({"id": "bd-parent", "title": "Parent", "notes": ""}) + "\n",
+                encoding="utf-8",
+            )
+            recorder = _RunSequence(
+                [
+                    {"payload": {"action": "issue.ready", "items": [{"id": "bd-parent"}]}},
+                    {"payload": {"action": "issue.update", "issue": {"id": "bd-parent", "status": "blocked"}}},
+                ]
+            )
+            result = harness_escalation.apply_terminal_escalation(
+                root,
+                scope="instruction",
+                decision=_decision("mark_blocked"),
+                policy={"policyId": "policy.harness.retry.v1", "policyDigest": "pol1_x"},
+                witness_path=witness,
+                env={},
+                run_process=recorder,
+                issues_path=issues,
+            )
+            self.assertEqual(result.outcome, "applied")
+            self.assertEqual(result.issue_id, "bd-parent")
+            self.assertIn("issueSource=ready:", result.details or "")
+            self.assertTrue(any("ready" in call for call in recorder.calls))
+
+    def test_ready_frontier_multiple_is_ambiguous(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-ready-ambiguous-") as tmp:
+            root = Path(tmp)
+            witness = root / "artifacts/ciwitness/latest-required.json"
+            witness.parent.mkdir(parents=True, exist_ok=True)
+            witness.write_text("{}", encoding="utf-8")
+            issues = root / ".premath/issues.jsonl"
+            issues.parent.mkdir(parents=True, exist_ok=True)
+            issues.write_text("", encoding="utf-8")
+            recorder = _RunSequence(
+                [
+                    {
+                        "payload": {
+                            "action": "issue.ready",
+                            "items": [{"id": "bd-a"}, {"id": "bd-b"}],
+                        }
+                    },
+                ]
+            )
+            with self.assertRaises(harness_escalation.EscalationError) as exc:
+                harness_escalation.apply_terminal_escalation(
+                    root,
+                    scope="instruction",
+                    decision=_decision("mark_blocked"),
+                    policy={"policyId": "policy.harness.retry.v1", "policyDigest": "pol1_x"},
+                    witness_path=witness,
+                    env={},
+                    run_process=recorder,
+                    issues_path=issues,
+                )
+            self.assertEqual(exc.exception.failure_class, "escalation_issue_context_ambiguous")
+
+    def test_conflicting_active_issue_env_values_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-env-ambiguous-") as tmp:
+            root = Path(tmp)
+            witness = root / "artifacts/ciwitness/latest-required.json"
+            witness.parent.mkdir(parents=True, exist_ok=True)
+            witness.write_text("{}", encoding="utf-8")
+            with self.assertRaises(harness_escalation.EscalationError) as exc:
+                harness_escalation.apply_terminal_escalation(
+                    root,
+                    scope="required",
+                    decision=_decision("issue_discover"),
+                    policy={"policyId": "policy.harness.retry.v1", "policyDigest": "pol1_x"},
+                    witness_path=witness,
+                    env={
+                        "PREMATH_ACTIVE_ISSUE_ID": "bd-a",
+                        "PREMATH_ISSUE_ID": "bd-b",
+                    },
+                )
+            self.assertEqual(exc.exception.failure_class, "escalation_issue_context_ambiguous")
 
     def test_malformed_harness_session_is_fail_closed(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-harness-escalate-session-invalid-") as tmp:

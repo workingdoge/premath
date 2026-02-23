@@ -61,6 +61,28 @@ def resolve_active_issue_id(env: Mapping[str, str] | None = None) -> str | None:
     return None
 
 
+def _resolve_active_issue_from_env(
+    env: Mapping[str, str],
+) -> tuple[str | None, str | None]:
+    values: list[tuple[str, str]] = []
+    for key in ACTIVE_ISSUE_ENV_KEYS:
+        raw = env.get(key)
+        if isinstance(raw, str) and raw.strip():
+            values.append((key, raw.strip()))
+    if not values:
+        return None, None
+
+    unique_values = {value for _, value in values}
+    if len(unique_values) > 1:
+        rendered = ", ".join(f"{key}={value}" for key, value in values)
+        raise EscalationError(
+            "escalation_issue_context_ambiguous",
+            f"conflicting active issue env values: {rendered}",
+        )
+    key, value = values[0]
+    return value, key
+
+
 def resolve_harness_session_path(
     repo_root: Path,
     env: Mapping[str, str] | None = None,
@@ -111,21 +133,85 @@ def _resolve_active_issue_from_harness_session(
     return None
 
 
+def _resolve_active_issue_from_ready_frontier(
+    repo_root: Path,
+    issues_path: Path,
+    *,
+    run_process: Any = subprocess.run,
+) -> str | None:
+    payload = _run_issue_json(
+        repo_root,
+        ["ready", "--issues", str(issues_path)],
+        run_process=run_process,
+    )
+    items = payload.get("items")
+    if not isinstance(items, list):
+        raise EscalationError(
+            "escalation_issue_output_invalid",
+            "issue ready payload must include array field `items`",
+        )
+
+    issue_ids: list[str] = []
+    for item in items:
+        if not isinstance(item, dict):
+            raise EscalationError(
+                "escalation_issue_output_invalid",
+                "issue ready row must be an object",
+            )
+        issue_id = item.get("id")
+        if not isinstance(issue_id, str) or not issue_id.strip():
+            raise EscalationError(
+                "escalation_issue_output_invalid",
+                "issue ready row missing non-empty `id`",
+            )
+        issue_ids.append(issue_id.strip())
+
+    if not issue_ids:
+        return None
+    if len(issue_ids) > 1:
+        rendered = ", ".join(issue_ids)
+        raise EscalationError(
+            "escalation_issue_context_ambiguous",
+            f"ready frontier contains multiple issues: {rendered}",
+        )
+    return issue_ids[0]
+
+
 def resolve_active_issue_context(
     repo_root: Path,
     env: Mapping[str, str] | None = None,
+    *,
+    issues_path: Path | None = None,
+    run_process: Any = subprocess.run,
 ) -> tuple[str | None, str]:
     source = env if env is not None else os.environ
-    for key in ACTIVE_ISSUE_ENV_KEYS:
-        value = source.get(key)
-        if isinstance(value, str) and value.strip():
-            return value.strip(), f"env:{key}"
+    env_issue_id, env_key = _resolve_active_issue_from_env(source)
+    if env_issue_id and env_key:
+        return env_issue_id, f"env:{env_key}"
 
     session_path = resolve_harness_session_path(repo_root, source)
     issue_from_session = _resolve_active_issue_from_harness_session(session_path)
     if issue_from_session:
         return issue_from_session, f"session:{session_path}"
-    return None, f"none(session:{session_path})"
+
+    resolved_issues_path = resolve_issues_path(repo_root, source, issues_path)
+    issue_from_ready = _resolve_active_issue_from_ready_frontier(
+        repo_root,
+        resolved_issues_path,
+        run_process=run_process,
+    )
+    if issue_from_ready:
+        return issue_from_ready, f"ready:{resolved_issues_path}"
+
+    raise EscalationError(
+        "escalation_issue_context_unbound",
+        (
+            "active issue context missing across env/session/ready fallback; "
+            f"set one of: {', '.join(ACTIVE_ISSUE_ENV_KEYS)}, "
+            f"or provide harness session at {HARNESS_SESSION_ENV_KEY}, "
+            f"or ensure exactly one ready issue in {resolved_issues_path}"
+        ),
+    )
 
 
 def resolve_issues_path(
@@ -297,22 +383,13 @@ def apply_terminal_escalation(
             details="terminal stop with no mutation",
         )
 
-    active_issue_id, issue_source = resolve_active_issue_context(repo_root, env)
-    if not active_issue_id:
-        return EscalationResult(
-            action=action,
-            outcome="skipped_missing_issue_context",
-            issue_id=None,
-            created_issue_id=None,
-            note_digest=None,
-            witness_ref=witness_ref,
-            details=(
-                f"source={issue_source}; set one of: {', '.join(ACTIVE_ISSUE_ENV_KEYS)} "
-                f"or provide harness session at {HARNESS_SESSION_ENV_KEY}"
-            ),
-        )
-
     resolved_issues_path = resolve_issues_path(repo_root, env, issues_path)
+    active_issue_id, issue_source = resolve_active_issue_context(
+        repo_root,
+        env,
+        issues_path=resolved_issues_path,
+        run_process=run_process,
+    )
     note = build_escalation_note(scope, decision, policy, witness_ref)
     note_digest = "note1_" + _stable_hash({"scope": scope, "note": note})
 
