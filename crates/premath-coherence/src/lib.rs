@@ -2591,10 +2591,9 @@ fn evaluate_gate_chain_worker_lane_authority(
             if let (Some(active_index), Some(support_index)) = (
                 epoch_to_month_index(active_epoch_value),
                 epoch_to_month_index(support_until_epoch),
-            ) {
-                if support_index - active_index > 12 {
-                    failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
-                }
+            ) && support_index - active_index > 12
+            {
+                failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
             }
         }
     }
