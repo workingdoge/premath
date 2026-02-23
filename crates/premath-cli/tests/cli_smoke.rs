@@ -1385,6 +1385,20 @@ fn issue_add_dep_ready_json_smoke() {
     ]);
     assert_success(&out_add_child);
 
+    let out_add_manual_blocked = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Manual blocked issue"),
+        OsString::from("--id"),
+        OsString::from("bd-manual"),
+        OsString::from("--status"),
+        OsString::from("blocked"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add_manual_blocked);
+
     let out_dep = run_premath([
         OsString::from("dep"),
         OsString::from("add"),
@@ -1407,10 +1421,31 @@ fn issue_add_dep_ready_json_smoke() {
     ]);
     assert_success(&out_blocked);
     let blocked = parse_json_stdout(&out_blocked);
-    assert_eq!(blocked["count"], 1);
-    assert_eq!(blocked["items"][0]["id"], "bd-child");
-    assert_eq!(blocked["items"][0]["blockers"][0]["dependsOnId"], "bd-root");
-    assert_eq!(blocked["items"][0]["blockers"][0]["type"], "blocks");
+    assert_eq!(blocked["count"], 2);
+    let blocked_items = blocked["items"]
+        .as_array()
+        .expect("blocked items should be an array");
+
+    let dep_blocked = blocked_items
+        .iter()
+        .find(|item| item["id"] == "bd-child")
+        .expect("dependency-blocked issue should be present");
+    assert_eq!(dep_blocked["manualBlocked"], false);
+    assert_eq!(dep_blocked["blockers"][0]["dependsOnId"], "bd-root");
+    assert_eq!(dep_blocked["blockers"][0]["type"], "blocks");
+
+    let manual_blocked = blocked_items
+        .iter()
+        .find(|item| item["id"] == "bd-manual")
+        .expect("manual blocked issue should be present");
+    assert_eq!(manual_blocked["manualBlocked"], true);
+    assert_eq!(
+        manual_blocked["blockers"]
+            .as_array()
+            .expect("manual blockers should be an array")
+            .len(),
+        0
+    );
 
     let out_ready = run_premath([
         OsString::from("issue"),

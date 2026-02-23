@@ -577,7 +577,7 @@ pub enum IssueCommands {
         json: bool,
     },
 
-    /// Show non-closed issues that are currently blocked
+    /// Show non-closed issues that are explicitly blocked or dependency-blocked
     Blocked {
         /// Path to issues JSONL
         #[arg(long, default_value = ".premath/issues.jsonl")]
