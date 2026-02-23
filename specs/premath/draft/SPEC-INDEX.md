@@ -159,7 +159,8 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
-  bindings + Stage 2 typed-authority metadata) consumed by CI/coherence adapter
+  bindings + Stage 2/Stage 3 typed-authority metadata) consumed by
+  CI/coherence adapter
   surfaces; lifecycle semantics follow `draft/UNIFICATION-DOCTRINE` §5.1
   including governance-mode metadata
   (`rollover|freeze`) and process contract in
@@ -260,7 +261,10 @@ Lane ownership note:
   rollback claims MUST use the deterministic rollback witness boundary in
   §10.6.3. Stage 2 typed-authority claims MUST use the clause-to-surface
   mapping in §10.6.4 (including Stage 2 gate-chain parity vectors and
-  `capabilities.ci_witnesses` boundary-authority vectors).
+  `capabilities.ci_witnesses` boundary-authority vectors). Stage 3 typed-first
+  closure claims MUST use §10.6.5 mapping (direct bidir checker/discharge route
+  canonical, sentinel fallback profile-gated only, typed-first consumer
+  lineage).
 
 ## 6. Suggested reading order
 

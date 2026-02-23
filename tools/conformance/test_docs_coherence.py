@@ -515,6 +515,20 @@ one canonical typed-core identity function over canonicalized profile bytes
         )
         self.assertEqual(missing, [])
 
+    def test_unification_stage3_closure_markers_all_present(self) -> None:
+        text = """
+#### 10.6.5 Stage 3 typed-first closure mapping (normative)
+`evidenceStage2Authority.bidirEvidenceRoute`
+`routeKind=direct_checker_discharge`
+`obligationFieldRef=bidirCheckerObligations`
+`bidirEvidenceRoute.fallback.mode=profile_gated_sentinel`
+Compatibility alias lookup MAY exist only behind an explicit
+"""
+        missing = check_docs_coherence.find_missing_markers(
+            text, check_docs_coherence.UNIFICATION_STAGE3_CLOSURE_MARKERS
+        )
+        self.assertEqual(missing, [])
+
     def test_span_square_composition_markers_all_present(self) -> None:
         text = """
 ## 4. Composition Law Surface (Bicategory Profile)

@@ -68,6 +68,14 @@ UNIFICATION_STAGE1_PROFILE_MARKERS: Tuple[str, ...] = (
     "`unification.evidence_stage1.rollback.identity_drift`",
     "`unification.evidence_stage1.rollback.unbound`",
 )
+UNIFICATION_STAGE3_CLOSURE_MARKERS: Tuple[str, ...] = (
+    "#### 10.6.5 Stage 3 typed-first closure mapping (normative)",
+    "`evidenceStage2Authority.bidirEvidenceRoute`",
+    "`routeKind=direct_checker_discharge`",
+    "`obligationFieldRef=bidirCheckerObligations`",
+    "`bidirEvidenceRoute.fallback.mode=profile_gated_sentinel`",
+    "Compatibility alias lookup MAY exist only behind an explicit",
+)
 SPEC_INDEX_UNIFIED_FACTORIZATION_RE = re.compile(
     r"Unified evidence factoring MUST route control-plane artifact families through\s+"
     r"one attested surface"
@@ -723,6 +731,11 @@ def main() -> int:
     )
     for marker in missing_stage1_markers:
         errors.append(f"UNIFICATION-DOCTRINE missing Stage 1 profile marker: {marker}")
+    missing_stage3_markers = find_missing_markers(
+        unification_text, UNIFICATION_STAGE3_CLOSURE_MARKERS
+    )
+    for marker in missing_stage3_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing Stage 3 closure marker: {marker}")
     missing_span_square_markers = find_missing_markers(
         span_square_text, SPAN_SQUARE_COMPOSITION_MARKERS
     )

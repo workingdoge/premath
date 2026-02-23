@@ -3299,3 +3299,53 @@ status is auditable and replayable.
 - Traceability status for `UNIFICATION-DOCTRINE` now reflects actual checker and
   vector coverage.
 - Future Stage 2 drift can be detected against one canonical docs contract.
+
+---
+
+## 2026-02-23 — Decision 0110: Close Stage 3 typed-first authority cleanup with bounded fallback and rollback
+
+### Decision
+Close Stage 3 authority cleanup by making direct checker/discharge evidence the
+canonical Stage 2 authority route, documenting Stage 3 closure mapping, and
+recording explicit fallback/rollback bounds.
+
+Implemented scope:
+
+1. migrate Stage 2 authority contract/checker surfaces to direct bidir route:
+   - canonical field `evidenceStage2Authority.bidirEvidenceRoute`,
+   - required constants `routeKind=direct_checker_discharge` and
+     `obligationFieldRef=bidirCheckerObligations`,
+   - canonical obligation + failure-class parity checks through
+     `gate_chain_parity`.
+2. keep transitional sentinel path compatibility-only and bounded:
+   - optional `kernelComplianceSentinel` accepted only when
+     `bidirEvidenceRoute.fallback.mode=profile_gated_sentinel`,
+   - current profile kind MUST be explicitly allowlisted in
+     `fallback.profileKinds`,
+   - default contract keeps fallback allowlist empty.
+3. close docs/traceability loop:
+   - add `§10.6.5 Stage 3 typed-first closure mapping (normative)` to
+     `draft/UNIFICATION-DOCTRINE`,
+   - update `draft/SPEC-INDEX` staged-gate lane note to include Stage 3 closure
+     constraints,
+   - update `draft/SPEC-TRACEABILITY` Stage 3 surface wording.
+
+Rollback notes (bounded):
+
+1. rollback MAY temporarily re-enable sentinel fallback for a profile only under
+   the profile-gated rule above;
+2. rollback MUST NOT introduce a second authority artifact or alias-as-authority
+   path;
+3. rollback + re-promotion MUST be issue-linked and decision-logged before
+   widening profile allowlists.
+
+### Rationale
+Stage 3 intent (typed-first authority) was implemented in code paths but remained
+partly implicit in doctrine closure language and decision-bound fallback limits.
+This decision makes the migration boundary explicit and replay-auditable.
+
+### Consequences
+- Stage 3 now has one canonical authority route across contract/checker/docs.
+- Transitional fallback is explicit, narrow, and profile-scoped instead of open-ended.
+- Future fallback expansion/reduction is constrained by deterministic governance
+  instead of ad-hoc implementation drift.

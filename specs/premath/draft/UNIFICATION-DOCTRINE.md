@@ -471,6 +471,21 @@ default. Compatibility alias lookup MAY exist only behind an explicit
 compatibility mode (for example `match=compatibility_alias`), and MUST NOT be
 the default projection-selection path.
 
+#### 10.6.5 Stage 3 typed-first closure mapping (normative)
+
+When Stage 3 cleanup is claimed complete, implementations MUST bind closure
+clauses to deterministic checker/vector surfaces as follows.
+
+| Stage 3 clause | Typed contract surface | Checker surface | Executable vectors/tests |
+| --- | --- | --- | --- |
+| direct checker/discharge route is canonical authority route | `evidenceStage2Authority.bidirEvidenceRoute` (`routeKind=direct_checker_discharge`, `obligationFieldRef=bidirCheckerObligations`) | `gate_chain_parity` Stage 2 bidir-route checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
+| transitional sentinel path is compatibility-only and profile-gated | optional `kernelComplianceSentinel` + `bidirEvidenceRoute.fallback.mode=profile_gated_sentinel` with current `profileKind` in `fallback.profileKinds` | Stage 2 authority fallback-gating checks in `gate_chain_parity` | `cargo test -p premath-coherence` (`check_gate_chain_parity_rejects_stage2_bidir_route_obligation_mismatch`, `check_gate_chain_parity_rejects_stage2_bidir_route_failure_class_mismatch`) |
+| typed-first consumer lineage is canonical across CI/CLI/MCP/observation | typed authority fields (`typedCoreProjectionDigest`, `normalizerId`, `policyDigest`) are canonical; alias fields are compatibility metadata only | CI witness lineage validators + observation typed-default projection selection | `capabilities.ci_witnesses` boundary-authority vectors + CLI/observation compatibility-mode checks |
+
+Stage 3 closure MUST NOT introduce a second authority artifact. If fallback is
+temporarily re-enabled for a profile, rollback/re-promotion MUST follow
+`§10.6` rollback requirements with issue + decision-log linkage.
+
 ## 11. Cross-layer Obstruction Algebra (v0)
 
 Implementations MAY project failure classes into one typed obstruction algebra
