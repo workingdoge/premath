@@ -1087,6 +1087,7 @@ pub enum HarnessFeatureStatusArg {
     Completed,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand, Clone, Debug)]
 pub enum HarnessTrajectoryCommands {
     /// Append one harness step trajectory row
