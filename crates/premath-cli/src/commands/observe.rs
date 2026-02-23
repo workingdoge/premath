@@ -185,6 +185,15 @@ fn print_coherence_summary(coherence: &Value) {
     if stale > 0 || contended > 0 {
         println!("  stale/contended claims: {stale}/{contended}");
     }
+    let worker_count = json_i64(coherence, "/workerLaneThroughput/workerCount").unwrap_or(0);
+    let in_progress = json_i64(coherence, "/workerLaneThroughput/inProgressCount").unwrap_or(0);
+    let unassigned =
+        json_i64(coherence, "/workerLaneThroughput/unassignedInProgressCount").unwrap_or(0);
+    if worker_count > 0 || in_progress > 0 {
+        println!(
+            "  worker-lane WIP (workers/in-progress/unassigned): {worker_count}/{in_progress}/{unassigned}"
+        );
+    }
 }
 
 fn json_bool(root: &Value, pointer: &str) -> Option<bool> {

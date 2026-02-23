@@ -317,6 +317,14 @@ class ObservationSurfaceTests(unittest.TestCase):
             self.assertEqual(coherence["instructionTyping"]["unknownCount"], 1)
             self.assertEqual(coherence["proposalRejectClasses"]["classCounts"]["proposal_unbound_policy"], 1)
             self.assertEqual(coherence["leaseHealth"]["staleCount"], 1)
+            throughput = coherence["workerLaneThroughput"]
+            self.assertEqual(throughput["inProgressCount"], 1)
+            self.assertEqual(throughput["unassignedInProgressCount"], 0)
+            self.assertEqual(throughput["workerCount"], 1)
+            self.assertEqual(throughput["activeLeaseCount"], 0)
+            self.assertEqual(throughput["staleLeaseCount"], 1)
+            self.assertEqual(throughput["perWorkerInProgress"][0]["worker"], "agent.alpha")
+            self.assertEqual(throughput["perWorkerInProgress"][0]["inProgressCount"], 1)
 
 
 if __name__ == "__main__":

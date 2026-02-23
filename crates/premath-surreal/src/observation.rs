@@ -757,6 +757,73 @@ fn coherence_lease_health(
     })
 }
 
+fn coherence_worker_lane_throughput(
+    issue_rows: &[serde_json::Map<String, Value>],
+    reference_time: Option<DateTime<Utc>>,
+) -> Value {
+    let mut active_lease_issue_ids = BTreeSet::new();
+    let mut stale_lease_issue_ids = BTreeSet::new();
+    let mut unknown_lease_evaluation_issue_ids = BTreeSet::new();
+    let mut worker_in_progress_counts: BTreeMap<String, u64> = BTreeMap::new();
+    let mut in_progress_count: u64 = 0;
+    let mut unassigned_in_progress_count: u64 = 0;
+
+    for row in issue_rows {
+        let status = string_opt(row.get("status")).unwrap_or_default();
+        if status == "in_progress" {
+            in_progress_count += 1;
+            if let Some(worker) = string_opt(row.get("assignee")) {
+                *worker_in_progress_counts.entry(worker).or_insert(0) += 1;
+            } else {
+                unassigned_in_progress_count += 1;
+            }
+        }
+
+        let Some(Value::Object(lease)) = row.get("lease") else {
+            continue;
+        };
+        let issue_id = string_opt(row.get("id")).unwrap_or_else(|| "(unknown)".to_string());
+
+        let Some(reference_time) = reference_time else {
+            unknown_lease_evaluation_issue_ids.insert(issue_id);
+            continue;
+        };
+        let Some(expires_at) = lease_expires_at(lease) else {
+            unknown_lease_evaluation_issue_ids.insert(issue_id);
+            continue;
+        };
+        if expires_at <= reference_time {
+            stale_lease_issue_ids.insert(issue_id);
+        } else {
+            active_lease_issue_ids.insert(issue_id);
+        }
+    }
+
+    let per_worker_in_progress = worker_in_progress_counts
+        .into_iter()
+        .map(|(worker, count)| {
+            json!({
+                "worker": worker,
+                "inProgressCount": count
+            })
+        })
+        .collect::<Vec<_>>();
+
+    json!({
+        "referenceTime": reference_time.map(rfc3339),
+        "inProgressCount": in_progress_count,
+        "unassignedInProgressCount": unassigned_in_progress_count,
+        "workerCount": per_worker_in_progress.len(),
+        "perWorkerInProgress": per_worker_in_progress,
+        "activeLeaseCount": active_lease_issue_ids.len(),
+        "activeLeaseIssueIds": active_lease_issue_ids.into_iter().collect::<Vec<_>>(),
+        "staleLeaseCount": stale_lease_issue_ids.len(),
+        "staleLeaseIssueIds": stale_lease_issue_ids.into_iter().collect::<Vec<_>>(),
+        "unknownLeaseEvaluationCount": unknown_lease_evaluation_issue_ids.len(),
+        "unknownLeaseEvaluationIssueIds": unknown_lease_evaluation_issue_ids.into_iter().collect::<Vec<_>>()
+    })
+}
+
 fn coherence_summary(
     delta: Option<&DeltaSummary>,
     required: Option<&RequiredSummary>,
@@ -770,6 +837,7 @@ fn coherence_summary(
     let issue_partition = coherence_issue_partition(issue_rows);
     let reference_time = derive_reference_time(instructions, issue_rows);
     let lease_health = coherence_lease_health(issue_rows, reference_time);
+    let worker_lane_throughput = coherence_worker_lane_throughput(issue_rows, reference_time);
 
     let mut attention_reasons = Vec::new();
     if policy_drift
@@ -825,6 +893,7 @@ fn coherence_summary(
         "proposalRejectClasses": proposal_reject_classes,
         "issuePartition": issue_partition,
         "leaseHealth": lease_health,
+        "workerLaneThroughput": worker_lane_throughput,
         "needsAttention": !attention_reasons.is_empty(),
         "attentionReasons": attention_reasons
     })
@@ -1358,6 +1427,167 @@ mod tests {
         assert_eq!(surface.summary.required_check_count, 1);
         assert_eq!(surface.summary.changed_path_count, 1);
         assert_eq!(surface.instructions.len(), 1);
+        let coherence = surface
+            .summary
+            .coherence
+            .as_ref()
+            .expect("coherence summary should exist");
+        let throughput = coherence
+            .get("workerLaneThroughput")
+            .expect("worker lane throughput should exist");
+        assert_eq!(
+            throughput
+                .get("inProgressCount")
+                .and_then(Value::as_u64)
+                .unwrap_or_default(),
+            0
+        );
+        assert_eq!(
+            throughput
+                .get("workerCount")
+                .and_then(Value::as_u64)
+                .unwrap_or_default(),
+            0
+        );
+        assert_eq!(
+            throughput
+                .get("perWorkerInProgress")
+                .and_then(Value::as_array)
+                .map(Vec::len)
+                .unwrap_or_default(),
+            0
+        );
+
+        let _ = fs::remove_dir_all(&repo_root);
+    }
+
+    #[test]
+    fn build_surface_projects_worker_lane_throughput() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after unix epoch")
+            .as_nanos();
+        let repo_root = std::env::temp_dir().join(format!(
+            "premath-surreal-observation-throughput-{unique}-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&repo_root).expect("temp root should create");
+        let ciwitness = repo_root.join("artifacts/ciwitness");
+        let issues = repo_root.join(".premath/issues.jsonl");
+
+        write_json(
+            &ciwitness.join("latest-required.json"),
+            json!({
+                "witnessKind": REQUIRED_WITNESS_KIND,
+                "projectionPolicy": "ci-topos-v0",
+                "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
+                "verdictClass": "accepted",
+                "requiredChecks": ["baseline"],
+                "executedChecks": ["baseline"],
+                "failureClasses": []
+            }),
+        );
+        write_json(
+            &ciwitness.join("20260222T010000Z-ci.json"),
+            json!({
+                "witnessKind": INSTRUCTION_WITNESS_KIND,
+                "instructionId": "20260222T010000Z-ci",
+                "instructionDigest": "instr1_alpha",
+                "policyDigest": "pol1_alpha",
+                "verdictClass": "accepted",
+                "requiredChecks": ["baseline"],
+                "executedChecks": ["baseline"],
+                "failureClasses": [],
+                "runFinishedAt": "2026-02-22T01:00:00Z"
+            }),
+        );
+
+        let mut active = base_issue("bd-active");
+        active["status"] = json!("in_progress");
+        active["assignee"] = json!("worker.alpha");
+        active["updated_at"] = json!("2026-02-22T01:00:00Z");
+        active["lease"] = json!({
+            "lease_id": "lease1_bd-active",
+            "owner": "worker.alpha",
+            "acquired_at": "2026-02-22T00:30:00Z",
+            "expires_at": "2026-02-22T02:00:00Z"
+        });
+
+        let mut stale = base_issue("bd-stale");
+        stale["status"] = json!("in_progress");
+        stale["assignee"] = json!("worker.beta");
+        stale["updated_at"] = json!("2026-02-22T01:00:00Z");
+        stale["lease"] = json!({
+            "lease_id": "lease1_bd-stale",
+            "owner": "worker.beta",
+            "acquired_at": "2026-02-22T00:10:00Z",
+            "expires_at": "2026-02-22T00:45:00Z"
+        });
+
+        let mut unassigned = base_issue("bd-unassigned");
+        unassigned["status"] = json!("in_progress");
+        unassigned["assignee"] = json!("");
+        unassigned["updated_at"] = json!("2026-02-22T01:00:00Z");
+
+        write_issue_jsonl(&issues, &[active, stale, unassigned]);
+
+        let surface =
+            build_surface(&repo_root, &ciwitness, Some(&issues)).expect("surface should build");
+        assert!(surface.summary.needs_attention);
+
+        let coherence = surface
+            .summary
+            .coherence
+            .as_ref()
+            .expect("coherence summary should exist");
+        let throughput = coherence
+            .get("workerLaneThroughput")
+            .expect("worker lane throughput should exist");
+        assert_eq!(
+            throughput
+                .get("inProgressCount")
+                .and_then(Value::as_u64)
+                .unwrap_or_default(),
+            3
+        );
+        assert_eq!(
+            throughput
+                .get("unassignedInProgressCount")
+                .and_then(Value::as_u64)
+                .unwrap_or_default(),
+            1
+        );
+        assert_eq!(
+            throughput
+                .get("workerCount")
+                .and_then(Value::as_u64)
+                .unwrap_or_default(),
+            2
+        );
+        assert_eq!(
+            throughput
+                .get("activeLeaseCount")
+                .and_then(Value::as_u64)
+                .unwrap_or_default(),
+            1
+        );
+        assert_eq!(
+            throughput
+                .get("staleLeaseCount")
+                .and_then(Value::as_u64)
+                .unwrap_or_default(),
+            1
+        );
+        let per_worker = throughput
+            .get("perWorkerInProgress")
+            .and_then(Value::as_array)
+            .expect("per-worker projection should be array");
+        assert_eq!(per_worker.len(), 2);
+        assert_eq!(per_worker[0]["worker"], "worker.alpha");
+        assert_eq!(per_worker[0]["inProgressCount"], 1);
+        assert_eq!(per_worker[1]["worker"], "worker.beta");
+        assert_eq!(per_worker[1]["inProgressCount"], 1);
 
         let _ = fs::remove_dir_all(&repo_root);
     }

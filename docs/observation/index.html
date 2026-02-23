@@ -277,6 +277,10 @@
         <div class="label">Stale/Contended Claims</div>
         <div class="value" id="mLeaseHealth">-</div>
       </article>
+      <article class="metric">
+        <div class="label">Worker WIP</div>
+        <div class="value" id="mWorkerWip">-</div>
+      </article>
     </section>
 
     <section class="panes">
@@ -452,6 +456,16 @@
           "mLeaseHealth",
           `${staleCount}/${contendedCount}`,
           leaseProblem ? "bad" : "ok"
+        );
+
+        const workerThroughput = coherence.workerLaneThroughput || {};
+        const workerCount = Number(workerThroughput.workerCount || 0);
+        const inProgressCount = Number(workerThroughput.inProgressCount || 0);
+        const unassignedInProgressCount = Number(workerThroughput.unassignedInProgressCount || 0);
+        setMetric(
+          "mWorkerWip",
+          `${workerCount}/${inProgressCount}/${unassignedInProgressCount}`,
+          unassignedInProgressCount > 0 ? "warn" : "ok"
         );
 
         if (needs.latestProjectionDigest) {
