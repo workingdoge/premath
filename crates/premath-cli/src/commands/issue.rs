@@ -348,6 +348,7 @@ struct BlockedIssueRow {
     title: String,
     status: String,
     priority: i32,
+    manual_blocked: bool,
     blockers: Vec<BlockedDependency>,
 }
 
@@ -359,6 +360,7 @@ fn run_blocked(issues: String, json_output: bool) {
         .issues()
         .filter(|issue| issue.status != "closed")
         .filter_map(|issue| {
+            let manual_blocked = issue.status == "blocked";
             let blockers = store
                 .blocking_dependencies_of(&issue.id)
                 .into_iter()
@@ -380,7 +382,7 @@ fn run_blocked(issues: String, json_output: bool) {
                 })
                 .collect::<Vec<_>>();
 
-            if blockers.is_empty() {
+            if blockers.is_empty() && !manual_blocked {
                 return None;
             }
 
@@ -389,6 +391,7 @@ fn run_blocked(issues: String, json_output: bool) {
                 title: issue.title.clone(),
                 status: issue.status.clone(),
                 priority: issue.priority,
+                manual_blocked,
                 blockers,
             })
         })
@@ -403,6 +406,7 @@ fn run_blocked(issues: String, json_output: bool) {
                     "title": row.title,
                     "status": row.status,
                     "priority": row.priority,
+                    "manualBlocked": row.manual_blocked,
                     "blockers": row.blockers.iter().map(|blocker| {
                         json!({
                             "issueId": blocker.issue_id,
@@ -435,8 +439,8 @@ fn run_blocked(issues: String, json_output: bool) {
         );
         for row in rows {
             println!(
-                "  - {} [{} p{}] {}",
-                row.id, row.status, row.priority, row.title
+                "  - {} [{} p{} manual_blocked={}] {}",
+                row.id, row.status, row.priority, row.manual_blocked, row.title
             );
             for blocker in row.blockers {
                 let status = blocker

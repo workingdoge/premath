@@ -110,7 +110,7 @@
 - `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json` — list issues with optional filters.
 - `cargo run --package premath-cli -- issue check --issues .premath/issues.jsonl --json` — run deterministic issue-memory contract checks (epic typing + active acceptance/verification + note-size warnings).
 - `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json` — return unblocked open issues.
-- `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues blocked by unresolved dependencies.
+- `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues explicitly blocked (`status=blocked`) or blocked by unresolved dependencies.
 - `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .premath/issues.jsonl --json` — update issue fields.
 - `cargo run --package premath-cli -- dep add <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — add a dependency edge.
 - `cargo run --package premath-cli -- dep remove <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — remove a dependency edge.

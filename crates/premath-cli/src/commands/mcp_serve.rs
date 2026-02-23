@@ -314,7 +314,7 @@ struct IssueBackendStatusTool {
 
 #[mcp_tool(
     name = "issue_blocked",
-    description = "List non-closed issues that currently have unresolved blocking dependencies",
+    description = "List non-closed issues that are explicitly blocked or have unresolved blocking dependencies",
     read_only_hint = true
 )]
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
@@ -1169,6 +1169,7 @@ fn call_issue_blocked(
         .issues()
         .filter(|issue| issue.status != "closed")
         .filter_map(|issue| {
+            let manual_blocked = issue.status == "blocked";
             let blockers = graph
                 .store
                 .blocking_dependencies_of(&issue.id)
@@ -1190,7 +1191,7 @@ fn call_issue_blocked(
                 })
                 .collect::<Vec<_>>();
 
-            if blockers.is_empty() {
+            if blockers.is_empty() && !manual_blocked {
                 return None;
             }
 
@@ -1199,6 +1200,7 @@ fn call_issue_blocked(
                 "title": issue.title,
                 "status": issue.status,
                 "priority": issue.priority,
+                "manualBlocked": manual_blocked,
                 "blockers": blockers
             }))
         })
@@ -2834,10 +2836,60 @@ mod tests {
         let blocked_payload = parse_tool_json(blocked);
         assert_eq!(blocked_payload["count"], 1);
         assert_eq!(blocked_payload["items"][0]["id"], "bd-child");
+        assert_eq!(blocked_payload["items"][0]["manualBlocked"], false);
         assert_eq!(
             blocked_payload["items"][0]["blockers"][0]["dependsOnId"],
             "bd-root"
         );
+    }
+
+    #[test]
+    fn issue_blocked_includes_manual_blocked_rows_without_dependencies() {
+        let root = temp_dir("issue-blocked-manual-status");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Open".to_string(),
+                id: Some("bd-open".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("open issue should be added");
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Manual blocked".to_string(),
+                id: Some("bd-manual".to_string()),
+                description: None,
+                status: Some("blocked".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("manual blocked issue should be added");
+
+        let blocked = call_issue_blocked(&config, IssueBlockedTool { issues_path: None })
+            .expect("blocked query should succeed");
+        let payload = parse_tool_json(blocked);
+        assert_eq!(payload["count"], 1);
+        assert_eq!(payload["items"][0]["id"], "bd-manual");
+        assert_eq!(payload["items"][0]["manualBlocked"], true);
+        assert_eq!(payload["items"][0]["blockers"], json!([]));
     }
 
     #[test]
