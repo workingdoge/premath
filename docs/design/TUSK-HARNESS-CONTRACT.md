@@ -107,7 +107,7 @@ Trajectory records are an operational lane, not semantic authority.
 
 | Harness clause | Current surface | Status |
 |---|---|---|
-| `boot` memory roots | `premath mcp-serve`, `.premath/issues.jsonl`, `artifacts/observation/latest.json`, `dep_diagnostics(active)` | partial |
+| `boot` memory roots | `premath mcp-serve`, `.premath/issues.jsonl`, `.premath/harness_session.json`, `artifacts/ciwitness/*`, `artifacts/observation/latest.json`, `dep_diagnostics(active)` | present |
 | `boot` deterministic next feature | `harness-feature` ledger (`next`/`check`) + `harness-session bootstrap` projection | present |
 | `step` mutation authority | `instruction-linked` mutation policy in MCP + instruction witness checks | present |
 | `step` deterministic verification | `ci-required-attested` (`run_required_checks` + verify/decide) | present |
@@ -117,16 +117,27 @@ Trajectory records are an operational lane, not semantic authority.
 
 ## 8. Gaps (remaining)
 
-1. Expand failure-class coverage from observed CI/harness runs while preserving
-   policy digest discipline.
+No known remaining harness-v1 contract gaps are tracked in this document at the
+current closure state.
+
+Operational maintenance (continuous, not a contract gap):
+
+1. Continue expanding failure-class coverage from observed CI/harness runs while
+   preserving policy-digest discipline in the canonical retry policy surface.
 
 ## 9. Implementation slice plan (no math generalization required)
 
-1. Expand failure-class coverage from observed CI/harness runs while preserving
-   policy digest discipline.
-2. Keep issue-context bootstrap deterministic across env + session fallback
-   paths (`PREMATH_ACTIVE_ISSUE_ID` / `PREMATH_ISSUE_ID` /
-   `PREMATH_HARNESS_SESSION_PATH` -> `.premath/harness_session.json`).
+Current status:
+
+1. Failure-class expansion + retry/escalation alignment is closed under
+   historical issue `bd-190`.
+2. Deterministic issue-context bootstrap via env/session fallback
+   (`PREMATH_ACTIVE_ISSUE_ID` / `PREMATH_ISSUE_ID` /
+   `PREMATH_HARNESS_SESSION_PATH` -> `.premath/harness_session.json`) is
+   specified and implemented in `draft/HARNESS-RETRY-ESCALATION`.
+
+Next slices should be opened only for net-new gaps discovered in runtime
+evidence, not for already-closed closure items.
 
 Each slice should ship with:
 
