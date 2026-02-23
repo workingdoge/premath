@@ -51,6 +51,13 @@ Default close-out checks:
 - `mise run coherence-check`
 - `python3 tools/ci/check_issue_graph.py`
 
+## Session Continuity
+
+For restart-safe context continuity between MCP/server sessions, keep the latest
+handoff summary in:
+
+- `.premath/SESSION-HANDOFF.md`
+
 ## Evidence Log
 
 | Date (UTC) | Operation | Issue | Decision | Evidence |
