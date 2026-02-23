@@ -147,6 +147,13 @@ Minimum parity set includes:
   binding metadata (`normalizerId`, `policyDigest`), and mismatch between
   declared rollback failure classes and canonical Stage 1 rollback doctrine
   classes,
+- when optional `evidenceFactorization` is present in
+  `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
+  missing/ambiguous factorization route metadata, unbound deterministic binding
+  metadata (`normalizerId`, `policyDigest`), mismatch between declared
+  factorization failure classes and canonical unification classes, and missing
+  required pullback commutation route binding
+  (`pullbackBaseChange=span_square_commutation`),
 - when lane-registry fields are present in
   `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
   unknown/duplicate lane IDs, unbound lane artifact-kind mappings, lane

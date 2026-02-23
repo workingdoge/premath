@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "gate_chain_parity",
+  "artifacts": {
+    "controlPlaneContract": {
+      "schema": 1,
+      "contractKind": "premath.control_plane.contract.v1",
+      "requiredGateProjection": {
+        "projectionPolicy": "ci-topos-v0",
+        "checkOrder": [
+          "baseline"
+        ]
+      },
+      "requiredWitness": {
+        "witnessKind": "ci.required.v1",
+        "decisionKind": "ci.required.decision.v1"
+      },
+      "instructionWitness": {
+        "witnessKind": "ci.instruction.v1",
+        "policyKind": "ci.instruction.policy.v1",
+        "policyDigestPrefix": "pol1_"
+      },
+      "evidenceFactorization": {
+        "profileKind": "ev.factorization.v1",
+        "routeKind": "eta_F_to_Ev",
+        "factorizationRoutes": [
+          "eta.control_plane_to_ev"
+        ],
+        "binding": {
+          "normalizerIdRef": "normalizerId",
+          "policyDigestRef": "policy"
+        },
+        "crossLaneRoutes": {
+          "pullbackBaseChange": "span_square_commutation"
+        },
+        "failureClasses": {
+          "missing": "unification.evidence_factorization.missing",
+          "ambiguous": "unification.evidence_factorization.ambiguous",
+          "unbound": "unification.evidence_factorization.unbound"
+        }
+      }
+    }
+  }
+}

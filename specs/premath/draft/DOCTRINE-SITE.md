@@ -41,6 +41,8 @@ Purpose:
 - make the doctrine-to-operation path explicit,
 - keep declarations and operational entrypoints coherent under change,
 - enforce that runtime tools remain downstream of declared semantic authority.
+- keep worker-orchestration routing aligned with cover/refinement and
+  Unified Evidence factoring boundaries from `draft/UNIFICATION-DOCTRINE`.
 
 This spec does not introduce new doctrine morphism classes.
 It binds existing classes from `draft/DOCTRINE-INF` to an auditable path map.
@@ -97,6 +99,14 @@ The site map MUST include at least:
 Operational nodes are not semantic authorities. They are execution/projection
 surfaces bound to upstream declarations.
 
+When implementations expose multithread worker orchestration, repositories
+SHOULD include route guidance linking these operation nodes to:
+
+- cover/refinement decomposition semantics (`raw/CTX-SITE`),
+- deterministic glue-or-obstruction boundary (`raw/SHEAF-STACK`),
+- Unified Evidence factoring and lane ownership (`draft/UNIFICATION-DOCTRINE`
+  §10 and §12).
+
 Repository v0 note:
 
 - CI operation nodes currently include `tools/ci/run_gate.sh`,
@@ -141,6 +151,20 @@ For each operation node, there MUST exist at least one directed path from
 
 This ensures every operational gate/projection entrypoint has an explicit
 doctrine ancestry.
+
+### 6.1 Operational cover/refinement routing boundary
+
+For routed worker-memory and harness operation paths
+(`op/mcp.issue_*`, `op/mcp.dep_*`, `op/harness.session_*`):
+
+1. decomposition/routing MUST remain operational projection material only,
+2. semantic admissibility MUST remain checker/Gate-owned,
+3. control-plane acceptance/rejection outputs MUST remain bound to one
+   deterministic evidence route (no parallel authority path).
+
+Cross-lane pullback/base-change commutation claims SHOULD be routed through the
+typed span/square witness surface (`draft/SPAN-SQUARE-CHECKING`) when surfaced
+by control-plane tooling.
 
 ## 7. Conformance tooling
 

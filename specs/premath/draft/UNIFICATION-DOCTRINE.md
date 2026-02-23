@@ -555,3 +555,82 @@ If an implementation emits obstruction constructors:
 
 These projections are informative indexing aids and MUST NOT affect admissibility
 decisions.
+
+## 12. Grothendieck Operationalization Contract (v0)
+
+This section defines the canonical operational reading of the doctrine for
+worker orchestration and control-plane artifact routing.
+
+### 12.1 One fibration, many deterministic projections
+
+Implementations claiming this contract MUST treat the semantic authority shape
+as one indexed family/fibration over contexts:
+
+- semantic authority projection: `p0 : E -> C` (kernel/Gate path),
+- attested control-plane evidence family: `Ev : Ctx^op -> V` (§10).
+
+Operational surfaces (instruction, coherence, CI witness, harness trajectory,
+observation projections, issue-memory projections) MAY vary by workflow, but
+MUST remain deterministic projections over one authority path and MUST NOT
+introduce a second admissibility schema.
+
+### 12.2 Worker orchestration as site cover/descent
+
+Concurrent work decomposition MUST be modeled as admissible covers on `Ctx`:
+
+1. coordinator selects an admissible cover
+   `{rho_i : Gamma_i -> Gamma}` over one active work context `Gamma`,
+2. each worker computes local candidate evidence over one refinement `Gamma_i`,
+3. overlap compatibility is checked on pullbacks
+   `Gamma_i x_Gamma Gamma_j`,
+4. coordinator performs deterministic glue-or-obstruction discharge.
+
+Global acceptance from concurrent work is valid only when glue/discharge is
+accepted through checker/Gate authority. Otherwise, deterministic obstruction
+witnesses MUST be emitted.
+
+### 12.3 Universal evidence factoring requirement
+
+For each attestable operational family `F : Ctx^op -> V` in one execution
+profile, implementations MUST provide one deterministic factoring route:
+
+- `eta_F : F => Ev`
+
+such that:
+
+1. all acceptance/rejection outputs consumed by runtime/control surfaces are
+   obtained through `Ev`,
+2. no surface may self-authorize admissibility without checker/Gate discharge,
+3. parallel inequivalent factorization routes fail closed under §10.5.
+
+### 12.4 Commutation and deterministic binding
+
+Cross-lane pullback/base-change claims in this operationalization MUST:
+
+1. route through typed span/square witnesses
+   (`draft/SPAN-SQUARE-CHECKING`),
+2. bind equality/comparison claims to `normalizerId + policyDigest`,
+3. preserve lane ownership in §9 (semantic/checker/commutation/runtime lanes).
+
+### 12.5 Operational theorem shape (normative reading)
+
+For fixed canonical contract bytes, repository state, and deterministic binding
+context:
+
+1. local worker outputs that factor through `Ev` and satisfy overlap
+   compatibility obligations produce one deterministic global accepted route up
+   to canonical projection equality in `Ev`, or
+2. produce deterministic rejection with obstruction/failure witnesses.
+
+Implementations MUST treat this as an authority boundary rule, not a heuristic.
+
+### 12.6 Minimum implementation checklist
+
+Conforming implementations SHOULD:
+
+1. encode worker decomposition in cover/refinement terms (`Ctx`, `J`),
+2. verify overlap/base-change claims via span/square witnesses,
+3. keep harness/coherence/CI surfaces as projections into `Ev`,
+4. keep admissibility decisions checker/Gate-owned only,
+5. reject deterministically on missing/ambiguous/unbound evidence factorization
+   routes.
