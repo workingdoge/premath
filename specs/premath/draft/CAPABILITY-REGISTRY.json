@@ -2,6 +2,39 @@
   "schema": 1,
   "registryKind": "premath.capability_registry.v1",
   "registryId": "capability.default.v1",
+  "profileOverlayClaims": [
+    "profile.doctrine_inf_governance.v0"
+  ],
+  "capabilityDocBindings": [
+    {
+      "docRef": "raw/SQUEAK-SITE",
+      "capabilityId": "capabilities.squeak_site"
+    },
+    {
+      "docRef": "raw/PREMATH-CI",
+      "capabilityId": "capabilities.ci_witnesses"
+    },
+    {
+      "docRef": "draft/LLM-INSTRUCTION-DOCTRINE",
+      "capabilityId": "capabilities.instruction_typing"
+    },
+    {
+      "docRef": "draft/LLM-PROPOSAL-CHECKING",
+      "capabilityId": "capabilities.instruction_typing"
+    },
+    {
+      "docRef": "profile/ADJOINTS-AND-SITES",
+      "capabilityId": "capabilities.adjoints_sites"
+    },
+    {
+      "docRef": "draft/CHANGE-MORPHISMS",
+      "capabilityId": "capabilities.change_morphisms"
+    },
+    {
+      "docRef": "draft/HARNESS-TYPESTATE",
+      "capabilityId": "capabilities.change_morphisms"
+    }
+  ],
   "executableCapabilities": [
     "capabilities.normal_forms",
     "capabilities.kcir_witnesses",

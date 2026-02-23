@@ -82,4 +82,7 @@ through this file and linking it from:
 - `docs/design/README.md`
 - `docs/design/ARCHITECTURE-MAP.md`
 
-Use `docs/design/TUSK-SIGPI.md` as a compatibility alias only.
+Legacy note:
+
+- historical compatibility alias `docs/design/TUSK-SIGPI.md` is folded into this
+  canonical path.

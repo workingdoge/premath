@@ -4,6 +4,8 @@ Execute capability conformance vectors.
 
 Executable capability defaults are loaded from:
 - specs/premath/draft/CAPABILITY-REGISTRY.json
+Profile-overlay claims in the same registry are parsed/validated for contract
+shape drift, though this runner executes only executable capability vectors.
 """
 
 from __future__ import annotations
@@ -134,6 +136,12 @@ class VectorOutcome:
     cmp_ref: Optional[str] = None
 
 
+@dataclass(frozen=True)
+class CapabilityRegistryContract:
+    executable_capabilities: List[str]
+    profile_overlay_claims: List[str]
+
+
 def load_json(path: Path) -> Dict[str, Any]:
     with path.open("r", encoding="utf-8") as f:
         data = json.load(f)
@@ -249,7 +257,7 @@ def ensure_gate_witness_payloads(
     return out
 
 
-def load_executable_capabilities(registry_path: Path) -> List[str]:
+def load_capability_registry(registry_path: Path) -> CapabilityRegistryContract:
     payload = load_json(registry_path)
     if payload.get("schema") != 1:
         raise ValueError(f"{registry_path}: schema must be 1")
@@ -258,12 +266,12 @@ def load_executable_capabilities(registry_path: Path) -> List[str]:
         raise ValueError(
             f"{registry_path}: registryKind must be {CAPABILITY_REGISTRY_KIND!r}, got {kind!r}"
         )
-    raw = payload.get("executableCapabilities")
-    if not isinstance(raw, list) or not raw:
+    raw_capabilities = payload.get("executableCapabilities")
+    if not isinstance(raw_capabilities, list) or not raw_capabilities:
         raise ValueError(f"{registry_path}: executableCapabilities must be a non-empty list")
-    out: List[str] = []
+    executable_capabilities: List[str] = []
     seen: set[str] = set()
-    for idx, item in enumerate(raw):
+    for idx, item in enumerate(raw_capabilities):
         if not isinstance(item, str) or not item.strip():
             raise ValueError(
                 f"{registry_path}: executableCapabilities[{idx}] must be a non-empty string"
@@ -274,8 +282,30 @@ def load_executable_capabilities(registry_path: Path) -> List[str]:
                 f"{registry_path}: executableCapabilities contains duplicate {capability_id!r}"
             )
         seen.add(capability_id)
-        out.append(capability_id)
-    return out
+        executable_capabilities.append(capability_id)
+
+    raw_profile_claims = payload.get("profileOverlayClaims", [])
+    if not isinstance(raw_profile_claims, list):
+        raise ValueError(f"{registry_path}: profileOverlayClaims must be a list")
+    profile_overlay_claims: List[str] = []
+    seen_profile_claims: set[str] = set()
+    for idx, item in enumerate(raw_profile_claims):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(
+                f"{registry_path}: profileOverlayClaims[{idx}] must be a non-empty string"
+            )
+        claim_id = item.strip()
+        if claim_id in seen_profile_claims:
+            raise ValueError(
+                f"{registry_path}: profileOverlayClaims contains duplicate {claim_id!r}"
+            )
+        seen_profile_claims.add(claim_id)
+        profile_overlay_claims.append(claim_id)
+
+    return CapabilityRegistryContract(
+        executable_capabilities=executable_capabilities,
+        profile_overlay_claims=profile_overlay_claims,
+    )
 
 
 def lease_token(value: str) -> str:
@@ -3467,7 +3497,8 @@ def main() -> int:
     fixtures_root = args.fixtures
 
     try:
-        executable_capabilities = load_executable_capabilities(registry_path)
+        registry_contract = load_capability_registry(registry_path)
+        executable_capabilities = registry_contract.executable_capabilities
     except ValueError as err:
         print(f"[error] {err}")
         return 2

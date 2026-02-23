@@ -1,10 +1,18 @@
-# Premath kernel bundle — v0.1.0 (parked)
+# Premath release notes (historical)
 
-This bundle is the first **parked** milestone: a small, backend-generic Premath kernel
-specification with runnable toy suites that exercise the Gate laws.
+This file records the original `v0.1.0` parked milestone context. It is
+historical, not a live roadmap surface.
 
-The goal of this release is to provide a stable base for the next step:
-**real backends + conformance vectors**, rather than continued kernel redesign.
+For current lifecycle state, see:
+
+- `specs/process/decision-log.md`
+- `.premath/issues.jsonl`
+- `ROADMAP.md`
+
+## v0.1.0 (parked) snapshot
+
+This milestone established a small, backend-generic Premath kernel
+specification with runnable toy suites that exercise Gate laws.
 
 ## What is committed
 
@@ -31,7 +39,7 @@ The toy suites use a deterministic SHA-256 binder **for fixture reproducibility 
 
 ### Operational totality
 
-- Normalization and deterministic comparison keys (`cmpRef`): `raw/NORMALIZER`.
+- Normalization and deterministic comparison keys (`cmpRef`): `draft/NORMALIZER`.
 - Bidirectional checking and obligation discharge: `draft/BIDIR-DESCENT`.
 - Deterministic witness IDs: `draft/WITNESS-ID`.
 
@@ -78,11 +86,11 @@ Project-level constraints are recorded in:
 
 - `specs/process/decision-log.md`
 
-## Next milestone
+## Historical next milestone note
 
-M1: replace the toy binder with at least one real backend profile implementation
-(still behind `project_ref` / `verify_ref`), and expand conformance fixtures to
-exercise cross-implementation interoperability.
+The original M1 note in this document has been superseded by subsequent
+control-plane, coherence, doctrine, and harness work. Use the current trackers
+listed above for active milestones.
 
 ---
 

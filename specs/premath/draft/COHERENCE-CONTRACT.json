@@ -110,6 +110,7 @@
     "capabilityManifestRoot": "tests/conformance/fixtures/capabilities",
     "readmePath": "README.md",
     "conformanceReadmePath": "tools/conformance/README.md",
+    "conformancePath": "specs/premath/draft/CONFORMANCE.md",
     "specIndexPath": "specs/premath/draft/SPEC-INDEX.md",
     "specIndexCapabilityHeading": "5.4",
     "specIndexInformativeHeading": "5.5",

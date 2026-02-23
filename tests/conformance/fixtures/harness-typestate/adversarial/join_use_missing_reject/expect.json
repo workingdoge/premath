@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "tool.join_incomplete",
+    "tool.use_missing"
+  ],
+  "expectedJoinClosed": false
+}

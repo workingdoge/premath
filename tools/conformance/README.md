@@ -13,6 +13,8 @@ Runs the executable conformance fixture suites through one command surface:
 - `doctrine-inf` (`run_doctrine_inf_vectors.py`)
 - `coherence-contract` (`premath coherence-check`)
 - `tusk-core` (`run_tusk_core_vectors.py`)
+- `harness-typestate` (`run_harness_typestate_vectors.py`)
+- `runtime-orchestration` (`run_runtime_orchestration_vectors.py`)
 - `capabilities` (`run_capability_vectors.py`)
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
@@ -226,6 +228,30 @@ Run:
 python3 tools/conformance/run_witness_id_vectors.py
 ```
 
+## `run_harness_typestate_vectors.py`
+
+Runs executable harness typestate closure vectors in:
+
+- `tests/conformance/fixtures/harness-typestate/`
+
+Checks include:
+
+- deterministic accept/reject outcomes for each vector,
+- deterministic `expectedFailureClasses` matching,
+- deterministic `expectedJoinClosed` matching, and
+- failure-class coverage parity guard:
+  - every fail-closed class emitted by
+    `crates/premath-cli/src/commands/harness_join_check.rs` MUST appear in at
+    least one fixture `expect.json.expectedFailureClasses`,
+  - fixture `expectedFailureClasses` entries MUST NOT contain classes not
+    emitted by `harness-join-check`.
+
+Run:
+
+```bash
+python3 tools/conformance/run_harness_typestate_vectors.py
+```
+
 ## `run_kernel_profile_vectors.py`
 
 Runs canonical cross-model kernel profile vectors in:
@@ -269,14 +295,57 @@ Run:
 python3 tools/conformance/run_tusk_core_vectors.py
 ```
 
+## `run_harness_typestate_vectors.py`
+
+Runs deterministic harness typestate closure vectors in:
+
+- `tests/conformance/fixtures/harness-typestate/`
+
+Checks include deterministic reject/accept behavior for:
+
+- `ToolUse -> JoinClosed` closure classes (`tool.use_missing`, `tool.join_incomplete`),
+- protocol stop-reason handling (`protocol.stop_reason_unhandled`),
+- protocol parallel transport ordering (`protocol.parallel_transport_order_invalid`),
+- truncation metadata policy (`tool.response_truncation_policy_violation`),
+- handoff artifact gating (`handoff.required_artifact_missing`),
+- machine-readable error-envelope requirements for tool failures (`tool.schema_invalid`).
+
+Run:
+
+```bash
+python3 tools/conformance/run_harness_typestate_vectors.py
+```
+
+## `run_runtime_orchestration_vectors.py`
+
+Runs deterministic runtime orchestration vectors in:
+
+- `tests/conformance/fixtures/runtime-orchestration/`
+
+Checks include deterministic accept/reject behavior for:
+
+- required route presence for Harness/Squeak runtime bindings,
+- required morphism coverage on routed operation nodes,
+- operation-path boundary enforcement for routed CI operations (`tools/ci/*`),
+- required handoff-shape contract markers for `HARNESS-RUNTIME`,
+- optional `controlPlaneKcirMappings` row-shape coverage when mapping rows are
+  present,
+- invariance scenario parity across profile-permuted vectors.
+
+Run:
+
+```bash
+python3 tools/conformance/run_runtime_orchestration_vectors.py
+```
+
 ## `check_doctrine_site.py`
 
 Validates doctrine-to-operation site coherence using:
 
 - `specs/premath/draft/DOCTRINE-INF.md` (morphism registry),
-- `specs/premath/draft/DOCTRINE-SITE-SOURCE.json` (site topology source),
-- `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node registry),
+- `specs/premath/draft/DOCTRINE-SITE-INPUT.json` (single input authority),
 - generated `specs/premath/draft/DOCTRINE-SITE.json` (canonical site map),
+- generated `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node view),
 - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`),
 - operation entrypoints referenced in the site map.
 
@@ -296,7 +365,7 @@ python3 tools/conformance/check_doctrine_site.py
 
 ## `generate_doctrine_site.py`
 
-Generates canonical doctrine-site JSON from source + operation registry +
+Generates canonical doctrine-site artifacts from input contract +
 declaration-bearing specs.
 
 Run:
@@ -311,6 +380,29 @@ Drift check (no write):
 python3 tools/conformance/generate_doctrine_site.py --check
 ```
 
+## `check_runtime_orchestration.py`
+
+Validates Harness+Squeak runtime orchestration bindings using:
+
+- `specs/premath/draft/CONTROL-PLANE-CONTRACT.json` (`runtimeRouteBindings`),
+- `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node bindings),
+- `specs/premath/draft/HARNESS-RUNTIME.md` (required handoff-shape contract).
+
+Checks include:
+
+- required runtime route presence in doctrine operation bindings,
+- required morphism coverage on bound operation routes,
+- routed operation path boundary enforcement (`tools/ci/*`),
+- required Harness/Squeak handoff-section shape markers in runtime contract,
+- optional `controlPlaneKcirMappings` row-shape validation when mapping rows are
+  provided.
+
+Run:
+
+```bash
+python3 tools/conformance/check_runtime_orchestration.py
+```
+
 ## `run_doctrine_inf_vectors.py`
 
 Runs executable doctrine-inf semantic boundary vectors in:
@@ -322,7 +414,18 @@ Checks include deterministic reject/accept behavior for:
 - edge morphisms within destination `preserved` declarations,
 - edge morphisms outside destination `preserved` declarations,
 - edge morphisms explicitly listed under destination `notPreserved`,
-- overlap violations between `preserved` and `notPreserved`.
+- overlap violations between `preserved` and `notPreserved`,
+- claim-gated governance-profile (`profile.doctrine_inf_governance.v0`) checks
+  for policy provenance pinning + digest mismatch, guardrail stage
+  presence/order, eval gate threshold success, eval lineage evidence fields,
+  observability mode validity, risk-tier control binding, and self-evolution
+  declaration requirements (retry/escalation/rollback).
+
+Governance claimed vectors are repository-claim-gated via
+`specs/premath/draft/CAPABILITY-REGISTRY.json` `profileOverlayClaims`.
+When the repository does not claim `profile.doctrine_inf_governance.v0`, vectors
+with `governanceProfile.claimed=true` are skipped unless
+`--ignore-repo-claims` is set.
 
 Run:
 

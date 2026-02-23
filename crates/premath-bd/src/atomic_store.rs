@@ -1,5 +1,6 @@
 //! Lock-scoped atomic mutation helpers for JSONL issue memory.
 
+use crate::jsonl::JsonlError;
 use crate::{MemoryStore, MemoryStoreError};
 use chrono::Utc;
 use std::error::Error as StdError;
@@ -88,7 +89,12 @@ where
         AtomicStoreMutationError::Mutation(unreachable) => match unreachable {},
     })?;
 
-    let mut store = MemoryStore::load_jsonl(path).map_err(AtomicStoreMutationError::Store)?;
+    let mut store = if path.exists() {
+        validate_mutation_substrate(path).map_err(AtomicStoreMutationError::Store)?;
+        MemoryStore::load_jsonl(path).map_err(AtomicStoreMutationError::Store)?
+    } else {
+        MemoryStore::default()
+    };
     let (value, changed) = mutator(&mut store).map_err(AtomicStoreMutationError::Mutation)?;
     if changed {
         store
@@ -153,5 +159,149 @@ impl IssueFileLockGuard {
 impl Drop for IssueFileLockGuard {
     fn drop(&mut self) {
         let _ = fs::remove_file(&self.lock_path);
+    }
+}
+
+fn validate_mutation_substrate(path: &Path) -> Result<(), MemoryStoreError> {
+    let bytes = fs::read(path).map_err(|e| {
+        MemoryStoreError::Jsonl(JsonlError::Io(0, format!("{}: {e}", path.display())))
+    })?;
+
+    if bytes.contains(&0) {
+        return Err(MemoryStoreError::Jsonl(JsonlError::Corrupt(format!(
+            "{}: contains NUL byte(s)",
+            path.display()
+        ))));
+    }
+    if std::str::from_utf8(&bytes).is_err() {
+        return Err(MemoryStoreError::Jsonl(JsonlError::Corrupt(format!(
+            "{}: contains non-UTF-8 byte sequence(s)",
+            path.display()
+        ))));
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Issue;
+    use std::convert::Infallible;
+    use std::sync::{Arc, Barrier};
+    use std::time::{SystemTime, UNIX_EPOCH};
+
+    fn temp_issues_path(prefix: &str) -> PathBuf {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after unix epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("premath-atomic-{prefix}-{unique}"));
+        fs::create_dir_all(&root).expect("temp dir should be created");
+        root.join("issues.jsonl")
+    }
+
+    #[test]
+    fn mutate_store_jsonl_contention_preserves_jsonl_integrity() {
+        let path = temp_issues_path("contention");
+        let workers = 8;
+        let barrier = Arc::new(Barrier::new(workers + 1));
+        let mut handles = Vec::new();
+
+        for idx in 0..workers {
+            let path = path.clone();
+            let barrier = Arc::clone(&barrier);
+            handles.push(thread::spawn(move || {
+                let issue_id = format!("bd-{idx}");
+                barrier.wait();
+                mutate_store_jsonl::<(), Infallible, _>(&path, |store| {
+                    let mut issue = Issue::new(&issue_id, format!("Issue {issue_id}"));
+                    issue.set_status("open".to_string());
+                    store.upsert_issue(issue);
+                    Ok(((), true))
+                })
+            }));
+        }
+        barrier.wait();
+
+        for handle in handles {
+            let result = handle.join().expect("worker should join");
+            assert!(result.is_ok(), "worker mutation should succeed: {result:?}");
+        }
+
+        let bytes = fs::read(&path).expect("issues jsonl should exist");
+        assert!(!bytes.contains(&0), "jsonl should never contain NUL bytes");
+
+        let store = MemoryStore::load_jsonl(&path).expect("store should reload");
+        assert_eq!(store.len(), workers);
+        for idx in 0..workers {
+            assert!(
+                store.issue(&format!("bd-{idx}")).is_some(),
+                "expected issue bd-{idx} to exist"
+            );
+        }
+    }
+
+    #[test]
+    fn mutate_store_jsonl_reports_lock_busy_without_modifying_store() {
+        let path = temp_issues_path("lock-busy");
+        let mut initial = Issue::new("bd-1", "Issue 1");
+        initial.set_status("open".to_string());
+        let store = MemoryStore::from_issues(vec![initial]).expect("store should build");
+        store.save_jsonl(&path).expect("store should save");
+
+        let lock_path = issue_lock_path(&path);
+        fs::write(&lock_path, "busy\n").expect("lock should be created");
+
+        let result = mutate_store_jsonl::<(), Infallible, _>(&path, |store| {
+            let issue = store
+                .issue_mut("bd-1")
+                .expect("issue should be present for mutation");
+            issue.set_status("closed".to_string());
+            Ok(((), true))
+        });
+
+        match result {
+            Err(AtomicStoreMutationError::LockBusy {
+                lock_path: reported,
+            }) => {
+                assert_eq!(reported, lock_path.display().to_string());
+            }
+            other => panic!("expected lock busy error, got {other:?}"),
+        }
+
+        let reloaded = MemoryStore::load_jsonl(&path).expect("store should reload");
+        assert_eq!(
+            reloaded
+                .issue("bd-1")
+                .expect("issue should be present")
+                .status,
+            "open"
+        );
+
+        let _ = fs::remove_file(lock_path);
+    }
+
+    #[test]
+    fn mutate_store_jsonl_rejects_corrupt_substrate_before_mutation() {
+        let path = temp_issues_path("corrupt");
+        fs::write(
+            &path,
+            b"{\"id\":\"bd-1\",\"title\":\"Issue 1\",\"status\":\"open\"}\n\0tail",
+        )
+        .expect("fixture should write");
+
+        let result = mutate_store_jsonl::<(), Infallible, _>(&path, |_store| Ok(((), true)));
+
+        match result {
+            Err(AtomicStoreMutationError::Store(MemoryStoreError::Jsonl(JsonlError::Corrupt(
+                message,
+            )))) => {
+                assert!(message.contains("contains NUL"));
+            }
+            other => panic!("expected corrupt substrate rejection, got {other:?}"),
+        }
+
+        let bytes = fs::read(&path).expect("fixture should remain untouched");
+        assert!(bytes.contains(&0));
     }
 }

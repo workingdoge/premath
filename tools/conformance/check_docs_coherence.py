@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
@@ -13,19 +14,16 @@ from typing import Dict, List, Sequence, Tuple
 BACKTICK_CAP_RE = re.compile(r"`(capabilities\.[a-z0-9_]+)`")
 BACKTICK_TASK_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
 CAPABILITY_REGISTRY_KIND = "premath.capability_registry.v1"
+PROFILE_CLAIM_RE = re.compile(r"`(profile\.[a-z0-9_.]+)`")
+README_WORKSPACE_CRATE_RE = re.compile(r"`(crates/premath-[a-z0-9_-]+)`")
+TRACKED_ISSUE_RE = re.compile(r"tracked by issue\s+`?(bd-\d+)`?", re.IGNORECASE)
 
 
-EXPECTED_CONDITIONAL_CAPABILITY_DOCS: Tuple[Tuple[str, str], ...] = (
-    ("draft/LLM-INSTRUCTION-DOCTRINE", "capabilities.instruction_typing"),
-    ("draft/LLM-PROPOSAL-CHECKING", "capabilities.instruction_typing"),
-    ("raw/SQUEAK-SITE", "capabilities.squeak_site"),
-    ("raw/PREMATH-CI", "capabilities.ci_witnesses"),
-)
 SPEC_INDEX_RAW_LIFECYCLE_MARKERS: Tuple[str, ...] = (
     "Raw capability-spec lifecycle policy:",
     "Promotion from raw to draft for capability-scoped specs requires:",
-    "`raw/SQUEAK-SITE` — tracked by issue `bd-44`",
-    "`raw/TUSK-CORE` — tracked by issue `bd-45`",
+    "`raw/SQUEAK-SITE` — retained raw per Decision 0040",
+    "`raw/TUSK-CORE` — retained raw per Decision 0041",
 )
 ROADMAP_AUTHORITY_MARKERS: Tuple[str, ...] = (
     "authoritative source of active work",
@@ -38,17 +36,20 @@ README_DOCTRINE_MARKERS: Tuple[str, ...] = (
     "mise run doctrine-check",
 )
 ARCHITECTURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "`tools/conformance/check_runtime_orchestration.py`",
     "`tools/conformance/check_doctrine_mcp_parity.py`",
-    "doctrine-operation parity (`check_doctrine_site.py`,",
+    "doctrine-operation parity + runtime-route parity",
+    "`check_runtime_orchestration.py`,",
     "`check_doctrine_mcp_parity.py`),",
 )
 EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
     "python3 tools/conformance/check_doctrine_site.py",
+    "python3 tools/conformance/check_runtime_orchestration.py",
     "python3 tools/conformance/check_doctrine_mcp_parity.py",
     "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 )
 CI_CLOSURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
-    "`doctrine-check` (site coherence + MCP doctrine-operation parity +",
+    "`doctrine-check` (site coherence + runtime orchestration route parity +",
     "doctrine-inf vectors)",
 )
 UNIFICATION_EVIDENCE_MARKERS: Tuple[str, ...] = (
@@ -166,6 +167,7 @@ STAGE2_REQUIRED_KERNEL_OBLIGATIONS: Tuple[str, ...] = (
     "ext_gap",
     "ext_ambiguous",
 )
+README_WORKSPACE_CRATE_ALLOWLIST: Tuple[str, ...] = ()
 
 
 def parse_args() -> argparse.Namespace:
@@ -251,7 +253,22 @@ def parse_manifest_capabilities(fixtures_root: Path) -> List[str]:
     return capability_ids
 
 
-def parse_capability_registry(contract_path: Path) -> List[str]:
+@dataclass(frozen=True)
+class CapabilityRegistryContract:
+    executable_capabilities: List[str]
+    profile_overlay_claims: List[str]
+    capability_doc_map: Dict[str, str]
+
+
+@dataclass(frozen=True)
+class TrackedIssueReference:
+    path: Path
+    line_number: int
+    issue_id: str
+    issue_status: str | None
+
+
+def parse_capability_registry(contract_path: Path) -> CapabilityRegistryContract:
     payload = json.loads(contract_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"{contract_path}: root must be an object")
@@ -269,7 +286,155 @@ def parse_capability_registry(contract_path: Path) -> List[str]:
         parsed.append(item.strip())
     if len(set(parsed)) != len(parsed):
         raise ValueError(f"{contract_path}: executableCapabilities must not contain duplicates")
-    return parsed
+    overlay_claims = payload.get("profileOverlayClaims", [])
+    if not isinstance(overlay_claims, list):
+        raise ValueError(f"{contract_path}: profileOverlayClaims must be a list")
+    parsed_overlay_claims: List[str] = []
+    for idx, item in enumerate(overlay_claims):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(f"{contract_path}: profileOverlayClaims[{idx}] must be a non-empty string")
+        parsed_overlay_claims.append(item.strip())
+    if len(set(parsed_overlay_claims)) != len(parsed_overlay_claims):
+        raise ValueError(f"{contract_path}: profileOverlayClaims must not contain duplicates")
+    raw_doc_bindings = payload.get("capabilityDocBindings", [])
+    if not isinstance(raw_doc_bindings, list):
+        raise ValueError(f"{contract_path}: capabilityDocBindings must be a list")
+    capability_doc_map: Dict[str, str] = {}
+    for idx, entry in enumerate(raw_doc_bindings):
+        if not isinstance(entry, dict):
+            raise ValueError(f"{contract_path}: capabilityDocBindings[{idx}] must be an object")
+        doc_ref = entry.get("docRef")
+        capability_id = entry.get("capabilityId")
+        if not isinstance(doc_ref, str) or not doc_ref.strip():
+            raise ValueError(
+                f"{contract_path}: capabilityDocBindings[{idx}].docRef must be a non-empty string"
+            )
+        if not isinstance(capability_id, str) or not capability_id.strip():
+            raise ValueError(
+                f"{contract_path}: capabilityDocBindings[{idx}].capabilityId must be a non-empty string"
+            )
+        doc_key = doc_ref.strip()
+        cap_value = capability_id.strip()
+        if cap_value not in parsed:
+            raise ValueError(
+                f"{contract_path}: capabilityDocBindings[{idx}].capabilityId {cap_value!r} "
+                "must be declared in executableCapabilities"
+            )
+        previous = capability_doc_map.get(doc_key)
+        if previous is not None and previous != cap_value:
+            raise ValueError(
+                f"{contract_path}: capabilityDocBindings docRef {doc_key!r} maps to multiple capabilities"
+            )
+        capability_doc_map[doc_key] = cap_value
+    if not capability_doc_map:
+        raise ValueError(f"{contract_path}: capabilityDocBindings must contain at least one mapping")
+    return CapabilityRegistryContract(
+        executable_capabilities=parsed,
+        profile_overlay_claims=parsed_overlay_claims,
+        capability_doc_map=capability_doc_map,
+    )
+
+
+def parse_conformance_overlay_claims(conformance_path: Path) -> List[str]:
+    text = load_text(conformance_path)
+    section_24 = extract_heading_section(text, "2.4")
+    claims = [claim.strip() for claim in PROFILE_CLAIM_RE.findall(section_24)]
+    return sorted(set(claims))
+
+
+def parse_workspace_members(cargo_toml_path: Path, repo_root: Path) -> List[str]:
+    text = cargo_toml_path.read_text(encoding="utf-8")
+    workspace_match = re.search(r"^\[workspace\]\n(.*?)(?=^\[|\Z)", text, re.MULTILINE | re.DOTALL)
+    if workspace_match is None:
+        raise ValueError(f"{cargo_toml_path}: missing [workspace] section")
+    workspace_section = workspace_match.group(1)
+    members_match = re.search(r"members\s*=\s*\[(.*?)\]", workspace_section, re.DOTALL)
+    if members_match is None:
+        raise ValueError(f"{cargo_toml_path}: workspace.members list missing")
+    members = re.findall(r"\"([^\"]+)\"", members_match.group(1))
+    if not members:
+        raise ValueError(f"{cargo_toml_path}: workspace.members must be a non-empty list")
+    resolved_members: List[str] = []
+    for idx, member in enumerate(members):
+        member_value = member.strip()
+        if not member_value:
+            raise ValueError(f"{cargo_toml_path}: workspace.members[{idx}] must be a non-empty string")
+        if any(ch in member_value for ch in "*?[]"):
+            matches = sorted(
+                path for path in repo_root.glob(member_value) if path.is_dir() and (path / "Cargo.toml").is_file()
+            )
+            if not matches:
+                raise ValueError(
+                    f"{cargo_toml_path}: workspace.members[{idx}] glob {member_value!r} matched no crates"
+                )
+            resolved_members.extend(path.relative_to(repo_root).as_posix() for path in matches)
+            continue
+        resolved_members.append(Path(member_value).as_posix())
+    deduped = sorted(set(resolved_members))
+    if not deduped:
+        raise ValueError(f"{cargo_toml_path}: workspace.members resolved to empty set")
+    return deduped
+
+
+def parse_readme_workspace_crates(readme_text: str) -> List[str]:
+    section = extract_section_between(readme_text, "## Workspace layering", "## Baseline gate")
+    crates = sorted(set(README_WORKSPACE_CRATE_RE.findall(section)))
+    if not crates:
+        raise ValueError("README.md: workspace layering section must enumerate crates/premath-* entries")
+    return crates
+
+
+def parse_issue_statuses(issues_path: Path) -> Dict[str, str]:
+    statuses: Dict[str, str] = {}
+    for idx, line in enumerate(issues_path.read_text(encoding="utf-8").splitlines(), start=1):
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"{issues_path}:{idx}: invalid JSONL row: {exc}") from exc
+        if not isinstance(payload, dict):
+            raise ValueError(f"{issues_path}:{idx}: issue row must be an object")
+        issue_id = payload.get("id")
+        status = payload.get("status")
+        if not isinstance(issue_id, str) or not issue_id.strip():
+            raise ValueError(f"{issues_path}:{idx}: issue id must be a non-empty string")
+        if not isinstance(status, str) or not status.strip():
+            raise ValueError(f"{issues_path}:{idx}: issue status must be a non-empty string")
+        statuses[issue_id.strip()] = status.strip()
+    if not statuses:
+        raise ValueError(f"{issues_path}: no issues found")
+    return statuses
+
+
+def find_stale_tracked_issue_references(
+    roots: Sequence[Path],
+    issue_statuses: Dict[str, str],
+    excluded_paths: Sequence[Path] = (),
+) -> List[TrackedIssueReference]:
+    excluded = {path.resolve() for path in excluded_paths}
+    refs: List[TrackedIssueReference] = []
+    for root in roots:
+        for path in sorted(root.rglob("*.md")):
+            resolved = path.resolve()
+            if resolved in excluded:
+                continue
+            for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+                match = TRACKED_ISSUE_RE.search(line)
+                if match is None:
+                    continue
+                issue_id = match.group(1)
+                issue_status = issue_statuses.get(issue_id)
+                if issue_status is None or issue_status == "closed":
+                    refs.append(
+                        TrackedIssueReference(
+                            path=path,
+                            line_number=line_number,
+                            issue_id=issue_id,
+                            issue_status=issue_status,
+                        )
+                    )
+    return refs
 
 
 def parse_control_plane_projection_checks(contract_path: Path) -> List[str]:
@@ -627,7 +792,7 @@ def parse_spec_index_capability_doc_map(section_54: str) -> Dict[str, str]:
 
 def verify_conditional_normative_entry(section_55: str, doc_ref: str, capability_id: str) -> bool:
     pattern = re.compile(
-        rf"`{re.escape(doc_ref)}`[\s\S]*?normative\s+only\s+when\s+`{re.escape(capability_id)}`\s+is\s+claimed",
+        rf"`{re.escape(doc_ref)}`[\s\S]*?normative(?:\s+only)?\s+when\s+`{re.escape(capability_id)}`\s+is\s+claimed",
         re.IGNORECASE,
     )
     return pattern.search(section_55) is not None
@@ -648,12 +813,15 @@ def main() -> int:
 
     capability_registry = root / "specs" / "premath" / "draft" / "CAPABILITY-REGISTRY.json"
     control_plane_contract = root / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json"
+    cargo_toml = root / "Cargo.toml"
+    issues_jsonl = root / ".premath" / "issues.jsonl"
     mise_toml = root / ".mise.toml"
     readme = root / "README.md"
     conformance_readme = root / "tools" / "conformance" / "README.md"
     ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
     architecture_map = root / "docs" / "design" / "ARCHITECTURE-MAP.md"
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
+    conformance = root / "specs" / "premath" / "draft" / "CONFORMANCE.md"
     unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
     span_square_checking = root / "specs" / "premath" / "draft" / "SPAN-SQUARE-CHECKING.md"
     pre_math_coherence = root / "specs" / "premath" / "draft" / "PREMATH-COHERENCE.md"
@@ -662,8 +830,14 @@ def main() -> int:
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
-    executable_capabilities = parse_capability_registry(capability_registry)
+    registry_contract = parse_capability_registry(capability_registry)
+    executable_capabilities = registry_contract.executable_capabilities
+    registry_overlay_claims = registry_contract.profile_overlay_claims
+    registry_doc_map = registry_contract.capability_doc_map
     executable_capability_set = set(executable_capabilities)
+    conformance_overlay_claims = parse_conformance_overlay_claims(conformance)
+    workspace_members = set(parse_workspace_members(cargo_toml, root))
+    issue_statuses = parse_issue_statuses(issues_jsonl)
 
     manifest_capabilities = parse_manifest_capabilities(fixtures_root)
     manifest_capability_set = set(manifest_capabilities)
@@ -677,6 +851,7 @@ def main() -> int:
 
     readme_caps = set(BACKTICK_CAP_RE.findall(load_text(readme)))
     readme_text = load_text(readme)
+    readme_workspace_crates = set(parse_readme_workspace_crates(readme_text))
     conformance_readme_caps = set(BACKTICK_CAP_RE.findall(load_text(conformance_readme)))
     architecture_text = load_text(architecture_map)
 
@@ -696,6 +871,14 @@ def main() -> int:
             "README capability list mismatch with executable capabilities: "
             f"expected=[{sorted_csv(executable_capabilities)}], got=[{sorted_csv(readme_caps)}]"
         )
+    expected_readme_workspace_crates = workspace_members - set(README_WORKSPACE_CRATE_ALLOWLIST)
+    if readme_workspace_crates != expected_readme_workspace_crates:
+        missing = sorted(expected_readme_workspace_crates - readme_workspace_crates)
+        extra = sorted(readme_workspace_crates - expected_readme_workspace_crates)
+        errors.append(
+            "README workspace layering crate list mismatch with Cargo workspace members: "
+            f"missing={missing}, extra={extra}"
+        )
     missing_readme_doctrine_markers = find_missing_markers(readme_text, README_DOCTRINE_MARKERS)
     for marker in missing_readme_doctrine_markers:
         errors.append(f"README doctrine-check marker missing: {marker}")
@@ -714,6 +897,13 @@ def main() -> int:
             "SPEC-INDEX §5.4 capability list mismatch with executable capabilities: "
             f"expected=[{sorted_csv(executable_capabilities)}], got=[{sorted_csv(spec_index_caps)}]"
         )
+    if set(conformance_overlay_claims) != set(registry_overlay_claims):
+        missing_in_conformance = sorted(set(registry_overlay_claims) - set(conformance_overlay_claims))
+        missing_in_registry = sorted(set(conformance_overlay_claims) - set(registry_overlay_claims))
+        errors.append(
+            "CONFORMANCE §2.4 profile-overlay claim list mismatch with CAPABILITY-REGISTRY profileOverlayClaims: "
+            f"missingInConformance={missing_in_conformance}, missingInRegistry={missing_in_registry}"
+        )
 
     informative_clause = "unless they are\nexplicitly claimed under §5.4 or §5.6"
     if informative_clause not in section_55:
@@ -721,12 +911,21 @@ def main() -> int:
             "SPEC-INDEX §5.5 must explicitly state informative/default status unless claimed under §5.4 or §5.6"
         )
 
-    for doc_ref, capability_id in EXPECTED_CONDITIONAL_CAPABILITY_DOCS:
-        mapped = spec_index_doc_map.get(doc_ref)
-        if mapped != capability_id:
-            errors.append(
-                f"SPEC-INDEX §5.4 capability mapping mismatch for {doc_ref}: expected {capability_id!r}, got {mapped!r}"
-            )
+    if spec_index_doc_map != registry_doc_map:
+        missing_in_spec_index = sorted(set(registry_doc_map) - set(spec_index_doc_map))
+        missing_in_registry = sorted(set(spec_index_doc_map) - set(registry_doc_map))
+        mismatched = sorted(
+            doc_ref
+            for doc_ref in set(spec_index_doc_map) & set(registry_doc_map)
+            if spec_index_doc_map[doc_ref] != registry_doc_map[doc_ref]
+        )
+        errors.append(
+            "SPEC-INDEX §5.4 capability doc mapping mismatch with CAPABILITY-REGISTRY capabilityDocBindings: "
+            f"missingInSpecIndex={missing_in_spec_index}, missingInRegistry={missing_in_registry}, mismatched={mismatched}"
+        )
+    for doc_ref, capability_id in sorted(registry_doc_map.items()):
+        if f"`{doc_ref}`" not in section_55:
+            continue
         if not verify_conditional_normative_entry(section_55, doc_ref, capability_id):
             errors.append(
                 f"SPEC-INDEX §5.5 missing conditional normative clause for {doc_ref} ({capability_id})"
@@ -847,6 +1046,21 @@ def main() -> int:
     missing_roadmap_markers = find_missing_markers(roadmap_text, ROADMAP_AUTHORITY_MARKERS)
     for marker in missing_roadmap_markers:
         errors.append(f"ROADMAP authority contract missing marker: {marker}")
+    stale_issue_refs = find_stale_tracked_issue_references(
+        roots=[root / "docs", root / "specs"],
+        issue_statuses=issue_statuses,
+        excluded_paths=[root / "specs" / "process" / "decision-log.md"],
+    )
+    for ref in stale_issue_refs:
+        rel_path = ref.path.relative_to(root).as_posix()
+        if ref.issue_status is None:
+            errors.append(
+                f"{rel_path}:{ref.line_number} tracked issue reference points to missing issue id {ref.issue_id}"
+            )
+        else:
+            errors.append(
+                f"{rel_path}:{ref.line_number} stale tracked issue reference uses closed issue {ref.issue_id}"
+            )
 
     if errors:
         print(f"[docs-coherence-check] FAIL (errors={len(errors)})")

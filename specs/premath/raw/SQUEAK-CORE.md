@@ -41,6 +41,8 @@ Boundary:
 - `raw/TUSK-CORE` governs execution inside one world.
 - `raw/SQUEAK-CORE` governs world-to-world mapping and transport.
 - `raw/SQUEAK-SITE` governs runtime-location site structure (`Loc`, covers, overlap/glue).
+- `draft/HARNESS-RUNTIME` governs runtime control loops and delegates inter-world
+  dispatch through Squeak.
 
 `Squeak` is the operational SigPi layer.
 
@@ -99,7 +101,21 @@ Squeak MAY orchestrate this handoff directly or by delegation, but there is no
 separate semantic “bridge” authority. Handoff is part of Squeak transport
 responsibility.
 
-### 4.2 Runtime unit contract (`Cheese`)
+### 4.2 Harness interop route (required)
+
+When Squeak is invoked from harness runtime orchestration, Squeak MUST:
+
+1. consume deterministic handoff inputs (source world/context refs plus witness
+   lineage refs),
+2. perform negotiation/transport under this spec,
+3. hand destination-scoped artifacts to destination `tusk-core` checks,
+4. return deterministic transport outcomes and destination evidence references to
+   harness projection surfaces.
+
+This route is operational composition only and MUST NOT bypass destination
+admissibility checks.
+
+### 4.3 Runtime unit contract (`Cheese`)
 
 Implementations MAY expose Squeak runtime units called `Cheese` for execution
 substrate placement/orchestration.

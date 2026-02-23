@@ -10,6 +10,7 @@ pub mod descent;
 pub mod eval;
 pub mod identity;
 pub mod mapping;
+pub mod typestate;
 pub mod witness;
 
 pub use descent::{
@@ -20,5 +21,16 @@ pub use eval::{EvalOutcome, evaluate_descent_pack};
 pub use identity::{IntentSpec, RunIdOptions, RunIdentity, compute_intent_id};
 pub use mapping::{
     TuskDiagnosticFailure, TuskFailureKind, map_glue_selection_failure, map_tusk_failure_kind,
+};
+pub use typestate::{
+    CallSpecInput, HandoffObservationInput, JoinClosedInput, MutationReadyInput,
+    NormalizedCallSpec, NormalizedContextState, NormalizedHandoffObservation, NormalizedJoinState,
+    NormalizedProtocolState, NormalizedReminderQueueReduction, NormalizedStateViewObservation,
+    NormalizedToolErrorEnvelope, NormalizedToolRenderObservation, NormalizedToolRequest,
+    NormalizedToolResult, NormalizedToolUse, NormalizedTypestateEvidence, ProtocolStateInput,
+    ReminderQueueReductionInput, StateViewObservationInput, TYPESTATE_NORMALIZED_KIND,
+    TYPESTATE_NORMALIZED_SCHEMA, ToolRenderObservationInput, ToolRequestInput, ToolResultInput,
+    ToolUseInput, TypestateDigestBundle, TypestateEvidenceInput, TypestateNormalizationError,
+    normalize_typestate_evidence,
 };
 pub use witness::GateWitnessEnvelope;

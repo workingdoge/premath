@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "governance.policy_package_unpinned"
+  ]
+}

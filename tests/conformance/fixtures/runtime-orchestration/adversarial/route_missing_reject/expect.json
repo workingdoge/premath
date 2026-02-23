@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "runtime_route_missing"
+  ]
+}

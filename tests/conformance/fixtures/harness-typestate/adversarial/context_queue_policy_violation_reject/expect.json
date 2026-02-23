@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedJoinClosed": false,
+  "expectedFailureClasses": [
+    "context.queue_policy_violation"
+  ]
+}

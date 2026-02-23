@@ -9,6 +9,13 @@ Design goals:
 - **Minimal encoding**: when interop is desired, normalization and equality reduce to deterministic *reference equality* (via `project_ref`) rather than large proof objects.
 - **Backend-generic**: commitment backends (hash, Merkle, lattice, etc.) are profiles that implement `project_ref` + `verify_ref`. The kernel never hardcodes a scheme.
 
+## System in 30 seconds
+
+- **Semantic authority**: kernel + gate specs decide admissibility (`PREMATH-KERNEL`, `GATE`, `BIDIR-DESCENT`).
+- **Control-plane consistency**: coherence checker enforces spec/docs/contract parity and emits deterministic checker witnesses.
+- **Operational runtime**: harness contracts govern typed runtime loops, typestate closure, and retry/escalation behavior without adding semantic authority.
+- **Regression discipline**: claim-gated conformance vectors and doctrine/coherence checks keep behavior stable as capabilities evolve.
+
 ## Layout
 
 - `specs/premath/draft/` — promoted draft contracts (normative for active claims)
@@ -35,6 +42,10 @@ Conformance is claim-based (profiles). See:
 - `specs/premath/draft/CAPABILITY-VECTORS.md`
 
 Interop documents (NF/normalizer/refs/wire/errors) are normative **only when their corresponding interop claims are asserted**.
+
+Harness typestate closure/mutation-gate conformance is currently exercised under
+`capabilities.change_morphisms` (intentional bundling; not an independent
+capability claim today).
 
 ## Toy suites
 
@@ -101,6 +112,9 @@ Runtime crates are split by responsibility:
 - `crates/premath-kernel`:
   - Generic laws only (contexts, covers, reindexing, descent, witnesses).
   - No storage or backend policy.
+- `crates/premath-coherence`:
+  - Typed coherence-obligation evaluator used by `premath coherence-check`.
+  - Emits deterministic checker witness output over the coherence contract.
 - `crates/premath-tusk`:
   - Minimal `tusk-core` runtime surface (run identity, descent pack artifacts,
     Gate-class mapping, witness envelope emission).
@@ -115,7 +129,8 @@ Runtime crates are split by responsibility:
 - `crates/premath-jj`:
   - JJ snapshot/status adapter.
 - `crates/premath-cli`:
-  - Composition point for workflows, verification commands, and UX queries.
+  - Composition point for workflows, verification commands, UX queries, and
+    harness/control-plane command surfaces.
 
 This keeps the kernel backend-generic while allowing Beads-style workflows to
 compose runtime (`tusk`) + storage (`bd`) + query adapters (`surreal`) + UX

@@ -149,11 +149,11 @@ Each slice should ship with:
 ## 10. Relation to existing docs/specs
 
 - Runtime shape: `docs/design/TUSK-ARCHITECTURE.md`
-- Harness handoff artifact: `docs/design/TUSK-HARNESS-SESSION.md`
+- Harness handoff artifact: this doc §11
 - Harness feature ledger: `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
-- Harness trajectory rows: `docs/design/TUSK-HARNESS-TRAJECTORY.md`
+- Harness trajectory rows: this doc §12
 - Multithread runbook: `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
-- KPI benchmark: `docs/design/TUSK-HARNESS-KPI-BENCHMARK.md`
+- KPI benchmark: this doc §13
 - Harness retry policy table: `docs/design/TUSK-HARNESS-RETRY-POLICY.md`
 - Identity/refinement/witness details:
   - `docs/design/TUSK-IDENTITY.md`
@@ -164,3 +164,173 @@ Each slice should ship with:
   - `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
   - `specs/premath/draft/BIDIR-DESCENT.md`
   - `specs/premath/draft/GATE.md`
+
+## 11. Harness Session Artifact (Consolidated)
+
+`HarnessSession` is the minimal handoff artifact for fresh-context
+restartability.
+
+- it carries compact stop/boot continuity state,
+- it references existing authority artifacts (issues/instructions/witnesses),
+- it does not introduce parallel semantic authority.
+
+Canonical artifact:
+
+- default path: `.premath/harness_session.json`
+- kind: `premath.harness.session.v1`
+- schema: `1`
+
+Required fields:
+
+- `schema: 1`
+- `sessionKind: "premath.harness.session.v1"`
+- `sessionId: string`
+- `state: "active" | "stopped"`
+- `startedAt: RFC3339`
+- `updatedAt: RFC3339`
+
+Optional fields:
+
+- `issueId: string`
+- `summary: string`
+- `nextStep: string`
+- `instructionRefs: string[]` (sorted + deduplicated)
+- `witnessRefs: string[]` (sorted + deduplicated; includes stop/handoff
+  `lease://handoff/...` refs when lease recovery is required)
+- `lineageRefs: string[]` (sorted + deduplicated; operational site lineage refs
+  such as `ctx://...`, `cover://...`, `refinement://...`)
+- `stoppedAt: RFC3339` (present when `state = stopped`)
+- `issuesPath: string`
+- `issuesSnapshotRef: string` (derived via `store_snapshot_ref`)
+
+Command surface:
+
+- `premath harness-session write --path <session.json> --state active|stopped ... --json`
+- `premath harness-session read --path <session.json> --json`
+- `premath harness-session bootstrap --path <session.json> --json`
+
+`bootstrap` output:
+
+- kind: `premath.harness.bootstrap.v1`
+- `mode`:
+  - `resume` when session state is `stopped`
+  - `attach` when session state is `active`
+- optional feature projection fields when feature ledger is available:
+  - `nextFeatureId`
+  - `featureClosureComplete`
+  - `featureCount`
+
+Determinism rules:
+
+- update-in-place preserves `sessionId` unless explicitly overridden,
+- update-in-place preserves `startedAt`; always refreshes `updatedAt`,
+- `issuesSnapshotRef` is stable for unchanged issue-memory state,
+- empty/whitespace optional string inputs are normalized to absent values.
+
+## 12. Harness Trajectory (Consolidated)
+
+`HarnessTrajectory` captures bounded harness step outcomes as append-only rows.
+
+- one row per step,
+- witness-linked references (no payload duplication),
+- deterministic projection queries for operator/agent handoff.
+
+Canonical artifact:
+
+- default path: `.premath/harness_trajectory.jsonl`
+- row kind: `premath.harness.step.v1`
+- row schema: `1`
+
+Required row fields:
+
+- `schema: 1`
+- `stepKind: "premath.harness.step.v1"`
+- `stepId: string`
+- `action: string`
+- `resultClass: string`
+- `finishedAt: RFC3339`
+
+Optional row fields:
+
+- `issueId: string`
+- `instructionRefs: string[]`
+- `witnessRefs: string[]`
+- `lineageRefs: string[]`
+- `startedAt: RFC3339`
+
+Worker-loop convention:
+
+- stop/handoff rows include deterministic lease witness references:
+  `lease://handoff/<issue-id>/<lease-state>/<digest>`
+- stop/handoff rows include deterministic site lineage refs:
+  `ctx://...`, `cover://...`, `refinement://...`
+
+Normalization rules:
+
+- refs are trimmed, sorted, and deduplicated,
+- empty optional values are dropped,
+- malformed timestamps are rejected.
+
+Deterministic projection:
+
+- projection kind: `premath.harness.trajectory.projection.v1`
+- modes: `latest`, `failed`, `retry-needed`
+- ordering: descending `finishedAt`, then `stepId`, then `action`
+- output includes `totalCount`, `failedCount`, `retryNeededCount`, and `items`
+
+Command surface:
+
+- `premath harness-trajectory append --path .premath/harness_trajectory.jsonl --step-id <id> --action <action> --result-class <class> --witness-ref <ref> --json`
+- `premath harness-trajectory query --path .premath/harness_trajectory.jsonl --mode latest|failed|retry-needed --limit 20 --json`
+
+## 13. Multithread KPI Benchmark (Consolidated)
+
+Canonical KPI:
+
+- KPI kind: `premath.multithread.throughput.v1`
+- formula: `kpi = throughput_per_worker_per_day * gate_pass_rate`
+
+where:
+
+- `throughput_per_worker_per_day = completed_rows_per_day / max(active_workers, 1)`
+- `completed_rows_per_day = completed_rows * (24 / window_hours)`
+- `gate_pass_rate = completed_rows / window_rows`
+
+Row source: `.premath/harness_trajectory.jsonl` windowed by `finishedAt`.
+
+Deterministic benchmark procedure:
+
+1. choose deterministic window (`window_hours`, default `24`),
+2. load trajectory rows and sort descending by `(finishedAt, stepId, action)`,
+3. classify success rows with canonical success classes,
+4. compute counts/ratios/KPI,
+5. evaluate thresholds and emit one decision state.
+
+Command surface:
+
+- `python3 tools/harness/benchmark_kpi.py --json`
+- `mise run harness-kpi-report`
+
+Thresholds and rollback trigger:
+
+- target KPI: `0.8`
+- rollback KPI: `0.4`
+- minimum sample rows: `3`
+
+Decision states:
+
+- `pass`: KPI >= target
+- `watch`: rollback <= KPI < target
+- `rollback`: KPI < rollback
+- `insufficient_data`: window rows < minimum sample rows
+
+Rollback trigger:
+
+- `rollback` means deterministic multithread regression and pauses expansion
+  until remediation is recorded.
+
+Evidence boundary:
+
+- benchmark output is control-plane operational evidence only,
+- it does not alter semantic authority, checker verdicts, or issue-memory
+  mutation authority.

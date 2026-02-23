@@ -48,6 +48,20 @@ class PipelineInstructionTests(unittest.TestCase):
                     "escalationAction": "mark_blocked",
                     "failureClasses": ("instruction_envelope_invalid_shape",),
                 },
+                "governance.eval_gate_unmet": {
+                    "ruleId": "governance_no_retry",
+                    "maxAttempts": 1,
+                    "backoffClass": "none",
+                    "escalationAction": "mark_blocked",
+                    "failureClasses": ("governance.eval_gate_unmet",),
+                },
+                "kcir_mapping_legacy_encoding_authority_violation": {
+                    "ruleId": "kcir_mapping_no_retry",
+                    "maxAttempts": 1,
+                    "backoffClass": "none",
+                    "escalationAction": "mark_blocked",
+                    "failureClasses": ("kcir_mapping_legacy_encoding_authority_violation",),
+                },
             },
         }
 
@@ -335,6 +349,113 @@ class PipelineInstructionTests(unittest.TestCase):
             self.assertEqual(history[0].matched_failure_class, "pipeline_missing_witness")
             self.assertFalse(history[1].retry)
             self.assertEqual(history[1].escalation_action, "issue_discover")
+
+    def test_run_instruction_with_retry_applies_governance_gate_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-instruction-governance-") as tmp:
+            root = Path(tmp)
+            policy = self._routing_policy()
+            with patch(
+                "pipeline_instruction.run_instruction_once",
+                return_value=(0, tuple()),
+            ):
+                with patch(
+                    "pipeline_instruction.governance_failure_classes",
+                    return_value=("governance.eval_gate_unmet",),
+                ):
+                    with patch(
+                        "pipeline_instruction.apply_terminal_escalation",
+                        return_value=EscalationResult(
+                            action="mark_blocked",
+                            outcome="applied",
+                            issue_id="bd-190",
+                            created_issue_id=None,
+                            note_digest="note1_test",
+                            witness_ref="artifacts/ciwitness/sample.json",
+                            details="governance gate unmet",
+                        ),
+                    ):
+                        exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
+                            root,
+                            root / "instructions" / "sample.json",
+                            "sample",
+                            policy,
+                            allow_failure=False,
+                        )
+
+            self.assertEqual(exit_code, 1)
+            self.assertIsNotNone(escalation)
+            self.assertEqual(len(history), 1)
+            self.assertEqual(history[0].rule_id, "governance_no_retry")
+            self.assertEqual(history[0].matched_failure_class, "governance.eval_gate_unmet")
+            self.assertEqual(history[0].escalation_action, "mark_blocked")
+
+    def test_run_instruction_with_retry_applies_kcir_mapping_gate_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-instruction-kcir-gate-") as tmp:
+            root = Path(tmp)
+            instruction_path = root / "instructions" / "sample.json"
+            instruction_path.parent.mkdir(parents=True, exist_ok=True)
+            instruction_path.write_text(
+                json.dumps({"llmProposal": {"proposalKind": "value"}}, ensure_ascii=False) + "\n",
+                encoding="utf-8",
+            )
+            ciwitness = root / "artifacts" / "ciwitness"
+            ciwitness.mkdir(parents=True, exist_ok=True)
+            (ciwitness / "sample.json").write_text(
+                json.dumps(
+                    {
+                        "instructionDigest": "instr_demo",
+                        "normalizerId": "normalizer.demo.v1",
+                        "policyDigest": "pol1_demo",
+                        "proposalIngest": {
+                            "proposalDigest": "prop_demo",
+                            "proposalKcirRef": "kcir1_demo",
+                        },
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            policy = self._routing_policy()
+
+            with patch(
+                "pipeline_instruction.run_instruction_once",
+                return_value=(0, tuple()),
+            ):
+                with patch(
+                    "pipeline_instruction.governance_failure_classes",
+                    return_value=tuple(),
+                ):
+                    with patch(
+                        "pipeline_instruction.apply_terminal_escalation",
+                        return_value=EscalationResult(
+                            action="mark_blocked",
+                            outcome="applied",
+                            issue_id="bd-190",
+                            created_issue_id=None,
+                            note_digest="note1_test",
+                            witness_ref="artifacts/ciwitness/sample.json",
+                            details="kcir mapping gate unmet",
+                        ),
+                    ):
+                        exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
+                            root,
+                            instruction_path,
+                            "sample",
+                            policy,
+                            allow_failure=False,
+                        )
+
+            self.assertEqual(exit_code, 1)
+            self.assertIsNotNone(escalation)
+            self.assertEqual(len(history), 1)
+            self.assertEqual(history[0].rule_id, "kcir_mapping_no_retry")
+            self.assertEqual(
+                history[0].matched_failure_class,
+                "kcir_mapping_legacy_encoding_authority_violation",
+            )
+            self.assertEqual(history[0].escalation_action, "mark_blocked")
 
 
 if __name__ == "__main__":

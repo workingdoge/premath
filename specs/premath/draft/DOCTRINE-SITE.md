@@ -66,19 +66,20 @@ where:
 
 The canonical machine-readable artifacts for this site are:
 
-- `draft/DOCTRINE-SITE-SOURCE.json` (site topology source),
-- `draft/DOCTRINE-OP-REGISTRY.json` (operation-node + CI edge registry),
-- `draft/DOCTRINE-SITE.json` (generated canonical map).
+- `draft/DOCTRINE-SITE-INPUT.json` (single authoritative input contract),
+- `draft/DOCTRINE-SITE.json` (generated canonical map),
+- `draft/DOCTRINE-OP-REGISTRY.json` (generated operation-node + CI edge view).
 
-Conforming repositories MUST generate `draft/DOCTRINE-SITE.json`
+Conforming repositories MUST generate `draft/DOCTRINE-SITE.json` and
+`draft/DOCTRINE-OP-REGISTRY.json`
 deterministically from:
 
-- `draft/DOCTRINE-SITE-SOURCE.json`,
-- `draft/DOCTRINE-OP-REGISTRY.json`,
+- `draft/DOCTRINE-SITE-INPUT.json`,
 - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`).
 
-`draft/DOCTRINE-SITE.json` MUST roundtrip to exactly the same generated output
-under deterministic canonicalization.
+Generated views (`draft/DOCTRINE-SITE.json`,
+`draft/DOCTRINE-OP-REGISTRY.json`) MUST roundtrip to exactly the same generated
+output under deterministic canonicalization.
 
 ## 4. Required node classes
 
@@ -110,8 +111,11 @@ SHOULD include route guidance linking these operation nodes to:
 Repository v0 note:
 
 - CI operation nodes currently include `tools/ci/run_gate.sh`,
-  `tools/ci/run_instruction.sh`, `tools/ci/verify_required_witness.py`, and
-  `tools/ci/decide_required.py`.
+  `tools/ci/run_gate_terraform.sh`, `tools/ci/run_instruction.sh`,
+  `tools/ci/verify_required_witness.py`, and `tools/ci/decide_required.py`.
+  Squeak runtime transport/placement routing for gate execution is explicit on
+  `run_gate*` operation nodes via `dm.transport.world` +
+  `dm.transport.location`.
 - worker-memory operation nodes include MCP mutation paths for
   `issue_add`, `issue_update`, `issue_claim`, `issue_lease_renew`,
   `issue_lease_release`, `issue_discover`, `dep_add`, `dep_remove`, and
@@ -130,8 +134,10 @@ Repository v0 note:
   paths in `crates/premath-cli/src/commands/harness_session.rs`.
 - doctrine-conformance operation nodes currently include
   `tools/conformance/check_doctrine_site.py`,
+  `tools/conformance/check_runtime_orchestration.py`,
   `tools/conformance/check_doctrine_mcp_parity.py`, and
-  `tools/conformance/run_doctrine_inf_vectors.py`.
+  `tools/conformance/run_doctrine_inf_vectors.py` (including claim-gated
+  governance-profile vectors).
 
 ## 5. Edge discipline
 
@@ -179,8 +185,11 @@ Repositories SHOULD provide a deterministic checker that validates:
 In this repository, that checker is:
 
 - `tools/conformance/check_doctrine_site.py`
+- `tools/conformance/check_runtime_orchestration.py`
 - `tools/conformance/check_doctrine_mcp_parity.py` (MCP operation parity
   against `draft/DOCTRINE-OP-REGISTRY.json`)
+- `tools/conformance/run_doctrine_inf_vectors.py` (semantic-boundary +
+  claim-gated governance-profile vectors)
 
 And the canonical map generator is:
 

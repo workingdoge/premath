@@ -21,10 +21,18 @@ from harness_retry_policy import (
     RetryDecision,
     RetryPolicyError,
     classify_failure_classes,
+    combine_failure_class_sources,
     failure_classes_from_completed_process,
     failure_classes_from_witness_path,
     load_retry_policy,
     resolve_retry_decision,
+)
+from control_plane_contract import REQUIRED_DECISION_CANONICAL_ENTRYPOINT
+from governance_gate import governance_failure_classes
+from kcir_mapping_gate import (
+    MappingGateReport,
+    evaluate_required_mapping,
+    render_mapping_summary_lines,
 )
 from provider_env import map_github_to_premath_env
 
@@ -127,6 +135,7 @@ def render_summary(
     retry_policy_digest: str | None = None,
     retry_policy_id: str | None = None,
     escalation: EscalationResult | None = None,
+    mapping_report: MappingGateReport | None = None,
 ) -> str:
     witness_path = repo_root / "artifacts/ciwitness/latest-required.json"
     digest_path = repo_root / "artifacts/ciwitness/latest-required.sha256"
@@ -195,6 +204,8 @@ def render_summary(
     if retry_policy_digest:
         policy_label = retry_policy_id or "(unknown)"
         lines.append(f"- retry policy: `{policy_label}` (`{retry_policy_digest}`)")
+    if mapping_report is not None:
+        lines.extend(render_mapping_summary_lines(mapping_report))
     lines.extend(_render_retry_lines(retry_history))
     lines.extend(_render_escalation_lines(escalation))
 
@@ -222,13 +233,42 @@ def run_required_with_retry(
     attempt = 1
     witness_path = root / "artifacts/ciwitness/latest-required.json"
     while True:
-        run = _run_with_streamed_output(["mise", "run", "ci-required-attested"], cwd=root)
+        run = _run_with_streamed_output(
+            list(REQUIRED_DECISION_CANONICAL_ENTRYPOINT),
+            cwd=root,
+        )
         exit_code = int(run.returncode)
+        process_failure_classes = failure_classes_from_completed_process(run)
+        governance_classes = governance_failure_classes(root)
+        if governance_classes:
+            process_failure_classes = combine_failure_class_sources(
+                process_failure_classes,
+                governance_classes,
+            )
+            if exit_code == 0:
+                joined = ", ".join(governance_classes)
+                print(
+                    "[pipeline-required] governance promotion gate rejected successful run "
+                    f"(failureClasses={joined})"
+                )
+                exit_code = 1
+        mapping_report = evaluate_required_mapping(root, strict=(exit_code == 0))
+        if mapping_report.failure_classes:
+            process_failure_classes = combine_failure_class_sources(
+                process_failure_classes,
+                mapping_report.failure_classes,
+            )
+            if exit_code == 0:
+                joined = ", ".join(mapping_report.failure_classes)
+                print(
+                    "[pipeline-required] kcir mapping gate rejected successful run "
+                    f"(failureClasses={joined})"
+                )
+                exit_code = 1
         if exit_code == 0:
             return 0, tuple(retry_history), None
 
         witness_failure_classes = failure_classes_from_witness_path(witness_path)
-        process_failure_classes = failure_classes_from_completed_process(run)
         failure_classes = classify_failure_classes(
             witness_failure_classes,
             process_failure_classes,
@@ -306,6 +346,7 @@ def main() -> int:
         retry_policy_digest=str(retry_policy.get("policyDigest")),
         retry_policy_id=str(retry_policy.get("policyId")),
         escalation=escalation,
+        mapping_report=evaluate_required_mapping(root, strict=False),
     )
     write_summary(summary, args.summary_out)
     return exit_code

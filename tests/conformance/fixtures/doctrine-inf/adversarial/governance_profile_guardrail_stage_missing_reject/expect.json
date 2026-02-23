@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "governance.guardrail_stage_missing"
+  ]
+}

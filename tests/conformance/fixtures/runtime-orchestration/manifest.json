@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "suiteId": "runtime-orchestration",
+  "vectors": [
+    "golden/required_routes_bound_accept",
+    "golden/mapping_rows_bound_accept",
+    "adversarial/route_missing_reject",
+    "adversarial/morphism_drift_reject",
+    "adversarial/handoff_contract_missing_reject",
+    "adversarial/operation_path_outside_ci_reject",
+    "adversarial/mapping_row_missing_reject",
+    "invariance/required_routes_bound_permuted_local_accept",
+    "invariance/required_routes_bound_permuted_external_accept"
+  ]
+}

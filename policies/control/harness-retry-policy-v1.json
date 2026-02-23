@@ -40,6 +40,34 @@
       "escalationAction": "issue_discover"
     },
     {
+      "ruleId": "governance_no_retry",
+      "failureClasses": [
+        "governance.policy_package_unpinned",
+        "governance.policy_package_mismatch",
+        "governance.guardrail_stage_missing",
+        "governance.guardrail_stage_order_invalid",
+        "governance.eval_gate_unmet",
+        "governance.eval_lineage_missing",
+        "governance.self_evolution_retry_missing",
+        "governance.self_evolution_escalation_missing",
+        "governance.self_evolution_rollback_missing",
+        "governance.trace_mode_violation",
+        "governance.risk_tier_profile_missing"
+      ],
+      "maxAttempts": 1,
+      "backoffClass": "none",
+      "escalationAction": "mark_blocked"
+    },
+    {
+      "ruleId": "kcir_mapping_no_retry",
+      "failureClasses": [
+        "kcir_mapping_legacy_encoding_authority_violation"
+      ],
+      "maxAttempts": 1,
+      "backoffClass": "none",
+      "escalationAction": "mark_blocked"
+    },
+    {
       "ruleId": "semantic_no_retry",
       "failureClasses": [
         "check_failed",
@@ -62,5 +90,5 @@
       "escalationAction": "mark_blocked"
     }
   ],
-  "policyDigest": "pol1_2e1753b503e957e7c7f60da2bc1d9c1cb18c989904a13e20eb98cc9bbbb27398"
+  "policyDigest": "pol1_85f35a1dd21bbfd1bd8c0b1e999303dba5f905e75ffe7eb8be25d581296ec0c7"
 }

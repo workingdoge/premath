@@ -148,6 +148,12 @@
       "requiresDeclaration": false
     },
     {
+      "id": "op/ci.run_gate_terraform",
+      "path": "tools/ci/run_gate_terraform.sh",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "op/ci.run_instruction",
       "path": "tools/ci/run_instruction.sh",
       "kind": "operation",
@@ -178,8 +184,20 @@
       "requiresDeclaration": false
     },
     {
+      "id": "op/conformance.doctrine_inf_governance",
+      "path": "tools/conformance/run_doctrine_inf_vectors.py",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "op/conformance.doctrine_mcp_parity",
       "path": "tools/conformance/check_doctrine_mcp_parity.py",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/conformance.runtime_orchestration",
+      "path": "tools/conformance/check_runtime_orchestration.py",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -457,12 +475,15 @@
         "draft/LLM-PROPOSAL-CHECKING",
         "op/ci.decide_required",
         "op/ci.run_gate",
+        "op/ci.run_gate_terraform",
         "op/ci.run_instruction",
         "op/ci.verify_required_witness",
         "op/conformance.capability",
         "op/conformance.doctrine",
         "op/conformance.doctrine_inf",
+        "op/conformance.doctrine_inf_governance",
         "op/conformance.doctrine_mcp_parity",
+        "op/conformance.runtime_orchestration",
         "op/conformance.stub",
         "op/harness.session_bootstrap",
         "op/harness.session_read",
@@ -610,6 +631,19 @@
       "morphisms": [
         "dm.identity",
         "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.doctrine_inf_governance",
+      "from": "raw/PREMATH-CI",
+      "to": "op/conformance.doctrine_inf_governance",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.policy.rebind",
+        "dm.presentation.projection",
+        "dm.profile.evidence",
+        "dm.profile.execution"
       ]
     },
     {
@@ -835,7 +869,20 @@
       "to": "op/ci.run_gate",
       "morphisms": [
         "dm.identity",
-        "dm.profile.execution"
+        "dm.profile.execution",
+        "dm.transport.location",
+        "dm.transport.world"
+      ]
+    },
+    {
+      "id": "e.ci.op.run_gate_terraform",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.run_gate_terraform",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.location",
+        "dm.transport.world"
       ]
     },
     {
@@ -846,6 +893,15 @@
         "dm.commitment.attest",
         "dm.identity",
         "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.runtime_orchestration",
+      "from": "raw/PREMATH-CI",
+      "to": "op/conformance.runtime_orchestration",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
       ]
     },
     {

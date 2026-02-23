@@ -1,0 +1,82 @@
+{
+  "schema": 1,
+  "suiteId": "harness-typestate",
+  "vectorId": "golden/governance_profile_claimed_accept",
+  "input": {
+    "evidence": {
+      "callSpec": {
+        "callId": "call-1",
+        "modelRef": "gpt-5",
+        "actionMode": "code",
+        "executionPattern": "parallel",
+        "normalizerId": "nf.v1",
+        "mutationPolicyDigest": "mut.pol.v1",
+        "governancePolicyDigest": "gov.pol.v1",
+        "toolRenderProtocolDigest": "render.pol.v1",
+        "reminderQueuePolicyDigest": "queue.pol.v1",
+        "stateViewPolicyDigest": "state.pol.v1",
+        "decompositionPolicyDigest": "decomp.pol.v1"
+      },
+      "toolRequests": [
+        {
+          "toolCallId": "tc-1",
+          "toolName": "fs.read"
+        }
+      ],
+      "toolResults": [
+        {
+          "toolCallId": "tc-1",
+          "status": "ok",
+          "resultDigest": "sha256:result-a"
+        }
+      ],
+      "toolUse": [
+        {
+          "toolCallId": "tc-1",
+          "disposition": "consumed",
+          "resultDigest": "sha256:result-a"
+        }
+      ],
+      "protocolState": {
+        "stopReason": "tool_use",
+        "continuationAllowed": true
+      },
+      "toolRender": [
+        {
+          "toolCallId": "tc-1",
+          "operatorPayloadDigest": "sha256:operator-a",
+          "reminderRenderDigest": "sha256:reminder-a",
+          "injectionPoint": "tool_response",
+          "policyDigest": "render.pol.v1"
+        }
+      ],
+      "reminderQueue": [
+        {
+          "queueId": "queue/default",
+          "reducedDigest": "sha256:queue-a",
+          "policyDigest": "queue.pol.v1"
+        }
+      ],
+      "stateViews": [
+        {
+          "viewId": "state/latest",
+          "viewDigest": "sha256:view-a",
+          "policyDigest": "state.pol.v1",
+          "sourceRefs": [
+            "handoff://return/main"
+          ]
+        }
+      ]
+    },
+    "governanceProfile": {
+      "claimId": "profile.doctrine_inf_governance.v0",
+      "claimed": true,
+      "policyProvenance": {
+        "pinned": true,
+        "packageRef": "policy/governance/v1",
+        "expectedDigest": "sha256:abc",
+        "boundDigest": "sha256:abc"
+      }
+    }
+  }
+}

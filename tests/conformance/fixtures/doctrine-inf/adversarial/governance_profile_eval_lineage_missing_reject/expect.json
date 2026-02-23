@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "governance.eval_lineage_missing"
+  ]
+}

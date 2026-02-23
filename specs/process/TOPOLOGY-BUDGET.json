@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "budgetKind": "premath.topology_budget.v1",
+  "metrics": {
+    "draftSpecNodes": {
+      "warnAbove": 32,
+      "failAbove": 34
+    },
+    "specTraceabilityRows": {
+      "warnAbove": 32,
+      "failAbove": 34
+    },
+    "designDocNodes": {
+      "warnAbove": 27,
+      "failAbove": 30
+    },
+    "doctrineSiteEdgeCount": {
+      "warnAbove": 65,
+      "failAbove": 80
+    },
+    "doctrineSiteAuthorityInputCount": {
+      "warnAbove": 1,
+      "failAbove": 1,
+      "warnBelow": 1,
+      "failBelow": 1
+    },
+    "doctrineSiteGeneratedViewCount": {
+      "warnAbove": 2,
+      "failAbove": 2,
+      "warnBelow": 2,
+      "failBelow": 2
+    },
+    "deprecatedDesignFragmentCount": {
+      "warnAbove": 0,
+      "failAbove": 0
+    }
+  },
+  "deprecatedDesignFragments": [
+    "docs/design/TUSK-HARNESS-SESSION.md",
+    "docs/design/TUSK-HARNESS-TRAJECTORY.md",
+    "docs/design/TUSK-HARNESS-KPI-BENCHMARK.md",
+    "docs/design/EV-STAGE1-CHECKLIST.md",
+    "docs/design/EV-STAGE3-EXECUTION-RUNBOOK.md",
+    "docs/design/TUSK-SIGPI.md"
+  ],
+  "doctrineSiteAuthorityInputs": [
+    "specs/premath/draft/DOCTRINE-SITE-INPUT.json"
+  ],
+  "doctrineSiteGeneratedViews": [
+    "specs/premath/draft/DOCTRINE-SITE.json",
+    "specs/premath/draft/DOCTRINE-OP-REGISTRY.json"
+  ]
+}

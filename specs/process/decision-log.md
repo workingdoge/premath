@@ -3417,3 +3417,222 @@ preservation from lock-safe multi-writer claim semantics.
   not only contention/stale paths.
 - Docs/spec conformance language is aligned with executable vector rows for
   both capabilities.
+
+---
+
+## 2026-02-23 — Decision 0113: Keep harness typestate scoped under `capabilities.change_morphisms` with explicit split triggers
+
+### Decision
+Adopt a bundled claim policy for harness typestate closure/mutation gating:
+
+1. `draft/HARNESS-TYPESTATE` remains capability-scoped under
+   `capabilities.change_morphisms` (no new executable capability ID now).
+2. `draft/CAPABILITY-REGISTRY.json` remains unchanged at the current executable
+   capability set; harness typestate conformance remains part of the existing
+   `capabilities.change_morphisms` claim surface.
+3. A dedicated typestate capability claim MAY be introduced later only when one
+   or more split triggers is met:
+   - independent claimability is required (operators need to claim typestate
+     closure without claiming full change-morphism projection/mutation scope, or
+     the inverse),
+   - independent operation ownership is required (typestate execution routes no
+     longer fit the existing change-morphism doctrine-operation surface),
+   - independent conformance lifecycle is required (typestate vectors/checks must
+     evolve/deprecate on a release cadence materially decoupled from
+     change-morphism vectors).
+4. If split triggers are met, the change MUST be decision-logged and include
+   coordinated updates to:
+   - `draft/CAPABILITY-REGISTRY.json`,
+   - `draft/SPEC-INDEX`,
+   - `draft/CONFORMANCE`,
+   - `draft/CAPABILITY-VECTORS`,
+   - docs/coherence marker checks.
+
+### Rationale
+This keeps the claim surface minimal while preserving expressiveness. Current
+runtime and conformance evidence already routes typestate closure through the
+same operational mutation discipline as change morphisms. Introducing a separate
+claim now would add topology (new claim, vectors, checker branching) without a
+clear independent authority boundary.
+
+### Consequences
+- Capability topology remains compact (no new claim lane unless justified by
+  execution or lifecycle decoupling).
+- Typestate fail-closed behavior remains enforced and testable under an existing
+  capability claim.
+- Future split decisions are constrained by explicit triggers instead of ad-hoc
+  claim proliferation.
+
+---
+
+## 2026-02-23 — Decision 0114: Add executable topology-budget contract and consolidate redundant doc topology
+
+### Decision
+Adopt one executable topology-budget contract and reduce redundant design/doc
+nodes while preserving authority boundaries.
+
+1. Add `specs/process/TOPOLOGY-BUDGET.json` as the canonical threshold contract
+   for measurable topology metrics.
+2. Extend `tools/ci/check_drift_budget.py` with deterministic topology metrics
+   and explicit fail/warn semantics:
+   - fail classes remain under `driftClasses`,
+   - non-failing budget pressure is emitted under `warningClasses`.
+3. Consolidate doctrine-site authority input to one canonical input surface:
+   - `draft/DOCTRINE-SITE-INPUT.json` is authoritative,
+   - `draft/DOCTRINE-SITE.json` and `draft/DOCTRINE-OP-REGISTRY.json` are generated views.
+4. Consolidate micro-fragment design docs:
+   - harness session/trajectory/KPI runbooks fold into
+     `docs/design/TUSK-HARNESS-CONTRACT.md` sections,
+   - EV Stage 1/Stage 3 runbooks fold into
+     `docs/design/EV-COHERENCE-OVERVIEW.md`,
+   - SigPi compatibility alias doc folds into `docs/design/SQUEAK-DESIGN.md`.
+
+### Rationale
+The repository already enforces semantic/control-plane coherence but lacked a
+first-class quantitative topology budget surface. Adding one machine contract
+enables deterministic budget reporting while consolidation removes redundant
+doc/input nodes without changing executable authority.
+
+### Consequences
+- CI now reports both drift failures and warning-grade topology pressure.
+- Doctrine-site input duplication is reduced while MCP parity keeps direct
+  operation-registry consumption.
+- Design index complexity is lower, with fewer fragment files to keep coherent.
+
+---
+
+## 2026-02-23 — Decision 0115: Enforce explicit Harness+Squeak runtime-route parity in doctrine and control-plane gates
+
+### Decision
+Adopt a fail-closed runtime-route parity contract and executable checker path:
+
+1. Add `runtimeRouteBindings` to `draft/CONTROL-PLANE-CONTRACT.json` with
+   canonical required operation routes:
+   - `op/ci.run_gate`
+   - `op/ci.run_gate_terraform`
+   and required transport/runtime morphism coverage.
+2. Extend `tools/ci/control_plane_contract.py` and
+   `tools/ci/check_drift_budget.py` so contract/loader/doctrine-operation
+   parity rejects on missing runtime route bindings.
+3. Add explicit doctrine operation routing for runtime parity checker:
+   - `op/conformance.runtime_orchestration` ->
+     `tools/conformance/check_runtime_orchestration.py`
+   via `draft/DOCTRINE-SITE-INPUT.json` (with generated site/registry refresh).
+4. Add deterministic runtime orchestration vectors and cached suite integration:
+   - `tests/conformance/fixtures/runtime-orchestration/`
+   - `tools/conformance/run_runtime_orchestration_vectors.py`
+   - `tools/conformance/run_fixture_suites.py --suite runtime-orchestration`.
+5. Promote doctrine gate command surface to include runtime-route parity:
+   `mise run doctrine-check` now runs site coherence + runtime orchestration
+   parity + MCP doctrine-operation parity + doctrine-inf vectors.
+
+### Rationale
+Runtime orchestration between Harness, Squeak, and destination Tusk/Gate was
+architecturally specified but not fully encoded as one executable parity lane.
+Adding a typed route contract plus checker/vectors closes that gap without
+introducing a second semantic authority path.
+
+### Consequences
+- Missing/partial runtime route bindings now fail closed in drift and doctrine
+  gate surfaces.
+- Runtime orchestration conformance has dedicated golden/adversarial vectors.
+- Docs/index/traceability now reference the explicit runtime-route parity
+  checker as part of doctrine closure.
+
+---
+
+## 2026-02-23 — Decision 0116: Place control-plane bundle profile (`C_cp`/`E_cp`) in the typed control-plane contract
+
+### Decision
+Declare the control-plane bundle profile directly in
+`draft/CONTROL-PLANE-CONTRACT.json` under `controlPlaneBundleProfile` (rather
+than introducing a separate draft spec), with canonical typed fields:
+
+1. `contextFamily.id = C_cp` with required repository-state context and
+   context-morphism kind sets.
+2. `artifactFamily.id = E_cp` with canonical control-plane artifact references.
+3. explicit reindex/coherence obligations plus required commutation witness.
+4. explicit cover/glue obligations for worker decomposition and merge
+   compatibility.
+5. explicit authority split: semantic authority remains
+   `PREMATH-KERNEL`/`GATE`/`BIDIR-DESCENT`; control-plane role is projection and
+   parity only.
+
+### Rationale
+This profile is consumed by runtime/checker/parity wrappers that already load
+`CONTROL-PLANE-CONTRACT.json`. Keeping the bundle contract in the same typed
+artifact minimizes topology while making `C_cp`/`E_cp` executable and
+fail-closed through the existing loader/test surfaces.
+
+### Consequences
+- `C_cp`/`E_cp` now have one machine-checked authority surface.
+- Downstream KCIR/self-hosting tasks can consume the profile without adding a
+  parallel architecture spec node.
+- Spec index and draft README now link the profile placement explicitly, so
+  authority boundaries remain unambiguous.
+
+---
+
+## 2026-02-23 — Decision 0117: Canonicalize control-plane artifact mappings through `controlPlaneKcirMappings`
+
+### Decision
+Adopt one machine-readable KCIR mapping surface in
+`draft/CONTROL-PLANE-CONTRACT.json` under `controlPlaneKcirMappings` with:
+
+1. canonical mapping rows for:
+   - instruction envelopes,
+   - proposal payloads,
+   - coherence obligations/check payloads,
+   - doctrine-route bindings,
+   - CI required-decision inputs.
+2. deterministic identity/digest lineage bindings:
+   `digestAlgorithm=sha256`, `refProfilePath=policies/ref/sha256_detached_v1.json`,
+   and canonical `normalizerId` / `policyDigest` field anchors.
+3. explicit legacy compatibility/deprecation policy:
+   non-KCIR semantic encodings are `projection_only`, forbidden as authority,
+   and bounded by a support window aligned with schema rollover epoch.
+
+### Rationale
+Control-plane mapping logic was split across wrappers and implicit conventions.
+One typed mapping table gives downstream core/parity work a canonical IR boundary
+without introducing a separate architecture node.
+
+### Consequences
+- Mapping drift for instruction/proposal/coherence/doctrine/decision inputs is
+  now fail-closed through the control-plane contract loader/tests.
+- Legacy non-KCIR encodings remain compatibility-only and cannot become a
+  parallel authority path.
+- Downstream KCIR self-hosting tasks can consume one canonical mapping artifact.
+
+---
+
+## 2026-02-23 — Decision 0118: Expand runtime-orchestration conformance with path-boundary, mapping-row, and invariance vectors
+
+### Decision
+Extend runtime-orchestration executable conformance to cover additional
+control-plane bundle closure points:
+
+1. enforce routed operation path boundary for runtime routes:
+   bound doctrine operations MUST resolve under `tools/ci/*` for this checker
+   surface (reject fail-closed on bypass path drift).
+2. validate optional `controlPlaneKcirMappings.mappingTable` row-shape when
+   present (`instructionEnvelope`, `proposalPayload`,
+   `coherenceCheckPayload`, `requiredDecisionInput`, `coherenceObligations`,
+   `doctrineRouteBinding`).
+3. add runtime-orchestration vector coverage for:
+   - mapping-row golden + adversarial rejects,
+   - operation-path bypass adversarial reject,
+   - profile-permuted invariance pairs with deterministic parity checks.
+
+### Rationale
+Phase-2 KCIR self-hosting closure needs executable proof that adapter boundaries
+cannot drift to non-canonical paths and that optional mapping-table surfaces
+stay typed when supplied. Existing route/morphism checks were necessary but not
+sufficient for this boundary.
+
+### Consequences
+- Runtime-orchestration vectors now cover golden/adversarial/invariance shapes.
+- Control-plane bundle closure has explicit fail-closed coverage for path
+  bypass and mapping-row drift.
+- Doctrine/conformance gates retain one runtime checker entrypoint while
+  carrying denser boundary evidence for KCIR phase-2 closure.

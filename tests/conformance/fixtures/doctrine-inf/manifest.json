@@ -3,8 +3,21 @@
   "suiteId": "doctrine-inf",
   "vectors": [
     "golden/preserved_boundary_accept",
+    "golden/governance_profile_claimed_accept",
+    "golden/governance_profile_unclaimed_ignored_accept",
     "adversarial/not_declared_preserved_reject",
     "adversarial/explicit_not_preserved_reject",
-    "adversarial/declaration_overlap_reject"
+    "adversarial/declaration_overlap_reject",
+    "adversarial/governance_profile_policy_mismatch_reject",
+    "adversarial/governance_profile_policy_unpinned_reject",
+    "adversarial/governance_profile_guardrail_stage_missing_reject",
+    "adversarial/governance_profile_guardrail_stage_order_invalid_reject",
+    "adversarial/governance_profile_eval_gate_unmet_reject",
+    "adversarial/governance_profile_eval_lineage_missing_reject",
+    "adversarial/governance_profile_trace_mode_violation_reject",
+    "adversarial/governance_profile_risk_tier_profile_missing_reject",
+    "adversarial/governance_profile_self_evolution_retry_missing_reject",
+    "adversarial/governance_profile_self_evolution_escalation_missing_reject",
+    "adversarial/governance_profile_self_evolution_rollback_missing_reject"
   ]
 }

@@ -441,6 +441,17 @@ pub enum Commands {
         command: HarnessTrajectoryCommands,
     },
 
+    /// Evaluate deterministic ToolUse/JoinClosed closure state from normalized evidence
+    HarnessJoinCheck {
+        /// Join-check input JSON path
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Manage dependencies between issues
     Dep {
         #[command(subcommand)]

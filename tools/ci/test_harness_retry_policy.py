@@ -20,7 +20,7 @@ class HarnessRetryPolicyTests(unittest.TestCase):
         self.assertEqual(policy.get("policyId"), "policy.harness.retry.v1")
         self.assertEqual(
             policy.get("policyDigest"),
-            "pol1_2e1753b503e957e7c7f60da2bc1d9c1cb18c989904a13e20eb98cc9bbbb27398",
+            "pol1_85f35a1dd21bbfd1bd8c0b1e999303dba5f905e75ffe7eb8be25d581296ec0c7",
         )
 
     def test_resolve_retry_decision_semantic_no_retry(self) -> None:
@@ -67,6 +67,30 @@ class HarnessRetryPolicyTests(unittest.TestCase):
         self.assertEqual(decision.rule_id, "semantic_no_retry")
         self.assertEqual(decision.matched_failure_class, "proposal_binding_mismatch")
         self.assertEqual(decision.escalation_action, "mark_blocked")
+
+    def test_resolve_retry_decision_kcir_mapping_no_retry(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        policy = harness_retry_policy.load_retry_policy(repo_root)
+        decision = harness_retry_policy.resolve_retry_decision(
+            policy,
+            (
+                "kcir_mapping_legacy_encoding_authority_violation",
+                "kcir_mapping_legacy_encoding_authority_violation",
+            ),
+            attempt=1,
+        )
+        self.assertFalse(decision.retry)
+        self.assertEqual(decision.max_attempts, 1)
+        self.assertEqual(decision.rule_id, "kcir_mapping_no_retry")
+        self.assertEqual(
+            decision.matched_failure_class,
+            "kcir_mapping_legacy_encoding_authority_violation",
+        )
+        self.assertEqual(decision.escalation_action, "mark_blocked")
+        self.assertEqual(
+            decision.failure_classes,
+            ("kcir_mapping_legacy_encoding_authority_violation",),
+        )
 
     def test_failure_classes_from_witness_payload_union(self) -> None:
         payload = {

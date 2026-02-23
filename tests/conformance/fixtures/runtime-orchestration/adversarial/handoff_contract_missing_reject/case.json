@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "suiteId": "runtime-orchestration",
+  "vectorId": "adversarial/handoff_contract_missing_reject",
+  "controlPlaneContract": {
+    "runtimeRouteBindings": {
+      "requiredOperationRoutes": {
+        "runGate": {
+          "operationId": "op/ci.run_gate",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ]
+        }
+      }
+    }
+  },
+  "doctrineOpRegistry": {
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "path": "tools/ci/run_gate.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      }
+    ]
+  },
+  "harnessRuntimeText": "# Missing required handoff section"
+}

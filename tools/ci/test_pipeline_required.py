@@ -48,6 +48,20 @@ class PipelineRequiredTests(unittest.TestCase):
                     "escalationAction": "mark_blocked",
                     "failureClasses": ("instruction_envelope_invalid",),
                 },
+                "governance.eval_gate_unmet": {
+                    "ruleId": "governance_no_retry",
+                    "maxAttempts": 1,
+                    "backoffClass": "none",
+                    "escalationAction": "mark_blocked",
+                    "failureClasses": ("governance.eval_gate_unmet",),
+                },
+                "kcir_mapping_legacy_encoding_authority_violation": {
+                    "ruleId": "kcir_mapping_no_retry",
+                    "maxAttempts": 1,
+                    "backoffClass": "none",
+                    "escalationAction": "mark_blocked",
+                    "failureClasses": ("kcir_mapping_legacy_encoding_authority_violation",),
+                },
             },
         }
 
@@ -309,6 +323,122 @@ class PipelineRequiredTests(unittest.TestCase):
             self.assertEqual(history[0].matched_failure_class, "pipeline_missing_witness")
             self.assertFalse(history[1].retry)
             self.assertEqual(history[1].escalation_action, "issue_discover")
+
+    def test_run_required_with_retry_applies_governance_gate_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-required-governance-") as tmp:
+            root = Path(tmp)
+            policy = self._routing_policy()
+            completed = subprocess.CompletedProcess(
+                args=["mise", "run", "ci-required-attested"],
+                returncode=0,
+                stdout="all checks passed\n",
+                stderr="",
+            )
+
+            with patch("pipeline_required.subprocess.run", return_value=completed):
+                with patch(
+                    "pipeline_required.governance_failure_classes",
+                    return_value=("governance.eval_gate_unmet",),
+                ):
+                    with patch(
+                        "pipeline_required.apply_terminal_escalation",
+                        return_value=EscalationResult(
+                            action="mark_blocked",
+                            outcome="applied",
+                            issue_id="bd-190",
+                            created_issue_id=None,
+                            note_digest="note1_test",
+                            witness_ref="artifacts/ciwitness/latest-required.json",
+                            details="governance gate unmet",
+                        ),
+                    ):
+                        exit_code, history, escalation = pipeline_required.run_required_with_retry(
+                            root,
+                            policy,
+                        )
+
+            self.assertEqual(exit_code, 1)
+            self.assertIsNotNone(escalation)
+            self.assertEqual(len(history), 1)
+            self.assertEqual(history[0].rule_id, "governance_no_retry")
+            self.assertEqual(history[0].matched_failure_class, "governance.eval_gate_unmet")
+            self.assertEqual(history[0].escalation_action, "mark_blocked")
+
+    def test_run_required_with_retry_applies_kcir_mapping_gate_fail_closed(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-required-kcir-gate-") as tmp:
+            root = Path(tmp)
+            ciwitness = root / "artifacts" / "ciwitness"
+            ciwitness.mkdir(parents=True, exist_ok=True)
+            (ciwitness / "latest-required.json").write_text(
+                json.dumps(
+                    {
+                        "projectionDigest": "proj1_demo",
+                        "normalizerId": "normalizer.ci.required.v1",
+                        "policyDigest": "ci-topos-v0",
+                        "authorityPayloadDigest": "proj1_demo",
+                        "verdictClass": "accepted",
+                        "requiredChecks": [],
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            (ciwitness / "latest-decision.json").write_text(
+                json.dumps(
+                    {
+                        "decision": "accept",
+                        "reasonClass": "verified_accept",
+                        "policyDigest": "ci-topos-v0",
+                        "authorityPayloadDigest": "proj1_demo",
+                        "witnessSha256": "witness_demo",
+                    },
+                    ensure_ascii=False,
+                    indent=2,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+            policy = self._routing_policy()
+            completed = subprocess.CompletedProcess(
+                args=["mise", "run", "ci-required-attested"],
+                returncode=0,
+                stdout="all checks passed\n",
+                stderr="",
+            )
+
+            with patch("pipeline_required.subprocess.run", return_value=completed):
+                with patch(
+                    "pipeline_required.governance_failure_classes",
+                    return_value=tuple(),
+                ):
+                    with patch(
+                        "pipeline_required.apply_terminal_escalation",
+                        return_value=EscalationResult(
+                            action="mark_blocked",
+                            outcome="applied",
+                            issue_id="bd-190",
+                            created_issue_id=None,
+                            note_digest="note1_test",
+                            witness_ref="artifacts/ciwitness/latest-required.json",
+                            details="kcir mapping gate unmet",
+                        ),
+                    ):
+                        exit_code, history, escalation = pipeline_required.run_required_with_retry(
+                            root,
+                            policy,
+                        )
+
+            self.assertEqual(exit_code, 1)
+            self.assertIsNotNone(escalation)
+            self.assertEqual(len(history), 1)
+            self.assertEqual(history[0].rule_id, "kcir_mapping_no_retry")
+            self.assertEqual(
+                history[0].matched_failure_class,
+                "kcir_mapping_legacy_encoding_authority_violation",
+            )
+            self.assertEqual(history[0].escalation_action, "mark_blocked")
 
 
 if __name__ == "__main__":

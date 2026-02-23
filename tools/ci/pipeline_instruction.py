@@ -27,6 +27,16 @@ from harness_retry_policy import (
     load_retry_policy,
     resolve_retry_decision,
 )
+from control_plane_contract import (
+    INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT,
+    INSTRUCTION_ENVELOPE_CHECK_CANONICAL_ENTRYPOINT,
+)
+from governance_gate import governance_failure_classes
+from kcir_mapping_gate import (
+    MappingGateReport,
+    evaluate_instruction_mapping,
+    render_mapping_summary_lines,
+)
 from provider_env import map_github_to_premath_env
 
 
@@ -156,6 +166,7 @@ def render_summary(
     retry_policy_digest: str | None = None,
     retry_policy_id: str | None = None,
     escalation: EscalationResult | None = None,
+    mapping_report: MappingGateReport | None = None,
 ) -> str:
     witness_path = repo_root / "artifacts/ciwitness" / f"{instruction_id}.json"
     witness_sha_path = repo_root / "artifacts/ciwitness" / f"{instruction_id}.sha256"
@@ -214,6 +225,8 @@ def render_summary(
     if retry_policy_digest:
         policy_label = retry_policy_id or "(unknown)"
         lines.append(f"- retry policy: `{policy_label}` (`{retry_policy_digest}`)")
+    if mapping_report is not None:
+        lines.extend(render_mapping_summary_lines(mapping_report))
     lines.extend(_render_retry_lines(retry_history))
     lines.extend(_render_escalation_lines(escalation))
     return "\n".join(lines) + "\n"
@@ -237,14 +250,20 @@ def run_instruction_once(
     instruction_path: Path,
     allow_failure: bool,
 ) -> tuple[int, tuple[str, ...]]:
+    validate_cmd = list(INSTRUCTION_ENVELOPE_CHECK_CANONICAL_ENTRYPOINT) + [
+        str(instruction_path)
+    ]
     validate = _run_with_streamed_output(
-        ["python3", str(root / "tools/ci/check_instruction_envelope.py"), str(instruction_path)],
+        validate_cmd,
         cwd=root,
     )
     validate_failure_classes = failure_classes_from_completed_process(validate)
     if validate.returncode != 0:
+        reject_cmd = list(INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT) + [
+            str(instruction_path)
+        ]
         reject_run = _run_with_streamed_output(
-            ["python3", str(root / "tools/ci/run_instruction.py"), str(instruction_path)],
+            reject_cmd,
             cwd=root,
         )
         reject_failure_classes = failure_classes_from_completed_process(reject_run)
@@ -253,7 +272,7 @@ def run_instruction_once(
             combine_failure_class_sources(reject_failure_classes, validate_failure_classes),
         )
 
-    run_cmd = ["python3", str(root / "tools/ci/run_instruction.py"), str(instruction_path)]
+    run_cmd = list(INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT) + [str(instruction_path)]
     if allow_failure:
         run_cmd.append("--allow-failure")
     run = _run_with_streamed_output(run_cmd, cwd=root)
@@ -273,6 +292,37 @@ def run_instruction_with_retry(
     attempt = 1
     while True:
         exit_code, process_failure_classes = run_instruction_once(root, instruction_path, allow_failure)
+        governance_classes = governance_failure_classes(root)
+        if governance_classes:
+            process_failure_classes = combine_failure_class_sources(
+                process_failure_classes,
+                governance_classes,
+            )
+            if exit_code == 0:
+                joined = ", ".join(governance_classes)
+                print(
+                    "[pipeline-instruction] governance promotion gate rejected successful run "
+                    f"(failureClasses={joined})"
+                )
+                exit_code = 1
+        mapping_report = evaluate_instruction_mapping(
+            root,
+            instruction_path=instruction_path,
+            instruction_id=instruction_id,
+            strict=(exit_code == 0),
+        )
+        if mapping_report.failure_classes:
+            process_failure_classes = combine_failure_class_sources(
+                process_failure_classes,
+                mapping_report.failure_classes,
+            )
+            if exit_code == 0:
+                joined = ", ".join(mapping_report.failure_classes)
+                print(
+                    "[pipeline-instruction] kcir mapping gate rejected successful run "
+                    f"(failureClasses={joined})"
+                )
+                exit_code = 1
         if exit_code == 0:
             return 0, tuple(retry_history), None
 
@@ -367,6 +417,12 @@ def main() -> int:
         retry_policy_digest=str(retry_policy.get("policyDigest")),
         retry_policy_id=str(retry_policy.get("policyId")),
         escalation=escalation,
+        mapping_report=evaluate_instruction_mapping(
+            root,
+            instruction_path=instruction_path,
+            instruction_id=instruction_id,
+            strict=False,
+        ),
     )
     write_summary(summary, args.summary_out)
     return exit_code

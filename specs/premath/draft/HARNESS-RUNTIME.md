@@ -41,7 +41,38 @@ authority. Authoritative admissibility remains in
 `draft/BIDIR-DESCENT.md` and `draft/GATE.md`; instruction authority boundaries
 remain in `draft/LLM-INSTRUCTION-DOCTRINE.md`.
 
-## 2. Canonical artifacts and command anchors
+### 1.1 Shared harness surface map (authoritative)
+
+The harness surface is split into three normative contracts with one shared
+authority map:
+
+| Concern | Normative surface | Shared bindings and routes | Primary executable anchors |
+| --- | --- | --- | --- |
+| Runtime loop/session/trajectory | `draft/HARNESS-RUNTIME` | canonical artifacts (`.premath/harness_session.json`, `.premath/harness_feature_ledger.json`, `.premath/harness_trajectory.jsonl`) and routed operation IDs (`op/harness.session_*`, issue lease routes) | `premath harness-session ...`, `premath harness-feature ...`, `premath harness-trajectory ...`, `mise run harness-worker-loop`, `mise run harness-coordinator-loop` |
+| Tool-calling closure/mutation gate | `draft/HARNESS-TYPESTATE` | typestate binding digests (`mutationPolicyDigest`, `governancePolicyDigest`, context/decomposition digests), fail-closed join/mutation classes, claim-gated governance provenance classes | `premath harness-join-check --input <json> --json`, `python3 tools/conformance/run_harness_typestate_vectors.py` |
+| Retry/escalation wrappers | `draft/HARNESS-RETRY-ESCALATION` | canonical retry policy artifact + digest binding (`policies/control/harness-retry-policy-v1.json`), deterministic escalation action mapping and issue-context resolution order | `python3 tools/ci/test_harness_retry_policy.py`, `python3 tools/ci/test_harness_escalation.py`, `mise run ci-pipeline-test` |
+
+`draft/HARNESS-TYPESTATE` and `draft/HARNESS-RETRY-ESCALATION` MUST reference
+this section for shared harness surface partitioning and MUST NOT introduce
+parallel authority routes.
+
+### 1.2 Harness-Squeak composition boundary (required)
+
+When runtime orchestration crosses world/location boundaries, Harness MUST route
+through Squeak transport and destination Tusk checks in this order:
+
+1. Harness computes deterministic work context and witness lineage refs.
+2. Squeak performs transport/runtime-placement mapping and emits transport-class
+   witness outcomes.
+3. Destination Tusk/Gate performs destination-local admissibility checks and
+   emits Gate-class outcomes.
+4. Harness records the resulting references in session/trajectory projections.
+
+Harness and Squeak are operational projection surfaces only. Neither may
+introduce semantic admissibility authority; acceptance/rejection remains
+checker/Gate-owned.
+
+## 2. Canonical runtime artifacts and command anchors
 
 A conforming harness runtime MUST use the following canonical projection
 artifacts:
@@ -78,9 +109,36 @@ A conforming command surface MUST include:
 `step` MUST:
 
 - claim one bounded work item (single-task by default),
+- compute deterministic `ToolUse` projection state from normalized tool
+  results, including typed consumed/observed/discarded dispositions as defined
+  in `draft/HARNESS-TYPESTATE`,
+- project deterministic state views over the append-only event stream and apply
+  queue reductions required by active stop/enforcement policy before the next
+  model/tool iteration,
+- compute deterministic closure gate state (`JoinClosed`) from normalized
+  tool/protocol/handoff evidence (including `ToolUse`) before any
+  issue/dependency mutation attempt, following `draft/HARNESS-TYPESTATE`,
+- when `profile.doctrine_inf_governance.v0` is claimed in
+  `draft/CAPABILITY-REGISTRY.json` `profileOverlayClaims`, include bound
+  `policyProvenance` evidence (`pinned`, `packageRef`, `expectedDigest`,
+  `boundDigest`) in closure/mutation inputs and fail closed on unpinned or
+  mismatched provenance before mutation,
+- when `executionPattern` implies fan-out/fan-in, enforce decomposition policy
+  admissibility before parallel worker dispatch,
+- compute deterministic mutation-admissibility gate state (`MutationReady`) and
+  permit issue/dependency mutations only when this gate is satisfied and
+  required `ToolUse` evidence is present (fail-closed class semantics in
+  `draft/HARNESS-TYPESTATE`),
 - execute mutation through instruction-mediated surfaces,
+- when work requires inter-world execution or runtime-location relocation,
+  produce deterministic handoff inputs to Squeak transport and require
+  destination Tusk/Gate evidence before treating the step as verified,
 - run deterministic verification before and after mutation,
 - emit typed witness references for side effects.
+
+If closure or mutation-admissibility gates are unsatisfied, `step` MUST fail
+closed by recording failure classes + witness references and skipping mutation;
+projection artifacts MAY still be emitted.
 
 ### 3.3 `stop`
 
@@ -209,6 +267,10 @@ Runtime routes include:
 - `op/mcp.issue_lease_projection`
 - `op/mcp.dep_diagnostics`
 
+Inter-world/runtime-placement transport remains in Squeak surfaces
+(`raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`) and MUST compose with Harness routes as
+one operational chain without introducing a parallel authority path.
+
 ## 9. Verification surfaces
 
 Minimum deterministic verification includes:
@@ -222,10 +284,10 @@ Minimum deterministic verification includes:
 
 - design runbooks:
   - `docs/design/TUSK-HARNESS-CONTRACT.md`
-  - `docs/design/TUSK-HARNESS-SESSION.md`
   - `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
-  - `docs/design/TUSK-HARNESS-TRAJECTORY.md`
+  - `docs/design/TUSK-HARNESS-CONTRACT.md` (§11 session artifact, §12 trajectory, §13 KPI benchmark)
   - `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
 - lane composition and authority:
   - `draft/SPEC-INDEX.md`
-  - `draft/UNIFICATION-DOCTRINE.md`
+- `draft/UNIFICATION-DOCTRINE.md`
+- `draft/HARNESS-TYPESTATE.md`

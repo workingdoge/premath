@@ -10,6 +10,7 @@ Scope: design-level, non-normative
 - `specs/premath/draft/DOCTRINE-SITE.md`
 - `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
 - `specs/premath/draft/LLM-PROPOSAL-CHECKING.md`
+  - governance-flywheel doctrine profile: `DOCTRINE-INF` §9
 
 `Kernel` (semantic authority):
 - `specs/premath/draft/PREMATH-KERNEL.md`
@@ -21,6 +22,13 @@ Scope: design-level, non-normative
 - `specs/premath/raw/SQUEAK-CORE.md`
 - `specs/premath/raw/SQUEAK-SITE.md`
 - harness overlay (design): `docs/design/TUSK-HARNESS-CONTRACT.md`
+
+Runtime composition route (required boundary shape):
+
+- `Harness(step)` -> `Squeak transport/placement` -> `destination Tusk/Gate`
+  -> `Harness projection artifacts`.
+- Harness/Squeak remain operational routing surfaces; admissibility remains
+  destination checker/Gate-owned.
 
 `CI/Control` (one layer, two roles):
 - `specs/premath/raw/PREMATH-CI.md`
@@ -41,6 +49,7 @@ Role split inside CI/Control:
 - `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
 - `tools/conformance/check_doctrine_site.py`
+- `tools/conformance/check_runtime_orchestration.py`
 - `tools/conformance/check_doctrine_mcp_parity.py`
 - `tools/conformance/run_doctrine_inf_vectors.py`
 - `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
@@ -62,7 +71,8 @@ DOCTRINE-INF
         -> tools/ci/verify_required_witness.py
         -> tools/ci/run_gate.sh
   -> tools/conformance/check_doctrine_site.py /
-     check_doctrine_mcp_parity.py / run_doctrine_inf_vectors.py
+     check_runtime_orchestration.py / check_doctrine_mcp_parity.py /
+     run_doctrine_inf_vectors.py
   -> hk/mise tasks (.mise baseline + ci-required-attested)
   -> CIWitness artifacts
   -> conformance + doctrine-site checks
@@ -126,7 +136,8 @@ Baseline gate (`mise run baseline`) enforces:
 - setup/lint/build/test/toy suites,
 - conformance + traceability + coherence-check + docs-coherence + doctrine closure,
 - doctrine closure includes doctrine-site roundtrip/reachability plus MCP
-  doctrine-operation parity (`check_doctrine_site.py`,
+  doctrine-operation parity + runtime-route parity
+  (`check_doctrine_site.py`, `check_runtime_orchestration.py`,
   `check_doctrine_mcp_parity.py`),
 - CI/control-plane wiring, pipeline, observation, instruction, and drift-budget checks,
 - executable fixture-suite closure (`mise run conformance-run`).
@@ -175,6 +186,7 @@ Canonical ordering for active work is architecture-first:
 Operational companion:
 - `docs/design/MULTITHREAD-LANE-SITE-ADJOINTS.md`
 - `docs/design/DEVELOPMENT-META-LOOP.md`
+- `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md`
 
 Operational rule:
 - treat this section as a pointer only; use `premath issue ready` /
@@ -205,3 +217,100 @@ Operational reading of current stack (normative anchor:
 
 This keeps concurrency and operational acceleration as structured base-change
 and descent, not as a second semantic path.
+
+Operational stance:
+
+- continuity is descent-first (bounded slices + typed handoffs + glue checks),
+  not transcript-linear + compaction-first.
+- compaction remains a bounded compatibility/fallback policy only.
+
+## 9. External Crosswalk (Harness / Context / Ralph Loop)
+
+This section maps recent external harness patterns to existing premath
+surfaces and identifies residual implementation gaps.
+
+Source anchors:
+
+- `https://michaellivs.com/blog/agent-harness`
+- `https://michaellivs.com/blog/context-engineering-open-call/`
+- `https://michaellivs.com/blog/multi-agent-context-transfer/`
+- `https://claytonfarr.github.io/ralph-playbook/`
+- `https://ampcode.com/notes/how-to-build-an-agent`
+- `https://ampcode.com/guides/context-management`
+
+Direct mappings already present:
+
+- injection points (`system`, `user`, `tool response`) map to per-turn typed
+  call policy and reminder-bearing tool rows in
+  `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md`.
+- "simple inner loop + explicit tool contract" maps to a deterministic
+  `step` contract and typed closure gates in
+  `specs/premath/draft/HARNESS-RUNTIME.md` §3.2.
+- "conversation as event stream + views" maps to append-only harness trajectory
+  plus deterministic projections (`latest|failed|retry-needed`) in
+  `specs/premath/draft/HARNESS-RUNTIME.md`.
+- context management operations (restore/edit/handoff) map to
+  `harness-session` bootstrap/continuation plus typed context-scope/state-view
+  policies in `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md`.
+- explicit stop and enforcement logic maps to `ToolUse -> JoinClosed ->
+  MutationReady` fail-closed mutation gates in
+  `specs/premath/draft/HARNESS-RUNTIME.md`.
+- tool failures are modeled as typed runtime evidence (not free-form narration)
+  and participate in closure/mutation admissibility checks.
+- lossy multi-agent boundaries map to typed handoff contracts
+  (`handoffContractDigest`, required artifacts, allowed targets, return path)
+  and lease handoff refs (`lease://handoff/...`) in
+  `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md` +
+  `specs/premath/draft/HARNESS-RUNTIME.md`.
+- governance flywheel/profile gating maps to `DOCTRINE-INF` §9 +
+  `CONFORMANCE` §2.4 + `CAPABILITY-REGISTRY.json` `profileOverlayClaims`, with
+  drift/coherence/doctrine checks bound to the same claim surface.
+- Ralph-style one-task/fresh-context/backpressure loops map to
+  issue-authoritative worker loops (`issue_ready -> claim -> work -> verify ->
+  update`) in `docs/design/DEVELOPMENT-META-LOOP.md`, with detailed adaptation
+  notes in `docs/design/RALPH-PLAYBOOK-PREMATH.md`.
+
+Residual integration status:
+
+- decomposition guards for parallel fan-out ("loop vs split") are now covered by
+  dedicated adversarial conformance vectors (`bd-232`).
+- governance promotion/runtime wrapper enforcement is now wired end-to-end in
+  CI wrapper paths (`pipeline_required.py`, `pipeline_instruction.py`) through
+  canonical governance gate helpers (`bd-229`).
+- this crosswalk currently has no open residual integration gaps; track new gaps
+  in `.premath/issues.jsonl` and keep this section synchronized with issue state.
+
+## 10. Active WIP Topology Ownership (Authority-Lane Grouped)
+
+Purpose:
+
+- keep one explicit map from dirty repository clusters to lane ownership and
+  tracked issue scope,
+- prevent "orphaned" WIP clusters from accumulating outside the active issue graph.
+
+Canonical WIP snapshot location:
+
+- `.premath/OPERATIONS.md` -> `Active WIP Topology Ownership Map (bd-280 snapshot)`
+
+Active chain for current reconciliation:
+
+- epic: `bd-279`
+- lane slices: `bd-280` -> `bd-281` -> `bd-282` -> `bd-283` -> `bd-284` ->
+  `bd-285` -> `bd-286`
+
+Lane grouping used by the WIP snapshot:
+
+- doctrine/decision lane: `specs/*` + `specs/process/*` (spec glue and
+  lifecycle closure),
+- control/checker lane: `tools/ci/*` + control policy surfaces,
+- runtime implementation lane: `crates/*`,
+- conformance lane: `tests/conformance/*` + vector/check runners,
+- design/operations lane: `docs/design/*`, root operational docs,
+  `.premath/*`, and issue-graph updates.
+
+Boundary rule:
+
+- cluster ownership in the WIP snapshot MUST point to active issue IDs in
+  `.premath/issues.jsonl`,
+- any dirty cluster without an owning active issue is a fail-closed planning
+  error and MUST be resolved before commit slicing.

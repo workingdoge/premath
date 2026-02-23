@@ -1,7 +1,7 @@
-# Harness Spec Promotion Map (Preflight)
+# Harness Spec Promotion Map (Historical Reference)
 
-Status: preflight
-Scope: parallel-safe planning artifact for `bd-192`
+Status: completed (`bd-194` preflight -> `bd-192` promotion closed)
+Scope: historical planning artifact for `bd-192`
 Authority: non-normative (no semantic delta)
 
 ## 1. Goal
@@ -9,8 +9,8 @@ Authority: non-normative (no semantic delta)
 Create a mechanical promotion path from harness design docs to draft spec surfaces
 with minimum encoding and maximum expressiveness.
 
-This document does not change behavior. It only fixes ordering and mapping so
-`bd-192` can land with low merge risk after `bd-190`.
+This document does not change behavior. It recorded ordering and mapping used to
+land `bd-192` after `bd-190`.
 
 ## 2. Source -> Target Mapping
 
@@ -23,7 +23,13 @@ Canonical source set (`docs/design`):
 - `TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
 - `TUSK-HARNESS-RETRY-POLICY.md`
 
-Canonical target set (`specs/premath/draft`, proposed for `bd-192`):
+Historical note:
+
+- `TUSK-HARNESS-SESSION.md` and `TUSK-HARNESS-TRAJECTORY.md` were later
+  consolidated into `TUSK-HARNESS-CONTRACT.md` (Decision 0114); entries above
+  preserve the original promotion input snapshot.
+
+Canonical target set (`specs/premath/draft`, delivered by `bd-192`):
 
 - `HARNESS-RUNTIME.md`
   - includes: boot/step/stop contract, session artifact, feature ledger, trajectory rows, multithread worker/coordinator loop.
@@ -88,12 +94,12 @@ Source of truth:
 
 ## 6. Completion Checklist (for bd-192)
 
-- [ ] `HARNESS-RUNTIME.md` added with command anchors and no behavior deltas.
-- [ ] `HARNESS-RETRY-ESCALATION.md` added with policy and escalation table.
-- [ ] `SPEC-INDEX.md` updated to include promoted harness draft docs.
-- [ ] `SPEC-TRACEABILITY.md` updated with coverage rows for promoted docs.
-- [ ] `docs/design/README.md` and `specs/premath/draft/README.md` references coherent.
-- [ ] Validation passes:
+- [x] `HARNESS-RUNTIME.md` added with command anchors and no behavior deltas.
+- [x] `HARNESS-RETRY-ESCALATION.md` added with policy and escalation table.
+- [x] `SPEC-INDEX.md` updated to include promoted harness draft docs.
+- [x] `SPEC-TRACEABILITY.md` updated with coverage rows for promoted docs.
+- [x] `docs/design/README.md` and `specs/premath/draft/README.md` references coherent.
+- [x] Validation passes:
   - `mise run traceability-check`
   - `mise run docs-coherence-check`
   - `mise run doctrine-check`

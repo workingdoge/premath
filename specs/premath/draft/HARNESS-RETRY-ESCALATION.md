@@ -40,6 +40,10 @@ This policy classifies operational outcomes only. It MUST NOT authorize
 semantic admissibility. Semantic authority remains in checker/discharge
 surfaces (`draft/BIDIR-DESCENT.md`, `draft/GATE.md`).
 
+Shared harness-surface partitioning and command-route authority are declared
+once in `draft/HARNESS-RUNTIME` §1.1. This spec defines retry/escalation policy
+and wrapper behavior only.
+
 ## 2. Canonical policy artifact and binding
 
 Canonical policy artifact:

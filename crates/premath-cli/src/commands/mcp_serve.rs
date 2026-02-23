@@ -775,6 +775,11 @@ struct InstructionWitnessLink {
     capability_claims: Vec<String>,
     required_checks: Vec<String>,
     executed_checks: Vec<String>,
+    failure_classes: Vec<String>,
+    join_gate_present: bool,
+    join_closed: Option<bool>,
+    join_failure_classes: Vec<String>,
+    join_witness_ref: Option<String>,
 }
 
 impl InstructionWitnessLink {
@@ -787,6 +792,11 @@ impl InstructionWitnessLink {
             "capabilityClaims": self.capability_claims,
             "requiredChecks": self.required_checks,
             "executedChecks": self.executed_checks,
+            "failureClasses": self.failure_classes,
+            "joinGatePresent": self.join_gate_present,
+            "joinClosed": self.join_closed,
+            "joinFailureClasses": self.join_failure_classes,
+            "joinWitnessRef": self.join_witness_ref,
         })
     }
 }
@@ -832,6 +842,17 @@ impl MutationAction {
             Self::DepReplace => "capabilities.change_morphisms.dep_replace",
         }
     }
+
+    fn requires_join_closed_gate(self) -> bool {
+        matches!(
+            self,
+            Self::IssueDiscover
+                | Self::IssueUpdate
+                | Self::DepAdd
+                | Self::DepRemove
+                | Self::DepReplace
+        )
+    }
 }
 
 const CHANGE_MORPHISMS_BASE_CAPABILITY: &str = "capabilities.change_morphisms";
@@ -858,6 +879,7 @@ const FAILURE_LEASE_ID_MISMATCH: &str = "lease_id_mismatch";
 const FAILURE_LEASE_MUTATION_LOCK_BUSY: &str = "lease_mutation_lock_busy";
 const FAILURE_LEASE_MUTATION_LOCK_IO: &str = "lease_mutation_lock_io";
 const FAILURE_LEASE_MUTATION_STORE_IO: &str = "lease_mutation_store_io";
+const FAILURE_MUTATION_USE_EVIDENCE_MISSING: &str = "mutation.use_evidence_missing";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -2365,7 +2387,58 @@ fn enforce_instruction_mutation_scope(
         )));
     }
 
+    if let Some(blocking_class) = first_non_empty_failure_class(&instruction.failure_classes) {
+        return Err(call_tool_error(format!(
+            "[failureClass={blocking_class}] instruction witness rejected mutation action `{}` (instructionWitness={})",
+            action.action_id(),
+            instruction.witness_path
+        )));
+    }
+
+    if action.requires_join_closed_gate() {
+        if !instruction.join_gate_present {
+            return Err(call_tool_error(format!(
+                "[failureClass={}] instruction witness `{}` missing join-gate evidence for mutation action `{}` (instructionWitness={})",
+                FAILURE_MUTATION_USE_EVIDENCE_MISSING,
+                instruction.instruction_id,
+                action.action_id(),
+                instruction.witness_path
+            )));
+        }
+
+        if let Some(blocking_class) =
+            first_non_empty_failure_class(&instruction.join_failure_classes)
+        {
+            return Err(call_tool_error(format!(
+                "[failureClass={blocking_class}] instruction join gate rejected mutation action `{}` (instructionWitness={}, joinWitnessRef={})",
+                action.action_id(),
+                instruction.witness_path,
+                instruction.join_witness_ref.as_deref().unwrap_or("missing")
+            )));
+        }
+
+        if instruction.join_closed != Some(true) {
+            return Err(call_tool_error(format!(
+                "[failureClass=tool.join_incomplete] instruction join gate is not closed for mutation action `{}` (instructionWitness={}, joinWitnessRef={})",
+                action.action_id(),
+                instruction.witness_path,
+                instruction.join_witness_ref.as_deref().unwrap_or("missing")
+            )));
+        }
+    }
+
     Ok(())
+}
+
+fn first_non_empty_failure_class(classes: &[String]) -> Option<&str> {
+    classes.iter().find_map(|item| {
+        let trimmed = item.trim();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    })
 }
 
 fn load_instruction_witness_link(
@@ -2416,6 +2489,16 @@ fn load_instruction_witness_link(
         )));
     }
 
+    let join_closed = payload.get("joinClosed").and_then(Value::as_bool);
+    let join_failure_classes = json_string_array(payload.get("joinFailureClasses"));
+    let join_witness_ref = payload
+        .get("joinWitnessRef")
+        .and_then(Value::as_str)
+        .map(ToOwned::to_owned);
+    let join_gate_present = payload.get("joinClosed").is_some()
+        || payload.get("joinFailureClasses").is_some()
+        || payload.get("joinWitnessRef").is_some();
+
     Ok(InstructionWitnessLink {
         instruction_id: instruction_id.to_string(),
         witness_path: witness_path.display().to_string(),
@@ -2430,6 +2513,11 @@ fn load_instruction_witness_link(
         capability_claims: json_string_array(payload.get("capabilityClaims")),
         required_checks: json_string_array(payload.get("requiredChecks")),
         executed_checks: json_string_array(payload.get("executedChecks")),
+        failure_classes: json_string_array(payload.get("failureClasses")),
+        join_gate_present,
+        join_closed,
+        join_failure_classes,
+        join_witness_ref,
     })
 }
 
@@ -3825,6 +3913,233 @@ mod tests {
             err.to_string()
                 .contains("missing required action capability claim"),
             "unexpected error: {err}"
+        );
+    }
+
+    #[test]
+    fn mutation_policy_instruction_linked_issue_update_requires_join_evidence() {
+        let root = temp_dir("mutation-policy-issue-update-missing-join");
+        let issues = root.join("issues.jsonl");
+        let witness_dir = root.join("artifacts").join("ciwitness");
+        fs::create_dir_all(&witness_dir).expect("witness dir should exist");
+        let instruction_id = "20260222T000400Z-issue-update-missing-join";
+        let witness_path = witness_dir.join(format!("{instruction_id}.json"));
+        let witness = json!({
+            "instructionId": instruction_id,
+            "instructionDigest": "instr1_test_digest",
+            "policyDigest": "pol1_4ba916ce38da5c5607eb7f41d963294b34b644deb1fa6d55e133b072ca001b39",
+            "capabilityClaims": [
+                "capabilities.change_morphisms",
+                "capabilities.change_morphisms.issue_update"
+            ],
+            "requiredChecks": ["hk-check"],
+            "executedChecks": ["hk-check"],
+            "failureClasses": [],
+            "verdictClass": "accepted"
+        });
+        fs::write(
+            &witness_path,
+            serde_json::to_vec_pretty(&witness).expect("witness json should serialize"),
+        )
+        .expect("witness should write");
+
+        let mut config = test_config(&root, &issues, &root.join("surface.json"));
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Target".to_string(),
+                id: Some("bd-target".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+        config.mutation_policy = MutationPolicy::InstructionLinked;
+
+        let err = call_issue_update(
+            &config,
+            IssueUpdateTool {
+                id: "bd-target".to_string(),
+                title: Some("Updated".to_string()),
+                description: None,
+                notes: None,
+                status: None,
+                priority: None,
+                assignee: None,
+                owner: None,
+                instruction_id: Some(instruction_id.to_string()),
+                issues_path: None,
+            },
+        )
+        .expect_err("issue update should require join evidence");
+        assert!(
+            err.to_string().contains(&format!(
+                "[failureClass={FAILURE_MUTATION_USE_EVIDENCE_MISSING}]"
+            )),
+            "unexpected error: {err}"
+        );
+        assert!(
+            err.to_string().contains("instructionWitness="),
+            "expected witness linkage in error: {err}"
+        );
+    }
+
+    #[test]
+    fn mutation_policy_instruction_linked_issue_update_rejects_join_failure_class() {
+        let root = temp_dir("mutation-policy-issue-update-join-failure");
+        let issues = root.join("issues.jsonl");
+        let witness_dir = root.join("artifacts").join("ciwitness");
+        fs::create_dir_all(&witness_dir).expect("witness dir should exist");
+        let instruction_id = "20260222T000500Z-issue-update-join-failure";
+        let witness_path = witness_dir.join(format!("{instruction_id}.json"));
+        let witness = json!({
+            "instructionId": instruction_id,
+            "instructionDigest": "instr1_test_digest",
+            "policyDigest": "pol1_4ba916ce38da5c5607eb7f41d963294b34b644deb1fa6d55e133b072ca001b39",
+            "capabilityClaims": [
+                "capabilities.change_morphisms",
+                "capabilities.change_morphisms.issue_update"
+            ],
+            "requiredChecks": ["hk-check"],
+            "executedChecks": ["hk-check"],
+            "failureClasses": [],
+            "joinClosed": false,
+            "joinFailureClasses": ["tool.use_missing"],
+            "joinWitnessRef": "artifacts/ciwitness/join-issue-update.json",
+            "verdictClass": "accepted"
+        });
+        fs::write(
+            &witness_path,
+            serde_json::to_vec_pretty(&witness).expect("witness json should serialize"),
+        )
+        .expect("witness should write");
+
+        let mut config = test_config(&root, &issues, &root.join("surface.json"));
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Target".to_string(),
+                id: Some("bd-target".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+        config.mutation_policy = MutationPolicy::InstructionLinked;
+
+        let err = call_issue_update(
+            &config,
+            IssueUpdateTool {
+                id: "bd-target".to_string(),
+                title: Some("Updated".to_string()),
+                description: None,
+                notes: None,
+                status: None,
+                priority: None,
+                assignee: None,
+                owner: None,
+                instruction_id: Some(instruction_id.to_string()),
+                issues_path: None,
+            },
+        )
+        .expect_err("issue update should fail for join failure class");
+        assert!(
+            err.to_string().contains("[failureClass=tool.use_missing]"),
+            "unexpected error: {err}"
+        );
+        assert!(
+            err.to_string()
+                .contains("joinWitnessRef=artifacts/ciwitness/join-issue-update.json"),
+            "expected join witness linkage in error: {err}"
+        );
+    }
+
+    #[test]
+    fn mutation_policy_instruction_linked_issue_update_accepts_join_closed_witness() {
+        let root = temp_dir("mutation-policy-issue-update-join-closed");
+        let issues = root.join("issues.jsonl");
+        let witness_dir = root.join("artifacts").join("ciwitness");
+        fs::create_dir_all(&witness_dir).expect("witness dir should exist");
+        let instruction_id = "20260222T000600Z-issue-update-join-closed";
+        let witness_path = witness_dir.join(format!("{instruction_id}.json"));
+        let witness = json!({
+            "instructionId": instruction_id,
+            "instructionDigest": "instr1_test_digest",
+            "policyDigest": "pol1_4ba916ce38da5c5607eb7f41d963294b34b644deb1fa6d55e133b072ca001b39",
+            "capabilityClaims": [
+                "capabilities.change_morphisms",
+                "capabilities.change_morphisms.issue_update"
+            ],
+            "requiredChecks": ["hk-check"],
+            "executedChecks": ["hk-check"],
+            "failureClasses": [],
+            "joinClosed": true,
+            "joinFailureClasses": [],
+            "joinWitnessRef": "artifacts/ciwitness/join-issue-update.json",
+            "verdictClass": "accepted"
+        });
+        fs::write(
+            &witness_path,
+            serde_json::to_vec_pretty(&witness).expect("witness json should serialize"),
+        )
+        .expect("witness should write");
+
+        let mut config = test_config(&root, &issues, &root.join("surface.json"));
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Target".to_string(),
+                id: Some("bd-target".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+        config.mutation_policy = MutationPolicy::InstructionLinked;
+
+        let updated = call_issue_update(
+            &config,
+            IssueUpdateTool {
+                id: "bd-target".to_string(),
+                title: Some("Updated".to_string()),
+                description: None,
+                notes: None,
+                status: None,
+                priority: None,
+                assignee: None,
+                owner: None,
+                instruction_id: Some(instruction_id.to_string()),
+                issues_path: None,
+            },
+        )
+        .expect("issue update should succeed when join gate is closed");
+        let payload = parse_tool_json(updated);
+        assert_eq!(payload["action"], "issue.update");
+        assert_eq!(
+            payload["instruction"]["joinClosed"],
+            serde_json::json!(true)
+        );
+        assert_eq!(
+            payload["instruction"]["joinWitnessRef"],
+            serde_json::json!("artifacts/ciwitness/join-issue-update.json")
         );
     }
 

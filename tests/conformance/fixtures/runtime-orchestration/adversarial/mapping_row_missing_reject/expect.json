@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "kcir_mapping_contract_violation"
+  ]
+}

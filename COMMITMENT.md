@@ -1,40 +1,53 @@
-# Premath bundle commitment (v0.1)
+# Premath commitment (current posture)
 
-This repository is structured to avoid drifting into "definability for definability".
+This file is a concise posture summary. Normative authority remains in
+`specs/premath/draft/SPEC-INDEX.md` and related promoted specs.
 
-**Commitment:** the baseline Premath kernel bundle is *minimal, backend-generic, and totalized operationally by a normalizer + deterministic descent obligations*.
+The original baseline binding decision is recorded in:
+- `specs/process/decision-log.md` (Decision 0001)
 
-The binding decision is recorded in:
-- `specs/process/decision-log.md` (Decision 0001, dated 2026-02-19)
+## What remains committed
 
-## What is committed
+### Kernel and interop authority
 
-### Normative kernel bundle
-These documents define the committed baseline:
+The repository keeps one semantic authority lane:
 
-- `specs/premath/draft/PREMATH-KERNEL.md` — definability = coherent reindexing + contractible descent
-- `specs/premath/draft/GATE.md` — admissibility gate + failure classes
-- `specs/premath/draft/REF-BINDING.md` — backend-generic reference binding (`project_ref`/`verify_ref`)
-- `specs/premath/draft/NF.md` — canonical ObjNF/MorNF byte grammars
-- `specs/premath/raw/NORMALIZER.md` — canonicalization + comparison keys (`cmpRef`)
-- `specs/premath/draft/BIDIR-DESCENT.md` — synthesis/checking + obligation emission/discharge
-- `specs/premath/draft/KCIR-CORE.md` — reference model + store + profile interface
-- `specs/premath/raw/OPCODES.md` — opcode contracts phrased via canonical bytes + `project_ref`
-- `specs/premath/raw/DSL.md`, `specs/premath/draft/ERROR-CODES.md`, `specs/premath/draft/WITNESS-ID.md`, `specs/premath/draft/WIRE-FORMATS.md`, `specs/premath/draft/CONFORMANCE.md`
+- kernel admissibility and discharge authority stays in
+  `specs/premath/draft/PREMATH-KERNEL.md`,
+  `specs/premath/draft/GATE.md`, and
+  `specs/premath/draft/BIDIR-DESCENT.md`;
+- interop identity/checking surfaces remain deterministic and profile-scoped via
+  `specs/premath/draft/REF-BINDING.md`,
+  `specs/premath/draft/NF.md`,
+  `specs/premath/draft/NORMALIZER.md`,
+  `specs/premath/draft/KCIR-CORE.md`,
+  `specs/premath/draft/WITNESS-ID.md`,
+  `specs/premath/draft/WIRE-FORMATS.md`,
+  `specs/premath/draft/ERROR-CODES.md`.
 
-### Optional, non-kernel dials
-These documents are explicitly **non-binding** on the kernel profile:
+### Control-plane and harness discipline
 
-- `specs/premath/raw/SEMANTICS-INFTOPOS.md` — Premath∞ semantics (informational)
-- `specs/premath/raw/HYPERDESCENT.md` — optional capability: hyperdescent
-- `specs/premath/raw/UNIVERSE.md` — optional extension: universe + comprehension
-- `specs/premath/raw/SPLIT-PRESENTATION.md` — implementation guidance (strict IR vs semantic equality)
+Control-plane execution remains deterministic and fail-closed through:
 
-## Next step
+- `specs/premath/draft/PREMATH-COHERENCE.md` +
+  `specs/premath/draft/COHERENCE-CONTRACT.json`,
+- `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`,
+- `specs/premath/draft/HARNESS-RUNTIME.md`,
+  `specs/premath/draft/HARNESS-TYPESTATE.md`,
+  `specs/premath/draft/HARNESS-RETRY-ESCALATION.md`.
 
-The next step is **running code** + **vectors** that exercise the baseline bundle:
+### Doctrine and unification program
 
-1. Implement `project_ref` for at least one backend profile.
-2. Implement NF parsing + deterministic normalization (`NORMALIZER`).
-3. Implement Gate checks via deterministic obligations (`BIDIR-DESCENT` + `GATE`).
-4. Build golden/adversarial fixtures that prove determinism and correct failure classes.
+Architecture/lifecycle commitments are governed by:
+
+- `specs/premath/draft/UNIFICATION-DOCTRINE.md`,
+- `specs/premath/draft/DOCTRINE-INF.md`,
+- `specs/premath/draft/CONFORMANCE.md` (claim-gated capability/profile lanes).
+
+## Current state tracking
+
+For active status and sequence, use:
+
+- issue authority: `.premath/issues.jsonl`,
+- lifecycle decisions: `specs/process/decision-log.md`,
+- roadmap pointer surface: `ROADMAP.md`.
