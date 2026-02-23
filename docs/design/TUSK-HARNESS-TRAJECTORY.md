@@ -37,6 +37,12 @@ Optional fields:
 - `witnessRefs: string[]`
 - `startedAt: RFC3339`
 
+Worker-loop convention:
+
+- stop/handoff rows include one deterministic lease witness reference of the form
+  `lease://handoff/<issue-id>/<lease-state>/<digest>` so session/trajectory
+  projections can be joined without introducing new mutation authority.
+
 Normalization rules:
 
 - refs are trimmed, sorted, and deduplicated,

@@ -110,7 +110,7 @@ Trajectory records are an operational lane, not semantic authority.
 | `boot` deterministic next feature | `harness-feature` ledger (`next`/`check`) + `harness-session bootstrap` projection | present |
 | `step` mutation authority | `instruction-linked` mutation policy in MCP + instruction witness checks | present |
 | `step` deterministic verification | `ci-required-attested` (`run_required_checks` + verify/decide) | present |
-| `stop` lease + handoff | `harness-session` artifact + `issue_claim` / `issue_lease_renew` / `issue_lease_release` | partial |
+| `stop` lease + handoff | issue-memory-derived lease state + `harness-session`/`harness-trajectory` `lease://handoff/...` refs + `issue_claim` / `issue_lease_renew` / `issue_lease_release` | present |
 | trajectory projection | `harness-trajectory` rows + deterministic `query` projection (`latest`/`failed`/`retry-needed`) | present |
 | replayable work-memory | issue/event replay + witness artifacts | present |
 

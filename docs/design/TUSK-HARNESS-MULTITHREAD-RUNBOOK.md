@@ -89,15 +89,22 @@ Each worker step does:
 3. `harness-feature write` (`in_progress`) projection update.
 4. execute `work-cmd`.
 5. execute `verify-cmd`.
-6. append `harness-trajectory` row (`succeeded` or `failed`).
+6. derive stop/handoff lease state from canonical issue memory (`.premath/issues.jsonl`)
+   after mutation outcome (`active` | `stale` | `contended` | `released` | invariant mismatch).
 7. success path:
    - `issue update --status closed` (releases lease via closed transition),
+   - assert stop invariant (`status=closed` and lease released) from issue memory,
+   - append `harness-trajectory` row with witness refs including deterministic
+     `lease://handoff/...` reference,
    - `harness-feature write` (`completed`),
    - `harness-session write` (`stopped`).
 8. failure path:
-   - issue remains claimed/in-progress,
-   - `harness-feature write` (`blocked`),
-   - `harness-session write` (`stopped`) with explicit recovery next-step.
+   - issue-memory-derived lease state determines recovery action
+     (`issue_lease_renew` / `issue_lease_release` / reclaim / stop),
+   - append `harness-trajectory` row with lease handoff witness ref,
+   - `harness-feature write` (`blocked`) carrying lease state/action summary,
+   - `harness-session write` (`stopped`) carrying deterministic next-step derived
+     from issue-memory lease state.
 
 ## 5. Heartbeat / Renew Guidance
 
@@ -122,6 +129,11 @@ Recovery sequence:
    - wait for stale lease boundary (or explicit release by operator),
    - reclaim with `issue claim-next`.
 4. record recovery in projection artifacts (`harness-session`, trajectory row).
+
+Determinism rule:
+
+- stop/recovery recommendations must be derived from issue-memory lease state,
+  never inferred from projection artifacts alone.
 
 ## 7. Artifact Interpretation
 
