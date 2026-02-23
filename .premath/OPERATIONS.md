@@ -53,10 +53,13 @@ Default close-out checks:
 
 ## Session Continuity
 
-For restart-safe context continuity between MCP/server sessions, keep the latest
-handoff summary in:
+For restart-safe context continuity between MCP/server sessions, use the
+canonical harness-session artifact and command surface:
 
-- `.premath/SESSION-HANDOFF.md`
+- artifact path: `.premath/harness_session.json`
+- read: `cargo run --package premath-cli -- harness-session read --path .premath/harness_session.json --json`
+- write: `cargo run --package premath-cli -- harness-session write --path .premath/harness_session.json --state <active|stopped> --issue-id <bd-id> --summary <text> --next-step <text> --instruction-ref <path-or-ref> --witness-ref <path-or-ref> --json`
+- bootstrap: `cargo run --package premath-cli -- harness-session bootstrap --path .premath/harness_session.json --feature-ledger .premath/harness_feature_ledger.json --json`
 
 ## Evidence Log
 
