@@ -1227,7 +1227,7 @@ fn call_issue_claim(
         ));
     }
     let now = Utc::now();
-    let lease_id = resolve_lease_id(tool.lease_id, &tool.id, &assignee);
+    let requested_lease_id = non_empty(tool.lease_id.clone());
     let lease_expires_at = parse_lease_expiry(tool.lease_ttl_seconds, tool.lease_expires_at, now)?;
 
     let write_witness =
@@ -1294,6 +1294,13 @@ fn call_issue_claim(
             changed = true;
             status_changed = true;
         }
+
+        let lease_id = issue
+            .lease
+            .as_ref()
+            .filter(|existing| existing.expires_at > now && existing.owner == assignee)
+            .map(|existing| existing.lease_id.clone())
+            .unwrap_or_else(|| resolve_lease_id(requested_lease_id.clone(), &tool.id, &assignee));
 
         let next_lease = match issue.lease.as_ref() {
             Some(existing) if existing.owner == assignee && existing.lease_id == lease_id => {
@@ -2669,6 +2676,8 @@ fn call_tool_error(message: impl Into<String>) -> CallToolError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{Arc, Barrier};
+    use std::thread;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn temp_dir(prefix: &str) -> PathBuf {
@@ -3899,6 +3908,160 @@ mod tests {
         assert_eq!(payload["issue"]["lease"]["state"], "active");
         assert_eq!(payload["leaseProjection"]["staleCount"], 0);
         assert_eq!(payload["leaseProjection"]["contendedCount"], 0);
+    }
+
+    #[test]
+    fn issue_claim_same_owner_preserves_existing_active_lease_id() {
+        let root = temp_dir("issue-claim-preserve-lease-id");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Lease target".to_string(),
+                id: Some("bd-lease-preserve".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+
+        let first = call_issue_claim(
+            &config,
+            IssueClaimTool {
+                id: "bd-lease-preserve".to_string(),
+                assignee: "alice".to_string(),
+                lease_id: Some("lease1_bd-lease-preserve_alice_original".to_string()),
+                lease_ttl_seconds: Some(120),
+                lease_expires_at: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("first claim should succeed");
+        let first_payload = parse_tool_json(first);
+        assert_eq!(
+            first_payload["issue"]["lease"]["leaseId"],
+            "lease1_bd-lease-preserve_alice_original"
+        );
+
+        let second = call_issue_claim(
+            &config,
+            IssueClaimTool {
+                id: "bd-lease-preserve".to_string(),
+                assignee: "alice".to_string(),
+                lease_id: Some("lease1_bd-lease-preserve_alice_overwrite".to_string()),
+                lease_ttl_seconds: Some(120),
+                lease_expires_at: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("second claim should renew existing lease");
+        let second_payload = parse_tool_json(second);
+        assert_eq!(
+            second_payload["issue"]["lease"]["leaseId"],
+            "lease1_bd-lease-preserve_alice_original"
+        );
+    }
+
+    #[test]
+    fn issue_claim_contention_has_single_winner_without_lock_busy_errors() {
+        let root = temp_dir("issue-claim-contention");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Race target".to_string(),
+                id: Some("bd-claim-race".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("seed issue should add");
+
+        let workers = 4;
+        let barrier = Arc::new(Barrier::new(workers + 1));
+        let mut handles = Vec::new();
+        for idx in 0..workers {
+            let config = config.clone();
+            let barrier = Arc::clone(&barrier);
+            handles.push(thread::spawn(move || {
+                let assignee = format!("worker-{idx}");
+                barrier.wait();
+                call_issue_claim(
+                    &config,
+                    IssueClaimTool {
+                        id: "bd-claim-race".to_string(),
+                        assignee,
+                        lease_id: None,
+                        lease_ttl_seconds: Some(120),
+                        lease_expires_at: None,
+                        instruction_id: None,
+                        issues_path: None,
+                    },
+                )
+                .map(parse_tool_json)
+                .map_err(|err| err.to_string())
+            }));
+        }
+        barrier.wait();
+
+        let mut successes = Vec::new();
+        let mut errors = Vec::new();
+        for handle in handles {
+            match handle.join().expect("worker should join") {
+                Ok(result) => successes.push(result),
+                Err(err) => errors.push(err.to_string()),
+            }
+        }
+
+        assert_eq!(successes.len(), 1, "exactly one claim should succeed");
+        assert_eq!(errors.len(), workers - 1);
+        for err in errors {
+            assert!(
+                err.contains("[failureClass=lease_contention_active]"),
+                "expected contention failure, got: {err}"
+            );
+            assert!(
+                !err.contains("[failureClass=lease_mutation_lock_busy]"),
+                "unexpected lock busy failure: {err}"
+            );
+        }
+
+        let winner = successes[0]["issue"]["assignee"]
+            .as_str()
+            .expect("winner assignee should be present")
+            .to_string();
+        let winner_lease = successes[0]["issue"]["lease"]["leaseId"]
+            .as_str()
+            .expect("winner lease should be present")
+            .to_string();
+
+        let store = MemoryStore::load_jsonl(&issues).expect("store should load");
+        let issue = store
+            .issue("bd-claim-race")
+            .expect("race issue should exist in store");
+        assert_eq!(issue.status, "in_progress");
+        assert_eq!(issue.assignee, winner);
+        let lease = issue.lease.as_ref().expect("lease should be persisted");
+        assert_eq!(lease.owner, issue.assignee);
+        assert_eq!(lease.lease_id, winner_lease);
     }
 
     #[test]

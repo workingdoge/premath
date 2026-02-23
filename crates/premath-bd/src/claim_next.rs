@@ -82,6 +82,7 @@ pub fn claim_next_issue_jsonl(
         .now
         .checked_add_signed(Duration::seconds(ttl))
         .ok_or(ClaimNextError::LeaseTtlOverflow)?;
+    let requested_lease_id = normalize_lease_id(request.lease_id.clone());
 
     let claimed = mutate_store_jsonl(&path, |store| {
         let mut claimed: Option<Issue> = None;
@@ -139,11 +140,18 @@ pub fn claim_next_issue_jsonl(
                     status_changed = true;
                 }
 
-                let lease_id = resolve_lease_id(
-                    request.lease_id.clone(),
-                    issue.id.as_str(),
-                    assignee.as_str(),
-                );
+                let lease_id = issue
+                    .lease
+                    .as_ref()
+                    .filter(|existing| existing.owner == assignee)
+                    .map(|existing| existing.lease_id.clone())
+                    .unwrap_or_else(|| {
+                        resolve_lease_id(
+                            requested_lease_id.clone(),
+                            issue.id.as_str(),
+                            assignee.as_str(),
+                        )
+                    });
                 let next_lease = match issue.lease.as_ref() {
                     Some(existing)
                         if existing.owner == assignee && existing.lease_id == lease_id =>
@@ -189,11 +197,21 @@ pub fn claim_next_issue_jsonl(
 }
 
 fn resolve_lease_id(raw_lease_id: Option<String>, issue_id: &str, assignee: &str) -> String {
-    let explicit = raw_lease_id.map(|value| value.trim().to_string());
-    match explicit {
+    match normalize_lease_id(raw_lease_id) {
         Some(value) if !value.is_empty() => value,
         _ => format!("lease1_{}_{}", lease_token(issue_id), lease_token(assignee)),
     }
+}
+
+fn normalize_lease_id(raw_lease_id: Option<String>) -> Option<String> {
+    raw_lease_id.and_then(|value| {
+        let trimmed = value.trim().to_string();
+        if trimmed.is_empty() {
+            None
+        } else {
+            Some(trimmed)
+        }
+    })
 }
 
 fn lease_token(value: &str) -> String {
@@ -219,11 +237,14 @@ fn lease_token(value: &str) -> String {
 mod tests {
     use super::*;
     use crate::MemoryStore;
+    use crate::dependency::{DepType, Dependency};
     use crate::issue::Issue;
     use crate::issue_lock_path;
     use chrono::TimeZone;
     use std::fs;
     use std::path::PathBuf;
+    use std::sync::{Arc, Barrier};
+    use std::thread;
     use std::time::{SystemTime, UNIX_EPOCH};
 
     fn issue(id: &str, status: &str) -> Issue {
@@ -383,5 +404,126 @@ mod tests {
             other => panic!("expected lock busy error, got {other:?}"),
         }
         let _ = fs::remove_file(lock_path);
+    }
+
+    #[test]
+    fn claim_next_contention_claims_unique_prefix_and_preserves_dependencies() {
+        let path = temp_issues_path("claim-next-contention");
+        let now = Utc
+            .with_ymd_and_hms(2026, 2, 23, 0, 0, 0)
+            .single()
+            .expect("fixed time");
+
+        let mut blocked = issue("bd-blocked", "open");
+        blocked.dependencies.push(Dependency {
+            issue_id: "bd-blocked".to_string(),
+            depends_on_id: "bd-blocker".to_string(),
+            dep_type: DepType::Blocks,
+            created_by: String::new(),
+        });
+
+        let store = MemoryStore::from_issues(vec![
+            issue("bd-3", "open"),
+            issue("bd-1", "open"),
+            issue("bd-4", "open"),
+            issue("bd-2", "open"),
+            issue("bd-blocker", "open"),
+            blocked,
+        ])
+        .expect("store should build");
+        store.save_jsonl(&path).expect("store should save");
+
+        let workers = 4;
+        let start = Arc::new(Barrier::new(workers + 1));
+        let mut handles = Vec::new();
+        for idx in 0..workers {
+            let path = path.clone();
+            let barrier = Arc::clone(&start);
+            handles.push(thread::spawn(move || {
+                let assignee = format!("worker-{idx}");
+                barrier.wait();
+                claim_next_issue_jsonl(
+                    &path,
+                    ClaimNextRequest {
+                        assignee,
+                        lease_id: None,
+                        lease_ttl_seconds: Some(300),
+                        now,
+                    },
+                )
+                .expect("claim should succeed")
+                .issue
+                .expect("contention claim should return one issue")
+                .id
+            }));
+        }
+        start.wait();
+
+        let mut claimed_ids = handles
+            .into_iter()
+            .map(|handle| handle.join().expect("worker should join"))
+            .collect::<Vec<_>>();
+        claimed_ids.sort();
+        claimed_ids.dedup();
+        assert_eq!(
+            claimed_ids,
+            vec![
+                "bd-1".to_string(),
+                "bd-2".to_string(),
+                "bd-3".to_string(),
+                "bd-4".to_string()
+            ]
+        );
+
+        let refreshed = MemoryStore::load_jsonl(&path).expect("store should reload");
+        let blocked_issue = refreshed
+            .issue("bd-blocked")
+            .expect("blocked issue should still exist");
+        assert_eq!(blocked_issue.status, "open");
+        assert_eq!(blocked_issue.assignee, "");
+        assert_eq!(blocked_issue.dependencies.len(), 1);
+        assert_eq!(blocked_issue.dependencies[0].depends_on_id, "bd-blocker");
+    }
+
+    #[test]
+    fn claim_next_preserves_active_lease_id_for_same_owner() {
+        let path = temp_issues_path("claim-next-preserve-lease-id");
+        let acquired_at = Utc
+            .with_ymd_and_hms(2026, 2, 23, 0, 0, 0)
+            .single()
+            .expect("fixed time");
+        let now = acquired_at
+            .checked_add_signed(Duration::seconds(30))
+            .expect("now should compute");
+
+        let mut first = issue("bd-1", "open");
+        first.assignee = "worker-a".to_string();
+        first.lease = Some(IssueLease {
+            lease_id: "lease1_bd-1_worker-a-original".to_string(),
+            owner: "worker-a".to_string(),
+            acquired_at,
+            expires_at: acquired_at
+                .checked_add_signed(Duration::seconds(600))
+                .expect("expiry should compute"),
+            renewed_at: None,
+        });
+        let store = MemoryStore::from_issues(vec![first]).expect("store should build");
+        store.save_jsonl(&path).expect("store should save");
+
+        let outcome = claim_next_issue_jsonl(
+            &path,
+            ClaimNextRequest {
+                assignee: "worker-a".to_string(),
+                lease_id: Some("lease1_bd-1_worker-a-overwrite".to_string()),
+                lease_ttl_seconds: Some(300),
+                now,
+            },
+        )
+        .expect("claim should succeed");
+        let claimed = outcome.issue.expect("issue should be claimed");
+        let lease = claimed.lease.expect("lease should be present");
+        assert_eq!(lease.lease_id, "lease1_bd-1_worker-a-original");
+        assert_eq!(lease.acquired_at, acquired_at);
+        assert_eq!(lease.renewed_at, Some(now));
     }
 }

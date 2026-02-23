@@ -8,6 +8,11 @@ use std::fmt::{Display, Formatter};
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
+
+const LOCK_ACQUIRE_MAX_ATTEMPTS: usize = 256;
+const LOCK_ACQUIRE_RETRY_DELAY: Duration = Duration::from_millis(2);
 
 pub fn issue_lock_path(issues_path: &Path) -> PathBuf {
     let mut path: OsString = issues_path.as_os_str().to_os_string();
@@ -108,31 +113,40 @@ impl IssueFileLockGuard {
                 .map_err(|e| AtomicStoreMutationError::lock_io(&lock_path, e.to_string()))?;
         }
 
-        match OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&lock_path)
-        {
-            Ok(mut file) => {
-                let _ = writeln!(
-                    file,
-                    "pid={}\nutc={}",
-                    std::process::id(),
-                    Utc::now().to_rfc3339()
-                );
-                Ok(Self {
-                    lock_path,
-                    _file: file,
-                })
+        for attempt in 0..LOCK_ACQUIRE_MAX_ATTEMPTS {
+            match OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&lock_path)
+            {
+                Ok(mut file) => {
+                    let _ = writeln!(
+                        file,
+                        "pid={}\nutc={}",
+                        std::process::id(),
+                        Utc::now().to_rfc3339()
+                    );
+                    return Ok(Self {
+                        lock_path,
+                        _file: file,
+                    });
+                }
+                Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
+                    if attempt + 1 == LOCK_ACQUIRE_MAX_ATTEMPTS {
+                        return Err(AtomicStoreMutationError::lock_busy(&lock_path));
+                    }
+                    thread::sleep(LOCK_ACQUIRE_RETRY_DELAY);
+                }
+                Err(err) => {
+                    return Err(AtomicStoreMutationError::lock_io(
+                        &lock_path,
+                        err.to_string(),
+                    ));
+                }
             }
-            Err(err) if err.kind() == std::io::ErrorKind::AlreadyExists => {
-                Err(AtomicStoreMutationError::lock_busy(&lock_path))
-            }
-            Err(err) => Err(AtomicStoreMutationError::lock_io(
-                &lock_path,
-                err.to_string(),
-            )),
         }
+
+        Err(AtomicStoreMutationError::lock_busy(&lock_path))
     }
 }
 

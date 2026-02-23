@@ -1,11 +1,11 @@
 use crate::cli::IssueCommands;
 use crate::support::{backend_status_payload, collect_backend_status};
-use premath_bd::issue::{issue_type_variants, parse_issue_type};
+use premath_bd::issue::{IssueLeaseState, issue_type_variants, parse_issue_type};
 use premath_bd::{
-    AtomicStoreMutationError, ClaimNextRequest, DepType, Issue, MemoryStore,
-    claim_next_issue_jsonl, event_stream_ref, migrate_store_to_events, mutate_store_jsonl,
-    read_events_from_path, replay_events, replay_events_from_path, store_snapshot_ref,
-    stores_equivalent, write_events_to_path,
+    AtomicStoreMutationError, ClaimNextRequest, DEFAULT_LEASE_TTL_SECONDS, DepType, Issue,
+    IssueLease, MemoryStore, claim_next_issue_jsonl, event_stream_ref, migrate_store_to_events,
+    mutate_store_jsonl, read_events_from_path, replay_events, replay_events_from_path,
+    store_snapshot_ref, stores_equivalent, write_events_to_path,
 };
 use premath_surreal::QueryCache;
 use serde::{Deserialize, Serialize};
@@ -599,6 +599,10 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
         eprintln!("error: assignee is required");
         std::process::exit(1);
     }
+    let now = chrono::Utc::now();
+    let lease_expires_at = now
+        .checked_add_signed(chrono::Duration::seconds(DEFAULT_LEASE_TTL_SECONDS))
+        .expect("default lease ttl should be in range");
 
     let path = PathBuf::from(issues);
     let updated = mutate_store_jsonl(&path, |store| {
@@ -609,7 +613,33 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
         if issue.status == "closed" {
             return Err(format!("cannot claim closed issue: {id}"));
         }
-        if !issue.assignee.is_empty() && issue.assignee != assignee {
+
+        let mut changed = false;
+        let mut status_changed = false;
+
+        if issue.lease_state_at(now) == IssueLeaseState::Stale {
+            issue.lease = None;
+            changed = true;
+
+            if issue.status == "in_progress" {
+                issue.set_status("open".to_string());
+                status_changed = true;
+            }
+            if !issue.assignee.is_empty() && issue.assignee != assignee {
+                issue.assignee.clear();
+                changed = true;
+            }
+        }
+
+        if let Some(active_lease) = issue.lease.as_ref().filter(|lease| lease.expires_at > now)
+            && active_lease.owner != assignee
+        {
+            return Err(format!(
+                "issue already leased: {id} (owner={}, lease_id={})",
+                active_lease.owner, active_lease.lease_id
+            ));
+        }
+        if issue.lease.is_none() && !issue.assignee.is_empty() && issue.assignee != assignee {
             return Err(format!(
                 "issue already claimed: {id} (assignee={})",
                 issue.assignee
@@ -618,13 +648,48 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
 
         if issue.assignee != assignee {
             issue.assignee = assignee.clone();
+            changed = true;
         }
         if issue.status != "in_progress" {
             issue.set_status("in_progress".to_string());
-        } else {
+            changed = true;
+            status_changed = true;
+        }
+
+        let lease_id = issue
+            .lease
+            .as_ref()
+            .filter(|existing| existing.owner == assignee)
+            .map(|existing| existing.lease_id.clone())
+            .unwrap_or_else(|| resolve_default_lease_id(&id, &assignee));
+
+        let next_lease = match issue.lease.as_ref() {
+            Some(existing) if existing.owner == assignee && existing.lease_id == lease_id => {
+                IssueLease {
+                    lease_id: lease_id.clone(),
+                    owner: assignee.clone(),
+                    acquired_at: existing.acquired_at,
+                    expires_at: lease_expires_at,
+                    renewed_at: Some(now),
+                }
+            }
+            _ => IssueLease {
+                lease_id,
+                owner: assignee.clone(),
+                acquired_at: now,
+                expires_at: lease_expires_at,
+                renewed_at: None,
+            },
+        };
+        if issue.lease.as_ref() != Some(&next_lease) {
+            issue.lease = Some(next_lease);
+            changed = true;
+        }
+
+        if changed && !status_changed {
             issue.touch_updated_at();
         }
-        Ok((issue.clone(), true))
+        Ok((issue.clone(), changed))
     })
     .unwrap_or_else(|e| {
         match e {
@@ -645,7 +710,16 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
                 "priority": updated.priority,
                 "issueType": updated.issue_type,
                 "assignee": updated.assignee,
-                "owner": updated.owner
+                "owner": updated.owner,
+                "lease": updated.lease.as_ref().map(|lease| {
+                    json!({
+                        "leaseId": lease.lease_id,
+                        "owner": lease.owner,
+                        "acquiredAt": lease.acquired_at.to_rfc3339(),
+                        "expiresAt": lease.expires_at.to_rfc3339(),
+                        "renewedAt": lease.renewed_at.map(|item| item.to_rfc3339()),
+                    })
+                })
             }
         });
         println!(
@@ -660,6 +734,29 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
             updated.status,
             path.display()
         );
+    }
+}
+
+fn resolve_default_lease_id(issue_id: &str, assignee: &str) -> String {
+    format!("lease1_{}_{}", lease_token(issue_id), lease_token(assignee))
+}
+
+fn lease_token(value: &str) -> String {
+    let mut out = String::new();
+    for ch in value.chars() {
+        if ch.is_ascii_alphanumeric() {
+            out.push(ch.to_ascii_lowercase());
+        } else if ch == '-' || ch == '_' {
+            out.push(ch);
+        } else {
+            out.push('_');
+        }
+    }
+    let trimmed = out.trim_matches('_');
+    if trimmed.is_empty() {
+        "anon".to_string()
+    } else {
+        trimmed.to_string()
     }
 }
 

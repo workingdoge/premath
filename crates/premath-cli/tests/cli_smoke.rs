@@ -4,6 +4,8 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::{Arc, Barrier};
+use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 struct TempDirGuard {
@@ -586,6 +588,65 @@ fn issue_claim_next_json_smoke() {
     let third_payload = parse_json_stdout(&third);
     assert_eq!(third_payload["claimed"], false);
     assert_eq!(third_payload["issue"], Value::Null);
+}
+
+#[test]
+fn issue_claim_next_json_contention_smoke() {
+    let tmp = TempDirGuard::new("issue-claim-next-contention");
+    let issues = tmp.path().join("issues.jsonl");
+    let lines = [
+        r#"{"id":"bd-1","title":"Issue 1","status":"open"}"#,
+        r#"{"id":"bd-2","title":"Issue 2","status":"open"}"#,
+        r#"{"id":"bd-3","title":"Issue 3","status":"open"}"#,
+        r#"{"id":"bd-4","title":"Issue 4","status":"open"}"#,
+    ];
+    fs::write(&issues, format!("{}\n", lines.join("\n")))
+        .expect("contention issues should be written");
+
+    let workers = 4;
+    let barrier = Arc::new(Barrier::new(workers + 1));
+    let mut handles = Vec::new();
+    for idx in 0..workers {
+        let issues = issues.clone();
+        let barrier = Arc::clone(&barrier);
+        handles.push(thread::spawn(move || {
+            let assignee = format!("worker-{idx}");
+            barrier.wait();
+            let output = run_premath([
+                OsString::from("issue"),
+                OsString::from("claim-next"),
+                OsString::from("--assignee"),
+                OsString::from(assignee),
+                OsString::from("--issues"),
+                issues.as_os_str().to_os_string(),
+                OsString::from("--json"),
+            ]);
+            assert_success(&output);
+            let payload = parse_json_stdout(&output);
+            assert_eq!(payload["claimed"], true);
+            payload["issue"]["id"]
+                .as_str()
+                .expect("claimed issue id should be present")
+                .to_string()
+        }));
+    }
+    barrier.wait();
+
+    let mut claimed_ids = handles
+        .into_iter()
+        .map(|handle| handle.join().expect("worker should join"))
+        .collect::<Vec<_>>();
+    claimed_ids.sort();
+    claimed_ids.dedup();
+    assert_eq!(
+        claimed_ids,
+        vec![
+            "bd-1".to_string(),
+            "bd-2".to_string(),
+            "bd-3".to_string(),
+            "bd-4".to_string()
+        ]
+    );
 }
 
 #[test]
