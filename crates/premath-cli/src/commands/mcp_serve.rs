@@ -262,6 +262,7 @@ impl ServerHandler for PremathMcpHandler {
 #[serde(rename_all = "camelCase")]
 struct IssueReadyTool {
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -278,6 +279,7 @@ struct IssueListTool {
     #[serde(default)]
     assignee: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -290,8 +292,10 @@ struct IssueListTool {
 #[serde(rename_all = "camelCase")]
 struct IssueCheckTool {
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
     #[serde(default)]
+    #[serde(alias = "note_warn_threshold")]
     note_warn_threshold: Option<u64>,
 }
 
@@ -304,6 +308,7 @@ struct IssueCheckTool {
 #[serde(rename_all = "camelCase")]
 struct IssueBackendStatusTool {
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -316,6 +321,7 @@ struct IssueBackendStatusTool {
 #[serde(rename_all = "camelCase")]
 struct IssueBlockedTool {
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -338,14 +344,17 @@ struct IssueAddTool {
     #[serde(default)]
     priority: Option<i32>,
     #[serde(default)]
+    #[serde(alias = "issue_type")]
     issue_type: Option<String>,
     #[serde(default)]
     assignee: Option<String>,
     #[serde(default)]
     owner: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -361,14 +370,19 @@ struct IssueClaimTool {
     id: String,
     assignee: String,
     #[serde(default)]
+    #[serde(alias = "lease_id")]
     lease_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "lease_ttl_seconds")]
     lease_ttl_seconds: Option<i64>,
     #[serde(default)]
+    #[serde(alias = "lease_expires_at")]
     lease_expires_at: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -383,14 +397,19 @@ struct IssueClaimTool {
 struct IssueLeaseRenewTool {
     id: String,
     assignee: String,
+    #[serde(alias = "lease_id")]
     lease_id: String,
     #[serde(default)]
+    #[serde(alias = "lease_ttl_seconds")]
     lease_ttl_seconds: Option<i64>,
     #[serde(default)]
+    #[serde(alias = "lease_expires_at")]
     lease_expires_at: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -407,10 +426,13 @@ struct IssueLeaseReleaseTool {
     #[serde(default)]
     assignee: Option<String>,
     #[serde(default)]
+    #[serde(alias = "lease_id")]
     lease_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -423,6 +445,7 @@ struct IssueLeaseReleaseTool {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 struct IssueDiscoverTool {
+    #[serde(alias = "parent_issue_id")]
     parent_issue_id: String,
     title: String,
     #[serde(default)]
@@ -432,14 +455,17 @@ struct IssueDiscoverTool {
     #[serde(default)]
     priority: Option<i32>,
     #[serde(default)]
+    #[serde(alias = "issue_type")]
     issue_type: Option<String>,
     #[serde(default)]
     assignee: Option<String>,
     #[serde(default)]
     owner: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -468,8 +494,10 @@ struct IssueUpdateTool {
     #[serde(default)]
     owner: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -482,15 +510,21 @@ struct IssueUpdateTool {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 struct DepAddTool {
+    #[serde(alias = "issue_id")]
     issue_id: String,
+    #[serde(alias = "depends_on_id")]
     depends_on_id: String,
     #[serde(default)]
+    #[serde(alias = "dep_type")]
     dep_type: Option<String>,
     #[serde(default)]
+    #[serde(alias = "created_by")]
     created_by: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -503,13 +537,18 @@ struct DepAddTool {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 struct DepRemoveTool {
+    #[serde(alias = "issue_id")]
     issue_id: String,
+    #[serde(alias = "depends_on_id")]
     depends_on_id: String,
     #[serde(default)]
+    #[serde(alias = "dep_type")]
     dep_type: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -522,16 +561,23 @@ struct DepRemoveTool {
 #[derive(Debug, Clone, Deserialize, Serialize, JsonSchema)]
 #[serde(rename_all = "camelCase")]
 struct DepReplaceTool {
+    #[serde(alias = "issue_id")]
     issue_id: String,
+    #[serde(alias = "depends_on_id")]
     depends_on_id: String,
     #[serde(default)]
+    #[serde(alias = "from_dep_type")]
     from_dep_type: Option<String>,
+    #[serde(alias = "to_dep_type")]
     to_dep_type: String,
     #[serde(default)]
+    #[serde(alias = "created_by")]
     created_by: Option<String>,
     #[serde(default)]
+    #[serde(alias = "instruction_id")]
     instruction_id: Option<String>,
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -561,8 +607,10 @@ impl From<DepGraphScopeToolArg> for DependencyGraphScope {
 #[serde(rename_all = "camelCase")]
 struct DepDiagnosticsTool {
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
     #[serde(default)]
+    #[serde(alias = "graph_scope")]
     graph_scope: DepGraphScopeToolArg,
 }
 
@@ -576,6 +624,7 @@ struct DepDiagnosticsTool {
 #[serde(rename_all = "camelCase")]
 struct InitTool {
     #[serde(default)]
+    #[serde(alias = "root_path")]
     root_path: Option<String>,
 }
 
@@ -659,6 +708,7 @@ struct ObserveProjectionTool {
 #[serde(rename_all = "camelCase")]
 struct IssueLeaseProjectionTool {
     #[serde(default)]
+    #[serde(alias = "issues_path")]
     issues_path: Option<String>,
 }
 
@@ -2676,6 +2726,7 @@ fn call_tool_error(message: impl Into<String>) -> CallToolError {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use serde_json::Map;
     use std::sync::{Arc, Barrier};
     use std::thread;
     use std::time::{SystemTime, UNIX_EPOCH};
@@ -2787,6 +2838,173 @@ mod tests {
             blocked_payload["items"][0]["blockers"][0]["dependsOnId"],
             "bd-root"
         );
+    }
+
+    #[test]
+    fn issue_add_accepts_snake_case_issue_type_and_issues_path() {
+        let root = temp_dir("issue-add-snake-case");
+        let default_issues = root.join("default-issues.jsonl");
+        let custom_issues = root.join("custom-issues.jsonl");
+        let config = test_config(&root, &default_issues, &root.join("surface.json"));
+
+        let tool: IssueAddTool = serde_json::from_value(json!({
+            "title": "[EPIC] Snake case issue type",
+            "id": "bd-epic-snake",
+            "issue_type": "epic",
+            "issues_path": custom_issues.display().to_string()
+        }))
+        .expect("snake_case issue_add payload should deserialize");
+
+        let result = call_issue_add(&config, tool).expect("issue add should succeed");
+        let payload = parse_tool_json(result);
+
+        assert_eq!(payload["action"], "issue.add");
+        assert_eq!(payload["issuesPath"], custom_issues.display().to_string());
+        assert_eq!(payload["issue"]["id"], "bd-epic-snake");
+        assert_eq!(payload["issue"]["issueType"], "epic");
+
+        assert!(
+            !default_issues.exists(),
+            "default issues path should remain untouched when issues_path override is provided"
+        );
+
+        let persisted = MemoryStore::load_jsonl(&custom_issues)
+            .expect("custom issues path should contain persisted issue");
+        let issue = persisted
+            .issue("bd-epic-snake")
+            .expect("persisted issue should exist");
+        assert_eq!(issue.issue_type, "epic");
+    }
+
+    #[test]
+    fn issue_claim_accepts_snake_case_lease_fields() {
+        let root = temp_dir("issue-claim-snake-case");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "Claim target".to_string(),
+                id: Some("bd-claim-snake".to_string()),
+                description: None,
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("issue add should succeed");
+
+        let tool: IssueClaimTool = serde_json::from_value(json!({
+            "id": "bd-claim-snake",
+            "assignee": "worker.snake",
+            "lease_ttl_seconds": 900,
+            "issues_path": issues.display().to_string()
+        }))
+        .expect("snake_case issue_claim payload should deserialize");
+
+        let result = call_issue_claim(&config, tool).expect("issue claim should succeed");
+        let payload = parse_tool_json(result);
+        assert_eq!(payload["action"], "issue.claim");
+        assert_eq!(payload["issuesPath"], issues.display().to_string());
+        assert_eq!(payload["issue"]["id"], "bd-claim-snake");
+        assert_eq!(payload["issue"]["assignee"], "worker.snake");
+        assert_eq!(payload["changed"], true);
+    }
+
+    #[test]
+    fn dep_add_accepts_snake_case_payload_fields() {
+        let root = temp_dir("dep-add-snake-case");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        for (id, title) in [("bd-dep-root", "Root"), ("bd-dep-child", "Child")] {
+            let _ = call_issue_add(
+                &config,
+                IssueAddTool {
+                    title: title.to_string(),
+                    id: Some(id.to_string()),
+                    description: None,
+                    status: Some("open".to_string()),
+                    priority: Some(2),
+                    issue_type: Some("task".to_string()),
+                    assignee: None,
+                    owner: None,
+                    instruction_id: None,
+                    issues_path: None,
+                },
+            )
+            .expect("issue add should succeed");
+        }
+
+        let tool: DepAddTool = serde_json::from_value(json!({
+            "issue_id": "bd-dep-child",
+            "depends_on_id": "bd-dep-root",
+            "dep_type": "blocks",
+            "issues_path": issues.display().to_string()
+        }))
+        .expect("snake_case dep_add payload should deserialize");
+
+        let result = call_dep_add(&config, tool).expect("dep add should succeed");
+        let payload = parse_tool_json(result);
+        assert_eq!(payload["action"], "dep.add");
+        assert_eq!(payload["issuesPath"], issues.display().to_string());
+        assert_eq!(payload["dependency"]["issueId"], "bd-dep-child");
+        assert_eq!(payload["dependency"]["dependsOnId"], "bd-dep-root");
+        assert_eq!(payload["dependency"]["type"], "blocks");
+    }
+
+    #[test]
+    fn issue_add_call_tool_params_accepts_snake_and_camel_shapes() {
+        let root = temp_dir("issue-add-call-tool-shapes");
+        let default_issues = root.join("default-issues.jsonl");
+        let custom_issues = root.join("custom-issues.jsonl");
+        let config = test_config(&root, &default_issues, &root.join("surface.json"));
+
+        let run_call = |issue_id: &str, issue_type_key: &str, issues_path_key: &str| -> Value {
+            let mut arguments = Map::new();
+            arguments.insert(
+                "title".to_string(),
+                json!(format!("[EPIC] parity {issue_id}")),
+            );
+            arguments.insert("id".to_string(), json!(issue_id));
+            arguments.insert(issue_type_key.to_string(), json!("epic"));
+            arguments.insert(
+                issues_path_key.to_string(),
+                json!(custom_issues.display().to_string()),
+            );
+
+            let params = CallToolRequestParams {
+                name: "issue_add".to_string(),
+                arguments: Some(arguments),
+                meta: None,
+                task: None,
+            };
+            let tool = match PremathTools::try_from(params).expect("tool params should parse") {
+                PremathTools::IssueAddTool(tool) => tool,
+                other => panic!("unexpected tool variant: {other:?}"),
+            };
+            let result = call_issue_add(&config, tool).expect("issue add should succeed");
+            parse_tool_json(result)
+        };
+
+        let snake_payload = run_call("bd-shape-snake", "issue_type", "issues_path");
+        let camel_payload = run_call("bd-shape-camel", "issueType", "issuesPath");
+
+        assert_eq!(
+            snake_payload["issuesPath"],
+            custom_issues.display().to_string()
+        );
+        assert_eq!(snake_payload["issue"]["issueType"], "epic");
+        assert_eq!(
+            camel_payload["issuesPath"],
+            custom_issues.display().to_string()
+        );
+        assert_eq!(camel_payload["issue"]["issueType"], "epic");
     }
 
     #[test]
