@@ -60,6 +60,7 @@
 - `mise run pf-start` / `mise run pf-status` / `mise run pf-stop` — optional pitchfork orchestration for local daemons in `pitchfork.toml` (`pf-start` starts both `docs-preview` and `observation-api`).
 - `mise run pf-gate-loop-start` / `mise run pf-gate-loop-stop` — optional background `ci-check` loop via pitchfork (`ci-check` every 30m).
 - `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
+- `mise run mcp-serve-status` / `mise run mcp-serve-stop` / `mise run mcp-serve-restart` — inspect/stop/restart repo-local `mcp-serve` processes deterministically (including stale duplicate wrappers).
 - `mise run harness-worker-loop -- --worker-id <worker-id> --mutation-mode human-override --override-reason '<reason>' --work-cmd '<cmd>' --verify-cmd '<cmd>'` — run one deterministic worker loop (`claim-next -> work -> verify -> close/recover`) with explicit bounded override and harness projection updates.
 - `mise run harness-coordinator-loop -- --worktree <path> [--worktree <path> ...] --rounds <n> --mutation-mode human-override --override-reason '<reason>'` — run deterministic coordinator round-robin dispatch over `N` worktrees under explicit auditable override.
 - `mise run harness-kpi-report` — emit canonical multithread throughput KPI benchmark from trajectory projections with deterministic threshold decision (`pass|watch|rollback|insufficient_data`).

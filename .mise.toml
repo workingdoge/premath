@@ -170,6 +170,18 @@ run = "cargo run --package premath-cli -- observe-serve --surface artifacts/obse
 [tasks.mcp-serve]
 run = "cargo run --package premath-cli -- mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root ."
 
+[tasks.mcp-serve-status]
+run = "python3 tools/ops/mcp_serve_lifecycle.py status"
+
+[tasks.mcp-serve-stop]
+run = "python3 tools/ops/mcp_serve_lifecycle.py stop"
+
+[tasks.mcp-serve-restart]
+run = [
+  "mise run mcp-serve-stop",
+  "mise run mcp-serve",
+]
+
 [tasks.harness-worker-loop]
 run = "python3 tools/harness/multithread_loop.py worker"
 
