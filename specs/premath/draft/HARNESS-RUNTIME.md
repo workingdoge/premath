@@ -102,7 +102,7 @@ A conforming command surface MUST include:
 - `startedAt` and `updatedAt` (RFC3339)
 
 Optional fields MAY include `issueId`, `summary`, `nextStep`,
-`instructionRefs[]`, `witnessRefs[]`, `stoppedAt`, `issuesPath`,
+`instructionRefs[]`, `witnessRefs[]`, `lineageRefs[]`, `stoppedAt`, `issuesPath`,
 `issuesSnapshotRef`.
 
 Determinism requirements:
@@ -149,7 +149,13 @@ Trajectory rows (`premath.harness.step.v1`) MUST be append-only and include:
 - `resultClass`
 - `finishedAt` (RFC3339)
 
-Rows MAY include `issueId`, `instructionRefs[]`, `witnessRefs[]`, `startedAt`.
+Rows MAY include `issueId`, `instructionRefs[]`, `witnessRefs[]`,
+`lineageRefs[]`, `startedAt`.
+
+When provided, `lineageRefs[]` SHOULD encode deterministic site lineage for the
+worker step (`ctx://...`, `cover://...`, `refinement://...`) so stop/handoff
+session and trajectory projections can be joined under one operational
+cover/refinement view.
 
 Stop/handoff rows SHOULD include one deterministic lease witness reference:
 
@@ -178,6 +184,7 @@ Worker requirements:
 
 - claim with deterministic lease semantics,
 - project `session` + `feature` state,
+- encode deterministic site lineage refs in session/trajectory projections,
 - execute work and verify commands,
 - derive handoff action from canonical issue-memory lease state,
 - append trajectory with deterministic lease witness reference,

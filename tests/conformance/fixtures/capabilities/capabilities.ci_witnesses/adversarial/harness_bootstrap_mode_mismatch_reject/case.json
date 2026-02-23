@@ -11,7 +11,12 @@
       "session": {
         "stateBefore": "stopped",
         "bootstrap": {
-          "mode": "attach"
+          "mode": "attach",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-302/ctx2abc",
+            "cover://worker-loop/bd-harness-302/cover2abc",
+            "refinement://worker-loop/bd-harness-302/worker.2/ref2abc"
+          ]
         }
       },
       "stop": {
@@ -21,6 +26,11 @@
         "recommendedAction": "issue_lease_renew",
         "trajectoryRow": {
           "stepKind": "premath.harness.step.v1",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-302/ctx2abc",
+            "cover://worker-loop/bd-harness-302/cover2abc",
+            "refinement://worker-loop/bd-harness-302/worker.2/ref2abc"
+          ],
           "witnessRefs": [
             "lease://handoff/bd-harness-302/active/ref2abc"
           ]

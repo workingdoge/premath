@@ -15,7 +15,12 @@
       "session": {
         "stateBefore": "stopped",
         "bootstrap": {
-          "mode": "resume"
+          "mode": "resume",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-304/ctx4abc",
+            "cover://worker-loop/bd-harness-304/cover4abc",
+            "refinement://worker-loop/bd-harness-304/worker.4/ref4abc"
+          ]
         }
       },
       "stop": {
@@ -25,6 +30,11 @@
         "recommendedAction": "issue_claim",
         "trajectoryRow": {
           "stepKind": "premath.harness.step.v1",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-304/ctx4abc",
+            "cover://worker-loop/bd-harness-304/cover4abc",
+            "refinement://worker-loop/bd-harness-304/worker.4/ref4abc"
+          ],
           "witnessRefs": [
             "lease://handoff/bd-harness-304/released/ref4abc"
           ]

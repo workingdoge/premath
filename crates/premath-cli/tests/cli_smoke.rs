@@ -2157,6 +2157,12 @@ fn harness_session_write_read_bootstrap_json_smoke() {
         OsString::from("artifacts/ciwitness/w-2.json"),
         OsString::from("--witness-ref"),
         OsString::from("artifacts/ciwitness/w-1.json"),
+        OsString::from("--lineage-ref"),
+        OsString::from("refinement://worker-loop/bd-a/worker.1/ref-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("ctx://issue/bd-a/ctx-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("refinement://worker-loop/bd-a/worker.1/ref-a"),
         OsString::from("--issues"),
         issues.as_os_str().to_os_string(),
         OsString::from("--json"),
@@ -2180,6 +2186,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
         serde_json::json!([
             "artifacts/ciwitness/w-1.json",
             "artifacts/ciwitness/w-2.json"
+        ])
+    );
+    assert_eq!(
+        session["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
         ])
     );
     assert_eq!(session["issuesPath"], issues.display().to_string());
@@ -2213,6 +2226,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
     assert_eq!(bootstrap_resume["resumeIssueId"], "bd-a");
     assert_eq!(bootstrap_resume["sessionId"], session_id);
     assert_eq!(
+        bootstrap_resume["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
+        ])
+    );
+    assert_eq!(
         bootstrap_resume["sessionRef"],
         session_path.display().to_string()
     );
@@ -2236,6 +2256,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
     assert_eq!(write_active["session"]["state"], "active");
     assert_eq!(write_active["session"]["stoppedAt"], Value::Null);
     assert_eq!(write_active["session"]["summary"], "continue work");
+    assert_eq!(
+        write_active["session"]["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
+        ])
+    );
 
     let out_read = run_premath([
         OsString::from("harness-session"),
@@ -2251,6 +2278,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
     assert_eq!(read["session"]["state"], "active");
     assert_eq!(read["session"]["issueId"], "bd-a");
     assert_eq!(read["session"]["nextStep"], "run ci-hygiene-check");
+    assert_eq!(
+        read["session"]["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
+        ])
+    );
 
     let out_bootstrap_attach = run_premath([
         OsString::from("harness-session"),
@@ -2485,6 +2519,12 @@ fn harness_trajectory_append_and_query_json_smoke() {
         OsString::from("artifacts/ciwitness/w1.json"),
         OsString::from("--witness-ref"),
         OsString::from("artifacts/ciwitness/w1.json"),
+        OsString::from("--lineage-ref"),
+        OsString::from("refinement://worker-loop/bd-1/worker.1/ref-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("ctx://issue/bd-1/ctx-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("ctx://issue/bd-1/ctx-a"),
         OsString::from("--finished-at"),
         OsString::from("2026-02-22T00:01:00Z"),
         OsString::from("--json"),
@@ -2496,6 +2536,13 @@ fn harness_trajectory_append_and_query_json_smoke() {
     assert_eq!(
         append_1["row"]["witnessRefs"],
         serde_json::json!(["artifacts/ciwitness/w1.json"])
+    );
+    assert_eq!(
+        append_1["row"]["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-1/ctx-a",
+            "refinement://worker-loop/bd-1/worker.1/ref-a"
+        ])
     );
 
     let out_append_2 = run_premath([

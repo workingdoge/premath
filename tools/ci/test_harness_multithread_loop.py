@@ -43,6 +43,35 @@ def _lease_row(*, lease_id: str, owner: str, expires_at: str) -> dict:
 
 
 class HarnessMultithreadLoopTests(unittest.TestCase):
+    def test_build_site_lineage_refs_are_deterministic(self) -> None:
+        refs_a = multithread_loop.build_site_lineage_refs(
+            repo_root=Path("/tmp/repo"),
+            issues_path=Path("/tmp/repo/.premath/issues.jsonl"),
+            worktree=Path("/tmp/repo-w1"),
+            worker_id="worker.1",
+            issue_id="bd-7",
+            mutation_mode="human-override",
+            active_epoch="2026-02",
+            support_until="2026-12",
+        )
+        refs_b = multithread_loop.build_site_lineage_refs(
+            repo_root=Path("/tmp/repo"),
+            issues_path=Path("/tmp/repo/.premath/issues.jsonl"),
+            worktree=Path("/tmp/repo-w1"),
+            worker_id="worker.1",
+            issue_id="bd-7",
+            mutation_mode="human-override",
+            active_epoch="2026-02",
+            support_until="2026-12",
+        )
+        self.assertEqual(refs_a, refs_b)
+        self.assertEqual(len(refs_a), 3)
+        self.assertTrue(any(ref.startswith("ctx://issue/bd-7/") for ref in refs_a))
+        self.assertTrue(any(ref.startswith("cover://worker-loop/bd-7/") for ref in refs_a))
+        self.assertTrue(
+            any(ref.startswith("refinement://worker-loop/bd-7/worker.1/") for ref in refs_a)
+        )
+
     def test_read_issue_lease_snapshot_active(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-harness-loop-active-") as tmp:
             issues_path = Path(tmp) / "issues.jsonl"

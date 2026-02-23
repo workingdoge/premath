@@ -31,6 +31,7 @@
     "adversarial/obstruction_algebra_roundtrip_mismatch_reject",
     "adversarial/harness_bootstrap_mode_mismatch_reject",
     "adversarial/harness_stop_handoff_missing_lease_ref_reject",
+    "adversarial/harness_stop_handoff_missing_lineage_ref_reject",
     "invariance/same_instruction_local",
     "invariance/same_instruction_external",
     "invariance/same_required_witness_local",

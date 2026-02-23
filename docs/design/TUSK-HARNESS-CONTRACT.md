@@ -62,6 +62,7 @@ Required effects:
   - issue/mutation identity,
   - verification result,
   - witness refs,
+  - site lineage refs (`ctx/cover/refinement`),
   - next-step recommendation.
 
 ## 4. Durability contract

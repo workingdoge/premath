@@ -682,6 +682,51 @@ def policy_audit_ref(
     return f"policy://worker-lane/{mode}/{digest}"
 
 
+def build_site_lineage_refs(
+    *,
+    repo_root: Path,
+    issues_path: Path,
+    worktree: Path,
+    worker_id: str,
+    issue_id: str,
+    mutation_mode: str,
+    active_epoch: str,
+    support_until: str,
+) -> list[str]:
+    ctx_digest = stable_hash(
+        {
+            "kind": "ctx",
+            "issueId": issue_id,
+            "repoRoot": str(repo_root),
+            "issuesPath": str(issues_path),
+        }
+    )
+    ctx_ref = f"ctx://issue/{issue_id}/{ctx_digest}"
+
+    cover_digest = stable_hash(
+        {
+            "kind": "cover",
+            "ctxRef": ctx_ref,
+            "workerPool": "harness.multithread.v1",
+        }
+    )
+    cover_ref = f"cover://worker-loop/{issue_id}/{cover_digest}"
+
+    refinement_digest = stable_hash(
+        {
+            "kind": "refinement",
+            "coverRef": cover_ref,
+            "workerId": worker_id,
+            "worktree": str(worktree),
+            "mutationMode": mutation_mode,
+            "activeEpoch": active_epoch,
+            "supportUntil": support_until,
+        }
+    )
+    refinement_ref = f"refinement://worker-loop/{issue_id}/{worker_id}/{refinement_digest}"
+    return sorted({ctx_ref, cover_ref, refinement_ref})
+
+
 def issue_ready_count(base_cmd: Sequence[str], cwd: Path, issues_path: Path) -> int:
     payload = run_premath_json(
         base_cmd,
@@ -705,6 +750,7 @@ def write_session_projection(
     summary: str,
     next_step: str,
     witness_refs: Sequence[str] = (),
+    lineage_refs: Sequence[str] = (),
 ) -> None:
     args = [
         "harness-session",
@@ -725,6 +771,9 @@ def write_session_projection(
     for witness_ref in witness_refs:
         if witness_ref:
             args.extend(["--witness-ref", witness_ref])
+    for lineage_ref in lineage_refs:
+        if lineage_ref:
+            args.extend(["--lineage-ref", lineage_ref])
     run_premath_json(base_cmd, args, cwd)
 
 
@@ -770,6 +819,7 @@ def append_trajectory_projection(
     issue_id: str,
     result_class: str,
     witness_refs: Sequence[str],
+    lineage_refs: Sequence[str],
 ) -> None:
     args = [
         "harness-trajectory",
@@ -787,6 +837,9 @@ def append_trajectory_projection(
     ]
     for ref in witness_refs:
         args.extend(["--witness-ref", ref])
+    for ref in lineage_refs:
+        if ref:
+            args.extend(["--lineage-ref", ref])
     args.extend(["--finished-at", now_rfc3339()])
     run_premath_json(base_cmd, args, cwd)
 
@@ -868,6 +921,16 @@ def run_worker(args: argparse.Namespace) -> int:
                 claimed_lease_id = raw_lease_id.strip()
 
         summary = f"worker={worker_id} claimed={issue_id} worktree={worktree} {policy_summary}"
+        lineage_refs = build_site_lineage_refs(
+            repo_root=repo_root,
+            issues_path=issues_path,
+            worktree=worktree,
+            worker_id=worker_id,
+            issue_id=issue_id,
+            mutation_mode=mutation_mode,
+            active_epoch=policy.active_epoch,
+            support_until=support_until,
+        )
         write_session_projection(
             base_cmd,
             worktree,
@@ -878,6 +941,7 @@ def run_worker(args: argparse.Namespace) -> int:
             summary=summary,
             next_step="work -> verify -> close_or_recover",
             witness_refs=[],
+            lineage_refs=lineage_refs,
         )
         write_feature_projection(
             base_cmd,
@@ -923,6 +987,7 @@ def run_worker(args: argparse.Namespace) -> int:
                 issue_id=issue_id,
                 result_class=handoff.result_class,
                 witness_refs=[witness_ref, policy_ref, handoff.lease_ref],
+                lineage_refs=lineage_refs,
             )
             write_feature_projection(
                 base_cmd,
@@ -950,6 +1015,7 @@ def run_worker(args: argparse.Namespace) -> int:
                 ),
                 next_step=handoff.next_step,
                 witness_refs=[policy_ref, handoff.lease_ref],
+                lineage_refs=lineage_refs,
             )
             print(f"[worker:{worker_id}] closed issue {issue_id}")
             continue
@@ -968,6 +1034,7 @@ def run_worker(args: argparse.Namespace) -> int:
             issue_id=issue_id,
             result_class=handoff.result_class,
             witness_refs=[witness_ref, policy_ref, handoff.lease_ref],
+            lineage_refs=lineage_refs,
         )
         write_feature_projection(
             base_cmd,
@@ -996,6 +1063,7 @@ def run_worker(args: argparse.Namespace) -> int:
             ),
             next_step=handoff.next_step,
             witness_refs=[policy_ref, handoff.lease_ref],
+            lineage_refs=lineage_refs,
         )
         print(
             f"[worker:{worker_id}] work/verify failed for {issue_id} "

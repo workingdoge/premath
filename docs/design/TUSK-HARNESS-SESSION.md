@@ -38,6 +38,8 @@ Optional:
 - `instructionRefs: string[]` (canonicalized: sorted + deduplicated)
 - `witnessRefs: string[]` (canonicalized: sorted + deduplicated; includes
   stop/handoff `lease://handoff/...` refs when lease recovery is required)
+- `lineageRefs: string[]` (canonicalized: sorted + deduplicated; operational
+  site lineage refs, e.g. `ctx://...`, `cover://...`, `refinement://...`)
 - `stoppedAt: RFC3339` (present when `state = stopped`)
 - `issuesPath: string`
 - `issuesSnapshotRef: string` (derived via `store_snapshot_ref`)

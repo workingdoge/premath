@@ -95,16 +95,17 @@ Each worker step does:
    - `issue update --status closed` (releases lease via closed transition),
    - assert stop invariant (`status=closed` and lease released) from issue memory,
    - append `harness-trajectory` row with witness refs including deterministic
-     `lease://handoff/...` reference,
+     `lease://handoff/...` reference and deterministic site lineage refs
+     (`ctx://...`, `cover://...`, `refinement://...`),
    - `harness-feature write` (`completed`),
-   - `harness-session write` (`stopped`).
+   - `harness-session write` (`stopped`) with matching lineage refs.
 8. failure path:
    - issue-memory-derived lease state determines recovery action
      (`issue_lease_renew` / `issue_lease_release` / reclaim / stop),
    - append `harness-trajectory` row with lease handoff witness ref,
    - `harness-feature write` (`blocked`) carrying lease state/action summary,
    - `harness-session write` (`stopped`) carrying deterministic next-step derived
-     from issue-memory lease state.
+     from issue-memory lease state and matching lineage refs.
 
 ## 5. Heartbeat / Renew Guidance
 

@@ -11,7 +11,12 @@
       "session": {
         "stateBefore": "active",
         "bootstrap": {
-          "mode": "attach"
+          "mode": "attach",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-303/ctx3abc",
+            "cover://worker-loop/bd-harness-303/cover3abc",
+            "refinement://worker-loop/bd-harness-303/worker.3/ref3abc"
+          ]
         }
       },
       "stop": {
@@ -21,6 +26,11 @@
         "recommendedAction": "stop",
         "trajectoryRow": {
           "stepKind": "premath.harness.step.v1",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-303/ctx3abc",
+            "cover://worker-loop/bd-harness-303/cover3abc",
+            "refinement://worker-loop/bd-harness-303/worker.3/ref3abc"
+          ],
           "witnessRefs": [
             "ciw://witness/ref3abc"
           ]

@@ -112,6 +112,11 @@ OBSTRUCTION_CONSTRUCTOR_TO_CANONICAL: Dict[Tuple[str, str], str] = {
     for family, tag, canonical in OBSTRUCTION_CLASS_TO_CONSTRUCTOR.values()
 }
 LEASE_HANDOFF_REF_RE = re.compile(r"^lease://handoff/([^/]+)/([^/]+)/([A-Za-z0-9._-]+)$")
+HARNESS_LINEAGE_CTX_REF_RE = re.compile(r"^ctx://issue/([^/]+)/([A-Za-z0-9._-]+)$")
+HARNESS_LINEAGE_COVER_REF_RE = re.compile(r"^cover://worker-loop/([^/]+)/([A-Za-z0-9._-]+)$")
+HARNESS_LINEAGE_REFINEMENT_REF_RE = re.compile(
+    r"^refinement://worker-loop/([^/]+)/([^/]+)/([A-Za-z0-9._-]+)$"
+)
 HARNESS_RECOVERY_ACTION_BY_LEASE_STATE: Dict[str, str] = {
     "active": "issue_lease_renew",
     "stale": "issue_claim",
@@ -1972,6 +1977,14 @@ def evaluate_ci_harness_runtime(case: Dict[str, Any]) -> VectorOutcome:
         trajectory_row.get("witnessRefs", []),
         "artifacts.harness.stop.trajectoryRow.witnessRefs",
     )
+    bootstrap_lineage_refs = ensure_string_list(
+        bootstrap.get("lineageRefs", []),
+        "artifacts.harness.session.bootstrap.lineageRefs",
+    )
+    trajectory_lineage_refs = ensure_string_list(
+        trajectory_row.get("lineageRefs", []),
+        "artifacts.harness.stop.trajectoryRow.lineageRefs",
+    )
 
     failures: List[str] = []
     if bootstrap_mode != expected_bootstrap_mode:
@@ -1985,6 +1998,58 @@ def evaluate_ci_harness_runtime(case: Dict[str, Any]) -> VectorOutcome:
 
     if trajectory_kind != "premath.harness.step.v1":
         failures.append("harness_trajectory_kind_invalid")
+
+    def classify_lineage_refs(refs: List[str]) -> Tuple[set[str], bool, bool]:
+        kinds: set[str] = set()
+        malformed = False
+        mismatch = False
+        for ref in refs:
+            ctx_match = HARNESS_LINEAGE_CTX_REF_RE.match(ref)
+            if ctx_match is not None:
+                if ctx_match.group(1) == issue_id:
+                    kinds.add("ctx")
+                else:
+                    mismatch = True
+                continue
+            cover_match = HARNESS_LINEAGE_COVER_REF_RE.match(ref)
+            if cover_match is not None:
+                if cover_match.group(1) == issue_id:
+                    kinds.add("cover")
+                else:
+                    mismatch = True
+                continue
+            refinement_match = HARNESS_LINEAGE_REFINEMENT_REF_RE.match(ref)
+            if refinement_match is not None:
+                if refinement_match.group(1) == issue_id:
+                    kinds.add("refinement")
+                else:
+                    mismatch = True
+                continue
+            malformed = True
+        return kinds, malformed, mismatch
+
+    if not bootstrap_lineage_refs or not trajectory_lineage_refs:
+        failures.append("harness_lineage_ref_missing")
+    else:
+        required_kinds = {"ctx", "cover", "refinement"}
+        bootstrap_kinds, bootstrap_malformed, bootstrap_mismatch = classify_lineage_refs(bootstrap_lineage_refs)
+        trajectory_kinds, trajectory_malformed, trajectory_mismatch = classify_lineage_refs(
+            trajectory_lineage_refs
+        )
+        if bootstrap_kinds != required_kinds or trajectory_kinds != required_kinds:
+            failures.append("harness_lineage_ref_missing")
+        if bootstrap_malformed or trajectory_malformed:
+            failures.append("harness_lineage_ref_malformed")
+        if bootstrap_mismatch or trajectory_mismatch:
+            failures.append("harness_lineage_ref_mismatch")
+        if canonical_check_set(
+            bootstrap_lineage_refs,
+            "artifacts.harness.session.bootstrap.lineageRefs",
+        ) != canonical_check_set(
+            trajectory_lineage_refs,
+            "artifacts.harness.stop.trajectoryRow.lineageRefs",
+        ):
+            failures.append("harness_lineage_ref_mismatch")
 
     matched_handoff_ref = False
     malformed_handoff_ref = False
@@ -2068,6 +2133,7 @@ def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOu
         "golden/harness_boot_stop_recovery_accept",
         "adversarial/harness_bootstrap_mode_mismatch_reject",
         "adversarial/harness_stop_handoff_missing_lease_ref_reject",
+        "adversarial/harness_stop_handoff_missing_lineage_ref_reject",
         "invariance/same_harness_recovery_local",
         "invariance/same_harness_recovery_external",
     }:

@@ -25,6 +25,8 @@ pub struct HarnessTrajectoryRow {
     pub instruction_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub witness_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub lineage_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub started_at: Option<String>,
     pub finished_at: String,
@@ -183,6 +185,7 @@ fn normalize_row(mut row: HarnessTrajectoryRow) -> Result<HarnessTrajectoryRow, 
     row.result_class = clean_required(row.result_class, "resultClass")?;
     row.instruction_refs = normalize_refs(row.instruction_refs);
     row.witness_refs = normalize_refs(row.witness_refs);
+    row.lineage_refs = normalize_refs(row.lineage_refs);
     row.started_at = row.started_at.and_then(clean_optional);
     row.finished_at = clean_required(row.finished_at, "finishedAt")?;
     parse_rfc3339(&row.finished_at)
@@ -287,6 +290,7 @@ mod tests {
                 "instructions/a.json".to_string(),
             ],
             witness_refs: vec!["artifacts/ciwitness/w1.json".to_string()],
+            lineage_refs: vec!["cover://ctx/main".to_string()],
             started_at: Some("2026-02-22T01:00:00Z".to_string()),
             finished_at: finished_at.to_string(),
         }
@@ -318,6 +322,11 @@ mod tests {
                     "artifacts/ciwitness/w1.json".to_string(),
                     "artifacts/ciwitness/w1.json".to_string(),
                 ],
+                lineage_refs: vec![
+                    "cover://ctx/main".to_string(),
+                    "cover://ctx/main".to_string(),
+                    "refinement://ctx/worker".to_string(),
+                ],
                 started_at: Some("2026-02-22T01:00:00Z".to_string()),
                 finished_at: "2026-02-22T01:01:00Z".to_string(),
             },
@@ -329,6 +338,7 @@ mod tests {
         assert_eq!(appended.issue_id.as_deref(), Some("bd-1"));
         assert_eq!(appended.witness_refs.len(), 1);
         assert_eq!(appended.instruction_refs.len(), 1);
+        assert_eq!(appended.lineage_refs.len(), 2);
 
         let rows = read_trajectory_rows(&path).expect("rows should load");
         assert_eq!(rows.len(), 1);
@@ -376,6 +386,7 @@ mod tests {
                 result_class: "accepted".to_string(),
                 instruction_refs: Vec::new(),
                 witness_refs: Vec::new(),
+                lineage_refs: Vec::new(),
                 started_at: None,
                 finished_at: "bad-time".to_string(),
             },
