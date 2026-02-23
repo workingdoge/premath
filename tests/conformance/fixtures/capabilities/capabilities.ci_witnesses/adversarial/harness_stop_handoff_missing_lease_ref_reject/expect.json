@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "harness_handoff_lease_ref_missing"
+  ],
+  "assertions": [
+    "stop/handoff requires deterministic lease witness linkage"
+  ]
+}

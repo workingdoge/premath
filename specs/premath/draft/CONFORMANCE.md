@@ -138,6 +138,11 @@ If capability `capabilities.change_morphisms` is claimed, implementation MUST:
 12. enforce paired invariance requirements (including kernel verdict/Gate class
     invariance claims) across local/external projection profiles.
 
+Executable vectors for this claim MUST include same-owner active claim
+preservation checks where existing lease ids are retained across deterministic
+renew/claim transitions, plus adversarial override attempts and paired
+local/external invariance rows.
+
 ### 3.5 Required behavior for SqueakSite capability
 
 If capability `capabilities.squeak_site` is claimed, implementation MUST:
@@ -162,6 +167,11 @@ If capability `capabilities.ci_witnesses` is claimed, implementation MUST:
     CI witness-profile invariance vectors, including boundary-authority lineage
     parity (kernel obligation registry -> proposal discharge -> coherence scope ->
     CI semantic failure classes) and stale generated doctrine-site rejection.
+
+Executable vectors for this claim MUST include harness v1 boot/stop/recovery
+rows that verify deterministic bootstrap mode (`attach|resume`), lease-state
+recovery action mapping, and stop-row lease-handoff witness linkage, with
+adversarial mismatch coverage and paired local/external invariance rows.
 
 ### 3.7 Required behavior for instruction typing capability
 

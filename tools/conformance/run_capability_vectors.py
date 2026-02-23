@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import sys
 import tempfile
 from dataclasses import dataclass
@@ -109,6 +110,19 @@ OBSTRUCTION_CLASS_TO_CONSTRUCTOR: Dict[str, Tuple[str, str, str]] = {
 OBSTRUCTION_CONSTRUCTOR_TO_CANONICAL: Dict[Tuple[str, str], str] = {
     (family, tag): canonical
     for family, tag, canonical in OBSTRUCTION_CLASS_TO_CONSTRUCTOR.values()
+}
+LEASE_HANDOFF_REF_RE = re.compile(r"^lease://handoff/([^/]+)/([^/]+)/([A-Za-z0-9._-]+)$")
+HARNESS_LINEAGE_CTX_REF_RE = re.compile(r"^ctx://issue/([^/]+)/([A-Za-z0-9._-]+)$")
+HARNESS_LINEAGE_COVER_REF_RE = re.compile(r"^cover://worker-loop/([^/]+)/([A-Za-z0-9._-]+)$")
+HARNESS_LINEAGE_REFINEMENT_REF_RE = re.compile(
+    r"^refinement://worker-loop/([^/]+)/([^/]+)/([A-Za-z0-9._-]+)$"
+)
+HARNESS_RECOVERY_ACTION_BY_LEASE_STATE: Dict[str, str] = {
+    "active": "issue_lease_renew",
+    "stale": "issue_claim",
+    "contended": "stop",
+    "released": "issue_claim",
+    "unleased": "issue_claim",
 }
 
 
@@ -1878,6 +1892,192 @@ def evaluate_ci_obstruction_roundtrip(case: Dict[str, Any]) -> VectorOutcome:
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_ci_harness_runtime(case: Dict[str, Any]) -> VectorOutcome:
+    profile = case.get("profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    if profile is not None:
+        profile_name = ensure_string(profile, "profile")
+        if profile_name != "local":
+            claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+            if CAPABILITY_CI_WITNESSES not in claimed:
+                return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+    else:
+        claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+        if CAPABILITY_CI_WITNESSES not in claimed:
+            return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    input_data = artifacts.get("input")
+    kernel_verdict = "accepted"
+    gate_failure_classes: List[str] = []
+    if input_data is not None:
+        if not isinstance(input_data, dict):
+            raise ValueError("artifacts.input must be an object when present")
+        kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+        if kernel_verdict not in {"accepted", "rejected"}:
+            raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+        gate_failure_classes = canonical_check_set(
+            input_data.get("gateFailureClasses", []),
+            "artifacts.input.gateFailureClasses",
+        )
+
+    harness = artifacts.get("harness")
+    if not isinstance(harness, dict):
+        raise ValueError("artifacts.harness must be an object")
+
+    session = harness.get("session")
+    if not isinstance(session, dict):
+        raise ValueError("artifacts.harness.session must be an object")
+    session_state_before = ensure_string(
+        session.get("stateBefore"),
+        "artifacts.harness.session.stateBefore",
+    )
+    if session_state_before not in {"active", "stopped"}:
+        raise ValueError("artifacts.harness.session.stateBefore must be 'active' or 'stopped'")
+    bootstrap = session.get("bootstrap")
+    if not isinstance(bootstrap, dict):
+        raise ValueError("artifacts.harness.session.bootstrap must be an object")
+    bootstrap_mode = ensure_string(
+        bootstrap.get("mode"),
+        "artifacts.harness.session.bootstrap.mode",
+    )
+    if bootstrap_mode not in {"attach", "resume"}:
+        raise ValueError("artifacts.harness.session.bootstrap.mode must be 'attach' or 'resume'")
+
+    expected_bootstrap_mode = "resume" if session_state_before == "stopped" else "attach"
+
+    stop = harness.get("stop")
+    if not isinstance(stop, dict):
+        raise ValueError("artifacts.harness.stop must be an object")
+    issue_id = ensure_string(stop.get("issueId"), "artifacts.harness.stop.issueId")
+    lease_state = ensure_string(stop.get("leaseState"), "artifacts.harness.stop.leaseState")
+    if lease_state not in HARNESS_RECOVERY_ACTION_BY_LEASE_STATE:
+        raise ValueError(
+            "artifacts.harness.stop.leaseState must be one of "
+            f"{sorted(HARNESS_RECOVERY_ACTION_BY_LEASE_STATE.keys())}"
+        )
+    session_state_after = ensure_string(
+        stop.get("sessionStateAfter"),
+        "artifacts.harness.stop.sessionStateAfter",
+    )
+    recommended_action = ensure_string(
+        stop.get("recommendedAction"),
+        "artifacts.harness.stop.recommendedAction",
+    )
+    trajectory_row = stop.get("trajectoryRow")
+    if not isinstance(trajectory_row, dict):
+        raise ValueError("artifacts.harness.stop.trajectoryRow must be an object")
+    trajectory_kind = ensure_string(
+        trajectory_row.get("stepKind"),
+        "artifacts.harness.stop.trajectoryRow.stepKind",
+    )
+    witness_refs = ensure_string_list(
+        trajectory_row.get("witnessRefs", []),
+        "artifacts.harness.stop.trajectoryRow.witnessRefs",
+    )
+    bootstrap_lineage_refs = ensure_string_list(
+        bootstrap.get("lineageRefs", []),
+        "artifacts.harness.session.bootstrap.lineageRefs",
+    )
+    trajectory_lineage_refs = ensure_string_list(
+        trajectory_row.get("lineageRefs", []),
+        "artifacts.harness.stop.trajectoryRow.lineageRefs",
+    )
+
+    failures: List[str] = []
+    if bootstrap_mode != expected_bootstrap_mode:
+        failures.append("harness_bootstrap_mode_mismatch")
+    if session_state_after != "stopped":
+        failures.append("harness_stop_state_invalid")
+
+    expected_recovery_action = HARNESS_RECOVERY_ACTION_BY_LEASE_STATE[lease_state]
+    if recommended_action != expected_recovery_action:
+        failures.append("harness_recovery_action_mismatch")
+
+    if trajectory_kind != "premath.harness.step.v1":
+        failures.append("harness_trajectory_kind_invalid")
+
+    def classify_lineage_refs(refs: List[str]) -> Tuple[set[str], bool, bool]:
+        kinds: set[str] = set()
+        malformed = False
+        mismatch = False
+        for ref in refs:
+            ctx_match = HARNESS_LINEAGE_CTX_REF_RE.match(ref)
+            if ctx_match is not None:
+                if ctx_match.group(1) == issue_id:
+                    kinds.add("ctx")
+                else:
+                    mismatch = True
+                continue
+            cover_match = HARNESS_LINEAGE_COVER_REF_RE.match(ref)
+            if cover_match is not None:
+                if cover_match.group(1) == issue_id:
+                    kinds.add("cover")
+                else:
+                    mismatch = True
+                continue
+            refinement_match = HARNESS_LINEAGE_REFINEMENT_REF_RE.match(ref)
+            if refinement_match is not None:
+                if refinement_match.group(1) == issue_id:
+                    kinds.add("refinement")
+                else:
+                    mismatch = True
+                continue
+            malformed = True
+        return kinds, malformed, mismatch
+
+    if not bootstrap_lineage_refs or not trajectory_lineage_refs:
+        failures.append("harness_lineage_ref_missing")
+    else:
+        required_kinds = {"ctx", "cover", "refinement"}
+        bootstrap_kinds, bootstrap_malformed, bootstrap_mismatch = classify_lineage_refs(bootstrap_lineage_refs)
+        trajectory_kinds, trajectory_malformed, trajectory_mismatch = classify_lineage_refs(
+            trajectory_lineage_refs
+        )
+        if bootstrap_kinds != required_kinds or trajectory_kinds != required_kinds:
+            failures.append("harness_lineage_ref_missing")
+        if bootstrap_malformed or trajectory_malformed:
+            failures.append("harness_lineage_ref_malformed")
+        if bootstrap_mismatch or trajectory_mismatch:
+            failures.append("harness_lineage_ref_mismatch")
+        if canonical_check_set(
+            bootstrap_lineage_refs,
+            "artifacts.harness.session.bootstrap.lineageRefs",
+        ) != canonical_check_set(
+            trajectory_lineage_refs,
+            "artifacts.harness.stop.trajectoryRow.lineageRefs",
+        ):
+            failures.append("harness_lineage_ref_mismatch")
+
+    matched_handoff_ref = False
+    malformed_handoff_ref = False
+    for ref in witness_refs:
+        if not ref.startswith("lease://handoff/"):
+            continue
+        match = LEASE_HANDOFF_REF_RE.match(ref)
+        if match is None:
+            malformed_handoff_ref = True
+            continue
+        ref_issue_id, ref_lease_state, _ = match.groups()
+        if ref_issue_id == issue_id and ref_lease_state == lease_state:
+            matched_handoff_ref = True
+            break
+    if not matched_handoff_ref:
+        if malformed_handoff_ref:
+            failures.append("harness_handoff_lease_ref_malformed")
+        elif any(ref.startswith("lease://handoff/") for ref in witness_refs):
+            failures.append("harness_handoff_lease_ref_mismatch")
+        else:
+            failures.append("harness_handoff_lease_ref_missing")
+
+    failure_classes = sorted(set(failures))
+    if failure_classes:
+        return VectorOutcome("rejected", "rejected", failure_classes)
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/instruction_witness_deterministic",
@@ -1929,6 +2129,15 @@ def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOu
         }:
             return evaluate_ci_obstruction_roundtrip(case)
         return evaluate_ci_boundary_authority_lineage(case)
+    if vector_id in {
+        "golden/harness_boot_stop_recovery_accept",
+        "adversarial/harness_bootstrap_mode_mismatch_reject",
+        "adversarial/harness_stop_handoff_missing_lease_ref_reject",
+        "adversarial/harness_stop_handoff_missing_lineage_ref_reject",
+        "invariance/same_harness_recovery_local",
+        "invariance/same_harness_recovery_external",
+    }:
+        return evaluate_ci_harness_runtime(case)
     if vector_id in {
         "invariance/same_required_witness_local",
         "invariance/same_required_witness_external",
@@ -2035,6 +2244,7 @@ def evaluate_change_projection_issue_claim(case: Dict[str, Any]) -> VectorOutcom
 
     before_lease = issue_before.get("lease")
     before_lease_owner: Optional[str] = None
+    before_lease_id: Optional[str] = None
     before_lease_expires_at_unix_ms: Optional[int] = None
     if before_lease is not None:
         if not isinstance(before_lease, dict):
@@ -2043,6 +2253,11 @@ def evaluate_change_projection_issue_claim(case: Dict[str, Any]) -> VectorOutcom
             before_lease.get("owner"),
             "artifacts.issueBefore.lease.owner",
         )
+        before_lease_id_raw = before_lease.get("leaseId")
+        if before_lease_id_raw is not None:
+            if not isinstance(before_lease_id_raw, str) or not before_lease_id_raw:
+                raise ValueError("artifacts.issueBefore.lease.leaseId must be a non-empty string")
+            before_lease_id = before_lease_id_raw
         before_lease_expires_at_unix_ms = ensure_int(
             before_lease.get("expiresAtUnixMs"),
             "artifacts.issueBefore.lease.expiresAtUnixMs",
@@ -2079,7 +2294,15 @@ def evaluate_change_projection_issue_claim(case: Dict[str, Any]) -> VectorOutcom
     if before_assignee and before_assignee != claim_assignee and not has_active_lease and not has_stale_lease:
         return VectorOutcome("rejected", "rejected", ["issue_already_claimed"])
 
-    lease_id = resolve_lease_id(claim_lease_id, issue_id, claim_assignee)
+    lease_id = (
+        before_lease_id
+        if (
+            has_active_lease
+            and before_lease_owner == claim_assignee
+            and before_lease_id is not None
+        )
+        else resolve_lease_id(claim_lease_id, issue_id, claim_assignee)
+    )
     lease_expires_at_unix_ms, expiry_error = resolve_lease_expiry_unix_ms(
         now_unix_ms,
         claim_lease_ttl_seconds,
@@ -2858,6 +3081,8 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "golden/issue_claim_reclaims_stale_lease":
         return evaluate_change_projection_issue_claim(case)
+    if vector_id == "golden/issue_claim_same_owner_preserves_active_lease_id":
+        return evaluate_change_projection_issue_claim(case)
     if vector_id == "golden/composed_issue_claim_sigpi_squeak_span_accept":
         return evaluate_change_projection_composed_issue_claim(case)
     if vector_id == "golden/issue_discover_preserves_existing_and_links_discovered_from":
@@ -2894,6 +3119,8 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
     if vector_id in {
         "invariance/same_issue_claim_contention_local",
         "invariance/same_issue_claim_contention_external",
+        "invariance/same_issue_claim_same_owner_preserve_local",
+        "invariance/same_issue_claim_same_owner_preserve_external",
     }:
         return evaluate_change_projection_issue_claim(case)
     if vector_id in {
@@ -2915,6 +3142,8 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
     if vector_id == "adversarial/issue_discover_rejects_parent_missing":
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "adversarial/issue_claim_rejects_active_lease_contention":
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id == "adversarial/issue_claim_same_owner_lease_id_override_reject":
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "adversarial/composed_issue_claim_cross_lane_capability_missing_reject":
         return evaluate_change_projection_composed_issue_claim(case)

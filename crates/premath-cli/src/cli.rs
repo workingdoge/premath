@@ -959,6 +959,10 @@ pub enum HarnessSessionCommands {
         #[arg(long = "witness-ref")]
         witness_refs: Vec<String>,
 
+        /// Site lineage references (repeatable; e.g. ctx/cover/refinement refs)
+        #[arg(long = "lineage-ref")]
+        lineage_refs: Vec<String>,
+
         /// Optional issues JSONL path for snapshot reference derivation
         #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
@@ -1083,6 +1087,7 @@ pub enum HarnessFeatureStatusArg {
     Completed,
 }
 
+#[allow(clippy::large_enum_variant)]
 #[derive(Subcommand, Clone, Debug)]
 pub enum HarnessTrajectoryCommands {
     /// Append one harness step trajectory row
@@ -1114,6 +1119,10 @@ pub enum HarnessTrajectoryCommands {
         /// Witness refs (repeatable)
         #[arg(long = "witness-ref")]
         witness_refs: Vec<String>,
+
+        /// Site lineage references (repeatable; e.g. ctx/cover/refinement refs)
+        #[arg(long = "lineage-ref")]
+        lineage_refs: Vec<String>,
 
         /// Optional started-at timestamp (RFC3339)
         #[arg(long)]

@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "coherence.gate_chain_parity.evidence_factorization_missing"
+  ]
+}

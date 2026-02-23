@@ -121,6 +121,14 @@ const GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE: &str =
     "coherence.gate_chain_parity.stage2_kernel_compliance_missing";
 const GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE: &str =
     "coherence.gate_chain_parity.stage2_kernel_compliance_drift";
+const GATE_CHAIN_EVIDENCE_FACTORIZATION_INVALID_FAILURE: &str =
+    "coherence.gate_chain_parity.evidence_factorization_invalid";
+const GATE_CHAIN_EVIDENCE_FACTORIZATION_MISSING_FAILURE: &str =
+    "coherence.gate_chain_parity.evidence_factorization_missing";
+const GATE_CHAIN_EVIDENCE_FACTORIZATION_AMBIGUOUS_FAILURE: &str =
+    "coherence.gate_chain_parity.evidence_factorization_ambiguous";
+const GATE_CHAIN_EVIDENCE_FACTORIZATION_UNBOUND_FAILURE: &str =
+    "coherence.gate_chain_parity.evidence_factorization_unbound";
 const STAGE2_AUTHORITY_CLASS_ALIAS_VIOLATION: &str =
     "unification.evidence_stage2.authority_alias_violation";
 const STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION: &str =
@@ -128,6 +136,10 @@ const STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION: &str =
 const STAGE2_AUTHORITY_CLASS_UNBOUND: &str = "unification.evidence_stage2.unbound";
 const STAGE2_KERNEL_CLASS_MISSING: &str = "unification.evidence_stage2.kernel_compliance_missing";
 const STAGE2_KERNEL_CLASS_DRIFT: &str = "unification.evidence_stage2.kernel_compliance_drift";
+const EVIDENCE_FACTORIZATION_CLASS_MISSING: &str = "unification.evidence_factorization.missing";
+const EVIDENCE_FACTORIZATION_CLASS_AMBIGUOUS: &str = "unification.evidence_factorization.ambiguous";
+const EVIDENCE_FACTORIZATION_CLASS_UNBOUND: &str = "unification.evidence_factorization.unbound";
+const EVIDENCE_FACTORIZATION_ROUTE_KIND: &str = "eta_F_to_Ev";
 const STAGE2_AUTHORITY_ALIAS_ROLE: &str = "projection_only";
 const STAGE2_BIDIR_ROUTE_KIND: &str = "direct_checker_discharge";
 const STAGE2_BIDIR_OBLIGATION_FIELD_REF: &str = "bidirCheckerObligations";
@@ -272,6 +284,8 @@ struct ControlPlaneProjectionContract {
     #[serde(default)]
     evidence_stage2_authority: Option<ControlPlaneStage2Authority>,
     #[serde(default)]
+    evidence_factorization: Option<ControlPlaneEvidenceFactorization>,
+    #[serde(default)]
     evidence_lanes: Option<ControlPlaneEvidenceLanes>,
     #[serde(default)]
     lane_artifact_kinds: Option<BTreeMap<String, Vec<String>>>,
@@ -362,6 +376,43 @@ struct ControlPlaneWorkerLaneFailureClasses {
     mutation_mode_drift: String,
     #[serde(default)]
     route_unbound: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneEvidenceFactorization {
+    #[serde(default)]
+    profile_kind: String,
+    #[serde(default)]
+    route_kind: String,
+    #[serde(default)]
+    factorization_routes: Vec<String>,
+    #[serde(default)]
+    binding: ControlPlaneEvidenceFactorizationBinding,
+    #[serde(default)]
+    cross_lane_routes: Option<ControlPlaneCrossLaneWitnessRoute>,
+    #[serde(default)]
+    failure_classes: ControlPlaneEvidenceFactorizationFailureClasses,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneEvidenceFactorizationBinding {
+    #[serde(default)]
+    normalizer_id_ref: String,
+    #[serde(default)]
+    policy_digest_ref: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneEvidenceFactorizationFailureClasses {
+    #[serde(default)]
+    missing: String,
+    #[serde(default)]
+    ambiguous: String,
+    #[serde(default)]
+    unbound: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1636,6 +1687,9 @@ fn check_gate_chain_parity(
         &contract.required_bidir_obligations,
     );
     failures.extend(stage2_authority_check.failure_classes.clone());
+    let evidence_factorization_check =
+        evaluate_control_plane_evidence_factorization(&control_plane_contract);
+    failures.extend(evidence_factorization_check.failure_classes.clone());
 
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     failures.extend(lane_registry_check.failure_classes.clone());
@@ -1678,6 +1732,7 @@ fn check_gate_chain_parity(
             "stage1Parity": stage1_parity_check.details,
             "stage1Rollback": stage1_rollback_check.details,
             "stage2Authority": stage2_authority_check.details,
+            "evidenceFactorization": evidence_factorization_check.details,
             "laneRegistry": lane_registry_check.details,
             "workerLaneAuthority": worker_lane_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
@@ -2335,6 +2390,149 @@ fn evaluate_control_plane_stage2_authority(
     }
 }
 
+fn evaluate_control_plane_evidence_factorization(
+    control_plane_contract: &ControlPlaneProjectionContract,
+) -> ObligationCheck {
+    let required_failure_classes = json!({
+        "missing": EVIDENCE_FACTORIZATION_CLASS_MISSING,
+        "ambiguous": EVIDENCE_FACTORIZATION_CLASS_AMBIGUOUS,
+        "unbound": EVIDENCE_FACTORIZATION_CLASS_UNBOUND,
+    });
+
+    let mut details = json!({
+        "present": control_plane_contract.evidence_factorization.is_some(),
+        "profileKind": null,
+        "routeKind": null,
+        "factorizationRoutes": null,
+        "binding": null,
+        "crossLaneRoutes": null,
+        "failureClasses": null,
+        "requiredRouteKind": EVIDENCE_FACTORIZATION_ROUTE_KIND,
+        "requiredPullbackRoute": REQUIRED_PULLBACK_ROUTE,
+        "requiredFailureClasses": required_failure_classes,
+        "reasons": [],
+    });
+
+    let Some(factorization) = &control_plane_contract.evidence_factorization else {
+        return ObligationCheck {
+            failure_classes: Vec::new(),
+            details,
+        };
+    };
+
+    details["profileKind"] = json!(&factorization.profile_kind);
+    details["routeKind"] = json!(&factorization.route_kind);
+    details["factorizationRoutes"] = json!(&factorization.factorization_routes);
+    details["binding"] = json!(&factorization.binding);
+    details["crossLaneRoutes"] = json!(&factorization.cross_lane_routes);
+    details["failureClasses"] = json!(&factorization.failure_classes);
+
+    let mut failures = Vec::new();
+    let mut reasons = Vec::new();
+
+    if factorization.profile_kind.trim().is_empty() {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_INVALID_FAILURE.to_string());
+        reasons.push("evidenceFactorization.profileKind must be non-empty".to_string());
+    }
+    if factorization.route_kind.trim() != EVIDENCE_FACTORIZATION_ROUTE_KIND {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_INVALID_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceFactorization.routeKind must be `{EVIDENCE_FACTORIZATION_ROUTE_KIND}`"
+        ));
+    }
+
+    let mut route_count = 0usize;
+    let mut unique_routes = BTreeSet::new();
+    for route in &factorization.factorization_routes {
+        route_count += 1;
+        let trimmed = route.trim();
+        if trimmed.is_empty() {
+            failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_MISSING_FAILURE.to_string());
+            reasons.push(
+                "evidenceFactorization.factorizationRoutes entries must be non-empty".to_string(),
+            );
+            continue;
+        }
+        unique_routes.insert(trimmed.to_string());
+    }
+    if route_count == 0 || unique_routes.is_empty() {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_MISSING_FAILURE.to_string());
+        reasons.push("evidenceFactorization.factorizationRoutes must be non-empty".to_string());
+    } else if unique_routes.len() > 1 {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_AMBIGUOUS_FAILURE.to_string());
+        reasons.push(
+            "evidenceFactorization.factorizationRoutes must provide exactly one canonical route"
+                .to_string(),
+        );
+    }
+
+    let normalizer_ref = factorization.binding.normalizer_id_ref.trim();
+    let policy_ref = factorization.binding.policy_digest_ref.trim();
+    if normalizer_ref.is_empty() || policy_ref.is_empty() {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_UNBOUND_FAILURE.to_string());
+        reasons.push(
+            "evidenceFactorization.binding normalizer/policy refs must be non-empty".to_string(),
+        );
+    } else {
+        if normalizer_ref != "normalizerId" {
+            failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceFactorization.binding.normalizerIdRef must be `normalizerId` (got `{normalizer_ref}`)"
+            ));
+        }
+        if policy_ref != "policyDigest" {
+            failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_UNBOUND_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceFactorization.binding.policyDigestRef must be `policyDigest` (got `{policy_ref}`)"
+            ));
+        }
+    }
+
+    match &factorization.cross_lane_routes {
+        Some(route) if route.pullback_base_change.trim() == REQUIRED_PULLBACK_ROUTE => {}
+        _ => {
+            failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_MISSING_FAILURE.to_string());
+            reasons.push(format!(
+                "evidenceFactorization.crossLaneRoutes.pullbackBaseChange must be `{REQUIRED_PULLBACK_ROUTE}`"
+            ));
+        }
+    }
+
+    if let Some(lane_ownership) = &control_plane_contract.lane_ownership
+        && let Some(route) = &lane_ownership.required_cross_lane_witness_route
+        && let Some(factorization_route) = &factorization.cross_lane_routes
+        && route.pullback_base_change.trim() != factorization_route.pullback_base_change.trim()
+    {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_AMBIGUOUS_FAILURE.to_string());
+        reasons.push(
+            "evidenceFactorization.crossLaneRoutes must match laneOwnership.requiredCrossLaneWitnessRoute"
+                .to_string(),
+        );
+    }
+
+    let actual_failure_classes = (
+        factorization.failure_classes.missing.trim(),
+        factorization.failure_classes.ambiguous.trim(),
+        factorization.failure_classes.unbound.trim(),
+    );
+    if actual_failure_classes.0 != EVIDENCE_FACTORIZATION_CLASS_MISSING
+        || actual_failure_classes.1 != EVIDENCE_FACTORIZATION_CLASS_AMBIGUOUS
+        || actual_failure_classes.2 != EVIDENCE_FACTORIZATION_CLASS_UNBOUND
+    {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_INVALID_FAILURE.to_string());
+        reasons.push(format!(
+            "evidenceFactorization.failureClasses must map to canonical classes ({EVIDENCE_FACTORIZATION_CLASS_MISSING}, {EVIDENCE_FACTORIZATION_CLASS_AMBIGUOUS}, {EVIDENCE_FACTORIZATION_CLASS_UNBOUND})"
+        ));
+    }
+
+    details["reasons"] = json!(dedupe_sorted(reasons));
+
+    ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details,
+    }
+}
+
 fn evaluate_gate_chain_lane_registry(
     control_plane_contract: &ControlPlaneProjectionContract,
 ) -> ObligationCheck {
@@ -2682,12 +2880,15 @@ fn evaluate_site_case_gate_chain_parity(
         &control_plane_contract,
         &required_bidir_obligations,
     );
+    let evidence_factorization_check =
+        evaluate_control_plane_evidence_factorization(&control_plane_contract);
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     let worker_lane_check = evaluate_gate_chain_worker_lane_authority(&control_plane_contract);
     let mut failures = Vec::new();
     failures.extend(stage1_parity_check.failure_classes.clone());
     failures.extend(stage1_rollback_check.failure_classes.clone());
     failures.extend(stage2_authority_check.failure_classes.clone());
+    failures.extend(evidence_factorization_check.failure_classes.clone());
     failures.extend(lane_registry_check.failure_classes.clone());
     failures.extend(worker_lane_check.failure_classes.clone());
     let failures = dedupe_sorted(failures);
@@ -2703,6 +2904,7 @@ fn evaluate_site_case_gate_chain_parity(
             "stage1Parity": stage1_parity_check.details,
             "stage1Rollback": stage1_rollback_check.details,
             "stage2Authority": stage2_authority_check.details,
+            "evidenceFactorization": evidence_factorization_check.details,
             "laneRegistry": lane_registry_check.details,
             "workerLaneAuthority": worker_lane_check.details,
         }),
@@ -5486,6 +5688,25 @@ Current deterministic projected check IDs include:
                     "unbound": "unification.evidence_stage2.unbound"
                 }
             },
+            "evidenceFactorization": {
+                "profileKind": "ev.factorization.v1",
+                "routeKind": "eta_F_to_Ev",
+                "factorizationRoutes": [
+                    "eta.control_plane_to_ev"
+                ],
+                "binding": {
+                    "normalizerIdRef": "normalizerId",
+                    "policyDigestRef": "policyDigest"
+                },
+                "crossLaneRoutes": {
+                    "pullbackBaseChange": "span_square_commutation"
+                },
+                "failureClasses": {
+                    "missing": "unification.evidence_factorization.missing",
+                    "ambiguous": "unification.evidence_factorization.ambiguous",
+                    "unbound": "unification.evidence_factorization.unbound"
+                }
+            },
             "evidenceLanes": {
                 "semanticDoctrine": "semantic_doctrine",
                 "strictChecker": "strict_checker",
@@ -6176,6 +6397,82 @@ Current deterministic projected check IDs include:
             evaluated
                 .failure_classes
                 .contains(&GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_evidence_factorization_missing_route() {
+        let temp = TempDirGuard::new("gate-chain-evidence-factorization-missing-route");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceFactorization"]["factorizationRoutes"] = json!([]);
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_EVIDENCE_FACTORIZATION_MISSING_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_evidence_factorization_ambiguous_routes() {
+        let temp = TempDirGuard::new("gate-chain-evidence-factorization-ambiguous-routes");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceFactorization"]["factorizationRoutes"] =
+            json!(["eta.route_a", "eta.route_b"]);
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_EVIDENCE_FACTORIZATION_AMBIGUOUS_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_evidence_factorization_unbound_binding() {
+        let temp = TempDirGuard::new("gate-chain-evidence-factorization-unbound-binding");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["evidenceFactorization"]["binding"]["policyDigestRef"] = json!("policy");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_EVIDENCE_FACTORIZATION_UNBOUND_FAILURE.to_string())
         );
     }
 

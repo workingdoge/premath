@@ -4,6 +4,8 @@ use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Output};
+use std::sync::{Arc, Barrier};
+use std::thread;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 struct TempDirGuard {
@@ -586,6 +588,65 @@ fn issue_claim_next_json_smoke() {
     let third_payload = parse_json_stdout(&third);
     assert_eq!(third_payload["claimed"], false);
     assert_eq!(third_payload["issue"], Value::Null);
+}
+
+#[test]
+fn issue_claim_next_json_contention_smoke() {
+    let tmp = TempDirGuard::new("issue-claim-next-contention");
+    let issues = tmp.path().join("issues.jsonl");
+    let lines = [
+        r#"{"id":"bd-1","title":"Issue 1","status":"open"}"#,
+        r#"{"id":"bd-2","title":"Issue 2","status":"open"}"#,
+        r#"{"id":"bd-3","title":"Issue 3","status":"open"}"#,
+        r#"{"id":"bd-4","title":"Issue 4","status":"open"}"#,
+    ];
+    fs::write(&issues, format!("{}\n", lines.join("\n")))
+        .expect("contention issues should be written");
+
+    let workers = 4;
+    let barrier = Arc::new(Barrier::new(workers + 1));
+    let mut handles = Vec::new();
+    for idx in 0..workers {
+        let issues = issues.clone();
+        let barrier = Arc::clone(&barrier);
+        handles.push(thread::spawn(move || {
+            let assignee = format!("worker-{idx}");
+            barrier.wait();
+            let output = run_premath([
+                OsString::from("issue"),
+                OsString::from("claim-next"),
+                OsString::from("--assignee"),
+                OsString::from(assignee),
+                OsString::from("--issues"),
+                issues.as_os_str().to_os_string(),
+                OsString::from("--json"),
+            ]);
+            assert_success(&output);
+            let payload = parse_json_stdout(&output);
+            assert_eq!(payload["claimed"], true);
+            payload["issue"]["id"]
+                .as_str()
+                .expect("claimed issue id should be present")
+                .to_string()
+        }));
+    }
+    barrier.wait();
+
+    let mut claimed_ids = handles
+        .into_iter()
+        .map(|handle| handle.join().expect("worker should join"))
+        .collect::<Vec<_>>();
+    claimed_ids.sort();
+    claimed_ids.dedup();
+    assert_eq!(
+        claimed_ids,
+        vec![
+            "bd-1".to_string(),
+            "bd-2".to_string(),
+            "bd-3".to_string(),
+            "bd-4".to_string()
+        ]
+    );
 }
 
 #[test]
@@ -2096,6 +2157,12 @@ fn harness_session_write_read_bootstrap_json_smoke() {
         OsString::from("artifacts/ciwitness/w-2.json"),
         OsString::from("--witness-ref"),
         OsString::from("artifacts/ciwitness/w-1.json"),
+        OsString::from("--lineage-ref"),
+        OsString::from("refinement://worker-loop/bd-a/worker.1/ref-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("ctx://issue/bd-a/ctx-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("refinement://worker-loop/bd-a/worker.1/ref-a"),
         OsString::from("--issues"),
         issues.as_os_str().to_os_string(),
         OsString::from("--json"),
@@ -2119,6 +2186,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
         serde_json::json!([
             "artifacts/ciwitness/w-1.json",
             "artifacts/ciwitness/w-2.json"
+        ])
+    );
+    assert_eq!(
+        session["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
         ])
     );
     assert_eq!(session["issuesPath"], issues.display().to_string());
@@ -2152,6 +2226,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
     assert_eq!(bootstrap_resume["resumeIssueId"], "bd-a");
     assert_eq!(bootstrap_resume["sessionId"], session_id);
     assert_eq!(
+        bootstrap_resume["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
+        ])
+    );
+    assert_eq!(
         bootstrap_resume["sessionRef"],
         session_path.display().to_string()
     );
@@ -2175,6 +2256,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
     assert_eq!(write_active["session"]["state"], "active");
     assert_eq!(write_active["session"]["stoppedAt"], Value::Null);
     assert_eq!(write_active["session"]["summary"], "continue work");
+    assert_eq!(
+        write_active["session"]["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
+        ])
+    );
 
     let out_read = run_premath([
         OsString::from("harness-session"),
@@ -2190,6 +2278,13 @@ fn harness_session_write_read_bootstrap_json_smoke() {
     assert_eq!(read["session"]["state"], "active");
     assert_eq!(read["session"]["issueId"], "bd-a");
     assert_eq!(read["session"]["nextStep"], "run ci-hygiene-check");
+    assert_eq!(
+        read["session"]["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-a/ctx-a",
+            "refinement://worker-loop/bd-a/worker.1/ref-a"
+        ])
+    );
 
     let out_bootstrap_attach = run_premath([
         OsString::from("harness-session"),
@@ -2424,6 +2519,12 @@ fn harness_trajectory_append_and_query_json_smoke() {
         OsString::from("artifacts/ciwitness/w1.json"),
         OsString::from("--witness-ref"),
         OsString::from("artifacts/ciwitness/w1.json"),
+        OsString::from("--lineage-ref"),
+        OsString::from("refinement://worker-loop/bd-1/worker.1/ref-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("ctx://issue/bd-1/ctx-a"),
+        OsString::from("--lineage-ref"),
+        OsString::from("ctx://issue/bd-1/ctx-a"),
         OsString::from("--finished-at"),
         OsString::from("2026-02-22T00:01:00Z"),
         OsString::from("--json"),
@@ -2435,6 +2536,13 @@ fn harness_trajectory_append_and_query_json_smoke() {
     assert_eq!(
         append_1["row"]["witnessRefs"],
         serde_json::json!(["artifacts/ciwitness/w1.json"])
+    );
+    assert_eq!(
+        append_1["row"]["lineageRefs"],
+        serde_json::json!([
+            "ctx://issue/bd-1/ctx-a",
+            "refinement://worker-loop/bd-1/worker.1/ref-a"
+        ])
     );
 
     let out_append_2 = run_premath([

@@ -177,10 +177,14 @@ Required vectors when claimed:
   active leases.
 - golden: CLI issue command-surface parity preserves coherent
   `issue_ready`/`issue_blocked` partition semantics over the same graph state.
+- golden: same-owner active claim preserves existing `lease_id` (no overwrite
+  churn) under deterministic renewal/claim paths.
 - adversarial: requesting change-morphism projection checks without claim rejects
   deterministically.
 - adversarial: active lease contention rejects deterministically
   (`lease_contention_active`).
+- adversarial: same-owner active claim override attempts reject deterministic
+  transition checks (`issue_claim_transition_mismatch`).
 - adversarial: stale renew or mismatched lease-owner/lease-id release requests
   reject deterministically (`lease_stale`, `lease_owner_mismatch`,
   `lease_id_mismatch`).
@@ -193,7 +197,7 @@ Required vectors when claimed:
   and `issue_blocked_set_mismatch`).
 - invariance: paired profile outputs for the same semantic scenario preserve
   kernel verdict and Gate failure classes (local/external and provider-wrapper
-  invariance).
+  invariance), including same-owner active lease-id preservation rows.
 
 ### 2.8 `capabilities.squeak_site`
 
@@ -251,6 +255,8 @@ Required vectors when claimed:
 - golden: cross-layer obstruction rows roundtrip deterministically between
   source failure classes and typed constructors (`semantic`, `structural`,
   `lifecycle`, `commutation`) with stable issue-discovery tags.
+- golden: harness v1 boot/stop/recovery rows preserve deterministic bootstrap
+  mode, recovery action mapping, and stop-row lease handoff witness linkage.
 - adversarial: mismatched verdict class or required/executed check sets for the
   same instruction envelope reject deterministically.
 - adversarial: required-gate witness digest/source/projection mismatches reject
@@ -260,9 +266,11 @@ Required vectors when claimed:
   deterministically.
 - adversarial: obstruction constructor/class roundtrip mismatches reject
   deterministically.
+- adversarial: harness v1 bootstrap-mode mismatch and missing lease-handoff refs
+  reject deterministically.
 - invariance: local/external execution profiles preserve kernel verdict and Gate
   failure classes for paired instruction, required-gate, and boundary-authority
-  lineage scenarios.
+  lineage scenarios, including harness recovery rows.
 
 ### 2.10 `capabilities.instruction_typing`
 

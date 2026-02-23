@@ -8,3 +8,5 @@ This directory contains lifecycle and governance documents for the Premath spec 
   rollover/freeze transitions in control-plane schema tables.
 - `GITHUB-BRANCH-POLICY.json` — machine policy contract for effective GitHub
   branch/ruleset enforcement checks on `main`.
+- `HARNESS-SPEC-PROMOTION-MAP.md` — parallel-safe preflight map/checklist for
+  promoting harness design docs into draft spec surfaces.

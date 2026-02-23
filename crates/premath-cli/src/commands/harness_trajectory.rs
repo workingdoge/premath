@@ -15,6 +15,7 @@ pub struct AppendArgs {
     pub result_class: String,
     pub instruction_refs: Vec<String>,
     pub witness_refs: Vec<String>,
+    pub lineage_refs: Vec<String>,
     pub started_at: Option<String>,
     pub finished_at: Option<String>,
     pub json: bool,
@@ -31,6 +32,7 @@ pub fn run_append(args: AppendArgs) {
         result_class: args.result_class,
         instruction_refs: args.instruction_refs,
         witness_refs: args.witness_refs,
+        lineage_refs: args.lineage_refs,
         started_at: args.started_at,
         finished_at: args.finished_at.unwrap_or_else(now_rfc3339),
     };

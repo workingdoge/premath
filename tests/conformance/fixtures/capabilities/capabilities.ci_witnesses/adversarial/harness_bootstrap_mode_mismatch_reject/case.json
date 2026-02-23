@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "adversarial/harness_bootstrap_mode_mismatch_reject",
+  "description": "Harness runtime rejects inconsistent bootstrap mode for stopped session recovery.",
+  "semanticScenarioId": "ci_harness_runtime_adversarial_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.ci_witnesses"],
+    "harness": {
+      "session": {
+        "stateBefore": "stopped",
+        "bootstrap": {
+          "mode": "attach",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-302/ctx2abc",
+            "cover://worker-loop/bd-harness-302/cover2abc",
+            "refinement://worker-loop/bd-harness-302/worker.2/ref2abc"
+          ]
+        }
+      },
+      "stop": {
+        "issueId": "bd-harness-302",
+        "leaseState": "active",
+        "sessionStateAfter": "stopped",
+        "recommendedAction": "issue_lease_renew",
+        "trajectoryRow": {
+          "stepKind": "premath.harness.step.v1",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-302/ctx2abc",
+            "cover://worker-loop/bd-harness-302/cover2abc",
+            "refinement://worker-loop/bd-harness-302/worker.2/ref2abc"
+          ],
+          "witnessRefs": [
+            "lease://handoff/bd-harness-302/active/ref2abc"
+          ]
+        }
+      }
+    }
+  }
+}

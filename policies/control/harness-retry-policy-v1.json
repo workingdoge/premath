@@ -15,7 +15,8 @@
         "flaky_execution",
         "flaky_io",
         "gate_timeout",
-        "network_timeout"
+        "network_timeout",
+        "pipeline_witness_io_error"
       ],
       "maxAttempts": 3,
       "backoffClass": "exponential_short",
@@ -25,9 +26,13 @@
       "ruleId": "operational_retry",
       "failureClasses": [
         "instruction_runtime_invalid",
+        "pipeline_missing_failure_class",
         "pipeline_invalid_witness_json",
         "pipeline_invalid_witness_shape",
         "pipeline_missing_witness",
+        "required_decision_verify_invalid",
+        "required_gate_ref_invalid",
+        "required_witness_decide_invalid",
         "required_witness_runtime_invalid"
       ],
       "maxAttempts": 2,
@@ -39,11 +44,16 @@
       "failureClasses": [
         "check_failed",
         "instruction_check_not_allowed",
+        "instruction_envelope_invalid",
+        "instruction_envelope_invalid_json",
+        "instruction_envelope_invalid_shape",
         "instruction_invalid_normalizer",
         "instruction_unknown_unroutable",
         "proposal_binding_mismatch",
         "proposal_discharge_failed",
+        "proposal_invalid_shape",
         "proposal_invalid_step",
+        "proposal_kcir_ref_mismatch",
         "proposal_nondeterministic",
         "proposal_unbound_policy"
       ],
@@ -52,5 +62,5 @@
       "escalationAction": "mark_blocked"
     }
   ],
-  "policyDigest": "pol1_7dc928615fec4a20c1f8d71aca695d737ab478b508bc9a9a8445757be37e9759"
+  "policyDigest": "pol1_2e1753b503e957e7c7f60da2bc1d9c1cb18c989904a13e20eb98cc9bbbb27398"
 }

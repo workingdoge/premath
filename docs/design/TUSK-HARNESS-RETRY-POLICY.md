@@ -125,10 +125,17 @@ Resolution order is deterministic:
 1. `PREMATH_ACTIVE_ISSUE_ID`
 2. `PREMATH_ISSUE_ID`
 3. harness-session artifact (`issueId`)
+4. issue-memory ready frontier (`premath issue ready --issues <path>`) when the
+   frontier has exactly one issue
 
-If active issue context is still missing, wrappers emit deterministic
-`skipped_missing_issue_context` escalation output and still fail the pipeline
-with the underlying check failure code.
+Fail-closed context resolution:
+
+- missing context after all fallbacks rejects with
+  `escalation_issue_context_unbound`
+- conflicting env values or multi-row ready frontier rejects with
+  `escalation_issue_context_ambiguous`
+- malformed/unreadable session artifact rejects with
+  `escalation_session_invalid` / `escalation_session_read_failed`
 
 Mutation command failures are fail-closed:
 

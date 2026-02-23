@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "issue_claim_transition_mismatch"
+  ],
+  "assertions": [
+    "same-owner active lease id override is rejected by deterministic transition checks"
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "adversarial/harness_stop_handoff_missing_lineage_ref_reject",
+  "description": "Harness stop rows reject when deterministic lineage references are missing.",
+  "semanticScenarioId": "ci_harness_runtime_adversarial_03",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.ci_witnesses"],
+    "harness": {
+      "session": {
+        "stateBefore": "active",
+        "bootstrap": {
+          "mode": "attach",
+          "lineageRefs": [
+            "ctx://issue/bd-harness-305/ctx5abc",
+            "cover://worker-loop/bd-harness-305/cover5abc",
+            "refinement://worker-loop/bd-harness-305/worker.5/ref5abc"
+          ]
+        }
+      },
+      "stop": {
+        "issueId": "bd-harness-305",
+        "leaseState": "stale",
+        "sessionStateAfter": "stopped",
+        "recommendedAction": "issue_claim",
+        "trajectoryRow": {
+          "stepKind": "premath.harness.step.v1",
+          "witnessRefs": [
+            "lease://handoff/bd-harness-305/stale/ref5abc"
+          ]
+        }
+      }
+    }
+  }
+}

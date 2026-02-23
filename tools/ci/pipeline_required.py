@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, Sequence
 
@@ -19,6 +20,8 @@ from harness_escalation import (
 from harness_retry_policy import (
     RetryDecision,
     RetryPolicyError,
+    classify_failure_classes,
+    failure_classes_from_completed_process,
     failure_classes_from_witness_path,
     load_retry_policy,
     resolve_retry_decision,
@@ -60,6 +63,20 @@ def _write_sha(path: Path, out_path: Path) -> str:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     out_path.write_text(digest + "\n", encoding="utf-8")
     return digest
+
+
+def _run_with_streamed_output(cmd: Sequence[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(
+        cmd,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    )
+    if completed.stdout:
+        print(completed.stdout, end="")
+    if completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr)
+    return completed
 
 
 def _render_retry_lines(retry_history: Sequence[RetryDecision]) -> list[str]:
@@ -205,12 +222,17 @@ def run_required_with_retry(
     attempt = 1
     witness_path = root / "artifacts/ciwitness/latest-required.json"
     while True:
-        run = subprocess.run(["mise", "run", "ci-required-attested"], cwd=root)
+        run = _run_with_streamed_output(["mise", "run", "ci-required-attested"], cwd=root)
         exit_code = int(run.returncode)
         if exit_code == 0:
             return 0, tuple(retry_history), None
 
-        failure_classes = failure_classes_from_witness_path(witness_path)
+        witness_failure_classes = failure_classes_from_witness_path(witness_path)
+        process_failure_classes = failure_classes_from_completed_process(run)
+        failure_classes = classify_failure_classes(
+            witness_failure_classes,
+            process_failure_classes,
+        )
         decision = resolve_retry_decision(policy, failure_classes, attempt=attempt)
         retry_history.append(decision)
         if decision.retry:

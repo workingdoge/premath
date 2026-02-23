@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "harness_lineage_ref_missing"
+  ],
+  "notes": [
+    "harness stop/handoff projections require deterministic ctx/cover/refinement lineage refs"
+  ]
+}

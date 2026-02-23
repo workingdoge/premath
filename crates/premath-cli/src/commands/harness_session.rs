@@ -29,6 +29,8 @@ struct HarnessSession {
     instruction_refs: Vec<String>,
     #[serde(default, skip_serializing_if = "Vec::is_empty")]
     witness_refs: Vec<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    lineage_refs: Vec<String>,
     started_at: String,
     updated_at: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -48,6 +50,7 @@ pub struct WriteArgs {
     pub next_step: Option<String>,
     pub instruction_refs: Vec<String>,
     pub witness_refs: Vec<String>,
+    pub lineage_refs: Vec<String>,
     pub issues: String,
     pub json: bool,
 }
@@ -123,6 +126,15 @@ pub fn run_write(args: WriteArgs) {
         normalize_refs(args.witness_refs)
     };
 
+    let lineage_refs = if args.lineage_refs.is_empty() {
+        existing
+            .as_ref()
+            .map(|session| session.lineage_refs.clone())
+            .unwrap_or_default()
+    } else {
+        normalize_refs(args.lineage_refs)
+    };
+
     let session_id = clean_optional_from_option(args.session_id)
         .or_else(|| existing.as_ref().map(|session| session.session_id.clone()))
         .unwrap_or_else(|| generate_session_id(issue_id.as_deref()));
@@ -147,6 +159,7 @@ pub fn run_write(args: WriteArgs) {
         next_step,
         instruction_refs,
         witness_refs,
+        lineage_refs,
         started_at,
         updated_at: now,
         stopped_at,
@@ -201,6 +214,7 @@ pub fn run_bootstrap(path: String, feature_ledger: String, json_output: bool) {
         "summary": session.summary,
         "instructionRefs": session.instruction_refs,
         "witnessRefs": session.witness_refs,
+        "lineageRefs": session.lineage_refs,
         "issuesPath": session.issues_path,
         "issuesSnapshotRef": session.issues_snapshot_ref,
         "featureLedgerRef": feature_ledger_buf.display().to_string(),

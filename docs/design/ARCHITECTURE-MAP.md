@@ -189,3 +189,19 @@ Execution notes:
   span/square witnesses.
 - keep capability composition explicit (`change_morphisms`,
   `adjoints_sites`, `squeak_site`) with no implicit authority escalation.
+
+## 8. Grothendieck Operationalization (Applied)
+
+Operational reading of current stack (normative anchor:
+`draft/UNIFICATION-DOCTRINE` §12):
+
+1. one semantic authority fibration (`p0 : E -> C`) plus one attested
+   control-plane evidence family (`Ev : Ctx^op -> V`),
+2. multithread worker decomposition is a cover on `Ctx`
+   (`{Gamma_i -> Gamma}`), with each worker handling one refinement,
+3. merge is a deterministic glue-or-obstruction step over overlap pullbacks,
+4. all runtime/control outcomes are projections factoring through `Ev`,
+5. checker/Gate discharge remains the only admissibility authority.
+
+This keeps concurrency and operational acceleration as structured base-change
+and descent, not as a second semantic path.

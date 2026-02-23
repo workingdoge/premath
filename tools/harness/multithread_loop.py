@@ -13,7 +13,7 @@ import sys
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Sequence
+from typing import Any, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -166,6 +166,27 @@ class WorkerPolicy:
     support_until_by_mode: dict[str, str]
 
 
+@dataclass(frozen=True)
+class IssueLeaseSnapshot:
+    issue_id: str
+    status: str
+    assignee: str
+    lease_id: str | None
+    lease_owner: str | None
+    lease_expires_at: str | None
+    lease_state: str
+
+
+@dataclass(frozen=True)
+class StopHandoff:
+    lease_state: str
+    lease_action: str
+    result_class: str
+    summary: str
+    next_step: str
+    lease_ref: str
+
+
 def now_rfc3339() -> str:
     return datetime.now(timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
@@ -191,6 +212,325 @@ def premath_base_cmd() -> list[str]:
 def stable_hash(value: Any) -> str:
     encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()
+
+
+def parse_rfc3339(value: str) -> datetime | None:
+    raw = value.strip()
+    if not raw:
+        return None
+    if raw.endswith("Z"):
+        raw = f"{raw[:-1]}+00:00"
+    try:
+        parsed = datetime.fromisoformat(raw)
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        return parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def read_issue_lease_snapshot(issues_path: Path, issue_id: str) -> IssueLeaseSnapshot:
+    if not issues_path.exists():
+        raise RuntimeError(f"issues path does not exist for stop/handoff invariant check: {issues_path}")
+
+    try:
+        lines = issues_path.read_text(encoding="utf-8").splitlines()
+    except OSError as exc:
+        raise RuntimeError(f"failed reading issues path for stop/handoff invariant check: {exc}") from exc
+
+    latest: Mapping[str, Any] | None = None
+    for raw in lines:
+        line = raw.strip()
+        if not line:
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(payload, dict):
+            continue
+        if str(payload.get("id", "")).strip() != issue_id:
+            continue
+        latest = payload
+
+    if latest is None:
+        return IssueLeaseSnapshot(
+            issue_id=issue_id,
+            status="",
+            assignee="",
+            lease_id=None,
+            lease_owner=None,
+            lease_expires_at=None,
+            lease_state="missing_issue",
+        )
+
+    status = str(latest.get("status", "")).strip()
+    assignee = str(latest.get("assignee", "")).strip()
+    lease_obj = latest.get("lease")
+    if status == "closed":
+        if isinstance(lease_obj, dict):
+            return IssueLeaseSnapshot(
+                issue_id=issue_id,
+                status=status,
+                assignee=assignee,
+                lease_id=str(lease_obj.get("lease_id", "")).strip() or None,
+                lease_owner=str(lease_obj.get("owner", "")).strip() or None,
+                lease_expires_at=str(lease_obj.get("expires_at", "")).strip() or None,
+                lease_state="closed_with_lease",
+            )
+        return IssueLeaseSnapshot(
+            issue_id=issue_id,
+            status=status,
+            assignee=assignee,
+            lease_id=None,
+            lease_owner=None,
+            lease_expires_at=None,
+            lease_state="released",
+        )
+
+    if not isinstance(lease_obj, dict):
+        return IssueLeaseSnapshot(
+            issue_id=issue_id,
+            status=status,
+            assignee=assignee,
+            lease_id=None,
+            lease_owner=None,
+            lease_expires_at=None,
+            lease_state="unleased",
+        )
+
+    lease_id = str(lease_obj.get("lease_id", "")).strip() or None
+    lease_owner = str(lease_obj.get("owner", "")).strip() or None
+    lease_expires_at = str(lease_obj.get("expires_at", "")).strip() or None
+    expires = parse_rfc3339(lease_expires_at or "")
+    if expires is None:
+        lease_state = "invalid_expires_at"
+    else:
+        now = datetime.now(timezone.utc)
+        if expires <= now:
+            lease_state = "stale"
+        elif status != "in_progress" or (lease_owner and assignee != lease_owner):
+            lease_state = "contended"
+        else:
+            lease_state = "active"
+
+    return IssueLeaseSnapshot(
+        issue_id=issue_id,
+        status=status,
+        assignee=assignee,
+        lease_id=lease_id,
+        lease_owner=lease_owner,
+        lease_expires_at=lease_expires_at,
+        lease_state=lease_state,
+    )
+
+
+def build_lease_ref(
+    *,
+    issue_id: str,
+    worker_id: str,
+    lease_id: str | None,
+    lease_owner: str | None,
+    lease_state: str,
+    lease_action: str,
+    status: str,
+    assignee: str,
+) -> str:
+    digest = stable_hash(
+        {
+            "issueId": issue_id,
+            "workerId": worker_id,
+            "leaseId": lease_id or "",
+            "leaseOwner": lease_owner or "",
+            "leaseState": lease_state,
+            "leaseAction": lease_action,
+            "status": status,
+            "assignee": assignee,
+        }
+    )
+    return f"lease://handoff/{issue_id}/{lease_state}/{digest}"
+
+
+def classify_failed_stop_handoff(
+    *,
+    snapshot: IssueLeaseSnapshot,
+    worker_id: str,
+    claimed_lease_id: str | None,
+) -> StopHandoff:
+    if snapshot.lease_state == "active":
+        lease_id = snapshot.lease_id or claimed_lease_id
+        owner = snapshot.lease_owner or worker_id
+        return StopHandoff(
+            lease_state=snapshot.lease_state,
+            lease_action="issue_lease_renew",
+            result_class="retry_needed_lease_active",
+            summary=f"lease active for owner={owner} lease_id={lease_id or 'unknown'}",
+            next_step=(
+                "recover lease via MCP issue_lease_renew "
+                f"(id={snapshot.issue_id}, assignee={owner}, lease_id={lease_id or 'MISSING'})"
+            ),
+            lease_ref=build_lease_ref(
+                issue_id=snapshot.issue_id,
+                worker_id=worker_id,
+                lease_id=lease_id,
+                lease_owner=owner,
+                lease_state=snapshot.lease_state,
+                lease_action="issue_lease_renew",
+                status=snapshot.status,
+                assignee=snapshot.assignee,
+            ),
+        )
+
+    if snapshot.lease_state == "stale":
+        return StopHandoff(
+            lease_state=snapshot.lease_state,
+            lease_action="issue_claim_next_reclaim",
+            result_class="retry_needed_lease_stale",
+            summary="lease stale; reclaim required before retry",
+            next_step=(
+                "lease stale; reclaim via issue claim-next (or explicit issue_lease_release reconciliation) before retry"
+            ),
+            lease_ref=build_lease_ref(
+                issue_id=snapshot.issue_id,
+                worker_id=worker_id,
+                lease_id=snapshot.lease_id,
+                lease_owner=snapshot.lease_owner,
+                lease_state=snapshot.lease_state,
+                lease_action="issue_claim_next_reclaim",
+                status=snapshot.status,
+                assignee=snapshot.assignee,
+            ),
+        )
+
+    if snapshot.lease_state == "contended":
+        return StopHandoff(
+            lease_state=snapshot.lease_state,
+            lease_action="issue_lease_release",
+            result_class="retry_needed_lease_contended",
+            summary="lease contention detected; release/rebind required before retry",
+            next_step=(
+                "lease contended; reconcile via MCP issue_lease_release then reclaim/renew before retry"
+            ),
+            lease_ref=build_lease_ref(
+                issue_id=snapshot.issue_id,
+                worker_id=worker_id,
+                lease_id=snapshot.lease_id,
+                lease_owner=snapshot.lease_owner,
+                lease_state=snapshot.lease_state,
+                lease_action="issue_lease_release",
+                status=snapshot.status,
+                assignee=snapshot.assignee,
+            ),
+        )
+
+    if snapshot.lease_state == "released" and snapshot.status == "closed":
+        return StopHandoff(
+            lease_state=snapshot.lease_state,
+            lease_action="claim_next",
+            result_class="failed_issue_closed",
+            summary="issue already closed; lease released",
+            next_step="issue closed during failure recovery; claim next ready issue",
+            lease_ref=build_lease_ref(
+                issue_id=snapshot.issue_id,
+                worker_id=worker_id,
+                lease_id=None,
+                lease_owner=None,
+                lease_state=snapshot.lease_state,
+                lease_action="claim_next",
+                status=snapshot.status,
+                assignee=snapshot.assignee,
+            ),
+        )
+
+    if snapshot.lease_state == "unleased":
+        return StopHandoff(
+            lease_state=snapshot.lease_state,
+            lease_action="reconcile",
+            result_class="failed_lease_missing",
+            summary="issue is in progress without lease binding",
+            next_step="lease missing; reconcile assignee/lease binding via issue_lease_release or re-claim",
+            lease_ref=build_lease_ref(
+                issue_id=snapshot.issue_id,
+                worker_id=worker_id,
+                lease_id=None,
+                lease_owner=None,
+                lease_state=snapshot.lease_state,
+                lease_action="reconcile",
+                status=snapshot.status,
+                assignee=snapshot.assignee,
+            ),
+        )
+
+    if snapshot.lease_state == "missing_issue":
+        return StopHandoff(
+            lease_state=snapshot.lease_state,
+            lease_action="stop",
+            result_class="failed_issue_missing",
+            summary="issue missing from issue-memory projection",
+            next_step="issue missing from issues.jsonl; run issue list/check before retry",
+            lease_ref=build_lease_ref(
+                issue_id=snapshot.issue_id,
+                worker_id=worker_id,
+                lease_id=None,
+                lease_owner=None,
+                lease_state=snapshot.lease_state,
+                lease_action="stop",
+                status=snapshot.status,
+                assignee=snapshot.assignee,
+            ),
+        )
+
+    return StopHandoff(
+        lease_state=snapshot.lease_state,
+        lease_action="stop",
+        result_class="failed_lease_invariant",
+        summary=f"lease invariant mismatch ({snapshot.lease_state})",
+        next_step="lease invariant mismatch; inspect issue_lease_projection and reconcile manually",
+        lease_ref=build_lease_ref(
+            issue_id=snapshot.issue_id,
+            worker_id=worker_id,
+            lease_id=snapshot.lease_id,
+            lease_owner=snapshot.lease_owner,
+            lease_state=snapshot.lease_state,
+            lease_action="stop",
+            status=snapshot.status,
+            assignee=snapshot.assignee,
+        ),
+    )
+
+
+def assert_success_stop_handoff(
+    *,
+    snapshot: IssueLeaseSnapshot,
+    worker_id: str,
+    claimed_lease_id: str | None,
+) -> StopHandoff:
+    if snapshot.status != "closed":
+        raise RuntimeError(
+            f"stop/handoff invariant violated for {snapshot.issue_id}: expected status=closed, got {snapshot.status!r}"
+        )
+    if snapshot.lease_state != "released":
+        raise RuntimeError(
+            "stop/handoff invariant violated for "
+            f"{snapshot.issue_id}: expected lease_state=released, got {snapshot.lease_state!r}"
+        )
+    return StopHandoff(
+        lease_state=snapshot.lease_state,
+        lease_action="release_closed",
+        result_class="completed",
+        summary="closed transition released lease",
+        next_step="claim next ready issue",
+        lease_ref=build_lease_ref(
+            issue_id=snapshot.issue_id,
+            worker_id=worker_id,
+            lease_id=claimed_lease_id,
+            lease_owner=worker_id,
+            lease_state=snapshot.lease_state,
+            lease_action="release_closed",
+            status=snapshot.status,
+            assignee=snapshot.assignee,
+        ),
+    )
 
 
 def run_command(cmd: Sequence[str], cwd: Path) -> RunResult:
@@ -342,6 +682,51 @@ def policy_audit_ref(
     return f"policy://worker-lane/{mode}/{digest}"
 
 
+def build_site_lineage_refs(
+    *,
+    repo_root: Path,
+    issues_path: Path,
+    worktree: Path,
+    worker_id: str,
+    issue_id: str,
+    mutation_mode: str,
+    active_epoch: str,
+    support_until: str,
+) -> list[str]:
+    ctx_digest = stable_hash(
+        {
+            "kind": "ctx",
+            "issueId": issue_id,
+            "repoRoot": str(repo_root),
+            "issuesPath": str(issues_path),
+        }
+    )
+    ctx_ref = f"ctx://issue/{issue_id}/{ctx_digest}"
+
+    cover_digest = stable_hash(
+        {
+            "kind": "cover",
+            "ctxRef": ctx_ref,
+            "workerPool": "harness.multithread.v1",
+        }
+    )
+    cover_ref = f"cover://worker-loop/{issue_id}/{cover_digest}"
+
+    refinement_digest = stable_hash(
+        {
+            "kind": "refinement",
+            "coverRef": cover_ref,
+            "workerId": worker_id,
+            "worktree": str(worktree),
+            "mutationMode": mutation_mode,
+            "activeEpoch": active_epoch,
+            "supportUntil": support_until,
+        }
+    )
+    refinement_ref = f"refinement://worker-loop/{issue_id}/{worker_id}/{refinement_digest}"
+    return sorted({ctx_ref, cover_ref, refinement_ref})
+
+
 def issue_ready_count(base_cmd: Sequence[str], cwd: Path, issues_path: Path) -> int:
     payload = run_premath_json(
         base_cmd,
@@ -364,7 +749,8 @@ def write_session_projection(
     issue_id: str,
     summary: str,
     next_step: str,
-    witness_ref: str | None,
+    witness_refs: Sequence[str] = (),
+    lineage_refs: Sequence[str] = (),
 ) -> None:
     args = [
         "harness-session",
@@ -382,8 +768,12 @@ def write_session_projection(
         "--issues",
         str(issues_path),
     ]
-    if witness_ref:
-        args.extend(["--witness-ref", witness_ref])
+    for witness_ref in witness_refs:
+        if witness_ref:
+            args.extend(["--witness-ref", witness_ref])
+    for lineage_ref in lineage_refs:
+        if lineage_ref:
+            args.extend(["--lineage-ref", lineage_ref])
     run_premath_json(base_cmd, args, cwd)
 
 
@@ -396,7 +786,7 @@ def write_feature_projection(
     issue_id: str,
     status: str,
     summary: str,
-    verification_ref: str | None,
+    verification_refs: Sequence[str] = (),
 ) -> None:
     args = [
         "harness-feature",
@@ -414,8 +804,9 @@ def write_feature_projection(
         "--session-ref",
         str(session_path),
     ]
-    if verification_ref:
-        args.extend(["--verification-ref", verification_ref])
+    for verification_ref in verification_refs:
+        if verification_ref:
+            args.extend(["--verification-ref", verification_ref])
     run_premath_json(base_cmd, args, cwd)
 
 
@@ -428,6 +819,7 @@ def append_trajectory_projection(
     issue_id: str,
     result_class: str,
     witness_refs: Sequence[str],
+    lineage_refs: Sequence[str],
 ) -> None:
     args = [
         "harness-trajectory",
@@ -445,6 +837,9 @@ def append_trajectory_projection(
     ]
     for ref in witness_refs:
         args.extend(["--witness-ref", ref])
+    for ref in lineage_refs:
+        if ref:
+            args.extend(["--lineage-ref", ref])
     args.extend(["--finished-at", now_rfc3339()])
     run_premath_json(base_cmd, args, cwd)
 
@@ -518,8 +913,24 @@ def run_worker(args: argparse.Namespace) -> int:
         issue_id = str(issue_obj.get("id", "")).strip()
         if not issue_id:
             raise RuntimeError("issue.claim-next payload returned empty issue id")
+        lease_obj = issue_obj.get("lease")
+        claimed_lease_id = None
+        if isinstance(lease_obj, dict):
+            raw_lease_id = lease_obj.get("leaseId")
+            if isinstance(raw_lease_id, str) and raw_lease_id.strip():
+                claimed_lease_id = raw_lease_id.strip()
 
         summary = f"worker={worker_id} claimed={issue_id} worktree={worktree} {policy_summary}"
+        lineage_refs = build_site_lineage_refs(
+            repo_root=repo_root,
+            issues_path=issues_path,
+            worktree=worktree,
+            worker_id=worker_id,
+            issue_id=issue_id,
+            mutation_mode=mutation_mode,
+            active_epoch=policy.active_epoch,
+            support_until=support_until,
+        )
         write_session_projection(
             base_cmd,
             worktree,
@@ -529,7 +940,8 @@ def run_worker(args: argparse.Namespace) -> int:
             issue_id=issue_id,
             summary=summary,
             next_step="work -> verify -> close_or_recover",
-            witness_ref=None,
+            witness_refs=[],
+            lineage_refs=lineage_refs,
         )
         write_feature_projection(
             base_cmd,
@@ -539,7 +951,7 @@ def run_worker(args: argparse.Namespace) -> int:
             issue_id=issue_id,
             status="in_progress",
             summary=summary,
-            verification_ref=None,
+            verification_refs=[],
         )
 
         work_rc = run_shell(args.work_cmd, worktree)
@@ -547,8 +959,8 @@ def run_worker(args: argparse.Namespace) -> int:
         success = work_rc == 0 and verify_rc == 0
 
         step_id = f"{worker_id}.{issue_id}.{step_index}"
-        result_class = "completed" if success else "failed"
-        witness_ref = f"{args.witness_ref_prefix.rstrip('/')}/{worker_id}/{issue_id}/{result_class}"
+        execution_result = "completed" if success else "failed"
+        witness_ref = f"{args.witness_ref_prefix.rstrip('/')}/{worker_id}/{issue_id}/{execution_result}"
         policy_ref = policy_audit_ref(
             mode=mutation_mode,
             reason=override_reason,
@@ -558,18 +970,25 @@ def run_worker(args: argparse.Namespace) -> int:
             issue_id=issue_id,
             step_index=step_index,
         )
-        append_trajectory_projection(
-            base_cmd,
-            worktree,
-            trajectory_path=trajectory_path,
-            step_id=step_id,
-            issue_id=issue_id,
-            result_class=result_class,
-            witness_refs=[witness_ref, policy_ref],
-        )
 
         if success:
             close_issue(base_cmd, worktree, issues_path, issue_id)
+            snapshot = read_issue_lease_snapshot(issues_path, issue_id)
+            handoff = assert_success_stop_handoff(
+                snapshot=snapshot,
+                worker_id=worker_id,
+                claimed_lease_id=claimed_lease_id,
+            )
+            append_trajectory_projection(
+                base_cmd,
+                worktree,
+                trajectory_path=trajectory_path,
+                step_id=step_id,
+                issue_id=issue_id,
+                result_class=handoff.result_class,
+                witness_refs=[witness_ref, policy_ref, handoff.lease_ref],
+                lineage_refs=lineage_refs,
+            )
             write_feature_projection(
                 base_cmd,
                 worktree,
@@ -577,8 +996,11 @@ def run_worker(args: argparse.Namespace) -> int:
                 session_path=session_path,
                 issue_id=issue_id,
                 status="completed",
-                summary=f"worker={worker_id} verified and closed issue={issue_id}",
-                verification_ref=witness_ref,
+                summary=(
+                    f"worker={worker_id} verified and closed issue={issue_id}; "
+                    f"lease_state={handoff.lease_state}; action={handoff.lease_action}"
+                ),
+                verification_refs=[witness_ref, handoff.lease_ref],
             )
             write_session_projection(
                 base_cmd,
@@ -587,13 +1009,33 @@ def run_worker(args: argparse.Namespace) -> int:
                 issues_path=issues_path,
                 state="stopped",
                 issue_id=issue_id,
-                summary=f"worker={worker_id} closed issue={issue_id}",
-                next_step="claim next ready issue",
-                witness_ref=policy_ref,
+                summary=(
+                    f"worker={worker_id} closed issue={issue_id}; "
+                    f"lease_state={handoff.lease_state}; action={handoff.lease_action}"
+                ),
+                next_step=handoff.next_step,
+                witness_refs=[policy_ref, handoff.lease_ref],
+                lineage_refs=lineage_refs,
             )
             print(f"[worker:{worker_id}] closed issue {issue_id}")
             continue
 
+        snapshot = read_issue_lease_snapshot(issues_path, issue_id)
+        handoff = classify_failed_stop_handoff(
+            snapshot=snapshot,
+            worker_id=worker_id,
+            claimed_lease_id=claimed_lease_id,
+        )
+        append_trajectory_projection(
+            base_cmd,
+            worktree,
+            trajectory_path=trajectory_path,
+            step_id=step_id,
+            issue_id=issue_id,
+            result_class=handoff.result_class,
+            witness_refs=[witness_ref, policy_ref, handoff.lease_ref],
+            lineage_refs=lineage_refs,
+        )
         write_feature_projection(
             base_cmd,
             worktree,
@@ -603,24 +1045,30 @@ def run_worker(args: argparse.Namespace) -> int:
             status="blocked",
             summary=(
                 f"worker={worker_id} failed issue={issue_id}; "
-                "recover via issue_lease_renew or issue_lease_release (MCP surface)"
+                f"lease_state={handoff.lease_state}; action={handoff.lease_action}; "
+                f"{handoff.summary}"
             ),
-            verification_ref=witness_ref,
+            verification_refs=[witness_ref, handoff.lease_ref],
         )
         write_session_projection(
             base_cmd,
             worktree,
             session_path=session_path,
             issues_path=issues_path,
-                state="stopped",
-                issue_id=issue_id,
-                summary=f"worker={worker_id} failed issue={issue_id}",
-                next_step="recover lease via MCP issue_lease_renew/issue_lease_release; retry",
-                witness_ref=policy_ref,
-            )
+            state="stopped",
+            issue_id=issue_id,
+            summary=(
+                f"worker={worker_id} failed issue={issue_id}; "
+                f"lease_state={handoff.lease_state}; action={handoff.lease_action}"
+            ),
+            next_step=handoff.next_step,
+            witness_refs=[policy_ref, handoff.lease_ref],
+            lineage_refs=lineage_refs,
+        )
         print(
             f"[worker:{worker_id}] work/verify failed for {issue_id} "
-            f"(work_rc={work_rc}, verify_rc={verify_rc})"
+            f"(work_rc={work_rc}, verify_rc={verify_rc}, "
+            f"lease_state={handoff.lease_state}, action={handoff.lease_action})"
         )
         if not args.continue_on_failure:
             return 1

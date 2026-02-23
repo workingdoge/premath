@@ -35,7 +35,17 @@ Optional fields:
 - `issueId: string`
 - `instructionRefs: string[]`
 - `witnessRefs: string[]`
+- `lineageRefs: string[]`
 - `startedAt: RFC3339`
+
+Worker-loop convention:
+
+- stop/handoff rows include one deterministic lease witness reference of the form
+  `lease://handoff/<issue-id>/<lease-state>/<digest>` so session/trajectory
+  projections can be joined without introducing new mutation authority.
+- stop/handoff rows include deterministic site lineage refs (`ctx://...`,
+  `cover://...`, `refinement://...`) so each row is explicitly attached to one
+  operational cover/refinement decomposition.
 
 Normalization rules:
 

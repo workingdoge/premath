@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "harness_bootstrap_mode_mismatch"
+  ],
+  "assertions": [
+    "bootstrap mode must match session state"
+  ]
+}

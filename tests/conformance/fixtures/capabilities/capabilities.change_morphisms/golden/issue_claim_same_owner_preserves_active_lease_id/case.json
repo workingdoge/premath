@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/issue_claim_same_owner_preserves_active_lease_id",
+  "description": "Same-owner active claim preserves existing lease id under contention-safe renewal semantics.",
+  "semanticScenarioId": "change_projection_issue_claim_same_owner_lease_id_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-401",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-lease-401_agent.alpha_original",
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 4600000
+      }
+    },
+    "claim": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-lease-401_agent.alpha_override",
+      "leaseExpiresAtUnixMs": 5600000
+    },
+    "expectedAfter": {
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-lease-401_agent.alpha_original",
+        "owner": "agent.alpha",
+        "state": "active"
+      }
+    }
+  }
+}

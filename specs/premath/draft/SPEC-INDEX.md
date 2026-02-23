@@ -158,12 +158,20 @@ Worker-operation doctrine-site routing note:
   (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
   `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
   `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
+- Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
+  `draft/HARNESS-RETRY-ESCALATION`) MUST reuse the same routed operation IDs
+  above and MUST NOT introduce parallel mutation/session authority paths.
 - Instruction/observation/init MCP surfaces are also mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
   (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
   `op/mcp.observe_latest`, `op/mcp.observe_needs_attention`,
   `op/mcp.observe_instruction`, `op/mcp.observe_projection`,
   `op/mcp.init_tool`).
+- For multithread worker orchestration, routed operation paths MUST be treated
+  as operational cover/refinement execution surfaces only (no semantic
+  authority transfer). Any acceptance/rejection consumed by runtime/control
+  surfaces MUST remain checker/Gate-discharged and factor through Unified
+  Evidence routing (`draft/UNIFICATION-DOCTRINE` §10 and §12).
 
 ### 5.5 Informative and optional
 
@@ -180,6 +188,12 @@ explicitly claimed under §5.4 or §5.6.
   for repository control-plane surfaces (`draft/COHERENCE-CONTRACT.json`).
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
+- `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
+  `boot/step/stop`, session/feature/trajectory artifacts, and deterministic
+  worker/coordinator loop behavior over existing routed operations.
+- `draft/HARNESS-RETRY-ESCALATION` — promoted classify/retry/escalation control
+  contract for CI harness wrappers bound to canonical policy digest and routed
+  escalation operations.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
@@ -201,7 +215,8 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries and deterministic projections
   (including Unified Evidence Plane contract in §10 and cross-layer obstruction
-  algebra in §11).
+  algebra in §11, plus Grothendieck operationalization routing contract in
+  §12).
 - `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
   pipeline/base-change commutation plus composition-law (identity,
   associativity, h/v compatibility, interchange) surfaces in coherence checker
@@ -279,6 +294,9 @@ Lane ownership note:
 - Unified evidence factoring MUST route control-plane artifact families through
   one attested surface (`draft/UNIFICATION-DOCTRINE` §10, including fail-closed
   factorization boundary in §10.5).
+- Grothendieck operationalization of worker concurrency/routing MUST follow
+  `draft/UNIFICATION-DOCTRINE` §12: cover-local execution, deterministic
+  glue-or-obstruction, and no parallel admissibility path.
 - Typed evidence-object migration MUST follow staged internalization gates in
   `draft/UNIFICATION-DOCTRINE` §10.6 (single authority artifact per stage with
   deterministic compatibility/rollback boundaries). Stage 1 typed-core parity
@@ -341,8 +359,9 @@ If you are implementing higher-order CI/CD:
 5) `raw/PREMATH-CI`
 6) `raw/CI-TOPOS`
 7) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-8) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
-9) `raw/SQUEAK-SITE`
+8) `draft/UNIFICATION-DOCTRINE` (especially §10 and §12)
+9) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
+10) `raw/SQUEAK-SITE`
 
 If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`

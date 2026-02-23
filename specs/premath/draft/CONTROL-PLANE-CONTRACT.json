@@ -279,5 +279,24 @@
       "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
       "unbound": "unification.evidence_stage2.unbound"
     }
+  },
+  "evidenceFactorization": {
+    "profileKind": "ev.factorization.v1",
+    "routeKind": "eta_F_to_Ev",
+    "factorizationRoutes": [
+      "eta.control_plane_to_ev"
+    ],
+    "binding": {
+      "normalizerIdRef": "normalizerId",
+      "policyDigestRef": "policyDigest"
+    },
+    "crossLaneRoutes": {
+      "pullbackBaseChange": "span_square_commutation"
+    },
+    "failureClasses": {
+      "missing": "unification.evidence_factorization.missing",
+      "ambiguous": "unification.evidence_factorization.ambiguous",
+      "unbound": "unification.evidence_factorization.unbound"
+    }
   }
 }
