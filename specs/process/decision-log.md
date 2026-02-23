@@ -3349,3 +3349,33 @@ This decision makes the migration boundary explicit and replay-auditable.
 - Transitional fallback is explicit, narrow, and profile-scoped instead of open-ended.
 - Future fallback expansion/reduction is constrained by deterministic governance
   instead of ad-hoc implementation drift.
+
+---
+
+## 2026-02-23 — Decision 0111: Promote harness runtime/retry contracts to draft surfaces
+
+### Decision
+Promote stable harness operational contracts from design docs into draft spec
+surfaces:
+
+1. add `draft/HARNESS-RUNTIME` for `boot/step/stop`, session/feature/trajectory
+   artifact contracts, and deterministic multithread worker/coordinator loop
+   behavior.
+2. add `draft/HARNESS-RETRY-ESCALATION` for canonical retry-policy digest
+   binding, failure-class routing, and escalation context resolution.
+3. update `draft/SPEC-INDEX`, `draft/SPEC-TRACEABILITY`, and draft/design
+   READMEs to route harness surfaces through existing doctrine-site operation
+   IDs only (no new operation authority paths).
+
+### Rationale
+Harness behavior was already live in command and test surfaces, but contract
+language remained split across non-normative design docs. Promotion provides one
+draft-contract surface for runtime and retry/escalation behavior while keeping
+existing semantic authority boundaries unchanged.
+
+### Consequences
+- Harness runtime/retry behavior is now traceable in promoted draft specs.
+- Doctrine-site routing for harness session/escalation paths is explicit in the
+  index and promoted docs.
+- Design docs remain implementation runbooks and must not diverge from promoted
+  harness contract surfaces.

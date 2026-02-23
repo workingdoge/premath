@@ -12,6 +12,11 @@ Authority rule:
 
 ### Tusk runtime (inside one world)
 
+- Promoted harness contract surfaces now live in:
+  - `specs/premath/draft/HARNESS-RUNTIME.md`
+  - `specs/premath/draft/HARNESS-RETRY-ESCALATION.md`
+  Design docs below remain implementation-facing runbooks.
+
 - `TUSK-ARCHITECTURE.md`: recursive unit contract and runtime surfaces.
 - `TUSK-DOMAIN-ADAPTERS.md`: domain adapter model over generic substrate.
 - `TUSK-DESCENT-PACKS.md`: local/overlap/glue package shape.

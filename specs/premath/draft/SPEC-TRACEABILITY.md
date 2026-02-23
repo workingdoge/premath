@@ -64,6 +64,8 @@ Purpose:
 | `DOCTRINE-SITE.json` | `mise run doctrine-check` | covered | - |
 | `DOCTRINE-SITE-SOURCE.json` | `mise run doctrine-check`; `python3 tools/conformance/generate_doctrine_site.py --check` | covered | - |
 | `DOCTRINE-OP-REGISTRY.json` | `mise run doctrine-check`; `python3 tools/conformance/generate_doctrine_site.py --check` | covered | - |
+| `HARNESS-RUNTIME.md` | `cargo test -p premath-cli`; `python3 tools/ci/check_issue_graph.py`; `mise run docs-coherence-check` | covered | - |
+| `HARNESS-RETRY-ESCALATION.md` | `python3 tools/ci/test_harness_retry_policy.py`; `python3 tools/ci/test_harness_escalation.py`; `mise run ci-pipeline-test`; `mise run doctrine-check` | covered | - |
 | `LLM-INSTRUCTION-DOCTRINE.md` | `capabilities.instruction_typing`; `capabilities.ci_witnesses`; `mise run ci-pipeline-test` | covered | - |
 | `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_check_client.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
 | `PREMATH-COHERENCE.md` | `mise run coherence-check`; `cargo test -p premath-coherence`; `coherence-check` CLI smoke test | covered | - |

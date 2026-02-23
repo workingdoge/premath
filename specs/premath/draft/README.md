@@ -28,6 +28,11 @@ Additive control-plane overlays (only when needed):
   repository control-plane consistency.
 - `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
   `premath coherence-check`.
+- `HARNESS-RUNTIME.md` — promoted harness runtime contract for
+  `boot/step/stop`, session/feature/trajectory projections, and deterministic
+  multithread loop behavior.
+- `HARNESS-RETRY-ESCALATION.md` — promoted classify/retry/escalation policy
+  contract for harness CI wrappers.
 - `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
   by CI projection and coherence parity checks (including schema lifecycle
   alias-window policy for contract/witness/projection kinds and governance-mode

@@ -158,6 +158,9 @@ Worker-operation doctrine-site routing note:
   (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
   `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
   `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
+- Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
+  `draft/HARNESS-RETRY-ESCALATION`) MUST reuse the same routed operation IDs
+  above and MUST NOT introduce parallel mutation/session authority paths.
 - Instruction/observation/init MCP surfaces are also mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
   (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
@@ -180,6 +183,12 @@ explicitly claimed under §5.4 or §5.6.
   for repository control-plane surfaces (`draft/COHERENCE-CONTRACT.json`).
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
+- `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
+  `boot/step/stop`, session/feature/trajectory artifacts, and deterministic
+  worker/coordinator loop behavior over existing routed operations.
+- `draft/HARNESS-RETRY-ESCALATION` — promoted classify/retry/escalation control
+  contract for CI harness wrappers bound to canonical policy digest and routed
+  escalation operations.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
