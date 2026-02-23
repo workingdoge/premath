@@ -60,8 +60,8 @@
 - `mise run pf-start` / `mise run pf-status` / `mise run pf-stop` — optional pitchfork orchestration for local daemons in `pitchfork.toml` (`pf-start` starts both `docs-preview` and `observation-api`).
 - `mise run pf-gate-loop-start` / `mise run pf-gate-loop-stop` — optional background `ci-check` loop via pitchfork (`ci-check` every 30m).
 - `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
-- `mise run harness-worker-loop -- --worker-id <worker-id> --work-cmd '<cmd>' --verify-cmd '<cmd>'` — run one deterministic worker loop (`claim-next -> work -> verify -> close/recover`) with harness projection updates.
-- `mise run harness-coordinator-loop -- --worktree <path> [--worktree <path> ...] --rounds <n>` — run deterministic coordinator round-robin dispatch over `N` worktrees.
+- `mise run harness-worker-loop -- --worker-id <worker-id> --mutation-mode human-override --override-reason '<reason>' --work-cmd '<cmd>' --verify-cmd '<cmd>'` — run one deterministic worker loop (`claim-next -> work -> verify -> close/recover`) with explicit bounded override and harness projection updates.
+- `mise run harness-coordinator-loop -- --worktree <path> [--worktree <path> ...] --rounds <n> --mutation-mode human-override --override-reason '<reason>'` — run deterministic coordinator round-robin dispatch over `N` worktrees under explicit auditable override.
 - `mise run conformance-run` — run executable fixture suites (Interop Core + Gate + Witness-ID + cross-model kernel profile + Tusk runtime contract vectors + capability vectors) through the cached suite runner.
 - `mise run doctrine-check` — validate doctrine declarations/site reachability plus doctrine-inf semantic boundary vectors (`specs/premath/draft/DOCTRINE-SITE.json`, `tests/conformance/fixtures/doctrine-inf/`).
 - `mise run traceability-check` — validate promoted draft spec coverage matrix integrity (`specs/premath/draft/SPEC-TRACEABILITY.md`).
@@ -99,7 +99,7 @@
 - `cargo run --package premath-cli -- harness-feature next --path .premath/harness_feature_ledger.json --json` — compute deterministic next unfinished feature (`in_progress` first, then `pending`).
 - `cargo run --package premath-cli -- harness-trajectory append --path .premath/harness_trajectory.jsonl --step-id <id> --issue-id <bd-id> --action <action> --result-class <class> --witness-ref <path-or-ref> --finished-at <rfc3339> --json` — append one typed harness step trajectory row (witness-linked, append-only).
 - `cargo run --package premath-cli -- harness-trajectory query --path .premath/harness_trajectory.jsonl --mode latest|failed|retry-needed --limit 20 --json` — project deterministic trajectory subsets for operator/agent handoff.
-- `python3 tools/harness/multithread_loop.py coordinator --worktree <path> [--worktree <path> ...] --rounds <n> --worker-prefix <prefix>` — canonical multithread coordinator/worker command loop; harness artifacts remain projection-only (issue JSONL is still mutation authority).
+- `python3 tools/harness/multithread_loop.py coordinator --worktree <path> [--worktree <path> ...] --rounds <n> --worker-prefix <prefix> --mutation-mode human-override --override-reason '<reason>'` — canonical multithread coordinator/worker command loop; fails closed on default `instruction-linked` mode for direct CLI mutation paths.
 - `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
 - `cargo run --package premath-cli -- issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json` — atomically claim work (`assignee` + `in_progress`).
 - `cargo run --package premath-cli -- issue discover <parent-issue-id> \"Title\" --issues .premath/issues.jsonl --json` — create discovered follow-up work linked by `discovered-from`.

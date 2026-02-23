@@ -22,6 +22,13 @@ Authority boundary remains unchanged:
   - `mise run harness-worker-loop`
   - `mise run harness-coordinator-loop`
 
+Policy gate:
+
+- control-plane default remains `instruction-linked`,
+- this direct CLI loop is allowed only under explicit `human-override`,
+- override requires `--override-reason` and is bounded by
+  `workerLaneAuthority.mutationPolicy.compatibilityOverrides` epoch support.
+
 ## 3. Coordinator Startup (N worktrees)
 
 Example (deterministic round-robin over three worktrees):
@@ -34,6 +41,8 @@ mise run harness-coordinator-loop -- \
   --rounds 4 \
   --worker-prefix lane \
   --max-steps-per-worker 1 \
+  --mutation-mode human-override \
+  --override-reason 'operator approved local multithread batch' \
   --work-cmd 'true' \
   --verify-cmd 'mise run ci-check'
 ```

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import shlex
@@ -135,6 +136,19 @@ def add_common_worker_args(parser: argparse.ArgumentParser) -> None:
         default=os.environ.get("PREMATH_WITNESS_REF_PREFIX", "worker://loop"),
         help="Prefix for synthetic witness refs in trajectory rows",
     )
+    parser.add_argument(
+        "--mutation-mode",
+        default="",
+        help=(
+            "Worker mutation mode override. Empty means use control-plane default "
+            "(workerLaneAuthority.mutationPolicy.defaultMode)."
+        ),
+    )
+    parser.add_argument(
+        "--override-reason",
+        default="",
+        help="Required when mutation mode is a non-default override (for example human-override).",
+    )
 
 
 @dataclass(frozen=True)
@@ -142,6 +156,14 @@ class RunResult:
     code: int
     stdout: str
     stderr: str
+
+
+@dataclass(frozen=True)
+class WorkerPolicy:
+    active_epoch: str
+    default_mode: str
+    allowed_modes: set[str]
+    support_until_by_mode: dict[str, str]
 
 
 def now_rfc3339() -> str:
@@ -164,6 +186,11 @@ def premath_base_cmd() -> list[str]:
     if override:
         return shlex.split(override)
     return ["cargo", "run", "--package", "premath-cli", "--"]
+
+
+def stable_hash(value: Any) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False).encode("utf-8")
+    return hashlib.sha256(encoded).hexdigest()
 
 
 def run_command(cmd: Sequence[str], cwd: Path) -> RunResult:
@@ -204,6 +231,115 @@ def run_premath_json(base_cmd: Sequence[str], args: Sequence[str], cwd: Path) ->
             f"premath command returned non-object payload (cwd={cwd}): {' '.join([*base_cmd, *args])}"
         )
     return payload
+
+
+def load_worker_policy(repo_root: Path) -> WorkerPolicy:
+    contract_path = repo_root / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json"
+    payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise RuntimeError(f"control-plane contract must be object: {contract_path}")
+
+    active_epoch = str(payload.get("schemaLifecycle", {}).get("activeEpoch", "")).strip()
+    worker_lane = payload.get("workerLaneAuthority", {})
+    if not isinstance(worker_lane, dict):
+        raise RuntimeError("workerLaneAuthority must be an object")
+    policy = worker_lane.get("mutationPolicy", {})
+    if not isinstance(policy, dict):
+        raise RuntimeError("workerLaneAuthority.mutationPolicy must be an object")
+    default_mode = str(policy.get("defaultMode", "")).strip()
+    allowed_modes_raw = policy.get("allowedModes", [])
+    if not isinstance(allowed_modes_raw, list):
+        raise RuntimeError("workerLaneAuthority.mutationPolicy.allowedModes must be a list")
+    allowed_modes = {str(item).strip() for item in allowed_modes_raw if str(item).strip()}
+
+    support_until_by_mode: dict[str, str] = {}
+    overrides = policy.get("compatibilityOverrides", [])
+    if isinstance(overrides, list):
+        for row in overrides:
+            if not isinstance(row, dict):
+                continue
+            mode = str(row.get("mode", "")).strip()
+            support_until = str(row.get("supportUntilEpoch", "")).strip()
+            if mode and support_until:
+                support_until_by_mode[mode] = support_until
+
+    if not default_mode:
+        raise RuntimeError("workerLaneAuthority.mutationPolicy.defaultMode is required")
+    if default_mode not in allowed_modes:
+        raise RuntimeError("workerLaneAuthority.mutationPolicy.defaultMode must be listed in allowedModes")
+
+    return WorkerPolicy(
+        active_epoch=active_epoch,
+        default_mode=default_mode,
+        allowed_modes=allowed_modes,
+        support_until_by_mode=support_until_by_mode,
+    )
+
+
+def parse_epoch(value: str) -> tuple[int, int]:
+    raw = value.strip()
+    chunks = raw.split("-", 1)
+    if len(chunks) != 2:
+        raise RuntimeError(f"epoch must be YYYY-MM: {value!r}")
+    year = int(chunks[0])
+    month = int(chunks[1])
+    if month < 1 or month > 12:
+        raise RuntimeError(f"epoch month must be 1..12: {value!r}")
+    return year, month
+
+
+def epoch_leq(left: str, right: str) -> bool:
+    return parse_epoch(left) <= parse_epoch(right)
+
+
+def resolve_mutation_mode(args: argparse.Namespace, policy: WorkerPolicy) -> tuple[str, str, str]:
+    mode = args.mutation_mode.strip() or policy.default_mode
+    reason = args.override_reason.strip()
+    if mode not in policy.allowed_modes:
+        raise RuntimeError(
+            f"mutation mode `{mode}` is not allowed by control-plane contract: {sorted(policy.allowed_modes)}"
+        )
+
+    if mode == policy.default_mode:
+        raise RuntimeError(
+            "default mutation mode is `instruction-linked`; this loop uses direct CLI mutation paths. "
+            "Use explicit `--mutation-mode human-override --override-reason <reason>` "
+            "or execute via MCP instruction-linked routes."
+        )
+
+    if not reason:
+        raise RuntimeError("override mutation mode requires --override-reason")
+
+    support_until = policy.support_until_by_mode.get(mode, "")
+    if support_until and policy.active_epoch and not epoch_leq(policy.active_epoch, support_until):
+        raise RuntimeError(
+            f"override mode `{mode}` expired at epoch {support_until} (active epoch: {policy.active_epoch})"
+        )
+    return mode, reason, support_until
+
+
+def policy_audit_ref(
+    *,
+    mode: str,
+    reason: str,
+    active_epoch: str,
+    support_until: str,
+    worker_id: str,
+    issue_id: str,
+    step_index: int,
+) -> str:
+    digest = stable_hash(
+        {
+            "mode": mode,
+            "reason": reason,
+            "activeEpoch": active_epoch,
+            "supportUntil": support_until,
+            "workerId": worker_id,
+            "issueId": issue_id,
+            "stepIndex": step_index,
+        }
+    )
+    return f"policy://worker-lane/{mode}/{digest}"
 
 
 def issue_ready_count(base_cmd: Sequence[str], cwd: Path, issues_path: Path) -> int:
@@ -291,30 +427,26 @@ def append_trajectory_projection(
     step_id: str,
     issue_id: str,
     result_class: str,
-    witness_ref: str,
+    witness_refs: Sequence[str],
 ) -> None:
-    run_premath_json(
-        base_cmd,
-        [
-            "harness-trajectory",
-            "append",
-            "--path",
-            str(trajectory_path),
-            "--step-id",
-            step_id,
-            "--issue-id",
-            issue_id,
-            "--action",
-            "worker.loop",
-            "--result-class",
-            result_class,
-            "--witness-ref",
-            witness_ref,
-            "--finished-at",
-            now_rfc3339(),
-        ],
-        cwd,
-    )
+    args = [
+        "harness-trajectory",
+        "append",
+        "--path",
+        str(trajectory_path),
+        "--step-id",
+        step_id,
+        "--issue-id",
+        issue_id,
+        "--action",
+        "worker.loop",
+        "--result-class",
+        result_class,
+    ]
+    for ref in witness_refs:
+        args.extend(["--witness-ref", ref])
+    args.extend(["--finished-at", now_rfc3339()])
+    run_premath_json(base_cmd, args, cwd)
 
 
 def close_issue(base_cmd: Sequence[str], cwd: Path, issues_path: Path, issue_id: str) -> None:
@@ -349,6 +481,17 @@ def run_worker(args: argparse.Namespace) -> int:
         return 2
 
     base_cmd = premath_base_cmd()
+    policy = load_worker_policy(repo_root)
+    try:
+        mutation_mode, override_reason, support_until = resolve_mutation_mode(args, policy)
+    except RuntimeError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+    policy_summary = (
+        f"mode={mutation_mode};reason={override_reason};"
+        f"active_epoch={policy.active_epoch};support_until={support_until or 'none'}"
+    )
+    print(f"[worker:{worker_id}] override policy {policy_summary}")
 
     for step_index in range(1, args.max_steps + 1):
         claim = run_premath_json(
@@ -376,7 +519,7 @@ def run_worker(args: argparse.Namespace) -> int:
         if not issue_id:
             raise RuntimeError("issue.claim-next payload returned empty issue id")
 
-        summary = f"worker={worker_id} claimed={issue_id} worktree={worktree}"
+        summary = f"worker={worker_id} claimed={issue_id} worktree={worktree} {policy_summary}"
         write_session_projection(
             base_cmd,
             worktree,
@@ -406,6 +549,15 @@ def run_worker(args: argparse.Namespace) -> int:
         step_id = f"{worker_id}.{issue_id}.{step_index}"
         result_class = "succeeded" if success else "failed"
         witness_ref = f"{args.witness_ref_prefix.rstrip('/')}/{worker_id}/{issue_id}/{result_class}"
+        policy_ref = policy_audit_ref(
+            mode=mutation_mode,
+            reason=override_reason,
+            active_epoch=policy.active_epoch,
+            support_until=support_until,
+            worker_id=worker_id,
+            issue_id=issue_id,
+            step_index=step_index,
+        )
         append_trajectory_projection(
             base_cmd,
             worktree,
@@ -413,7 +565,7 @@ def run_worker(args: argparse.Namespace) -> int:
             step_id=step_id,
             issue_id=issue_id,
             result_class=result_class,
-            witness_ref=witness_ref,
+            witness_refs=[witness_ref, policy_ref],
         )
 
         if success:
@@ -437,7 +589,7 @@ def run_worker(args: argparse.Namespace) -> int:
                 issue_id=issue_id,
                 summary=f"worker={worker_id} closed issue={issue_id}",
                 next_step="claim next ready issue",
-                witness_ref=witness_ref,
+                witness_ref=policy_ref,
             )
             print(f"[worker:{worker_id}] closed issue {issue_id}")
             continue
@@ -460,12 +612,12 @@ def run_worker(args: argparse.Namespace) -> int:
             worktree,
             session_path=session_path,
             issues_path=issues_path,
-            state="stopped",
-            issue_id=issue_id,
-            summary=f"worker={worker_id} failed issue={issue_id}",
-            next_step="recover lease via MCP issue_lease_renew/issue_lease_release; retry",
-            witness_ref=witness_ref,
-        )
+                state="stopped",
+                issue_id=issue_id,
+                summary=f"worker={worker_id} failed issue={issue_id}",
+                next_step="recover lease via MCP issue_lease_renew/issue_lease_release; retry",
+                witness_ref=policy_ref,
+            )
         print(
             f"[worker:{worker_id}] work/verify failed for {issue_id} "
             f"(work_rc={work_rc}, verify_rc={verify_rc})"
@@ -545,6 +697,10 @@ def run_coordinator(args: argparse.Namespace) -> int:
             ]
             if args.continue_on_failure:
                 cmd.append("--continue-on-failure")
+            if args.mutation_mode:
+                cmd.extend(["--mutation-mode", args.mutation_mode])
+            if args.override_reason:
+                cmd.extend(["--override-reason", args.override_reason])
 
             result = run_command(cmd, repo_root)
             if result.stdout.strip():
