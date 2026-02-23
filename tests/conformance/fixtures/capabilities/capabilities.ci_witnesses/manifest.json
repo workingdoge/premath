@@ -13,6 +13,7 @@
     "golden/decision_attestation_chain_accept",
     "golden/boundary_authority_lineage_accept",
     "golden/obstruction_algebra_roundtrip_accept",
+    "golden/harness_boot_stop_recovery_accept",
     "adversarial/instruction_witness_non_deterministic_reject",
     "adversarial/instruction_reject_witness_failure_class_mismatch_reject",
     "adversarial/instruction_witness_requires_claim",
@@ -28,11 +29,15 @@
     "adversarial/boundary_authority_registry_mismatch_reject",
     "adversarial/boundary_authority_stale_generated_reject",
     "adversarial/obstruction_algebra_roundtrip_mismatch_reject",
+    "adversarial/harness_bootstrap_mode_mismatch_reject",
+    "adversarial/harness_stop_handoff_missing_lease_ref_reject",
     "invariance/same_instruction_local",
     "invariance/same_instruction_external",
     "invariance/same_required_witness_local",
     "invariance/same_required_witness_external",
     "invariance/same_boundary_authority_local",
-    "invariance/same_boundary_authority_external"
+    "invariance/same_boundary_authority_external",
+    "invariance/same_harness_recovery_local",
+    "invariance/same_harness_recovery_external"
   ]
 }

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "adversarial/harness_stop_handoff_missing_lease_ref_reject",
+  "description": "Harness stop rows reject when deterministic lease-handoff references are missing.",
+  "semanticScenarioId": "ci_harness_runtime_adversarial_02",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.ci_witnesses"],
+    "harness": {
+      "session": {
+        "stateBefore": "active",
+        "bootstrap": {
+          "mode": "attach"
+        }
+      },
+      "stop": {
+        "issueId": "bd-harness-303",
+        "leaseState": "contended",
+        "sessionStateAfter": "stopped",
+        "recommendedAction": "stop",
+        "trajectoryRow": {
+          "stepKind": "premath.harness.step.v1",
+          "witnessRefs": [
+            "ciw://witness/ref3abc"
+          ]
+        }
+      }
+    }
+  }
+}

@@ -3379,3 +3379,41 @@ existing semantic authority boundaries unchanged.
   index and promoted docs.
 - Design docs remain implementation runbooks and must not diverge from promoted
   harness contract surfaces.
+
+---
+
+## 2026-02-23 — Decision 0112: Add harness-v1 and multi-writer claim conformance vectors
+
+### Decision
+Extend executable capability vectors to close harness-v1 and multi-writer claim
+coverage gaps:
+
+1. `capabilities.ci_witnesses` gains harness runtime vectors for deterministic
+   boot/stop/recovery behavior:
+   - bootstrap mode contract (`attach|resume`),
+   - lease-state -> recovery-action mapping,
+   - stop-row lease-handoff witness linkage.
+2. `capabilities.change_morphisms` gains same-owner active lease-id vectors:
+   - preserve existing lease id on same-owner active claim paths,
+   - reject deterministic transition expectations that attempt lease-id override,
+   - paired local/external invariance rows.
+3. evaluator parity is updated in
+   `tools/conformance/run_capability_vectors.py` to match current lock-safe
+   claim semantics and harness stop/handoff contract checks.
+4. capability docs are updated:
+   - `draft/CAPABILITY-VECTORS`
+   - `draft/CONFORMANCE`
+
+### Rationale
+Harness runtime/retry contracts were promoted to draft (Decision 0111), but
+capability vectors did not yet encode deterministic harness recovery rows. We
+also needed explicit executable coverage for same-owner active lease-id
+preservation from lock-safe multi-writer claim semantics.
+
+### Consequences
+- Conformance now rejects deterministic drift in harness stop/handoff and
+  recovery mapping behavior.
+- Multi-writer claim semantics are checked for same-owner lease-id stability,
+  not only contention/stale paths.
+- Docs/spec conformance language is aligned with executable vector rows for
+  both capabilities.

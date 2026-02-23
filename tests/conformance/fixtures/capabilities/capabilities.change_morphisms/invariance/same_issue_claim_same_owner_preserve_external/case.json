@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_issue_claim_same_owner_preserve_external",
+  "description": "External profile preserves same-owner active lease-id claim semantics.",
+  "semanticScenarioId": "change_projection_issue_claim_same_owner_invariance_01",
+  "profile": "external",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-403",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-lease-403_agent.alpha_original",
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 4600000
+      }
+    },
+    "claim": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-lease-403_agent.alpha_override",
+      "leaseExpiresAtUnixMs": 5600000
+    },
+    "expectedAfter": {
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-lease-403_agent.alpha_original",
+        "owner": "agent.alpha",
+        "state": "active"
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "invariance/same_harness_recovery_external",
+  "description": "External harness recovery profile preserves deterministic outcome.",
+  "semanticScenarioId": "ci_harness_recovery_invariance_01",
+  "profile": "external",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.ci_witnesses"],
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "harness": {
+      "session": {
+        "stateBefore": "stopped",
+        "bootstrap": {
+          "mode": "resume"
+        }
+      },
+      "stop": {
+        "issueId": "bd-harness-304",
+        "leaseState": "released",
+        "sessionStateAfter": "stopped",
+        "recommendedAction": "issue_claim",
+        "trajectoryRow": {
+          "stepKind": "premath.harness.step.v1",
+          "witnessRefs": [
+            "lease://handoff/bd-harness-304/released/ref4abc"
+          ]
+        }
+      }
+    }
+  }
+}

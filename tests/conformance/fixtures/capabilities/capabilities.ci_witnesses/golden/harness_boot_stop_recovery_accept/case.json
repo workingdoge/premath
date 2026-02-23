@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "golden/harness_boot_stop_recovery_accept",
+  "description": "Harness boot/stop/recovery flow remains deterministic and lease-handoff linked.",
+  "semanticScenarioId": "ci_harness_runtime_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.ci_witnesses"],
+    "harness": {
+      "session": {
+        "stateBefore": "stopped",
+        "bootstrap": {
+          "mode": "resume"
+        }
+      },
+      "stop": {
+        "issueId": "bd-harness-301",
+        "leaseState": "stale",
+        "sessionStateAfter": "stopped",
+        "recommendedAction": "issue_claim",
+        "trajectoryRow": {
+          "stepKind": "premath.harness.step.v1",
+          "witnessRefs": [
+            "lease://handoff/bd-harness-301/stale/ref1abc"
+          ]
+        }
+      }
+    }
+  }
+}
