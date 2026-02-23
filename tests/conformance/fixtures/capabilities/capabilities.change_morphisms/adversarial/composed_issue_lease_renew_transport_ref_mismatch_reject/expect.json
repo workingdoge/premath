@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "cross_lane_transport_mismatch"
+  ],
+  "assertions": [
+    "composed lease-renew mutation must preserve deterministic runtime location references"
+  ]
+}

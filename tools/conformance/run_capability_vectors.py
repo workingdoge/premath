@@ -1273,8 +1273,23 @@ def evaluate_adjoints_sites_cross_lane_contract(
     artifacts: Dict[str, Any],
     label_prefix: str = "artifacts",
 ) -> Optional[VectorOutcome]:
-    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
-    if CAPABILITY_ADJOINTS_SITES not in claimed or CAPABILITY_SQUEAK_SITE not in claimed:
+    return evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(CAPABILITY_ADJOINTS_SITES, CAPABILITY_SQUEAK_SITE),
+        label_prefix=label_prefix,
+    )
+
+
+def evaluate_cross_lane_span_square_contract(
+    artifacts: Dict[str, Any],
+    *,
+    required_capabilities: Sequence[str],
+    label_prefix: str = "artifacts",
+) -> Optional[VectorOutcome]:
+    claimed = set(
+        ensure_string_list(artifacts.get("claimedCapabilities", []), f"{label_prefix}.claimedCapabilities")
+    )
+    if not set(required_capabilities).issubset(claimed):
         return VectorOutcome("rejected", "rejected", ["cross_lane_capability_missing"])
 
     route_obj = artifacts.get("crossLaneRoute")
@@ -2314,6 +2329,103 @@ def evaluate_change_projection_issue_lease_release(case: Dict[str, Any]) -> Vect
     return VectorOutcome("accepted", "accepted", [])
 
 
+def evaluate_change_projection_composed_issue_claim(case: Dict[str, Any]) -> VectorOutcome:
+    base_outcome = evaluate_change_projection_issue_claim(case)
+    if base_outcome.result != "accepted":
+        return base_outcome
+
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    contract_outcome = evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(
+            CAPABILITY_CHANGE_MORPHISMS,
+            CAPABILITY_ADJOINTS_SITES,
+            CAPABILITY_SQUEAK_SITE,
+        ),
+    )
+    if contract_outcome is not None:
+        return contract_outcome
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_composed_issue_lease_renew(case: Dict[str, Any]) -> VectorOutcome:
+    base_outcome = evaluate_change_projection_issue_lease_renew(case)
+    if base_outcome.result != "accepted":
+        return base_outcome
+
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    contract_outcome = evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(
+            CAPABILITY_CHANGE_MORPHISMS,
+            CAPABILITY_ADJOINTS_SITES,
+            CAPABILITY_SQUEAK_SITE,
+        ),
+    )
+    if contract_outcome is not None:
+        return contract_outcome
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_composed_invariance(
+    case: Dict[str, Any],
+    mutation_evaluator: Callable[[Dict[str, Any]], VectorOutcome],
+) -> VectorOutcome:
+    profile = ensure_string(case.get("profile"), "profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = canonical_check_set(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+
+    contract_outcome = evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(
+            CAPABILITY_CHANGE_MORPHISMS,
+            CAPABILITY_ADJOINTS_SITES,
+            CAPABILITY_SQUEAK_SITE,
+        ),
+    )
+    if contract_outcome is not None:
+        return contract_outcome
+
+    location_descriptor = artifacts.get("locationDescriptor")
+    if not isinstance(location_descriptor, dict):
+        raise ValueError("artifacts.locationDescriptor must be an object")
+    runtime_profile = ensure_string(location_descriptor.get("runtimeProfile"), "artifacts.locationDescriptor.runtimeProfile")
+    if profile != runtime_profile:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_profile_mismatch"])
+
+    mutation_outcome = mutation_evaluator(case)
+    mutation_failure_classes = sorted(set(mutation_outcome.gate_failure_classes))
+    if mutation_outcome.kernel_verdict != kernel_verdict:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_kernel_verdict_mismatch"])
+    if mutation_failure_classes != gate_failure_classes:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_gate_failure_class_mismatch"])
+
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
+def evaluate_change_projection_composed_issue_claim_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    return evaluate_change_projection_composed_invariance(case, evaluate_change_projection_issue_claim)
+
+
+def evaluate_change_projection_composed_issue_lease_renew_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    return evaluate_change_projection_composed_invariance(case, evaluate_change_projection_issue_lease_renew)
+
+
 def _extract_issue_ids(value: Any, label: str) -> List[str]:
     if not isinstance(value, list):
         raise ValueError(f"{label} must be a list")
@@ -2746,10 +2858,14 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "golden/issue_claim_reclaims_stale_lease":
         return evaluate_change_projection_issue_claim(case)
+    if vector_id == "golden/composed_issue_claim_sigpi_squeak_span_accept":
+        return evaluate_change_projection_composed_issue_claim(case)
     if vector_id == "golden/issue_discover_preserves_existing_and_links_discovered_from":
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "golden/issue_lease_renew_preserves_active_claim":
         return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id == "golden/composed_issue_lease_renew_sigpi_squeak_span_accept":
+        return evaluate_change_projection_composed_issue_lease_renew(case)
     if vector_id == "golden/issue_lease_release_reopens_issue":
         return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "golden/issue_ready_blocked_partition_coherent":
@@ -2765,6 +2881,16 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         "invariance/same_provider_wrapper_github_env",
     }:
         return evaluate_change_projection_provider_wrapper_invariance(case)
+    if vector_id in {
+        "invariance/same_composed_issue_claim_sigpi_squeak_span_local",
+        "invariance/same_composed_issue_claim_sigpi_squeak_span_external",
+    }:
+        return evaluate_change_projection_composed_issue_claim_invariance(case)
+    if vector_id in {
+        "invariance/same_composed_issue_lease_renew_sigpi_squeak_span_local",
+        "invariance/same_composed_issue_lease_renew_sigpi_squeak_span_external",
+    }:
+        return evaluate_change_projection_composed_issue_lease_renew_invariance(case)
     if vector_id in {
         "invariance/same_issue_claim_contention_local",
         "invariance/same_issue_claim_contention_external",
@@ -2790,12 +2916,18 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "adversarial/issue_claim_rejects_active_lease_contention":
         return evaluate_change_projection_issue_claim(case)
+    if vector_id == "adversarial/composed_issue_claim_cross_lane_capability_missing_reject":
+        return evaluate_change_projection_composed_issue_claim(case)
+    if vector_id == "adversarial/composed_issue_claim_span_route_missing_reject":
+        return evaluate_change_projection_composed_issue_claim(case)
     if vector_id == "adversarial/issue_claim_invalid_expiry_reject":
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "adversarial/issue_claim_invalid_ttl_reject":
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "adversarial/issue_lease_renew_stale_reject":
         return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id == "adversarial/composed_issue_lease_renew_transport_ref_mismatch_reject":
+        return evaluate_change_projection_composed_issue_lease_renew(case)
     if vector_id == "adversarial/issue_lease_release_owner_mismatch_reject":
         return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "adversarial/issue_lease_release_id_mismatch_reject":

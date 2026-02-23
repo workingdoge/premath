@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "cross_lane_route_missing"
+  ],
+  "assertions": [
+    "composed claim mutation must route pullback/base-change through span_square_commutation"
+  ]
+}

@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_composed_issue_lease_renew_sigpi_squeak_span_external",
+  "profile": "external",
+  "semanticScenarioId": "change_morphisms_composed_issue_lease_renew_invariance_01",
+  "description": "External composed issue-lease-renew profile paired with local baseline.",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": [],
+      "semantic": {
+        "overlay": "change-morphisms-composed-lease-renew"
+      }
+    },
+    "request": {
+      "mode": "issue_lease_renew",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms",
+        "capabilities.adjoints_sites",
+        "capabilities.squeak_site"
+      ]
+    },
+    "claimedCapabilities": [
+      "capabilities.change_morphisms",
+      "capabilities.adjoints_sites",
+      "capabilities.squeak_site"
+    ],
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-306",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "owner": "agent.alpha",
+        "leaseId": "lease1_bd-lease-306_agent.alpha",
+        "expiresAtUnixMs": 4600000
+      }
+    },
+    "renew": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-lease-306_agent.alpha",
+      "leaseExpiresAtUnixMs": 6600000
+    },
+    "crossLaneRoute": {
+      "pullbackBaseChange": "span_square_commutation"
+    },
+    "spanSquareWitness": {
+      "squareId": "sq_sigpi_squeak_01",
+      "route": "span_square_commutation",
+      "digest": "sqw1_5d5a2eb23e40035644e5fdf84bf56011c5a91e2f8b7ed0f9c3ceef7604c2192f"
+    },
+    "locationDescriptor": {
+      "worldId": "world.dev",
+      "runtimeProfile": "external",
+      "capabilityVector": [
+        "hk",
+        "mise",
+        "rust",
+        "squeak-site"
+      ],
+      "substrateBindingRef": "runner://terraform/external"
+    },
+    "expectedLocRef": "loc1_8aaff2a49c2c09ed159902aaafe4932a05e62287f03be8c2d7d074cb2e246dc8"
+  }
+}
