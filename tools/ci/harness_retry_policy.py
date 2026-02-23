@@ -5,6 +5,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Sequence, Tuple
@@ -12,6 +14,7 @@ from typing import Any, Dict, Sequence, Tuple
 
 DEFAULT_RETRY_POLICY_REL_PATH = Path("policies/control/harness-retry-policy-v1.json")
 RETRY_POLICY_KIND = "ci.harness.retry.policy.v1"
+_FAILURE_CLASS_TOKEN_RE = re.compile(r"(?P<class>[a-z0-9]+(?:_[a-z0-9]+)+):")
 
 
 class RetryPolicyError(ValueError):
@@ -45,6 +48,22 @@ def _stable_hash(value: Any) -> str:
     return hashlib.sha256(_canonical_json(value).encode("utf-8")).hexdigest()
 
 
+def _ordered_failure_classes(values: Sequence[str] | None) -> Tuple[str, ...]:
+    if values is None:
+        return tuple()
+    ordered: list[str] = []
+    seen: set[str] = set()
+    for value in values:
+        if not isinstance(value, str):
+            continue
+        trimmed = value.strip()
+        if not trimmed or trimmed in seen:
+            continue
+        seen.add(trimmed)
+        ordered.append(trimmed)
+    return tuple(ordered)
+
+
 def normalize_failure_classes(values: Sequence[str] | None) -> Tuple[str, ...]:
     if values is None:
         return tuple()
@@ -56,6 +75,67 @@ def normalize_failure_classes(values: Sequence[str] | None) -> Tuple[str, ...]:
         }
     )
     return tuple(normalized)
+
+
+def combine_failure_class_sources(*sources: Sequence[str] | None) -> Tuple[str, ...]:
+    merged: list[str] = []
+    for source in sources:
+        if source is None:
+            continue
+        merged.extend(source)
+    return _ordered_failure_classes(merged)
+
+
+def _failure_classes_from_json_payload(payload: Any) -> Tuple[str, ...]:
+    if not isinstance(payload, dict):
+        return tuple()
+    classes: list[str] = []
+    for key in ("failureClass", "reasonClass"):
+        value = payload.get(key)
+        if isinstance(value, str):
+            classes.append(value)
+    for key in ("failureClasses", "operationalFailureClasses", "semanticFailureClasses"):
+        value = payload.get(key)
+        if isinstance(value, list):
+            classes.extend(item for item in value if isinstance(item, str))
+    return _ordered_failure_classes(classes)
+
+
+def _failure_classes_from_text_blob(text: str | None) -> Tuple[str, ...]:
+    if not isinstance(text, str) or not text.strip():
+        return tuple()
+
+    classes: list[str] = []
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        payload = None
+    classes.extend(_failure_classes_from_json_payload(payload))
+
+    for line in text.splitlines():
+        for match in _FAILURE_CLASS_TOKEN_RE.finditer(line.strip()):
+            classes.append(match.group("class"))
+
+    return _ordered_failure_classes(classes)
+
+
+def failure_classes_from_completed_process(
+    completed: subprocess.CompletedProcess[str],
+) -> Tuple[str, ...]:
+    return combine_failure_class_sources(
+        _failure_classes_from_text_blob(completed.stderr),
+        _failure_classes_from_text_blob(completed.stdout),
+    )
+
+
+def classify_failure_classes(
+    witness_failure_classes: Sequence[str] | None,
+    process_failure_classes: Sequence[str] | None = None,
+) -> Tuple[str, ...]:
+    classes = combine_failure_class_sources(process_failure_classes, witness_failure_classes)
+    if classes:
+        return classes
+    return ("pipeline_missing_failure_class",)
 
 
 def _require_non_empty_string(value: Any, label: str) -> str:
@@ -237,10 +317,11 @@ def resolve_retry_decision(
 ) -> RetryDecision:
     if attempt < 1:
         raise RetryPolicyError("retry_policy_invalid_shape", "attempt must be >= 1")
-    normalized = normalize_failure_classes(failure_classes)
-    matched_failure_class = normalized[0] if normalized else "pipeline_missing_failure_class"
+    ordered = _ordered_failure_classes(failure_classes)
+    normalized = normalize_failure_classes(ordered)
+    matched_failure_class = ordered[0] if ordered else "pipeline_missing_failure_class"
     rule = policy["defaultRule"]
-    for failure_class in normalized:
+    for failure_class in ordered:
         candidate = policy["rulesByFailureClass"].get(failure_class)
         if candidate is not None:
             rule = candidate

@@ -6,9 +6,11 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from harness_escalation import EscalationResult
 from harness_retry_policy import RetryDecision
@@ -21,6 +23,34 @@ def _sha256(path: Path) -> str:
 
 
 class PipelineInstructionTests(unittest.TestCase):
+    @staticmethod
+    def _routing_policy() -> dict:
+        return {
+            "defaultRule": {
+                "ruleId": "default",
+                "maxAttempts": 1,
+                "backoffClass": "none",
+                "escalationAction": "stop",
+                "failureClasses": tuple(),
+            },
+            "rulesByFailureClass": {
+                "pipeline_missing_witness": {
+                    "ruleId": "operational_retry",
+                    "maxAttempts": 2,
+                    "backoffClass": "fixed_short",
+                    "escalationAction": "issue_discover",
+                    "failureClasses": ("pipeline_missing_witness",),
+                },
+                "instruction_envelope_invalid_shape": {
+                    "ruleId": "semantic_no_retry",
+                    "maxAttempts": 1,
+                    "backoffClass": "none",
+                    "escalationAction": "mark_blocked",
+                    "failureClasses": ("instruction_envelope_invalid_shape",),
+                },
+            },
+        }
+
     def test_render_summary_writes_witness_digest(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-pipeline-instruction-") as tmp:
             root = Path(tmp)
@@ -180,6 +210,131 @@ class PipelineInstructionTests(unittest.TestCase):
             self.assertIn("matched=pipeline_missing_witness", summary)
             self.assertIn("- escalation: action=`issue_discover` outcome=`applied`", summary)
             self.assertIn("- escalation created issue id: `bd-11`", summary)
+
+    def test_run_instruction_once_collects_validate_and_reject_failure_classes(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        instruction = repo_root / "instructions" / "sample.json"
+        validate = subprocess.CompletedProcess(
+            args=["python3", "tools/ci/check_instruction_envelope.py", str(instruction)],
+            returncode=1,
+            stdout="",
+            stderr=f"{instruction}: proposal_binding_mismatch: mismatch\n",
+        )
+        reject = subprocess.CompletedProcess(
+            args=["python3", "tools/ci/run_instruction.py", str(instruction)],
+            returncode=2,
+            stdout="",
+            stderr=(
+                "[error] invalid instruction envelope: "
+                "instruction_envelope_invalid: malformed envelope\n"
+            ),
+        )
+
+        with patch("pipeline_instruction.subprocess.run", side_effect=[validate, reject]):
+            exit_code, failure_classes = pipeline_instruction.run_instruction_once(
+                repo_root,
+                instruction,
+                allow_failure=False,
+            )
+
+        self.assertEqual(exit_code, 2)
+        self.assertEqual(
+            failure_classes,
+            (
+                "instruction_envelope_invalid",
+                "proposal_binding_mismatch",
+            ),
+        )
+
+    def test_run_instruction_with_retry_prefers_process_failure_class(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-instruction-route-") as tmp:
+            root = Path(tmp)
+            policy = self._routing_policy()
+            seen: dict[str, object] = {}
+
+            def _fake_escalation(
+                _repo_root: Path,
+                *,
+                scope: str,
+                decision: RetryDecision,
+                policy: dict,
+                witness_path: Path,
+                **kwargs: object,
+            ) -> EscalationResult:
+                seen["scope"] = scope
+                seen["decision"] = decision
+                seen["witness_path"] = witness_path
+                return EscalationResult(
+                    action=decision.escalation_action,
+                    outcome="applied",
+                    issue_id="bd-190",
+                    created_issue_id=None,
+                    note_digest="note1_test",
+                    witness_ref=str(witness_path),
+                    details="test",
+                )
+
+            with patch(
+                "pipeline_instruction.run_instruction_once",
+                return_value=(1, ("instruction_envelope_invalid_shape",)),
+            ):
+                with patch("pipeline_instruction.apply_terminal_escalation", side_effect=_fake_escalation):
+                    exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
+                        root,
+                        root / "instructions" / "sample.json",
+                        "sample",
+                        policy,
+                        allow_failure=False,
+                    )
+
+            self.assertEqual(exit_code, 1)
+            self.assertEqual(len(history), 1)
+            self.assertIsNotNone(escalation)
+            decision = history[0]
+            self.assertEqual(decision.rule_id, "semantic_no_retry")
+            self.assertEqual(decision.matched_failure_class, "instruction_envelope_invalid_shape")
+            self.assertEqual(decision.escalation_action, "mark_blocked")
+            self.assertEqual(seen.get("scope"), "instruction")
+            self.assertEqual(
+                seen.get("witness_path"),
+                root / "artifacts/ciwitness/sample.json",
+            )
+
+    def test_run_instruction_with_retry_falls_back_to_witness_class_when_process_untyped(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-instruction-witness-fallback-") as tmp:
+            root = Path(tmp)
+            policy = self._routing_policy()
+            with patch(
+                "pipeline_instruction.run_instruction_once",
+                side_effect=[(1, tuple()), (1, tuple())],
+            ):
+                with patch(
+                    "pipeline_instruction.apply_terminal_escalation",
+                    return_value=EscalationResult(
+                        action="issue_discover",
+                        outcome="applied",
+                        issue_id="bd-190",
+                        created_issue_id="bd-191",
+                        note_digest="note1_test",
+                        witness_ref="artifacts/ciwitness/sample.json",
+                        details="test",
+                    ),
+                ):
+                    exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
+                        root,
+                        root / "instructions" / "sample.json",
+                        "sample",
+                        policy,
+                        allow_failure=False,
+                    )
+
+            self.assertEqual(exit_code, 1)
+            self.assertIsNotNone(escalation)
+            self.assertEqual(len(history), 2)
+            self.assertTrue(history[0].retry)
+            self.assertEqual(history[0].matched_failure_class, "pipeline_missing_witness")
+            self.assertFalse(history[1].retry)
+            self.assertEqual(history[1].escalation_action, "issue_discover")
 
 
 if __name__ == "__main__":

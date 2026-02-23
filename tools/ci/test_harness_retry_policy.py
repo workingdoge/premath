@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -19,7 +20,7 @@ class HarnessRetryPolicyTests(unittest.TestCase):
         self.assertEqual(policy.get("policyId"), "policy.harness.retry.v1")
         self.assertEqual(
             policy.get("policyDigest"),
-            "pol1_7dc928615fec4a20c1f8d71aca695d737ab478b508bc9a9a8445757be37e9759",
+            "pol1_2e1753b503e957e7c7f60da2bc1d9c1cb18c989904a13e20eb98cc9bbbb27398",
         )
 
     def test_resolve_retry_decision_semantic_no_retry(self) -> None:
@@ -54,6 +55,19 @@ class HarnessRetryPolicyTests(unittest.TestCase):
         self.assertFalse(second.retry)
         self.assertEqual(second.escalation_action, "issue_discover")
 
+    def test_resolve_retry_decision_prefers_input_order_for_rule_match(self) -> None:
+        repo_root = Path(__file__).resolve().parents[2]
+        policy = harness_retry_policy.load_retry_policy(repo_root)
+        decision = harness_retry_policy.resolve_retry_decision(
+            policy,
+            ("proposal_binding_mismatch", "pipeline_missing_witness"),
+            attempt=1,
+        )
+        self.assertFalse(decision.retry)
+        self.assertEqual(decision.rule_id, "semantic_no_retry")
+        self.assertEqual(decision.matched_failure_class, "proposal_binding_mismatch")
+        self.assertEqual(decision.escalation_action, "mark_blocked")
+
     def test_failure_classes_from_witness_payload_union(self) -> None:
         payload = {
             "verdictClass": "rejected",
@@ -81,6 +95,40 @@ class HarnessRetryPolicyTests(unittest.TestCase):
             witness.write_text(json.dumps({"verdictClass": "rejected"}) + "\n", encoding="utf-8")
             missing_failure_class = harness_retry_policy.failure_classes_from_witness_path(witness)
             self.assertEqual(missing_failure_class, ("pipeline_missing_failure_class",))
+
+    def test_failure_classes_from_completed_process_extracts_typed_classes(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=["mise", "run", "ci-required-attested"],
+            returncode=2,
+            stdout=json.dumps(
+                {
+                    "decision": "reject",
+                    "reasonClass": "required_witness_decide_invalid",
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+            + "\n",
+            stderr=(
+                "[verify-decision] core verify failed: "
+                "required_decision_verify_invalid: digest mismatch\n"
+            ),
+        )
+        classes = harness_retry_policy.failure_classes_from_completed_process(completed)
+        self.assertEqual(
+            classes,
+            (
+                "required_decision_verify_invalid",
+                "required_witness_decide_invalid",
+            ),
+        )
+
+    def test_classify_failure_classes_prefers_process_failure_class(self) -> None:
+        classes = harness_retry_policy.classify_failure_classes(
+            ("pipeline_missing_witness",),
+            ("proposal_binding_mismatch",),
+        )
+        self.assertEqual(classes, ("proposal_binding_mismatch", "pipeline_missing_witness"))
 
 
 if __name__ == "__main__":

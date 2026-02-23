@@ -8,6 +8,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 from pathlib import Path
 from typing import Dict, Sequence
 
@@ -19,6 +20,9 @@ from harness_escalation import (
 from harness_retry_policy import (
     RetryDecision,
     RetryPolicyError,
+    classify_failure_classes,
+    combine_failure_class_sources,
+    failure_classes_from_completed_process,
     failure_classes_from_witness_path,
     load_retry_policy,
     resolve_retry_decision,
@@ -87,6 +91,20 @@ def _write_sha(path: Path, out_path: Path) -> str:
     digest = hashlib.sha256(path.read_bytes()).hexdigest()
     out_path.write_text(digest + "\n", encoding="utf-8")
     return digest
+
+
+def _run_with_streamed_output(cmd: Sequence[str], *, cwd: Path) -> subprocess.CompletedProcess[str]:
+    completed = subprocess.run(
+        cmd,
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+    )
+    if completed.stdout:
+        print(completed.stdout, end="")
+    if completed.stderr:
+        print(completed.stderr, end="", file=sys.stderr)
+    return completed
 
 
 def _render_retry_lines(retry_history: Sequence[RetryDecision]) -> list[str]:
@@ -214,23 +232,32 @@ def write_summary(summary_text: str, summary_out: Path | None) -> None:
     print(summary_text, end="")
 
 
-def run_instruction_once(root: Path, instruction_path: Path, allow_failure: bool) -> int:
-    validate = subprocess.run(
+def run_instruction_once(
+    root: Path,
+    instruction_path: Path,
+    allow_failure: bool,
+) -> tuple[int, tuple[str, ...]]:
+    validate = _run_with_streamed_output(
         ["python3", str(root / "tools/ci/check_instruction_envelope.py"), str(instruction_path)],
         cwd=root,
     )
+    validate_failure_classes = failure_classes_from_completed_process(validate)
     if validate.returncode != 0:
-        reject_run = subprocess.run(
+        reject_run = _run_with_streamed_output(
             ["python3", str(root / "tools/ci/run_instruction.py"), str(instruction_path)],
             cwd=root,
         )
-        return int(reject_run.returncode or validate.returncode)
+        reject_failure_classes = failure_classes_from_completed_process(reject_run)
+        return (
+            int(reject_run.returncode or validate.returncode),
+            combine_failure_class_sources(reject_failure_classes, validate_failure_classes),
+        )
 
     run_cmd = ["python3", str(root / "tools/ci/run_instruction.py"), str(instruction_path)]
     if allow_failure:
         run_cmd.append("--allow-failure")
-    run = subprocess.run(run_cmd, cwd=root)
-    return int(run.returncode)
+    run = _run_with_streamed_output(run_cmd, cwd=root)
+    return int(run.returncode), failure_classes_from_completed_process(run)
 
 
 def run_instruction_with_retry(
@@ -245,11 +272,15 @@ def run_instruction_with_retry(
     witness_path = root / "artifacts/ciwitness" / f"{instruction_id}.json"
     attempt = 1
     while True:
-        exit_code = run_instruction_once(root, instruction_path, allow_failure)
+        exit_code, process_failure_classes = run_instruction_once(root, instruction_path, allow_failure)
         if exit_code == 0:
             return 0, tuple(retry_history), None
 
-        failure_classes = failure_classes_from_witness_path(witness_path)
+        witness_failure_classes = failure_classes_from_witness_path(witness_path)
+        failure_classes = classify_failure_classes(
+            witness_failure_classes,
+            process_failure_classes,
+        )
         decision = resolve_retry_decision(policy, failure_classes, attempt=attempt)
         retry_history.append(decision)
         if decision.retry:
