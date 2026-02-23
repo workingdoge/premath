@@ -151,7 +151,12 @@ Minimum parity set includes:
   `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
   unknown/duplicate lane IDs, unbound lane artifact-kind mappings, lane
   ownership violations (including checker-core CwF ownership boundaries), and
-  missing required cross-lane witness routes.
+  missing required cross-lane witness routes,
+- worker mutation authority metadata in
+  `draft/CONTROL-PLANE-CONTRACT.json` (`workerLaneAuthority`) MUST fail closed
+  on policy drift (expired/unbounded compatibility override windows),
+  mutation-mode drift (default/allowed mode mismatch from
+  `instruction-linked`-first contract), and unbound mutation capability routes.
 
 ### 4.4 `operation_reachability`
 

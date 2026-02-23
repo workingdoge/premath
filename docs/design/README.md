@@ -48,6 +48,9 @@ Authority rule:
 - `DEVELOPMENT-META-LOOP.md`: canonical development workflow contract
   (architecture-first ordering, multithread worker loop, and lane/gate
   discipline).
+- `MULTITHREAD-LANE-SITE-ADJOINTS.md`: canonical concurrent-worker contract
+  aligned with lane ownership, site refinement/covers, and optional SigPi/Squeak
+  capability overlays.
 - `LIFECYCLE-COHERENCE-FLOWS.md`: operator flow for schema lifecycle policy and
   coherence gate-chain enforcement.
 - `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move

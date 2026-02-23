@@ -64,6 +64,33 @@
         "witnessKind": "ci.instruction.v1",
         "policyKind": "ci.instruction.policy.v1",
         "policyDigestPrefix": "pol1_"
+      },
+      "workerLaneAuthority": {
+        "mutationPolicy": {
+          "defaultMode": "instruction-linked",
+          "allowedModes": [
+            "instruction-linked",
+            "human-override"
+          ],
+          "compatibilityOverrides": [
+            {
+              "mode": "human-override",
+              "supportUntilEpoch": "2026-06",
+              "requiresReason": true
+            }
+          ]
+        },
+        "mutationRoutes": {
+          "issueClaim": "capabilities.change_morphisms.issue_claim",
+          "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
+          "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
+          "issueDiscover": "capabilities.change_morphisms.issue_discover"
+        },
+        "failureClasses": {
+          "policyDrift": "worker_lane_policy_drift",
+          "mutationModeDrift": "worker_lane_mutation_mode_drift",
+          "routeUnbound": "worker_lane_route_unbound"
+        }
       }
     }
   }

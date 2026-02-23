@@ -142,6 +142,16 @@ Capability-specific normative specs include:
 
 Normative requirements apply only when the corresponding capability is claimed.
 
+Worker-operation doctrine-site routing note:
+
+- Mutation/session operation surfaces for
+  `capabilities.change_morphisms` are mapped in
+  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
+  (`op/mcp.issue_claim`, `op/mcp.issue_lease_renew`,
+  `op/mcp.issue_lease_release`, `op/mcp.issue_discover`,
+  `op/harness.session_read`, `op/harness.session_write`,
+  `op/harness.session_bootstrap`).
+
 ### 5.5 Informative and optional
 
 The entries below are informative/default reading surfaces unless they are
@@ -149,7 +159,8 @@ explicitly claimed under §5.4 or §5.6.
 
 - `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
   (`draft/DOCTRINE-SITE-SOURCE.json` + `draft/DOCTRINE-OP-REGISTRY.json` ->
-  `draft/DOCTRINE-SITE.json`).
+  `draft/DOCTRINE-SITE.json`, including worker mutation and harness-session
+  operation routes).
 - `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
   explicit gap targets.
 - `draft/PREMATH-COHERENCE` — typed coherence-contract checker/witness model
@@ -159,7 +170,8 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
-  bindings + Stage 2/Stage 3 typed-authority metadata) consumed by
+  bindings + worker mutation authority policy/routes + Stage 2/Stage 3
+  typed-authority metadata) consumed by
   CI/coherence adapter
   surfaces; lifecycle semantics follow `draft/UNIFICATION-DOCTRINE` §5.1
   including governance-mode metadata
@@ -333,6 +345,16 @@ If you are integrating SigPi + Squeak + spans in one system:
 5) `draft/SPAN-SQUARE-CHECKING`
 6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
 7) `draft/UNIFICATION-DOCTRINE` (§9 lane separation)
+
+If you are implementing multithread worker orchestration:
+1) `draft/UNIFICATION-DOCTRINE` (§9 lane separation; one authority artifact per boundary)
+2) `raw/CTX-SITE` + `raw/SHEAF-STACK` (refinement/cover + glue-or-witness discipline)
+3) `profile/ADJOINTS-AND-SITES` (§10/§11) (when `capabilities.adjoints_sites` is claimed)
+4) `draft/CHANGE-MORPHISMS` + `draft/CAPABILITY-VECTORS`
+   (`capabilities.change_morphisms`)
+5) `raw/SQUEAK-SITE` (only when `capabilities.squeak_site` is claimed)
+6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+7) operational companion: `docs/design/MULTITHREAD-LANE-SITE-ADJOINTS.md`
 
 If you are implementing the Unified Evidence Plane:
 1) `draft/UNIFICATION-DOCTRINE` (§10, especially §10.6)

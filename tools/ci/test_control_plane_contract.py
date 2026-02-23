@@ -204,6 +204,33 @@ def _base_payload() -> dict:
                 "unbound": "unification.evidence_stage2.unbound",
             },
         },
+        "workerLaneAuthority": {
+            "mutationPolicy": {
+                "defaultMode": "instruction-linked",
+                "allowedModes": [
+                    "instruction-linked",
+                    "human-override",
+                ],
+                "compatibilityOverrides": [
+                    {
+                        "mode": "human-override",
+                        "supportUntilEpoch": "2026-06",
+                        "requiresReason": True,
+                    }
+                ],
+            },
+            "mutationRoutes": {
+                "issueClaim": "capabilities.change_morphisms.issue_claim",
+                "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
+                "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
+                "issueDiscover": "capabilities.change_morphisms.issue_discover",
+            },
+            "failureClasses": {
+                "policyDrift": "worker_lane_policy_drift",
+                "mutationModeDrift": "worker_lane_mutation_mode_drift",
+                "routeUnbound": "worker_lane_route_unbound",
+            },
+        },
         "harnessRetry": {
             "policyKind": "ci.harness.retry.policy.v1",
             "policyPath": "policies/control/harness-retry-policy-v1.json",
@@ -316,6 +343,22 @@ class ControlPlaneContractTests(unittest.TestCase):
             "stability",
             loaded["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"],
         )
+        self.assertEqual(
+            loaded["workerLaneAuthority"]["mutationPolicy"]["defaultMode"],
+            "instruction-linked",
+        )
+        self.assertIn(
+            "human-override",
+            loaded["workerLaneAuthority"]["mutationPolicy"]["allowedModes"],
+        )
+        self.assertEqual(
+            loaded["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"],
+            "capabilities.change_morphisms.issue_discover",
+        )
+        self.assertEqual(
+            loaded["workerLaneAuthority"]["failureClasses"]["routeUnbound"],
+            "worker_lane_route_unbound",
+        )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())
@@ -327,6 +370,26 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload = _with_lane_registry(_base_payload())
         payload["laneArtifactKinds"]["unknown_lane"] = ["opaque_kind"]
         with self.assertRaises(ValueError):
+            self._load(payload)
+
+    def test_load_rejects_worker_lane_default_mode_drift(self) -> None:
+        payload = _base_payload()
+        payload["workerLaneAuthority"]["mutationPolicy"]["defaultMode"] = "human-override"
+        with self.assertRaisesRegex(ValueError, "defaultMode"):
+            self._load(payload)
+
+    def test_load_rejects_worker_lane_route_drift(self) -> None:
+        payload = _base_payload()
+        payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = "issue_discover"
+        with self.assertRaisesRegex(ValueError, "canonical route"):
+            self._load(payload)
+
+    def test_load_rejects_worker_lane_expired_override(self) -> None:
+        payload = _base_payload()
+        payload["workerLaneAuthority"]["mutationPolicy"]["compatibilityOverrides"][0][
+            "supportUntilEpoch"
+        ] = "2026-01"
+        with self.assertRaisesRegex(ValueError, "expired"):
             self._load(payload)
 
     def test_resolve_schema_kind_accepts_alias_within_support_window(self) -> None:

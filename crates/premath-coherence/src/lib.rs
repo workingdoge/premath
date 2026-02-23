@@ -132,6 +132,21 @@ const STAGE2_AUTHORITY_ALIAS_ROLE: &str = "projection_only";
 const STAGE2_BIDIR_ROUTE_KIND: &str = "direct_checker_discharge";
 const STAGE2_BIDIR_OBLIGATION_FIELD_REF: &str = "bidirCheckerObligations";
 const STAGE2_BIDIR_FALLBACK_MODE: &str = "profile_gated_sentinel";
+const WORKER_MUTATION_DEFAULT_MODE: &str = "instruction-linked";
+const WORKER_ALLOWED_MUTATION_MODES: &[&str] = &["instruction-linked", "human-override"];
+const WORKER_ROUTE_ISSUE_CLAIM: &str = "capabilities.change_morphisms.issue_claim";
+const WORKER_ROUTE_ISSUE_LEASE_RENEW: &str = "capabilities.change_morphisms.issue_lease_renew";
+const WORKER_ROUTE_ISSUE_LEASE_RELEASE: &str = "capabilities.change_morphisms.issue_lease_release";
+const WORKER_ROUTE_ISSUE_DISCOVER: &str = "capabilities.change_morphisms.issue_discover";
+const WORKER_CLASS_POLICY_DRIFT: &str = "worker_lane_policy_drift";
+const WORKER_CLASS_MUTATION_MODE_DRIFT: &str = "worker_lane_mutation_mode_drift";
+const WORKER_CLASS_ROUTE_UNBOUND: &str = "worker_lane_route_unbound";
+const GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE: &str =
+    "coherence.gate_chain_parity.worker_lane_policy_drift";
+const GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE: &str =
+    "coherence.gate_chain_parity.worker_lane_mutation_mode_drift";
+const GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE: &str =
+    "coherence.gate_chain_parity.worker_lane_route_unbound";
 const STAGE2_REQUIRED_KERNEL_OBLIGATIONS: &[&str] = &[
     "stability",
     "locality",
@@ -264,6 +279,8 @@ struct ControlPlaneProjectionContract {
     lane_ownership: Option<ControlPlaneLaneOwnership>,
     #[serde(default)]
     lane_failure_classes: Option<Vec<String>>,
+    #[serde(default)]
+    worker_lane_authority: Option<ControlPlaneWorkerLaneAuthority>,
     required_gate_projection: RequiredGateProjection,
     required_witness: ControlPlaneRequiredWitness,
     instruction_witness: ControlPlaneInstructionWitness,
@@ -291,6 +308,60 @@ struct ControlPlaneLaneOwnership {
 #[serde(rename_all = "camelCase")]
 struct ControlPlaneCrossLaneWitnessRoute {
     pullback_base_change: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneWorkerLaneAuthority {
+    mutation_policy: ControlPlaneWorkerMutationPolicy,
+    mutation_routes: ControlPlaneWorkerMutationRoutes,
+    failure_classes: ControlPlaneWorkerLaneFailureClasses,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneWorkerMutationPolicy {
+    #[serde(default)]
+    default_mode: String,
+    #[serde(default)]
+    allowed_modes: Vec<String>,
+    #[serde(default)]
+    compatibility_overrides: Vec<ControlPlaneWorkerMutationOverride>,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneWorkerMutationOverride {
+    #[serde(default)]
+    mode: String,
+    #[serde(default)]
+    support_until_epoch: String,
+    #[serde(default)]
+    requires_reason: bool,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneWorkerMutationRoutes {
+    #[serde(default)]
+    issue_claim: String,
+    #[serde(default)]
+    issue_lease_renew: String,
+    #[serde(default)]
+    issue_lease_release: String,
+    #[serde(default)]
+    issue_discover: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+#[serde(rename_all = "camelCase")]
+struct ControlPlaneWorkerLaneFailureClasses {
+    #[serde(default)]
+    policy_drift: String,
+    #[serde(default)]
+    mutation_mode_drift: String,
+    #[serde(default)]
+    route_unbound: String,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -1568,6 +1639,8 @@ fn check_gate_chain_parity(
 
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
     failures.extend(lane_registry_check.failure_classes.clone());
+    let worker_lane_check = evaluate_gate_chain_worker_lane_authority(&control_plane_contract);
+    failures.extend(worker_lane_check.failure_classes.clone());
 
     let lane_vectors_check = if contract.surfaces.site_fixture_root_path.trim().is_empty() {
         None
@@ -1606,6 +1679,7 @@ fn check_gate_chain_parity(
             "stage1Rollback": stage1_rollback_check.details,
             "stage2Authority": stage2_authority_check.details,
             "laneRegistry": lane_registry_check.details,
+            "workerLaneAuthority": worker_lane_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
         }),
     })
@@ -2410,6 +2484,155 @@ fn evaluate_gate_chain_lane_registry(
     }
 }
 
+fn evaluate_gate_chain_worker_lane_authority(
+    control_plane_contract: &ControlPlaneProjectionContract,
+) -> ObligationCheck {
+    let lane_registry_present = control_plane_contract.evidence_lanes.is_some()
+        || control_plane_contract.lane_artifact_kinds.is_some()
+        || control_plane_contract.lane_ownership.is_some()
+        || control_plane_contract.lane_failure_classes.is_some();
+    let active_epoch = control_plane_contract
+        .schema_lifecycle
+        .as_ref()
+        .map(|lifecycle| lifecycle.active_epoch.trim().to_string());
+
+    let required_allowed_modes: Vec<String> = WORKER_ALLOWED_MUTATION_MODES
+        .iter()
+        .map(|value| (*value).to_string())
+        .collect();
+    let mut details = json!({
+        "present": control_plane_contract.worker_lane_authority.is_some(),
+        "laneRegistryPresent": lane_registry_present,
+        "activeEpoch": active_epoch.clone(),
+        "requiredDefaultMode": WORKER_MUTATION_DEFAULT_MODE,
+        "requiredAllowedModes": required_allowed_modes,
+        "requiredMutationRoutes": {
+            "issueClaim": WORKER_ROUTE_ISSUE_CLAIM,
+            "issueLeaseRenew": WORKER_ROUTE_ISSUE_LEASE_RENEW,
+            "issueLeaseRelease": WORKER_ROUTE_ISSUE_LEASE_RELEASE,
+            "issueDiscover": WORKER_ROUTE_ISSUE_DISCOVER,
+        },
+        "requiredFailureClasses": {
+            "policyDrift": WORKER_CLASS_POLICY_DRIFT,
+            "mutationModeDrift": WORKER_CLASS_MUTATION_MODE_DRIFT,
+            "routeUnbound": WORKER_CLASS_ROUTE_UNBOUND,
+        },
+        "mutationPolicy": null,
+        "mutationRoutes": null,
+        "failureClasses": null,
+        "compatibilityOverrides": null,
+    });
+
+    if !lane_registry_present && control_plane_contract.worker_lane_authority.is_none() {
+        return ObligationCheck {
+            failure_classes: Vec::new(),
+            details,
+        };
+    }
+
+    let mut failures = Vec::new();
+    let Some(worker_lane) = &control_plane_contract.worker_lane_authority else {
+        failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+        details["reason"] = json!("workerLaneAuthority missing while lane registry is present");
+        return ObligationCheck {
+            failure_classes: dedupe_sorted(failures),
+            details,
+        };
+    };
+
+    details["mutationPolicy"] = json!(&worker_lane.mutation_policy);
+    details["mutationRoutes"] = json!(&worker_lane.mutation_routes);
+    details["failureClasses"] = json!(&worker_lane.failure_classes);
+    details["compatibilityOverrides"] = json!(&worker_lane.mutation_policy.compatibility_overrides);
+
+    let default_mode = worker_lane.mutation_policy.default_mode.trim();
+    if default_mode != WORKER_MUTATION_DEFAULT_MODE {
+        failures.push(GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE.to_string());
+    }
+
+    let mut allowed_modes = BTreeSet::new();
+    for mode in &worker_lane.mutation_policy.allowed_modes {
+        let mode_norm = mode.trim();
+        if mode_norm.is_empty() || !allowed_modes.insert(mode_norm.to_string()) {
+            failures.push(GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE.to_string());
+        }
+    }
+    if allowed_modes.is_empty() || !allowed_modes.contains(WORKER_MUTATION_DEFAULT_MODE) {
+        failures.push(GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE.to_string());
+    }
+    let required_allowed_modes: BTreeSet<String> = WORKER_ALLOWED_MUTATION_MODES
+        .iter()
+        .map(|mode| (*mode).to_string())
+        .collect();
+    if allowed_modes != required_allowed_modes {
+        failures.push(GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE.to_string());
+    }
+
+    let mut seen_override_modes: BTreeSet<String> = BTreeSet::new();
+    for override_row in &worker_lane.mutation_policy.compatibility_overrides {
+        let mode = override_row.mode.trim();
+        let support_until_epoch = override_row.support_until_epoch.trim();
+        if mode.is_empty()
+            || mode == WORKER_MUTATION_DEFAULT_MODE
+            || !allowed_modes.contains(mode)
+            || !seen_override_modes.insert(mode.to_string())
+        {
+            failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+        }
+        if !override_row.requires_reason {
+            failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+        }
+        if !is_valid_epoch(support_until_epoch) {
+            failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+        } else if let Some(active_epoch_value) = active_epoch.as_deref() {
+            if is_valid_epoch(active_epoch_value) && active_epoch_value > support_until_epoch {
+                failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+            }
+            if let (Some(active_index), Some(support_index)) = (
+                epoch_to_month_index(active_epoch_value),
+                epoch_to_month_index(support_until_epoch),
+            ) {
+                if support_index - active_index > 12 {
+                    failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+                }
+            }
+        }
+    }
+
+    let expected_override_modes: BTreeSet<String> = required_allowed_modes
+        .iter()
+        .filter(|mode| mode.as_str() != WORKER_MUTATION_DEFAULT_MODE)
+        .cloned()
+        .collect();
+    if seen_override_modes != expected_override_modes {
+        failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+    }
+
+    if worker_lane.mutation_routes.issue_claim.trim() != WORKER_ROUTE_ISSUE_CLAIM
+        || worker_lane.mutation_routes.issue_lease_renew.trim() != WORKER_ROUTE_ISSUE_LEASE_RENEW
+        || worker_lane.mutation_routes.issue_lease_release.trim()
+            != WORKER_ROUTE_ISSUE_LEASE_RELEASE
+        || worker_lane.mutation_routes.issue_discover.trim() != WORKER_ROUTE_ISSUE_DISCOVER
+    {
+        failures.push(GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE.to_string());
+    }
+
+    if worker_lane.failure_classes.policy_drift.trim() != WORKER_CLASS_POLICY_DRIFT {
+        failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
+    }
+    if worker_lane.failure_classes.mutation_mode_drift.trim() != WORKER_CLASS_MUTATION_MODE_DRIFT {
+        failures.push(GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE.to_string());
+    }
+    if worker_lane.failure_classes.route_unbound.trim() != WORKER_CLASS_ROUTE_UNBOUND {
+        failures.push(GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE.to_string());
+    }
+
+    ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details,
+    }
+}
+
 fn evaluate_site_case_gate_chain_parity(
     artifacts_payload: &Value,
     case_path: &Path,
@@ -2461,11 +2684,13 @@ fn evaluate_site_case_gate_chain_parity(
         &required_bidir_obligations,
     );
     let lane_registry_check = evaluate_gate_chain_lane_registry(&control_plane_contract);
+    let worker_lane_check = evaluate_gate_chain_worker_lane_authority(&control_plane_contract);
     let mut failures = Vec::new();
     failures.extend(stage1_parity_check.failure_classes.clone());
     failures.extend(stage1_rollback_check.failure_classes.clone());
     failures.extend(stage2_authority_check.failure_classes.clone());
     failures.extend(lane_registry_check.failure_classes.clone());
+    failures.extend(worker_lane_check.failure_classes.clone());
     let failures = dedupe_sorted(failures);
     let result = if failures.is_empty() {
         "accepted"
@@ -2480,6 +2705,7 @@ fn evaluate_site_case_gate_chain_parity(
             "stage1Rollback": stage1_rollback_check.details,
             "stage2Authority": stage2_authority_check.details,
             "laneRegistry": lane_registry_check.details,
+            "workerLaneAuthority": worker_lane_check.details,
         }),
     })
 }
@@ -5289,7 +5515,34 @@ Current deterministic projected check IDs include:
                 "lane_kind_unbound",
                 "lane_ownership_violation",
                 "lane_route_missing"
-            ]
+            ],
+            "workerLaneAuthority": {
+                "mutationPolicy": {
+                    "defaultMode": "instruction-linked",
+                    "allowedModes": [
+                        "instruction-linked",
+                        "human-override"
+                    ],
+                    "compatibilityOverrides": [
+                        {
+                            "mode": "human-override",
+                            "supportUntilEpoch": "2026-06",
+                            "requiresReason": true
+                        }
+                    ]
+                },
+                "mutationRoutes": {
+                    "issueClaim": "capabilities.change_morphisms.issue_claim",
+                    "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
+                    "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
+                    "issueDiscover": "capabilities.change_morphisms.issue_discover"
+                },
+                "failureClasses": {
+                    "policyDrift": "worker_lane_policy_drift",
+                    "mutationModeDrift": "worker_lane_mutation_mode_drift",
+                    "routeUnbound": "worker_lane_route_unbound"
+                }
+            }
         })
     }
 
@@ -5848,6 +6101,82 @@ Current deterministic projected check IDs include:
             evaluated
                 .failure_classes
                 .contains(&"coherence.gate_chain_parity.lane_ownership_violation".to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_worker_lane_default_mode_drift() {
+        let temp = TempDirGuard::new("gate-chain-worker-lane-default-mode-drift");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["workerLaneAuthority"]["mutationPolicy"]["defaultMode"] = json!("human-override");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_worker_lane_route_drift() {
+        let temp = TempDirGuard::new("gate-chain-worker-lane-route-drift");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = json!("issue_discover");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_worker_lane_policy_drift() {
+        let temp = TempDirGuard::new("gate-chain-worker-lane-policy-drift");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        let mut payload = base_control_plane_contract_payload();
+        payload["workerLaneAuthority"]["mutationPolicy"]["compatibilityOverrides"][0]["supportUntilEpoch"] =
+            json!("2026-01");
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &payload,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string())
         );
     }
 

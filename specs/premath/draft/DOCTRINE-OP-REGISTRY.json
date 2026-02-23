@@ -53,6 +53,83 @@
       ]
     },
     {
+      "id": "op/mcp.issue_claim",
+      "edgeId": "e.ci.op.issue_claim",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/mcp.issue_lease_renew",
+      "edgeId": "e.ci.op.issue_lease_renew",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/mcp.issue_lease_release",
+      "edgeId": "e.ci.op.issue_lease_release",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/mcp.issue_discover",
+      "edgeId": "e.ci.op.issue_discover",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/harness.session_read",
+      "edgeId": "e.ci.op.harness_session_read",
+      "path": "crates/premath-cli/src/commands/harness_session.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "op/harness.session_write",
+      "edgeId": "e.ci.op.harness_session_write",
+      "path": "crates/premath-cli/src/commands/harness_session.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ]
+    },
+    {
+      "id": "op/harness.session_bootstrap",
+      "edgeId": "e.ci.op.harness_session_bootstrap",
+      "path": "crates/premath-cli/src/commands/harness_session.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.presentation.projection"
+      ]
+    },
+    {
       "id": "op/conformance.stub",
       "edgeId": "e.ci.op.stub",
       "path": "tools/conformance/check_stub_invariance.py",

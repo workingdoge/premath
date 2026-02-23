@@ -61,6 +61,22 @@ _STAGE2_COMPATIBILITY_ALIAS_ROLE = "projection_only"
 _STAGE2_BIDIR_EVIDENCE_ROUTE_KIND = "direct_checker_discharge"
 _STAGE2_BIDIR_EVIDENCE_OBLIGATION_FIELD_REF = "bidirCheckerObligations"
 _STAGE2_BIDIR_EVIDENCE_FALLBACK_MODE = "profile_gated_sentinel"
+_WORKER_DEFAULT_MUTATION_MODE = "instruction-linked"
+_WORKER_ALLOWED_MUTATION_MODES = (
+    "instruction-linked",
+    "human-override",
+)
+_WORKER_MUTATION_ROUTE_BINDINGS = {
+    "issueClaim": "capabilities.change_morphisms.issue_claim",
+    "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
+    "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
+    "issueDiscover": "capabilities.change_morphisms.issue_discover",
+}
+_WORKER_FAILURE_CLASSES = (
+    "worker_lane_policy_drift",
+    "worker_lane_mutation_mode_drift",
+    "worker_lane_route_unbound",
+)
 
 
 def _require_non_empty_string(value: Any, label: str) -> str:
@@ -791,6 +807,162 @@ def _validate_stage2_authority_contract(
     }
 
 
+def _validate_worker_lane_authority_contract(
+    payload: Any,
+    *,
+    active_epoch: str,
+) -> Dict[str, Any]:
+    worker_lane = _require_object(payload, "workerLaneAuthority")
+    mutation_policy = _require_object(
+        worker_lane.get("mutationPolicy"),
+        "workerLaneAuthority.mutationPolicy",
+    )
+    default_mode = _require_non_empty_string(
+        mutation_policy.get("defaultMode"),
+        "workerLaneAuthority.mutationPolicy.defaultMode",
+    )
+    allowed_modes = _require_string_list(
+        mutation_policy.get("allowedModes"),
+        "workerLaneAuthority.mutationPolicy.allowedModes",
+    )
+    allowed_mode_set = set(allowed_modes)
+    required_mode_set = set(_WORKER_ALLOWED_MUTATION_MODES)
+    if default_mode != _WORKER_DEFAULT_MUTATION_MODE:
+        raise ValueError(
+            "workerLaneAuthority.mutationPolicy.defaultMode must be `instruction-linked`"
+        )
+    if default_mode not in allowed_mode_set:
+        raise ValueError(
+            "workerLaneAuthority.mutationPolicy.allowedModes must include defaultMode"
+        )
+    if allowed_mode_set != required_mode_set:
+        raise ValueError(
+            "workerLaneAuthority.mutationPolicy.allowedModes must match canonical modes: "
+            + ", ".join(_WORKER_ALLOWED_MUTATION_MODES)
+        )
+
+    overrides_raw = mutation_policy.get("compatibilityOverrides", [])
+    if not isinstance(overrides_raw, list):
+        raise ValueError(
+            "workerLaneAuthority.mutationPolicy.compatibilityOverrides must be a list"
+        )
+    override_rows: Dict[str, Dict[str, Any]] = {}
+    for idx, override_raw in enumerate(overrides_raw):
+        override = _require_object(
+            override_raw,
+            f"workerLaneAuthority.mutationPolicy.compatibilityOverrides[{idx}]",
+        )
+        mode = _require_non_empty_string(
+            override.get("mode"),
+            f"workerLaneAuthority.mutationPolicy.compatibilityOverrides[{idx}].mode",
+        )
+        support_until_epoch = _require_epoch(
+            override.get("supportUntilEpoch"),
+            f"workerLaneAuthority.mutationPolicy.compatibilityOverrides[{idx}].supportUntilEpoch",
+        )
+        requires_reason = override.get("requiresReason")
+        if not isinstance(requires_reason, bool):
+            raise ValueError(
+                "workerLaneAuthority.mutationPolicy.compatibilityOverrides"
+                f"[{idx}].requiresReason must be a boolean"
+            )
+        if mode == default_mode:
+            raise ValueError(
+                "workerLaneAuthority.mutationPolicy.compatibilityOverrides mode must differ from defaultMode"
+            )
+        if mode not in allowed_mode_set:
+            raise ValueError(
+                "workerLaneAuthority.mutationPolicy.compatibilityOverrides mode must be listed in allowedModes"
+            )
+        if active_epoch > support_until_epoch:
+            raise ValueError(
+                "workerLaneAuthority.mutationPolicy.compatibilityOverrides"
+                f"[{idx}] expired at supportUntilEpoch={support_until_epoch!r}"
+                f" (activeEpoch={active_epoch!r})"
+            )
+        if mode in override_rows:
+            raise ValueError(
+                "workerLaneAuthority.mutationPolicy.compatibilityOverrides mode values must be unique"
+            )
+        override_rows[mode] = {
+            "supportUntilEpoch": support_until_epoch,
+            "requiresReason": requires_reason,
+        }
+
+    expected_override_modes = required_mode_set - {default_mode}
+    if set(override_rows) != expected_override_modes:
+        raise ValueError(
+            "workerLaneAuthority.mutationPolicy.compatibilityOverrides must define exactly one active override per non-default allowed mode"
+        )
+
+    mutation_routes = _require_object(
+        worker_lane.get("mutationRoutes"),
+        "workerLaneAuthority.mutationRoutes",
+    )
+    parsed_routes: Dict[str, str] = {}
+    for key, expected in _WORKER_MUTATION_ROUTE_BINDINGS.items():
+        value = _require_non_empty_string(
+            mutation_routes.get(key),
+            f"workerLaneAuthority.mutationRoutes.{key}",
+        )
+        if value != expected:
+            raise ValueError(
+                "workerLaneAuthority.mutationRoutes."
+                f"{key} must resolve to canonical route {expected!r}"
+            )
+        parsed_routes[key] = value
+    unknown_route_keys = sorted(set(mutation_routes) - set(_WORKER_MUTATION_ROUTE_BINDINGS))
+    if unknown_route_keys:
+        raise ValueError(
+            "workerLaneAuthority.mutationRoutes includes unknown route keys: "
+            + ", ".join(unknown_route_keys)
+        )
+
+    failure_classes = _require_object(
+        worker_lane.get("failureClasses"),
+        "workerLaneAuthority.failureClasses",
+    )
+    parsed_failure_classes = (
+        _require_non_empty_string(
+            failure_classes.get("policyDrift"),
+            "workerLaneAuthority.failureClasses.policyDrift",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("mutationModeDrift"),
+            "workerLaneAuthority.failureClasses.mutationModeDrift",
+        ),
+        _require_non_empty_string(
+            failure_classes.get("routeUnbound"),
+            "workerLaneAuthority.failureClasses.routeUnbound",
+        ),
+    )
+    if parsed_failure_classes != _WORKER_FAILURE_CLASSES:
+        raise ValueError(
+            "workerLaneAuthority.failureClasses must map to canonical worker-lane classes"
+        )
+
+    return {
+        "mutationPolicy": {
+            "defaultMode": default_mode,
+            "allowedModes": allowed_modes,
+            "compatibilityOverrides": [
+                {
+                    "mode": mode,
+                    "supportUntilEpoch": override_rows[mode]["supportUntilEpoch"],
+                    "requiresReason": override_rows[mode]["requiresReason"],
+                }
+                for mode in sorted(override_rows)
+            ],
+        },
+        "mutationRoutes": parsed_routes,
+        "failureClasses": {
+            "policyDrift": parsed_failure_classes[0],
+            "mutationModeDrift": parsed_failure_classes[1],
+            "routeUnbound": parsed_failure_classes[2],
+        },
+    }
+
+
 def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -908,6 +1080,10 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
 
     lane_failure_classes = _require_optional_string_list(
         root.get("laneFailureClasses"), "laneFailureClasses"
+    )
+    worker_lane_authority = _validate_worker_lane_authority_contract(
+        root.get("workerLaneAuthority"),
+        active_epoch=active_epoch,
     )
 
     harness_retry_obj = _require_object(
@@ -1069,6 +1245,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
             "requiredCrossLaneWitnessRoute": required_cross_lane_witness_route,
         },
         "laneFailureClasses": lane_failure_classes,
+        "workerLaneAuthority": worker_lane_authority,
         "harnessRetry": {
             "policyKind": harness_retry_policy_kind,
             "policyPath": harness_retry_policy_path,
@@ -1195,6 +1372,25 @@ REQUIRED_CROSS_LANE_WITNESS_ROUTE: Optional[str] = _CONTRACT.get(
     "laneOwnership", {}
 ).get("requiredCrossLaneWitnessRoute")
 LANE_FAILURE_CLASSES: Tuple[str, ...] = tuple(_CONTRACT.get("laneFailureClasses", ()))
+WORKER_LANE_DEFAULT_MUTATION_MODE: str = (
+    _CONTRACT.get("workerLaneAuthority", {})
+    .get("mutationPolicy", {})
+    .get("defaultMode", "")
+)
+WORKER_LANE_ALLOWED_MUTATION_MODES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("workerLaneAuthority", {})
+    .get("mutationPolicy", {})
+    .get("allowedModes", ())
+)
+WORKER_LANE_MUTATION_ROUTES: Dict[str, str] = dict(
+    _CONTRACT.get("workerLaneAuthority", {}).get("mutationRoutes", {})
+)
+WORKER_LANE_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("workerLaneAuthority", {})
+    .get("failureClasses", {})
+    .get(key, "")
+    for key in ("policyDrift", "mutationModeDrift", "routeUnbound")
+)
 
 HARNESS_RETRY_POLICY_KIND: str = _CONTRACT.get("harnessRetry", {}).get(
     "policyKind",

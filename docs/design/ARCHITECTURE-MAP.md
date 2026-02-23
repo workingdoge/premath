@@ -159,10 +159,17 @@ Instruction doctrine is executable via:
 Current sequencing is tracked in `.premath/issues.jsonl` with active unification
 work resolved dynamically via `premath issue ready`.
 
-Current follow-on work should remain focused on:
+Canonical ordering for active work is architecture-first:
 
-- governance/operations follow-ups that require human reviewer availability
-  (current open item: `bd-67`).
+1. lane/site/adjoint architecture slice,
+2. spec-index + doctrine-site glue slice,
+3. control-plane typed-contract/checker parity slice,
+4. implementation slice,
+5. conformance/closure slice.
+
+Operational companion:
+- `docs/design/MULTITHREAD-LANE-SITE-ADJOINTS.md`
+- `docs/design/DEVELOPMENT-META-LOOP.md`
 
 Operational rule:
 - treat this section as a pointer only; use `premath issue ready` /
@@ -175,3 +182,5 @@ Execution notes:
   checker/profile/CI wrappers.
 - keep cross-lane pullback/base-change claims routed through typed
   span/square witnesses.
+- keep capability composition explicit (`change_morphisms`,
+  `adjoints_sites`, `squeak_site`) with no implicit authority escalation.

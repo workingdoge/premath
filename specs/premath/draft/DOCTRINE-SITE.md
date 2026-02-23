@@ -90,7 +90,9 @@ The site map MUST include at least:
 - runtime transport/site nodes (`raw/TUSK-CORE`, `raw/SQUEAK-CORE`,
   `raw/SQUEAK-SITE`),
 - CI/projection nodes (`raw/PREMATH-CI`, `raw/CI-TOPOS`),
-- operational entrypoint nodes (`tools/ci/*`, `tools/conformance/*`).
+- operational entrypoint nodes (`tools/ci/*`, `tools/conformance/*`,
+  `crates/premath-cli/src/commands/*` for worker-memory and harness session
+  surfaces).
 
 Operational nodes are not semantic authorities. They are execution/projection
 surfaces bound to upstream declarations.
@@ -100,6 +102,11 @@ Repository v0 note:
 - CI operation nodes currently include `tools/ci/run_gate.sh`,
   `tools/ci/run_instruction.sh`, `tools/ci/verify_required_witness.py`, and
   `tools/ci/decide_required.py`.
+- worker-memory operation nodes include MCP mutation paths for
+  `issue_claim`, `issue_lease_renew`, `issue_lease_release`, and
+  `issue_discover` in `crates/premath-cli/src/commands/mcp_serve.rs`.
+- harness-session operation nodes include `read`, `write`, and `bootstrap`
+  paths in `crates/premath-cli/src/commands/harness_session.rs`.
 - doctrine-conformance operation nodes currently include
   `tools/conformance/check_doctrine_site.py` and
   `tools/conformance/run_doctrine_inf_vectors.py`.
