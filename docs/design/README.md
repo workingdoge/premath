@@ -28,6 +28,9 @@ Authority rule:
   checks, and deterministic next-feature selection.
 - `TUSK-HARNESS-TRAJECTORY.md`: append-only step trajectory rows with
   witness-linked deterministic query projections.
+- `TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`: deterministic coordinator/worker loop
+  over `N` worktrees (`issue_ready -> claim -> work -> verify -> release/update`)
+  with explicit heartbeat/recovery guidance.
 
 ### Squeak/SigPi transport + runtime placement (between worlds)
 

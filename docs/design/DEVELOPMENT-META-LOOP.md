@@ -70,6 +70,11 @@ Worker mutation authority remains instruction-linked by default.
 
 Never run multi-issue implicit sessions.
 
+Canonical script surface:
+
+- `python3 tools/harness/multithread_loop.py worker`
+- `python3 tools/harness/multithread_loop.py coordinator`
+
 ## 5. Lane Discipline
 
 - Issue lane (`.premath/issues.jsonl`): task state, dependencies, acceptance,

@@ -80,3 +80,8 @@ Issue graph discipline:
 - encode the order with explicit dependency edges,
 - keep one in-progress issue per worker session,
 - record discovered work immediately with dependency linkage.
+
+Operational entrypoint for this loop:
+
+- `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
+- `tools/harness/multithread_loop.py`

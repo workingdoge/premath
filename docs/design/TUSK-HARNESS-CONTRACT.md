@@ -139,6 +139,7 @@ Each slice should ship with:
 - Harness handoff artifact: `docs/design/TUSK-HARNESS-SESSION.md`
 - Harness feature ledger: `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
 - Harness trajectory rows: `docs/design/TUSK-HARNESS-TRAJECTORY.md`
+- Multithread runbook: `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
 - Harness retry policy table: `docs/design/TUSK-HARNESS-RETRY-POLICY.md`
 - Identity/refinement/witness details:
   - `docs/design/TUSK-IDENTITY.md`
