@@ -19,6 +19,8 @@
 //! MemoryStore (deterministic in-memory projection)
 //! ```
 
+pub mod atomic_store;
+pub mod claim_next;
 pub mod dependency;
 pub mod events;
 pub mod issue;
@@ -26,6 +28,11 @@ pub mod issue_graph;
 pub mod jsonl;
 pub mod memory;
 
+pub use atomic_store::{AtomicStoreMutationError, issue_lock_path, mutate_store_jsonl};
+pub use claim_next::{
+    ClaimNextError, ClaimNextOutcome, ClaimNextRequest, DEFAULT_LEASE_TTL_SECONDS,
+    MAX_LEASE_TTL_SECONDS, MIN_LEASE_TTL_SECONDS, claim_next_issue_jsonl,
+};
 pub use dependency::{DepType, Dependency, DependencyProjection, DependencyView};
 pub use events::{
     EventError, ISSUE_EVENT_REF_PREFIX, ISSUE_EVENT_SCHEMA, ISSUE_SNAPSHOT_REF_PREFIX, IssueEvent,

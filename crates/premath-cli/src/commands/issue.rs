@@ -2,9 +2,10 @@ use crate::cli::IssueCommands;
 use crate::support::{backend_status_payload, collect_backend_status};
 use premath_bd::issue::{issue_type_variants, parse_issue_type};
 use premath_bd::{
-    DepType, Issue, MemoryStore, event_stream_ref, migrate_store_to_events, read_events_from_path,
-    replay_events, replay_events_from_path, store_snapshot_ref, stores_equivalent,
-    write_events_to_path,
+    AtomicStoreMutationError, ClaimNextRequest, DepType, Issue, MemoryStore,
+    claim_next_issue_jsonl, event_stream_ref, migrate_store_to_events, mutate_store_jsonl,
+    read_events_from_path, replay_events, replay_events_from_path, store_snapshot_ref,
+    stores_equivalent, write_events_to_path,
 };
 use premath_surreal::QueryCache;
 use serde::{Deserialize, Serialize};
@@ -92,6 +93,14 @@ pub fn run(command: IssueCommands) {
             issues,
             json,
         } => run_claim(id, assignee, issues, json),
+
+        IssueCommands::ClaimNext {
+            assignee,
+            lease_id,
+            lease_ttl_seconds,
+            issues,
+            json,
+        } => run_claim_next(assignee, lease_id, lease_ttl_seconds, issues, json),
 
         IssueCommands::Discover {
             parent_issue_id,
@@ -591,23 +600,20 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
         std::process::exit(1);
     }
 
-    let (mut store, path) = load_store_existing_or_exit(&issues);
-    let updated = {
-        let issue = store.issue_mut(&id).unwrap_or_else(|| {
-            eprintln!("error: issue not found: {id}");
-            std::process::exit(1);
-        });
+    let path = PathBuf::from(issues);
+    let updated = mutate_store_jsonl(&path, |store| {
+        let issue = store
+            .issue_mut(&id)
+            .ok_or_else(|| format!("issue not found: {id}"))?;
 
         if issue.status == "closed" {
-            eprintln!("error: cannot claim closed issue: {id}");
-            std::process::exit(1);
+            return Err(format!("cannot claim closed issue: {id}"));
         }
         if !issue.assignee.is_empty() && issue.assignee != assignee {
-            eprintln!(
-                "error: issue already claimed: {id} (assignee={})",
+            return Err(format!(
+                "issue already claimed: {id} (assignee={})",
                 issue.assignee
-            );
-            std::process::exit(1);
+            ));
         }
 
         if issue.assignee != assignee {
@@ -618,10 +624,15 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
         } else {
             issue.touch_updated_at();
         }
-        issue.clone()
-    };
-
-    save_store_or_exit(&store, &path);
+        Ok((issue.clone(), true))
+    })
+    .unwrap_or_else(|e| {
+        match e {
+            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
+            other => eprintln!("error: {other}"),
+        }
+        std::process::exit(1);
+    });
 
     if json_output {
         let payload = json!({
@@ -647,6 +658,75 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
             updated.id,
             updated.assignee,
             updated.status,
+            path.display()
+        );
+    }
+}
+
+fn run_claim_next(
+    assignee: String,
+    lease_id: Option<String>,
+    lease_ttl_seconds: Option<i64>,
+    issues: String,
+    json_output: bool,
+) {
+    let path = PathBuf::from(issues);
+    let claim = claim_next_issue_jsonl(
+        &path,
+        ClaimNextRequest {
+            assignee,
+            lease_id,
+            lease_ttl_seconds,
+            now: chrono::Utc::now(),
+        },
+    )
+    .unwrap_or_else(|e| {
+        eprintln!("error: {e}");
+        std::process::exit(1);
+    });
+
+    if json_output {
+        let issue = claim.issue.as_ref().map(|updated| {
+            json!({
+                "id": updated.id,
+                "title": updated.title,
+                "status": updated.status,
+                "priority": updated.priority,
+                "issueType": updated.issue_type,
+                "assignee": updated.assignee,
+                "owner": updated.owner,
+                "lease": updated.lease.as_ref().map(|lease| {
+                    json!({
+                        "leaseId": lease.lease_id,
+                        "owner": lease.owner,
+                        "acquiredAt": lease.acquired_at.to_rfc3339(),
+                        "expiresAt": lease.expires_at.to_rfc3339(),
+                        "renewedAt": lease.renewed_at.map(|item| item.to_rfc3339()),
+                    })
+                })
+            })
+        });
+        let payload = json!({
+            "action": "issue.claim_next",
+            "issuesPath": path.display().to_string(),
+            "claimed": issue.is_some(),
+            "issue": issue
+        });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&payload).expect("json serialization")
+        );
+    } else if let Some(updated) = claim.issue {
+        println!(
+            "premath issue claim-next\n  Claimed: {} -> {} [{}]\n  Path: {}",
+            updated.id,
+            updated.assignee,
+            updated.status,
+            path.display()
+        );
+    } else {
+        println!(
+            "premath issue claim-next\n  Claimed: none (no ready/open issue)\n  Path: {}",
             path.display()
         );
     }

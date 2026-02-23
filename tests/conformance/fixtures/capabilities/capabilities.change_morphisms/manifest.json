@@ -34,6 +34,12 @@
     "invariance/same_delta_external_profile",
     "invariance/same_provider_wrapper_local_env",
     "invariance/same_provider_wrapper_github_env",
+    "invariance/same_issue_claim_contention_local",
+    "invariance/same_issue_claim_contention_external",
+    "invariance/same_issue_lease_renew_stale_local",
+    "invariance/same_issue_lease_renew_stale_external",
+    "invariance/same_issue_lease_release_owner_mismatch_local",
+    "invariance/same_issue_lease_release_owner_mismatch_external",
     "invariance/same_issue_event_replay_cache_local",
     "invariance/same_issue_event_replay_cache_external"
   ]

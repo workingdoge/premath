@@ -2765,6 +2765,21 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         "invariance/same_provider_wrapper_github_env",
     }:
         return evaluate_change_projection_provider_wrapper_invariance(case)
+    if vector_id in {
+        "invariance/same_issue_claim_contention_local",
+        "invariance/same_issue_claim_contention_external",
+    }:
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id in {
+        "invariance/same_issue_lease_renew_stale_local",
+        "invariance/same_issue_lease_renew_stale_external",
+    }:
+        return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id in {
+        "invariance/same_issue_lease_release_owner_mismatch_local",
+        "invariance/same_issue_lease_release_owner_mismatch_external",
+    }:
+        return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "adversarial/change_morphisms_requires_claim":
         return evaluate_change_projection_requires_claim(case)
     if vector_id == "adversarial/issue_ready_blocked_partition_mismatch_reject":

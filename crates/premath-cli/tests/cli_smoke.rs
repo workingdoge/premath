@@ -75,6 +75,15 @@ fn write_sample_issues(path: &Path) {
     fs::write(path, format!("{}\n", lines.join("\n"))).expect("sample issues should be written");
 }
 
+fn write_claim_next_issues(path: &Path) {
+    let lines = [
+        r#"{"id":"bd-1","title":"Issue 1","status":"open"}"#,
+        r#"{"id":"bd-2","title":"Issue 2","status":"open"}"#,
+    ];
+    fs::write(path, format!("{}\n", lines.join("\n")))
+        .expect("claim-next issues should be written");
+}
+
 fn write_tusk_eval_inputs(dir: &Path) -> (PathBuf, PathBuf) {
     let identity = serde_json::json!({
         "worldId": "world.dev",
@@ -521,6 +530,62 @@ fn verify_json_smoke() {
     assert!(payload["axioms"]["gluing"].is_boolean());
     assert!(payload["axioms"]["uniqueness"].is_boolean());
     assert!(payload["violations"]["descent_conflict_count"].is_number());
+}
+
+#[test]
+fn issue_claim_next_json_smoke() {
+    let tmp = TempDirGuard::new("issue-claim-next");
+    let issues = tmp.path().join("issues.jsonl");
+    write_claim_next_issues(&issues);
+
+    let first = run_premath([
+        OsString::from("issue"),
+        OsString::from("claim-next"),
+        OsString::from("--assignee"),
+        OsString::from("worker-a"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&first);
+    let first_payload = parse_json_stdout(&first);
+    assert_eq!(first_payload["action"], "issue.claim_next");
+    assert_eq!(first_payload["claimed"], true);
+    assert_eq!(first_payload["issue"]["id"], "bd-1");
+    assert_eq!(first_payload["issue"]["status"], "in_progress");
+    assert_eq!(first_payload["issue"]["assignee"], "worker-a");
+    assert_eq!(
+        first_payload["issue"]["lease"]["leaseId"],
+        serde_json::json!("lease1_bd-1_worker-a")
+    );
+
+    let second = run_premath([
+        OsString::from("issue"),
+        OsString::from("claim-next"),
+        OsString::from("--assignee"),
+        OsString::from("worker-a"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&second);
+    let second_payload = parse_json_stdout(&second);
+    assert_eq!(second_payload["claimed"], true);
+    assert_eq!(second_payload["issue"]["id"], "bd-2");
+
+    let third = run_premath([
+        OsString::from("issue"),
+        OsString::from("claim-next"),
+        OsString::from("--assignee"),
+        OsString::from("worker-a"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&third);
+    let third_payload = parse_json_stdout(&third);
+    assert_eq!(third_payload["claimed"], false);
+    assert_eq!(third_payload["issue"], Value::Null);
 }
 
 #[test]

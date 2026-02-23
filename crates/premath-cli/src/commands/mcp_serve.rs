@@ -8,7 +8,10 @@ use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use premath_bd::DEFAULT_NOTE_WARN_THRESHOLD;
 use premath_bd::issue::{issue_type_variants, parse_issue_type};
-use premath_bd::{DepType, Issue, IssueLease, IssueLeaseState, MemoryStore, store_snapshot_ref};
+use premath_bd::{
+    AtomicStoreMutationError, DepType, Issue, IssueLease, IssueLeaseState, MemoryStore,
+    mutate_store_jsonl, store_snapshot_ref,
+};
 use premath_coherence::validate_instruction_envelope_payload;
 use premath_jj::JjClient;
 use premath_surreal::{ProjectionMatchMode, QueryCache};
@@ -769,6 +772,9 @@ const FAILURE_LEASE_MISSING: &str = "lease_missing";
 const FAILURE_LEASE_STALE: &str = "lease_stale";
 const FAILURE_LEASE_OWNER_MISMATCH: &str = "lease_owner_mismatch";
 const FAILURE_LEASE_ID_MISMATCH: &str = "lease_id_mismatch";
+const FAILURE_LEASE_MUTATION_LOCK_BUSY: &str = "lease_mutation_lock_busy";
+const FAILURE_LEASE_MUTATION_LOCK_IO: &str = "lease_mutation_lock_io";
+const FAILURE_LEASE_MUTATION_STORE_IO: &str = "lease_mutation_store_io";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -867,6 +873,23 @@ fn compute_lease_projection(store: &MemoryStore, now: DateTime<Utc>) -> LeasePro
 
 fn lease_error(failure_class: &str, detail: impl Into<String>) -> CallToolError {
     call_tool_error(format!("[failureClass={failure_class}] {}", detail.into()))
+}
+
+fn map_atomic_store_mutation_error(err: AtomicStoreMutationError<CallToolError>) -> CallToolError {
+    match err {
+        AtomicStoreMutationError::Mutation(inner) => inner,
+        AtomicStoreMutationError::LockBusy { lock_path } => lease_error(
+            FAILURE_LEASE_MUTATION_LOCK_BUSY,
+            format!("issue-memory lock busy: {lock_path}"),
+        ),
+        AtomicStoreMutationError::LockIo { lock_path, message } => lease_error(
+            FAILURE_LEASE_MUTATION_LOCK_IO,
+            format!("failed to acquire issue-memory lock {lock_path}: {message}"),
+        ),
+        AtomicStoreMutationError::Store(source) => {
+            lease_error(FAILURE_LEASE_MUTATION_STORE_IO, source.to_string())
+        }
+    }
 }
 
 fn parse_lease_ttl_seconds(ttl_seconds: Option<i64>) -> std::result::Result<i64, CallToolError> {
@@ -1161,7 +1184,6 @@ fn call_issue_claim(
     tool: IssueClaimTool,
 ) -> std::result::Result<CallToolResult, CallToolError> {
     let path = resolve_path(tool.issues_path, &config.issues_path);
-    let mut store = load_store_existing(&path)?;
     let instruction =
         resolve_instruction_link(config, tool.instruction_id, MutationAction::IssueClaim)?;
     let assignee = tool.assignee.trim().to_string();
@@ -1178,7 +1200,7 @@ fn call_issue_claim(
     let write_witness =
         build_write_witness(config, "issue.claim", &tool.id, &path, instruction.as_ref());
 
-    let (updated, changed) = {
+    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
         let issue = store
             .issue_mut(&tool.id)
             .ok_or_else(|| call_tool_error(format!("issue not found: {}", tool.id)))?;
@@ -1271,11 +1293,13 @@ fn call_issue_claim(
         if changed {
             issue_attach_write_witness(issue, write_witness.clone());
         }
-        (issue.clone(), changed)
-    };
+        let updated = issue.clone();
+
+        Ok(((updated, changed, store.clone()), changed))
+    })
+    .map_err(map_atomic_store_mutation_error)?;
 
     if changed {
-        save_store(&store, &path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
     let lease_projection = compute_lease_projection(&store, now);
@@ -1297,7 +1321,6 @@ fn call_issue_lease_renew(
     tool: IssueLeaseRenewTool,
 ) -> std::result::Result<CallToolResult, CallToolError> {
     let path = resolve_path(tool.issues_path, &config.issues_path);
-    let mut store = load_store_existing(&path)?;
     let instruction =
         resolve_instruction_link(config, tool.instruction_id, MutationAction::IssueLeaseRenew)?;
     let assignee = tool.assignee.trim().to_string();
@@ -1324,7 +1347,7 @@ fn call_issue_lease_renew(
         instruction.as_ref(),
     );
 
-    let (updated, changed) = {
+    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
         let issue = store.issue_mut(&tool.id).ok_or_else(|| {
             lease_error(
                 FAILURE_LEASE_NOT_FOUND,
@@ -1401,11 +1424,13 @@ fn call_issue_lease_renew(
         if changed {
             issue_attach_write_witness(issue, write_witness.clone());
         }
-        (issue.clone(), changed)
-    };
+        let updated = issue.clone();
+
+        Ok(((updated, changed, store.clone()), changed))
+    })
+    .map_err(map_atomic_store_mutation_error)?;
 
     if changed {
-        save_store(&store, &path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
     let lease_projection = compute_lease_projection(&store, now);
@@ -1427,7 +1452,6 @@ fn call_issue_lease_release(
     tool: IssueLeaseReleaseTool,
 ) -> std::result::Result<CallToolResult, CallToolError> {
     let path = resolve_path(tool.issues_path, &config.issues_path);
-    let mut store = load_store_existing(&path)?;
     let instruction = resolve_instruction_link(
         config,
         tool.instruction_id,
@@ -1444,7 +1468,7 @@ fn call_issue_lease_release(
         instruction.as_ref(),
     );
 
-    let (updated, changed) = {
+    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
         let issue = store.issue_mut(&tool.id).ok_or_else(|| {
             lease_error(
                 FAILURE_LEASE_NOT_FOUND,
@@ -1506,12 +1530,13 @@ fn call_issue_lease_release(
             }
             issue_attach_write_witness(issue, write_witness.clone());
         }
+        let updated = issue.clone();
 
-        (issue.clone(), changed)
-    };
+        Ok(((updated, changed, store.clone()), changed))
+    })
+    .map_err(map_atomic_store_mutation_error)?;
 
     if changed {
-        save_store(&store, &path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
     let lease_projection = compute_lease_projection(&store, now);

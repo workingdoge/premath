@@ -663,6 +663,29 @@ pub enum IssueCommands {
         json: bool,
     },
 
+    /// Atomically claim the next ready/open issue for work
+    ClaimNext {
+        /// Assignee to claim with
+        #[arg(long)]
+        assignee: String,
+
+        /// Optional explicit lease identifier
+        #[arg(long)]
+        lease_id: Option<String>,
+
+        /// Optional lease TTL in seconds
+        #[arg(long)]
+        lease_ttl_seconds: Option<i64>,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Create discovered follow-up work linked to a parent issue
     Discover {
         /// Parent issue ID where work was discovered

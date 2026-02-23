@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_contention_active"
+  ],
+  "assertions": [
+    "kernel verdict matches paired profile",
+    "Gate failure classes match paired profile"
+  ]
+}

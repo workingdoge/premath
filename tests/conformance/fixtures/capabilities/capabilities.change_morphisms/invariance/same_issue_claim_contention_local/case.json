@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_issue_claim_contention_local",
+  "profile": "local",
+  "semanticScenarioId": "change_projection_issue_claim_contention_invariance_01",
+  "description": "Local baseline for issue-claim contention invariance.",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-202",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 4600000
+      }
+    },
+    "claim": {
+      "assignee": "agent.beta",
+      "leaseId": "lease1_bd-lease-202_agent.beta",
+      "leaseExpiresAtUnixMs": 5600000
+    }
+  }
+}
