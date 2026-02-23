@@ -173,6 +173,9 @@ run = "python3 tools/harness/multithread_loop.py worker"
 [tasks.harness-coordinator-loop]
 run = "python3 tools/harness/multithread_loop.py coordinator"
 
+[tasks.harness-kpi-report]
+run = "python3 tools/harness/benchmark_kpi.py --json"
+
 [tasks.ci-observation-check]
 run = [
   "mise run ci-observation-build",

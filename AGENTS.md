@@ -62,6 +62,7 @@
 - `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
 - `mise run harness-worker-loop -- --worker-id <worker-id> --mutation-mode human-override --override-reason '<reason>' --work-cmd '<cmd>' --verify-cmd '<cmd>'` — run one deterministic worker loop (`claim-next -> work -> verify -> close/recover`) with explicit bounded override and harness projection updates.
 - `mise run harness-coordinator-loop -- --worktree <path> [--worktree <path> ...] --rounds <n> --mutation-mode human-override --override-reason '<reason>'` — run deterministic coordinator round-robin dispatch over `N` worktrees under explicit auditable override.
+- `mise run harness-kpi-report` — emit canonical multithread throughput KPI benchmark from trajectory projections with deterministic threshold decision (`pass|watch|rollback|insufficient_data`).
 - `mise run conformance-run` — run executable fixture suites (Interop Core + Gate + Witness-ID + cross-model kernel profile + Tusk runtime contract vectors + capability vectors) through the cached suite runner.
 - `mise run doctrine-check` — validate doctrine declarations/site reachability plus doctrine-inf semantic boundary vectors (`specs/premath/draft/DOCTRINE-SITE.json`, `tests/conformance/fixtures/doctrine-inf/`).
 - `mise run traceability-check` — validate promoted draft spec coverage matrix integrity (`specs/premath/draft/SPEC-TRACEABILITY.md`).
@@ -100,6 +101,7 @@
 - `cargo run --package premath-cli -- harness-trajectory append --path .premath/harness_trajectory.jsonl --step-id <id> --issue-id <bd-id> --action <action> --result-class <class> --witness-ref <path-or-ref> --finished-at <rfc3339> --json` — append one typed harness step trajectory row (witness-linked, append-only).
 - `cargo run --package premath-cli -- harness-trajectory query --path .premath/harness_trajectory.jsonl --mode latest|failed|retry-needed --limit 20 --json` — project deterministic trajectory subsets for operator/agent handoff.
 - `python3 tools/harness/multithread_loop.py coordinator --worktree <path> [--worktree <path> ...] --rounds <n> --worker-prefix <prefix> --mutation-mode human-override --override-reason '<reason>'` — canonical multithread coordinator/worker command loop; fails closed on default `instruction-linked` mode for direct CLI mutation paths.
+- `python3 tools/harness/benchmark_kpi.py --window-hours 24 --target-kpi 0.8 --rollback-kpi 0.4 --json` — canonical throughput KPI benchmark and rollback trigger report.
 - `cargo run --package premath-cli -- issue add \"Title\" --issues .premath/issues.jsonl --json` — add an issue to JSONL-backed memory.
 - `cargo run --package premath-cli -- issue claim <issue-id> --assignee <name> --issues .premath/issues.jsonl --json` — atomically claim work (`assignee` + `in_progress`).
 - `cargo run --package premath-cli -- issue discover <parent-issue-id> \"Title\" --issues .premath/issues.jsonl --json` — create discovered follow-up work linked by `discovered-from`.

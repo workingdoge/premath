@@ -547,7 +547,7 @@ def run_worker(args: argparse.Namespace) -> int:
         success = work_rc == 0 and verify_rc == 0
 
         step_id = f"{worker_id}.{issue_id}.{step_index}"
-        result_class = "succeeded" if success else "failed"
+        result_class = "completed" if success else "failed"
         witness_ref = f"{args.witness_ref_prefix.rstrip('/')}/{worker_id}/{issue_id}/{result_class}"
         policy_ref = policy_audit_ref(
             mode=mutation_mode,

@@ -140,6 +140,7 @@ Each slice should ship with:
 - Harness feature ledger: `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
 - Harness trajectory rows: `docs/design/TUSK-HARNESS-TRAJECTORY.md`
 - Multithread runbook: `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
+- KPI benchmark: `docs/design/TUSK-HARNESS-KPI-BENCHMARK.md`
 - Harness retry policy table: `docs/design/TUSK-HARNESS-RETRY-POLICY.md`
 - Identity/refinement/witness details:
   - `docs/design/TUSK-IDENTITY.md`

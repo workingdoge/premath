@@ -31,6 +31,9 @@ Authority rule:
 - `TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`: deterministic coordinator/worker loop
   over `N` worktrees (`issue_ready -> claim -> work -> verify -> release/update`)
   with explicit heartbeat/recovery guidance.
+- `TUSK-HARNESS-KPI-BENCHMARK.md`: canonical multithread throughput KPI
+  definition, deterministic benchmark procedure, and rollback trigger
+  thresholds.
 
 ### Squeak/SigPi transport + runtime placement (between worlds)
 
