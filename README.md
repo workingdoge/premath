@@ -437,6 +437,7 @@ surface.
     `issue_check`, `issue_backend_status`, `issue_blocked`, `issue_add`, `issue_claim`,
     `issue_lease_renew`, `issue_lease_release`, `issue_lease_projection`,
     `issue_discover`, `issue_update`, `dep_add`, `dep_remove`, `dep_replace`,
+    `dep_diagnostics`,
     `observe_latest`, `observe_needs_attention`, `observe_instruction`,
     `observe_projection`.
   - doctrine-gated tools: `instruction_check`, `instruction_run`
@@ -465,8 +466,8 @@ surface.
   - removes one typed dependency edge.
 - `premath dep replace <issue-id> <depends-on-id> --from-type blocks --to-type related --issues .premath/issues.jsonl --json`
   - replaces one dependency edge type without manual JSONL edits.
-- `premath dep diagnostics --issues .premath/issues.jsonl --json`
-  - reports dependency graph integrity diagnostics (`hasCycle`, `cyclePath`).
+- `premath dep diagnostics --issues .premath/issues.jsonl --graph-scope active|full --json`
+  - reports scoped dependency graph integrity diagnostics (`graphScope`, `hasCycle`, `cyclePath`), defaulting to `active`.
 
 ### MCP Client Config Snippets
 

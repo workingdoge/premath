@@ -1863,6 +1863,7 @@ fn dep_remove_replace_and_diagnostics_json_smoke() {
     assert_success(&out_diag);
     let diag_payload = parse_json_stdout(&out_diag);
     assert_eq!(diag_payload["action"], "dep.diagnostics");
+    assert_eq!(diag_payload["graphScope"], "active");
     assert_eq!(diag_payload["integrity"]["hasCycle"], false);
     assert_eq!(diag_payload["integrity"]["cyclePath"], Value::Null);
 
@@ -1900,6 +1901,55 @@ fn dep_remove_replace_and_diagnostics_json_smoke() {
         String::from_utf8_lossy(&out_cycle.stderr).contains("dependency cycle detected"),
         "expected cycle diagnostic in stderr, got:\n{}",
         String::from_utf8_lossy(&out_cycle.stderr)
+    );
+}
+
+#[test]
+fn dep_diagnostics_scope_filters_closed_cycle_noise() {
+    let tmp = TempDirGuard::new("dep-diagnostics-scope");
+    let issues = tmp.path().join("issues.jsonl");
+    fs::write(
+        &issues,
+        concat!(
+            r#"{"id":"bd-a","title":"A","status":"closed","dependencies":[{"issue_id":"bd-a","depends_on_id":"bd-b","type":"blocks"}]}"#,
+            "\n",
+            r#"{"id":"bd-b","title":"B","status":"closed","dependencies":[{"issue_id":"bd-b","depends_on_id":"bd-a","type":"blocks"}]}"#,
+            "\n",
+            r#"{"id":"bd-c","title":"C","status":"open"}"#,
+            "\n"
+        ),
+    )
+    .expect("issues fixture should write");
+
+    let out_active = run_premath([
+        OsString::from("dep"),
+        OsString::from("diagnostics"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_active);
+    let active_payload = parse_json_stdout(&out_active);
+    assert_eq!(active_payload["graphScope"], "active");
+    assert_eq!(active_payload["integrity"]["hasCycle"], false);
+    assert_eq!(active_payload["integrity"]["cyclePath"], Value::Null);
+
+    let out_full = run_premath([
+        OsString::from("dep"),
+        OsString::from("diagnostics"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--graph-scope"),
+        OsString::from("full"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_full);
+    let full_payload = parse_json_stdout(&out_full);
+    assert_eq!(full_payload["graphScope"], "full");
+    assert_eq!(full_payload["integrity"]["hasCycle"], true);
+    assert_eq!(
+        full_payload["integrity"]["cyclePath"],
+        serde_json::json!(["bd-a", "bd-b", "bd-a"])
     );
 }
 

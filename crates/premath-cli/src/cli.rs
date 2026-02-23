@@ -860,6 +860,10 @@ pub enum DepCommands {
         #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
+        /// Graph scope for diagnostics (`active` excludes closed issues, `full` includes all)
+        #[arg(long = "graph-scope", default_value = "active")]
+        graph_scope: DepGraphScopeArg,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -898,6 +902,14 @@ pub enum DepViewArg {
     Gtd,
     #[value(name = "groupoid")]
     Groupoid,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum DepGraphScopeArg {
+    #[value(name = "active")]
+    Active,
+    #[value(name = "full")]
+    Full,
 }
 
 #[derive(Subcommand, Clone, Debug)]

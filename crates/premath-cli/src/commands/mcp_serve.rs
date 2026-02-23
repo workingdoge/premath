@@ -9,8 +9,8 @@ use chrono::{DateTime, Duration, Utc};
 use premath_bd::DEFAULT_NOTE_WARN_THRESHOLD;
 use premath_bd::issue::{issue_type_variants, parse_issue_type};
 use premath_bd::{
-    AtomicStoreMutationError, DepType, Issue, IssueLease, IssueLeaseState, MemoryStore,
-    mutate_store_jsonl, store_snapshot_ref,
+    AtomicStoreMutationError, DepType, DependencyGraphScope, Issue, IssueLease, IssueLeaseState,
+    MemoryStore, mutate_store_jsonl, store_snapshot_ref,
 };
 use premath_coherence::validate_instruction_envelope_payload;
 use premath_jj::JjClient;
@@ -167,7 +167,7 @@ async fn run_async(args: Args) -> Result<(), String> {
         },
         protocol_version: ProtocolVersion::V2025_11_25.into(),
         instructions: Some(
-            "Use init_tool to initialize canonical .premath/issues.jsonl memory. issue/dep mutation tools (including issue_claim, issue_lease_renew, issue_lease_release, and issue_discover) are instruction-mediated by policy (default: instruction-linked) and reads may use jsonl or surreal projection backends. Use issue_backend_status for backend integration state and issue_lease_projection for deterministic stale/contended lease views. Use instruction_* tools for doctrine-gated runs (instruction envelopes require normalizerId + policyDigest, requestedChecks must be policy-allowlisted, optional capabilityClaims are carried to witness for mutation gating, and optional proposal ingestion uses proposal/llmProposal) and observe_* tools for observation queries."
+            "Use init_tool to initialize canonical .premath/issues.jsonl memory. issue/dep mutation tools (including issue_claim, issue_lease_renew, issue_lease_release, and issue_discover) are instruction-mediated by policy (default: instruction-linked) and reads may use jsonl or surreal projection backends. Use issue_backend_status for backend integration state, issue_lease_projection for deterministic stale/contended lease views, and dep_diagnostics for scoped dependency-cycle diagnostics. Use instruction_* tools for doctrine-gated runs (instruction envelopes require normalizerId + policyDigest, requestedChecks must be policy-allowlisted, optional capabilityClaims are carried to witness for mutation gating, and optional proposal ingestion uses proposal/llmProposal) and observe_* tools for observation queries."
                 .into(),
         ),
         meta: None,
@@ -232,6 +232,7 @@ impl ServerHandler for PremathMcpHandler {
             PremathTools::DepAddTool(tool) => call_dep_add(&self.config, tool),
             PremathTools::DepRemoveTool(tool) => call_dep_remove(&self.config, tool),
             PremathTools::DepReplaceTool(tool) => call_dep_replace(&self.config, tool),
+            PremathTools::DepDiagnosticsTool(tool) => call_dep_diagnostics(&self.config, tool),
             PremathTools::InitTool(tool) => call_init_tool(&self.config, tool),
             PremathTools::IssueLeaseProjectionTool(tool) => {
                 call_issue_lease_projection(&self.config, tool)
@@ -534,6 +535,37 @@ struct DepReplaceTool {
     issues_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+enum DepGraphScopeToolArg {
+    #[default]
+    Active,
+    Full,
+}
+
+impl From<DepGraphScopeToolArg> for DependencyGraphScope {
+    fn from(value: DepGraphScopeToolArg) -> Self {
+        match value {
+            DepGraphScopeToolArg::Active => DependencyGraphScope::Active,
+            DepGraphScopeToolArg::Full => DependencyGraphScope::Full,
+        }
+    }
+}
+
+#[mcp_tool(
+    name = "dep_diagnostics",
+    description = "Report dependency graph cycle diagnostics for active or full graph scope",
+    read_only_hint = true
+)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "camelCase")]
+struct DepDiagnosticsTool {
+    #[serde(default)]
+    issues_path: Option<String>,
+    #[serde(default)]
+    graph_scope: DepGraphScopeToolArg,
+}
+
 #[mcp_tool(
     name = "init_tool",
     description = "Initialize premath local substrate (.premath/issues.jsonl), migrating legacy .beads store when present",
@@ -672,6 +704,7 @@ tool_box!(
         DepAddTool,
         DepRemoveTool,
         DepReplaceTool,
+        DepDiagnosticsTool,
         InitTool,
         IssueLeaseProjectionTool,
         ObserveLatestTool,
@@ -1893,6 +1926,27 @@ fn call_dep_replace(
     }))
 }
 
+fn call_dep_diagnostics(
+    config: &PremathMcpConfig,
+    tool: DepDiagnosticsTool,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    let path = resolve_path(tool.issues_path, &config.issues_path);
+    let store = load_store_existing(&path)?;
+    let graph_scope: DependencyGraphScope = tool.graph_scope.into();
+    let cycle = store.find_any_dependency_cycle_in_scope(graph_scope);
+
+    json_result(json!({
+        "action": "dep.diagnostics",
+        "issuesPath": path.display().to_string(),
+        "queryBackend": config.issue_query_backend.as_str(),
+        "graphScope": graph_scope.as_str(),
+        "integrity": {
+            "hasCycle": cycle.is_some(),
+            "cyclePath": cycle
+        }
+    }))
+}
+
 fn call_init_tool(
     config: &PremathMcpConfig,
     tool: InitTool,
@@ -2927,6 +2981,55 @@ mod tests {
         assert!(
             err.to_string().contains("dependency cycle detected"),
             "expected cycle diagnostic, got: {err}"
+        );
+    }
+
+    #[test]
+    fn dep_diagnostics_reports_scoped_cycle_integrity() {
+        let root = temp_dir("dep-diagnostics-scope");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+        fs::write(
+            &issues,
+            concat!(
+                r#"{"id":"bd-a","title":"A","status":"closed","dependencies":[{"issue_id":"bd-a","depends_on_id":"bd-b","type":"blocks"}]}"#,
+                "\n",
+                r#"{"id":"bd-b","title":"B","status":"closed","dependencies":[{"issue_id":"bd-b","depends_on_id":"bd-a","type":"blocks"}]}"#,
+                "\n",
+                r#"{"id":"bd-c","title":"C","status":"open"}"#,
+                "\n"
+            ),
+        )
+        .expect("issues fixture should write");
+
+        let active = call_dep_diagnostics(
+            &config,
+            DepDiagnosticsTool {
+                issues_path: None,
+                graph_scope: DepGraphScopeToolArg::Active,
+            },
+        )
+        .expect("active diagnostics should succeed");
+        let active_payload = parse_tool_json(active);
+        assert_eq!(active_payload["action"], "dep.diagnostics");
+        assert_eq!(active_payload["graphScope"], "active");
+        assert_eq!(active_payload["integrity"]["hasCycle"], false);
+        assert_eq!(active_payload["integrity"]["cyclePath"], Value::Null);
+
+        let full = call_dep_diagnostics(
+            &config,
+            DepDiagnosticsTool {
+                issues_path: None,
+                graph_scope: DepGraphScopeToolArg::Full,
+            },
+        )
+        .expect("full diagnostics should succeed");
+        let full_payload = parse_tool_json(full);
+        assert_eq!(full_payload["graphScope"], "full");
+        assert_eq!(full_payload["integrity"]["hasCycle"], true);
+        assert_eq!(
+            full_payload["integrity"]["cyclePath"],
+            json!(["bd-a", "bd-b", "bd-a"])
         );
     }
 

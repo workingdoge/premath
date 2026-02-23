@@ -1,5 +1,5 @@
-use crate::cli::{DepCommands, DepTypeArg, DepViewArg};
-use premath_bd::{DepType, Dependency, DependencyView, MemoryStore};
+use crate::cli::{DepCommands, DepGraphScopeArg, DepTypeArg, DepViewArg};
+use premath_bd::{DepType, Dependency, DependencyGraphScope, DependencyView, MemoryStore};
 use serde_json::json;
 use std::path::PathBuf;
 
@@ -54,7 +54,11 @@ pub fn run(command: DepCommands) {
         DepCommands::Project { view, issues, json } => {
             run_project(map_dep_view(view), issues, json)
         }
-        DepCommands::Diagnostics { issues, json } => run_diagnostics(issues, json),
+        DepCommands::Diagnostics {
+            issues,
+            graph_scope,
+            json,
+        } => run_diagnostics(issues, map_dep_graph_scope(graph_scope), json),
     }
 }
 
@@ -221,6 +225,13 @@ fn map_dep_view(arg: DepViewArg) -> DependencyView {
     }
 }
 
+fn map_dep_graph_scope(arg: DepGraphScopeArg) -> DependencyGraphScope {
+    match arg {
+        DepGraphScopeArg::Active => DependencyGraphScope::Active,
+        DepGraphScopeArg::Full => DependencyGraphScope::Full,
+    }
+}
+
 fn run_project(view: DependencyView, issues: String, json_output: bool) {
     let path = PathBuf::from(issues);
     let store = load_store_required(&path);
@@ -302,14 +313,15 @@ fn run_project(view: DependencyView, issues: String, json_output: bool) {
     }
 }
 
-fn run_diagnostics(issues: String, json_output: bool) {
+fn run_diagnostics(issues: String, graph_scope: DependencyGraphScope, json_output: bool) {
     let path = PathBuf::from(issues);
     let store = load_store_required(&path);
-    let cycle = store.find_any_dependency_cycle();
+    let cycle = store.find_any_dependency_cycle_in_scope(graph_scope);
     if json_output {
         let payload = json!({
             "action": "dep.diagnostics",
             "issuesPath": path.display().to_string(),
+            "graphScope": graph_scope.as_str(),
             "integrity": {
                 "hasCycle": cycle.is_some(),
                 "cyclePath": cycle
@@ -321,14 +333,16 @@ fn run_diagnostics(issues: String, json_output: bool) {
         );
     } else if let Some(cycle_path) = cycle {
         println!(
-            "premath dep diagnostics\n  Path: {}\n  Integrity: cycle detected ({})",
+            "premath dep diagnostics\n  Path: {}\n  Graph scope: {}\n  Integrity: cycle detected ({})",
             path.display(),
+            graph_scope.as_str(),
             cycle_path.join(" -> ")
         );
     } else {
         println!(
-            "premath dep diagnostics\n  Path: {}\n  Integrity: no cycles detected",
-            path.display()
+            "premath dep diagnostics\n  Path: {}\n  Graph scope: {}\n  Integrity: no cycles detected",
+            path.display(),
+            graph_scope.as_str()
         );
     }
 }

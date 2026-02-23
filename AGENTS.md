@@ -114,7 +114,7 @@
 - `cargo run --package premath-cli -- dep add <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — add a dependency edge.
 - `cargo run --package premath-cli -- dep remove <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — remove a dependency edge.
 - `cargo run --package premath-cli -- dep replace <issue-id> <depends-on-id> --from-type blocks --to-type related --issues .premath/issues.jsonl --json` — replace one dependency edge type.
-- `cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --json` — report dependency graph integrity status (cycle detection).
+- `cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --graph-scope active|full --json` — report scoped dependency graph integrity status (default `active`; `full` includes historical closed cycles).
 
 ## CI Workflow Instructions
 

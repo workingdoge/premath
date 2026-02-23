@@ -46,4 +46,4 @@ pub use issue_graph::{
     FAILURE_CLASS_VERIFICATION_COMMAND_MISSING, ISSUE_GRAPH_CHECK_KIND, IssueGraphCheckReport,
     IssueGraphFinding, IssueGraphSummary, WARNING_CLASS_NOTES_LARGE, check_issue_graph,
 };
-pub use memory::{MemoryStore, MemoryStoreError};
+pub use memory::{DependencyGraphScope, MemoryStore, MemoryStoreError};
