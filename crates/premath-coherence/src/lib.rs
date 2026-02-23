@@ -2498,20 +2498,16 @@ fn evaluate_control_plane_evidence_factorization(
         }
     }
 
-    if let Some(lane_ownership) = &control_plane_contract.lane_ownership {
-        if let Some(route) = &lane_ownership.required_cross_lane_witness_route {
-            if let Some(factorization_route) = &factorization.cross_lane_routes {
-                if route.pullback_base_change.trim()
-                    != factorization_route.pullback_base_change.trim()
-                {
-                    failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_AMBIGUOUS_FAILURE.to_string());
-                    reasons.push(
-                        "evidenceFactorization.crossLaneRoutes must match laneOwnership.requiredCrossLaneWitnessRoute"
-                            .to_string(),
-                    );
-                }
-            }
-        }
+    if let Some(lane_ownership) = &control_plane_contract.lane_ownership
+        && let Some(route) = &lane_ownership.required_cross_lane_witness_route
+        && let Some(factorization_route) = &factorization.cross_lane_routes
+        && route.pullback_base_change.trim() != factorization_route.pullback_base_change.trim()
+    {
+        failures.push(GATE_CHAIN_EVIDENCE_FACTORIZATION_AMBIGUOUS_FAILURE.to_string());
+        reasons.push(
+            "evidenceFactorization.crossLaneRoutes must match laneOwnership.requiredCrossLaneWitnessRoute"
+                .to_string(),
+        );
     }
 
     let actual_failure_classes = (
