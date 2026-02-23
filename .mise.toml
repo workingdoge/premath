@@ -47,6 +47,7 @@ run = "cargo run --package premath-cli -- coherence-check --contract specs/prema
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
+  "python3 tools/conformance/check_doctrine_mcp_parity.py",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
 
@@ -104,7 +105,10 @@ run = "python3 tools/ci/project_checks.py"
 run = "python3 tools/ci/check_command_surface.py"
 
 [tasks.ci-hygiene-check]
-run = "python3 tools/ci/check_repo_hygiene.py"
+run = [
+  "python3 tools/ci/check_repo_hygiene.py",
+  "python3 tools/ci/check_issue_graph.py",
+]
 
 [tasks.ci-branch-policy-check]
 run = "python3 tools/ci/check_branch_policy.py --rules-json tests/ci/fixtures/branch-policy/effective-main-rules-golden.json"
@@ -130,6 +134,8 @@ run = [
   "python3 tools/ci/test_required_witness_verify_client.py",
   "python3 tools/ci/test_required_witness_decide_client.py",
   "python3 tools/ci/test_required_decision_verify_client.py",
+  "python3 tools/ci/test_harness_retry_policy.py",
+  "python3 tools/ci/test_harness_escalation.py",
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_proposal.py",
@@ -141,9 +147,11 @@ run = [
   "python3 tools/ci/test_instruction_reject_witness.py",
   "python3 tools/ci/test_branch_policy.py",
   "python3 tools/ci/test_repo_hygiene.py",
+  "python3 tools/ci/test_issue_graph.py",
   "python3 tools/conformance/test_docs_coherence.py",
   "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
+  "python3 tools/conformance/test_doctrine_mcp_parity.py",
 ]
 
 [tasks.ci-observation-build]
@@ -160,6 +168,15 @@ run = "cargo run --package premath-cli -- observe-serve --surface artifacts/obse
 
 [tasks.mcp-serve]
 run = "cargo run --package premath-cli -- mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root ."
+
+[tasks.harness-worker-loop]
+run = "python3 tools/harness/multithread_loop.py worker"
+
+[tasks.harness-coordinator-loop]
+run = "python3 tools/harness/multithread_loop.py coordinator"
+
+[tasks.harness-kpi-report]
+run = "python3 tools/harness/benchmark_kpi.py --json"
 
 [tasks.ci-observation-check]
 run = [

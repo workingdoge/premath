@@ -147,6 +147,7 @@ def query_surface(
     mode: str,
     instruction_id: Optional[str] = None,
     projection_digest: Optional[str] = None,
+    projection_match: str = "typed",
 ) -> Dict[str, Any]:
     latest = surface.get("latest") or {}
     summary = surface.get("summary") or {}
@@ -182,16 +183,32 @@ def query_surface(
     if mode == "projection":
         if not projection_digest:
             raise ValueError("--projection-digest is required for mode=projection")
+        if projection_match not in {"typed", "compatibility_alias"}:
+            raise ValueError(
+                "--projection-match must be one of: typed, compatibility_alias"
+            )
         required = latest.get("required")
         delta = latest.get("delta")
         decision = latest.get("decision")
 
+        def _matches_projection(row: Any) -> bool:
+            if not isinstance(row, dict):
+                return False
+            typed = row.get("typedCoreProjectionDigest")
+            alias = row.get("projectionDigest")
+            if typed == projection_digest:
+                return True
+            if projection_match == "compatibility_alias" and alias == projection_digest:
+                return True
+            return False
+
         payload = {
             "mode": "projection",
             "projectionDigest": projection_digest,
-            "required": required if isinstance(required, dict) and required.get("projectionDigest") == projection_digest else None,
-            "delta": delta if isinstance(delta, dict) and delta.get("projectionDigest") == projection_digest else None,
-            "decision": decision if isinstance(decision, dict) and decision.get("projectionDigest") == projection_digest else None,
+            "projectionMatch": projection_match,
+            "required": required if _matches_projection(required) else None,
+            "delta": delta if _matches_projection(delta) else None,
+            "decision": decision if _matches_projection(decision) else None,
         }
         if payload["required"] is None and payload["delta"] is None and payload["decision"] is None:
             raise ValueError(f"projection not found in latest surface: {projection_digest}")
@@ -259,6 +276,12 @@ def parse_args(default_root: Path) -> argparse.Namespace:
         default=None,
         help="Projection digest for mode=projection.",
     )
+    query.add_argument(
+        "--projection-match",
+        choices=["typed", "compatibility_alias"],
+        default="typed",
+        help="Projection lookup mode for mode=projection (default: typed).",
+    )
 
     return parser.parse_args()
 
@@ -306,6 +329,7 @@ def main() -> int:
                 mode=args.mode,
                 instruction_id=args.instruction_id,
                 projection_digest=args.projection_digest,
+                projection_match=args.projection_match,
             )
         except ValueError as exc:
             print(f"[error] {exc}", file=sys.stderr)

@@ -1,4 +1,5 @@
 use crate::{ObserveQuery, ObserveQueryError, SurrealObservationBackend, UxService};
+use premath_surreal::ProjectionMatchMode;
 use serde_json::{Value, json};
 use std::collections::BTreeMap;
 use std::io::{Read, Write};
@@ -33,7 +34,10 @@ enum Route {
     Latest,
     NeedsAttention,
     Instruction(String),
-    Projection(String),
+    Projection {
+        projection_digest: String,
+        projection_match: ProjectionMatchMode,
+    },
 }
 
 #[derive(Debug, Error, Clone, PartialEq, Eq)]
@@ -185,9 +189,31 @@ fn parse_route_target(target: &str) -> Result<Route, RouteError> {
                             .to_string(),
                     )
                 })?;
-            Ok(Route::Projection(digest))
+            let projection_match = parse_projection_match(&params)?;
+            Ok(Route::Projection {
+                projection_digest: digest,
+                projection_match,
+            })
         }
         _ => Err(RouteError::NotFound(format!("unknown route: {path}"))),
+    }
+}
+
+fn parse_projection_match(
+    params: &BTreeMap<String, String>,
+) -> Result<ProjectionMatchMode, RouteError> {
+    let Some(raw) = params
+        .get("match")
+        .or_else(|| params.get("projection_match"))
+    else {
+        return Ok(ProjectionMatchMode::Typed);
+    };
+    match raw.as_str() {
+        "typed" => Ok(ProjectionMatchMode::Typed),
+        "compatibility_alias" => Ok(ProjectionMatchMode::CompatibilityAlias),
+        _ => Err(RouteError::BadRequest(
+            "invalid projection match mode (use match=typed|compatibility_alias)".to_string(),
+        )),
     }
 }
 
@@ -272,7 +298,7 @@ where
                     "/latest",
                     "/needs-attention",
                     "/instruction?id=<instruction_id>",
-                    "/projection?digest=<projection_digest>"
+                    "/projection?digest=<projection_digest>[&match=typed|compatibility_alias]"
                 ]
             }),
         },
@@ -290,12 +316,16 @@ where
                 Err(err) => query_error_response(err),
             }
         }
-        Route::Projection(projection_digest) => {
-            match service.query_json(ObserveQuery::Projection { projection_digest }) {
-                Ok(body) => HttpResponse { status: 200, body },
-                Err(err) => query_error_response(err),
-            }
-        }
+        Route::Projection {
+            projection_digest,
+            projection_match,
+        } => match service.query_json(ObserveQuery::Projection {
+            projection_digest,
+            projection_match,
+        }) {
+            Ok(body) => HttpResponse { status: 200, body },
+            Err(err) => query_error_response(err),
+        },
     }
 }
 
@@ -374,6 +404,10 @@ mod tests {
                 witness_kind: Some("ci.required.v1".to_string()),
                 projection_policy: Some("ci-topos-v0".to_string()),
                 projection_digest: Some("proj1_x".to_string()),
+                typed_core_projection_digest: None,
+                authority_payload_digest: None,
+                normalizer_id: None,
+                policy_digest: None,
                 verdict_class: Some("accepted".to_string()),
                 required_checks: vec!["baseline".to_string()],
                 executed_checks: vec!["baseline".to_string()],
@@ -392,6 +426,8 @@ mod tests {
                     witness_kind: Some("ci.instruction.v1".to_string()),
                     instruction_id: "i1".to_string(),
                     instruction_digest: Some("instr1_x".to_string()),
+                    typed_core_projection_digest: None,
+                    authority_payload_digest: None,
                     instruction_classification: None,
                     intent: None,
                     scope: None,
@@ -409,7 +445,11 @@ mod tests {
             }
         }
 
-        fn projection(&self, projection_digest: &str) -> Option<ProjectionView> {
+        fn projection(
+            &self,
+            projection_digest: &str,
+            _projection_match: ProjectionMatchMode,
+        ) -> Option<ProjectionView> {
             if projection_digest == "proj1_x" {
                 Some(ProjectionView {
                     projection_digest: "proj1_x".to_string(),
@@ -429,12 +469,32 @@ mod tests {
         assert_eq!(route, Route::Instruction("i1".to_string()));
 
         let route = parse_route_target("/projection?digest=proj1_x").expect("route should parse");
-        assert_eq!(route, Route::Projection("proj1_x".to_string()));
+        assert_eq!(
+            route,
+            Route::Projection {
+                projection_digest: "proj1_x".to_string(),
+                projection_match: ProjectionMatchMode::Typed
+            }
+        );
+
+        let route = parse_route_target("/projection?digest=proj1_x&match=compatibility_alias")
+            .expect("compat route should parse");
+        assert_eq!(
+            route,
+            Route::Projection {
+                projection_digest: "proj1_x".to_string(),
+                projection_match: ProjectionMatchMode::CompatibilityAlias
+            }
+        );
     }
 
     #[test]
     fn route_parsing_reports_missing_params() {
         let err = parse_route_target("/instruction").expect_err("route should fail");
+        assert!(matches!(err, RouteError::BadRequest(_)));
+
+        let err = parse_route_target("/projection?digest=proj1_x&match=unknown")
+            .expect_err("route should fail");
         assert!(matches!(err, RouteError::BadRequest(_)));
     }
 

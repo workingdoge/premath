@@ -81,6 +81,15 @@ private/local-only surfaces (for example `.claude/`, `.serena/`,
 `.premath/cache/`) and required ignore entries
 (`mise run ci-hygiene-check`).
 
+`tools/ci/check_issue_graph.py` is a thin wrapper over
+`premath issue check` and therefore uses core issue-memory semantics from
+`premath-bd` for machine-actionable planning surfaces:
+
+- `[EPIC]` title rows must use `issue_type=epic`,
+- active issues (`open`/`in_progress`) must carry an `Acceptance:` section,
+- active issues must include at least one verification command surface,
+- oversized `notes` payloads are reported as warnings to limit JSONL churn.
+
 `tools/ci/check_branch_policy.py` validates effective GitHub `main` branch
 rules against tracked process policy (`specs/process/GITHUB-BRANCH-POLICY.json`)
 with two modes:
@@ -136,7 +145,11 @@ contract as a tiny HTTP read API for frontend clients:
 - `GET /latest`
 - `GET /needs-attention`
 - `GET /instruction?id=<instruction_id>`
-- `GET /projection?digest=<projection_digest>`
+- `GET /projection?digest=<projection_digest>[&match=typed|compatibility_alias]`
+
+Projection lookup defaults to `match=typed` (canonical typed authority digest
+only). Alias lookups are compatibility-scoped and require
+`match=compatibility_alias`.
 
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
 entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the

@@ -1,7 +1,7 @@
 use crate::{
     CanonicalProposal, ProposalBinding, ProposalDischarge, ProposalError, ProposalObligation,
     ProposalTargetJudgment, compile_proposal_obligations, discharge_proposal_obligations,
-    validate_proposal_payload,
+    required::compute_typed_core_projection_digest, validate_proposal_payload,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -139,6 +139,10 @@ pub struct InstructionWitness {
     pub scope: Value,
     pub normalizer_id: Option<String>,
     pub policy_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
     pub capability_claims: Vec<String>,
     pub required_checks: Vec<String>,
     pub executed_checks: Vec<String>,
@@ -849,6 +853,15 @@ pub fn build_pre_execution_reject_witness(
             .and_then(Value::as_object)
             .and_then(|root| root.get("policyDigest")),
     );
+    let authority_payload_digest = Some(instruction_digest.clone());
+    let typed_core_projection_digest = match (normalizer_id.as_deref(), policy_digest.as_deref()) {
+        (Some(normalizer_id), Some(policy_digest)) => Some(compute_typed_core_projection_digest(
+            instruction_digest.as_str(),
+            normalizer_id,
+            policy_digest,
+        )),
+        _ => None,
+    };
 
     Ok(InstructionWitness {
         ci_schema: 1,
@@ -864,6 +877,8 @@ pub fn build_pre_execution_reject_witness(
         scope: normalized_scope_from_envelope(envelope),
         normalizer_id,
         policy_digest,
+        typed_core_projection_digest,
+        authority_payload_digest,
         capability_claims: normalized_capability_claims_from_envelope(envelope),
         required_checks: normalized_requested_checks_from_envelope(envelope),
         executed_checks: Vec::new(),
@@ -932,6 +947,12 @@ pub fn build_instruction_witness(
             .cloned()
             .collect::<Vec<String>>(),
     );
+    let authority_payload_digest = Some(instruction_digest.clone());
+    let typed_core_projection_digest = Some(compute_typed_core_projection_digest(
+        instruction_digest.as_str(),
+        checked.normalizer_id.as_str(),
+        checked.policy_digest.as_str(),
+    ));
 
     Ok(InstructionWitness {
         ci_schema: 1,
@@ -945,6 +966,8 @@ pub fn build_instruction_witness(
         scope: checked.scope.clone(),
         normalizer_id: Some(checked.normalizer_id.clone()),
         policy_digest: Some(checked.policy_digest.clone()),
+        typed_core_projection_digest,
+        authority_payload_digest,
         capability_claims: checked.capability_claims.clone(),
         required_checks: checked.requested_checks.clone(),
         executed_checks,

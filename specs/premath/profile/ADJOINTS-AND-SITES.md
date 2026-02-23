@@ -305,3 +305,60 @@ Any composed overlay witness surface MUST preserve:
 - failure-class lineage bound to canonical checker/gate vocabularies.
 
 Unknown/unbound lane or capability material MUST fail closed.
+
+## 11. CwF <-> sig\Pi Bridge Contract (Strict vs Semantic)
+
+This section defines the translation boundary between:
+
+- strict CwF checker equalities (`draft/PREMATH-COHERENCE`), and
+- semantic SigPi obligations (`\Sigma_f -| f* -| \Pi_f`) in this profile.
+
+### 11.1 Authority split
+
+- CwF obligations (`cwf_substitution_identity`,
+  `cwf_substitution_composition`, `cwf_comprehension_beta`,
+  `cwf_comprehension_eta`) are strict operational equalities (`≡`) in checker
+  lane.
+- SigPi obligations (`adjoint_triple`, `beck_chevalley_sigma`,
+  `beck_chevalley_pi`) are semantic coherence obligations (`~=`) in semantic
+  lane.
+- Bridge material is evidence routing only. It MUST NOT introduce independent
+  admissibility authority.
+
+### 11.2 Admissible bridge morphisms
+
+Implementations MAY expose bridge morphisms, but only as typed projections into
+existing obligation vocabularies:
+
+- `bridge.reindex`: CwF substitution rows -> semantic `stability` obligations
+  over the same context/morphism lineage.
+- `bridge.comprehension`: CwF comprehension rows -> semantic
+  `locality`/`descent_exists`/`descent_contractible` obligations.
+- `bridge.adjoint_reflection` (optional): SigPi adjoint/Beck-Chevalley witness
+  projections into checker evidence payloads for replay/debugging only.
+
+Unknown bridge morphism kinds MUST reject deterministically.
+
+### 11.3 Law mapping (normative)
+
+| Strict checker law (CwF) | Semantic/kernel law (sig\Pi lane) | Boundary note |
+| --- | --- | --- |
+| `A[id] = A`, `t[id] = t` (`cwf_substitution_identity`) | `stability` identity (`(id)^* = id`) | same context/morphism lineage |
+| `A[f ∘ g] = A[f][g]`, `t[f ∘ g] = t[f][g]` (`cwf_substitution_composition`) | `stability` composition (`(f ∘ g)^* = g^* f^*`) | same composed morphism lineage |
+| `q[⟨id,a⟩] = a` (`cwf_comprehension_beta`) | `locality` + `descent_exists` | section restriction/glue existence |
+| `⟨π ∘ σ, q[σ]⟩ = σ` (`cwf_comprehension_eta`) | `descent_contractible` | uniqueness/contractibility of reconstruction |
+
+SigPi adjoint/Beck-Chevalley laws remain semantic-lane obligations. They MAY be
+referenced by bridge evidence, but MUST NOT be re-owned as checker-core
+obligations.
+
+### 11.4 Failure and ownership constraints
+
+- Bridge violations MUST map to existing deterministic classes; implementations
+  MUST NOT introduce bridge-only admissibility classes.
+- Checker-side strict failures stay under `coherence.cwf_*` classes.
+- Semantic failures stay under Gate/BIDIR mappings (`stability_failure`,
+  `locality_failure`, `descent_failure`, `glue_non_contractible`,
+  `adjoint_triple_coherence_failure`).
+- Ownership boundaries remain unchanged: bridge rules MUST NOT add new coherence
+  obligation IDs or profile-owned checker obligations.

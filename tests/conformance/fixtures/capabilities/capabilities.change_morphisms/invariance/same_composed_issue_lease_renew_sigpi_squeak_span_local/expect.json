@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "composed local profile preserves kernel verdict for paired scenario",
+    "composed local profile preserves Gate failure classes for paired scenario"
+  ]
+}

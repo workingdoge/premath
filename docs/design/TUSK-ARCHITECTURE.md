@@ -229,6 +229,11 @@ select_glue(GlueProposalSet, mode) -> GlueResult | GlueSelectionFailure
 close(GlueResult, GateWitnessSet) -> (UpwardSummary, UpwardObligations, WitnessBundle)
 ```
 
+Harness overlay:
+- operational long-running harness hooks (`boot/step/stop`) and durability/
+  trajectory contracts are defined in `TUSK-HARNESS-CONTRACT.md`.
+- this overlay must remain non-authoritative for semantic admissibility.
+
 ## 10. Identity and determinism
 
 Run identity and deterministic ID material are defined in `TUSK-IDENTITY.md`.

@@ -7,13 +7,19 @@
 //! versioning/snapshots (that's `premath-jj`).
 
 mod observation;
+mod trajectory;
 
 pub use observation::{
     DecisionSummary, DeltaSummary, INSTRUCTION_EVENT_KIND, INSTRUCTION_WITNESS_KIND,
     InstructionSummary, LatestObservation, OBSERVATION_KIND, OBSERVATION_SCHEMA, ObservationError,
-    ObservationEvent, ObservationIndex, ObservationSummary, ObservationSurface, ProjectionView,
-    REQUIRED_DECISION_EVENT_KIND, REQUIRED_DECISION_KIND, REQUIRED_EVENT_KIND,
-    REQUIRED_WITNESS_KIND, RequiredSummary, build_events, build_surface,
+    ObservationEvent, ObservationIndex, ObservationSummary, ObservationSurface,
+    ProjectionMatchMode, ProjectionView, REQUIRED_DECISION_EVENT_KIND, REQUIRED_DECISION_KIND,
+    REQUIRED_EVENT_KIND, REQUIRED_WITNESS_KIND, RequiredSummary, build_events, build_surface,
+};
+pub use trajectory::{
+    HARNESS_TRAJECTORY_KIND, HARNESS_TRAJECTORY_SCHEMA, HarnessTrajectoryProjection,
+    HarnessTrajectoryRow, TRAJECTORY_PROJECTION_KIND, TrajectoryError, TrajectoryProjectionMode,
+    append_trajectory_row, project_trajectory, read_trajectory_rows,
 };
 
 use premath_bd::{Dependency, Issue, MemoryStore};

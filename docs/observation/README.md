@@ -24,7 +24,9 @@ The dashboard shows both base state and coherence projections, including:
 - unknown instruction-classification rate,
 - proposal reject-class counts,
 - ready-vs-blocked partition integrity,
-- stale/contended lease claims.
+- dependency-cycle integrity (`active`/`full` scope),
+- stale/contended lease claims,
+- worker-lane throughput projection (`workers/in-progress/unassigned`).
 
 Default API base in the page is `http://127.0.0.1:43174` and can be changed in
 the UI.

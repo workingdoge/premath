@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "cross_lane_capability_missing"
+  ],
+  "assertions": [
+    "composed claim mutation must declare all cross-lane capabilities"
+  ]
+}

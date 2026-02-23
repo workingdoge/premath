@@ -18,6 +18,12 @@ def _base_payload() -> dict:
         "contractId": "control-plane.default.v1",
         "schemaLifecycle": {
             "activeEpoch": "2026-02",
+            "governance": {
+                "mode": "rollover",
+                "decisionRef": "decision-0105",
+                "owner": "premath-core",
+                "rolloverCadenceMonths": 6,
+            },
             "kindFamilies": {
                 "controlPlaneContractKind": {
                     "canonicalKind": "premath.control_plane.contract.v1",
@@ -123,6 +129,125 @@ def _base_payload() -> dict:
             "policyKind": "ci.instruction.policy.v1",
             "policyDigestPrefix": "pol1_",
         },
+        "evidenceStage1Parity": {
+            "profileKind": "ev.stage1.core.v1",
+            "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+            "comparisonTuple": {
+                "authorityDigestRef": "authorityPayloadDigest",
+                "typedCoreDigestRef": "typedCoreProjectionDigest",
+                "normalizerIdRef": "normalizerId",
+                "policyDigestRef": "policyDigest",
+            },
+            "failureClasses": {
+                "missing": "unification.evidence_stage1.parity.missing",
+                "mismatch": "unification.evidence_stage1.parity.mismatch",
+                "unbound": "unification.evidence_stage1.parity.unbound",
+            },
+        },
+        "evidenceStage1Rollback": {
+            "profileKind": "ev.stage1.rollback.v1",
+            "witnessKind": "ev.stage1.rollback.witness.v1",
+            "fromStage": "stage1",
+            "toStage": "stage0",
+            "triggerFailureClasses": [
+                "unification.evidence_stage1.parity.missing",
+                "unification.evidence_stage1.parity.mismatch",
+                "unification.evidence_stage1.parity.unbound",
+            ],
+            "identityRefs": {
+                "authorityDigestRef": "authorityPayloadDigest",
+                "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+                "normalizerIdRef": "normalizerId",
+                "policyDigestRef": "policyDigest",
+            },
+            "failureClasses": {
+                "precondition": "unification.evidence_stage1.rollback.precondition",
+                "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+                "unbound": "unification.evidence_stage1.rollback.unbound",
+            },
+        },
+        "evidenceStage2Authority": {
+            "profileKind": "ev.stage2.authority.v1",
+            "activeStage": "stage2",
+            "typedAuthority": {
+                "kindRef": "ev.stage1.core.v1",
+                "digestRef": "typedCoreProjectionDigest",
+                "normalizerIdRef": "normalizerId",
+                "policyDigestRef": "policyDigest",
+            },
+            "compatibilityAlias": {
+                "kindRef": "ev.legacy.payload.v1",
+                "digestRef": "authorityPayloadDigest",
+                "role": "projection_only",
+                "supportUntilEpoch": "2026-06",
+            },
+            "bidirEvidenceRoute": {
+                "routeKind": "direct_checker_discharge",
+                "obligationFieldRef": "bidirCheckerObligations",
+                "requiredObligations": [
+                    "stability",
+                    "locality",
+                    "descent_exists",
+                    "descent_contractible",
+                    "adjoint_triple",
+                    "ext_gap",
+                    "ext_ambiguous",
+                ],
+                "failureClasses": {
+                    "missing": "unification.evidence_stage2.kernel_compliance_missing",
+                    "drift": "unification.evidence_stage2.kernel_compliance_drift",
+                },
+            },
+            "failureClasses": {
+                "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+                "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+                "unbound": "unification.evidence_stage2.unbound",
+            },
+        },
+        "workerLaneAuthority": {
+            "mutationPolicy": {
+                "defaultMode": "instruction-linked",
+                "allowedModes": [
+                    "instruction-linked",
+                    "human-override",
+                ],
+                "compatibilityOverrides": [
+                    {
+                        "mode": "human-override",
+                        "supportUntilEpoch": "2026-06",
+                        "requiresReason": True,
+                    }
+                ],
+            },
+            "mutationRoutes": {
+                "issueClaim": "capabilities.change_morphisms.issue_claim",
+                "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
+                "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
+                "issueDiscover": "capabilities.change_morphisms.issue_discover",
+            },
+            "failureClasses": {
+                "policyDrift": "worker_lane_policy_drift",
+                "mutationModeDrift": "worker_lane_mutation_mode_drift",
+                "routeUnbound": "worker_lane_route_unbound",
+            },
+        },
+        "harnessRetry": {
+            "policyKind": "ci.harness.retry.policy.v1",
+            "policyPath": "policies/control/harness-retry-policy-v1.json",
+            "escalationActions": [
+                "issue_discover",
+                "mark_blocked",
+                "stop",
+            ],
+            "activeIssueEnvKeys": [
+                "PREMATH_ACTIVE_ISSUE_ID",
+                "PREMATH_ISSUE_ID",
+            ],
+            "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+            "sessionPathEnvKey": "PREMATH_HARNESS_SESSION_PATH",
+            "sessionPathDefault": ".premath/harness_session.json",
+            "sessionIssueField": "issueId",
+        },
     }
 
 
@@ -181,6 +306,59 @@ class ControlPlaneContractTests(unittest.TestCase):
             loaded["schemaLifecycle"]["epochDiscipline"]["aliasRunwayMonths"],
             4,
         )
+        self.assertEqual(
+            loaded["schemaLifecycle"]["governance"]["mode"],
+            "rollover",
+        )
+        self.assertEqual(
+            loaded["schemaLifecycle"]["governance"]["rolloverCadenceMonths"],
+            6,
+        )
+        self.assertEqual(
+            loaded["harnessRetry"]["policyKind"],
+            "ci.harness.retry.policy.v1",
+        )
+        self.assertIn("mark_blocked", loaded["harnessRetry"]["escalationActions"])
+        self.assertEqual(
+            loaded["harnessRetry"]["sessionPathEnvKey"],
+            "PREMATH_HARNESS_SESSION_PATH",
+        )
+        self.assertEqual(
+            loaded["evidenceStage1Parity"]["profileKind"],
+            "ev.stage1.core.v1",
+        )
+        self.assertEqual(
+            loaded["evidenceStage1Rollback"]["witnessKind"],
+            "ev.stage1.rollback.witness.v1",
+        )
+        self.assertEqual(
+            loaded["evidenceStage2Authority"]["profileKind"],
+            "ev.stage2.authority.v1",
+        )
+        self.assertEqual(
+            loaded["evidenceStage2Authority"]["compatibilityAlias"]["role"],
+            "projection_only",
+        )
+        self.assertIn(
+            "stability",
+            loaded["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"],
+        )
+        self.assertEqual(
+            loaded["workerLaneAuthority"]["mutationPolicy"]["defaultMode"],
+            "instruction-linked",
+        )
+        self.assertIn(
+            "human-override",
+            loaded["workerLaneAuthority"]["mutationPolicy"]["allowedModes"],
+        )
+        self.assertEqual(
+            loaded["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"],
+            "capabilities.change_morphisms.issue_discover",
+        )
+        self.assertEqual(
+            loaded["workerLaneAuthority"]["failureClasses"]["routeUnbound"],
+            "worker_lane_route_unbound",
+        )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())
@@ -192,6 +370,26 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload = _with_lane_registry(_base_payload())
         payload["laneArtifactKinds"]["unknown_lane"] = ["opaque_kind"]
         with self.assertRaises(ValueError):
+            self._load(payload)
+
+    def test_load_rejects_worker_lane_default_mode_drift(self) -> None:
+        payload = _base_payload()
+        payload["workerLaneAuthority"]["mutationPolicy"]["defaultMode"] = "human-override"
+        with self.assertRaisesRegex(ValueError, "defaultMode"):
+            self._load(payload)
+
+    def test_load_rejects_worker_lane_route_drift(self) -> None:
+        payload = _base_payload()
+        payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = "issue_discover"
+        with self.assertRaisesRegex(ValueError, "canonical route"):
+            self._load(payload)
+
+    def test_load_rejects_worker_lane_expired_override(self) -> None:
+        payload = _base_payload()
+        payload["workerLaneAuthority"]["mutationPolicy"]["compatibilityOverrides"][0][
+            "supportUntilEpoch"
+        ] = "2026-01"
+        with self.assertRaisesRegex(ValueError, "expired"):
             self._load(payload)
 
     def test_resolve_schema_kind_accepts_alias_within_support_window(self) -> None:
@@ -228,6 +426,101 @@ class ControlPlaneContractTests(unittest.TestCase):
                 alias_row["supportUntilEpoch"] = "2027-03"
         with self.assertRaisesRegex(ValueError, "max runway"):
             self._load(payload)
+
+    def test_load_rejects_duplicate_harness_escalation_actions(self) -> None:
+        payload = _base_payload()
+        payload["harnessRetry"]["escalationActions"] = [
+            "issue_discover",
+            "issue_discover",
+        ]
+        with self.assertRaisesRegex(ValueError, "must not contain duplicates"):
+            self._load(payload)
+
+    def test_load_rejects_stage1_parity_class_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage1Parity"]["failureClasses"]["unbound"] = "ev.stage1.parity.unbound"
+        with self.assertRaisesRegex(ValueError, "canonical Stage 1 parity classes"):
+            self._load(payload)
+
+    def test_load_rejects_stage1_rollback_missing_trigger_class(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage1Rollback"]["triggerFailureClasses"] = [
+            "unification.evidence_stage1.parity.missing",
+            "unification.evidence_stage1.parity.mismatch",
+        ]
+        with self.assertRaisesRegex(ValueError, "include canonical Stage 1 parity classes"):
+            self._load(payload)
+
+    def test_load_rejects_stage1_rollback_identity_ref_aliasing(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage1Rollback"]["identityRefs"]["rollbackAuthorityDigestRef"] = (
+            "authorityPayloadDigest"
+        )
+        with self.assertRaisesRegex(ValueError, "authority/rollback refs must differ"):
+            self._load(payload)
+
+    def test_load_rejects_stage2_alias_role_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["compatibilityAlias"]["role"] = "authority"
+        with self.assertRaisesRegex(ValueError, "projection_only"):
+            self._load(payload)
+
+    def test_load_rejects_stage2_alias_window_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["compatibilityAlias"]["supportUntilEpoch"] = "2026-07"
+        with self.assertRaisesRegex(ValueError, "rolloverEpoch"):
+            self._load(payload)
+
+    def test_load_rejects_stage2_failure_class_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["failureClasses"]["unbound"] = (
+            "unification.evidence_stage2.not_bound"
+        )
+        with self.assertRaisesRegex(ValueError, "canonical Stage 2 classes"):
+            self._load(payload)
+
+    def test_load_rejects_stage2_bidir_route_obligation_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"] = [
+            "stability"
+        ]
+        with self.assertRaisesRegex(ValueError, "canonical Stage 2 kernel obligations"):
+            self._load(payload)
+
+    def test_load_rejects_rollover_without_cadence(self) -> None:
+        payload = _base_payload()
+        payload["schemaLifecycle"]["governance"].pop("rolloverCadenceMonths", None)
+        with self.assertRaisesRegex(ValueError, "rolloverCadenceMonths"):
+            self._load(payload)
+
+    def test_load_rejects_freeze_with_aliases(self) -> None:
+        payload = _base_payload()
+        payload["schemaLifecycle"]["governance"] = {
+            "mode": "freeze",
+            "decisionRef": "decision-0105",
+            "owner": "premath-core",
+            "freezeReason": "release-freeze",
+        }
+        with self.assertRaisesRegex(ValueError, "mode=freeze requires no active compatibility aliases"):
+            self._load(payload)
+
+    def test_load_accepts_freeze_without_aliases(self) -> None:
+        payload = _base_payload()
+        payload["schemaLifecycle"]["governance"] = {
+            "mode": "freeze",
+            "decisionRef": "decision-0105",
+            "owner": "premath-core",
+            "freezeReason": "release-freeze",
+        }
+        for family in payload["schemaLifecycle"]["kindFamilies"].values():
+            family["compatibilityAliases"] = []
+        payload.pop("evidenceStage2Authority", None)
+        loaded = self._load(payload)
+        self.assertEqual(loaded["schemaLifecycle"]["governance"]["mode"], "freeze")
+        self.assertEqual(
+            loaded["schemaLifecycle"]["governance"]["freezeReason"],
+            "release-freeze",
+        )
 
 
 if __name__ == "__main__":

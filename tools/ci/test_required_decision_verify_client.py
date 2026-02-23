@@ -23,6 +23,10 @@ class RequiredDecisionVerifyClientTests(unittest.TestCase):
             "derived": {
                 "decision": "accept",
                 "projectionDigest": "proj1_demo",
+                "typedCoreProjectionDigest": "ev1_demo",
+                "authorityPayloadDigest": "proj1_demo",
+                "normalizerId": "normalizer.ci.required.v1",
+                "policyDigest": "ci-topos-v0",
                 "requiredChecks": ["baseline"],
             },
         }
@@ -38,6 +42,26 @@ class RequiredDecisionVerifyClientTests(unittest.TestCase):
             payload = run_required_decision_verify(Path("."), {"decision": {}})
         self.assertEqual(payload["errors"], [])
         self.assertEqual(payload["derived"]["decision"], "accept")
+
+    def test_run_required_decision_verify_rejects_accept_without_typed_authority(self) -> None:
+        missing_typed = {
+            "errors": [],
+            "derived": {
+                "decision": "accept",
+                "projectionDigest": "proj1_demo",
+                "requiredChecks": ["baseline"],
+            },
+        }
+        completed = subprocess.CompletedProcess(
+            args=["premath", "required-decision-verify"],
+            returncode=0,
+            stdout=json.dumps(missing_typed),
+            stderr="",
+        )
+        with patch("required_decision_verify_client.subprocess.run", return_value=completed):
+            with self.assertRaises(RequiredDecisionVerifyError) as exc:
+                run_required_decision_verify(Path("."), {"decision": {}})
+        self.assertEqual(exc.exception.failure_class, "required_decision_verify_invalid")
 
     def test_run_required_decision_verify_propagates_failure_class(self) -> None:
         completed = subprocess.CompletedProcess(

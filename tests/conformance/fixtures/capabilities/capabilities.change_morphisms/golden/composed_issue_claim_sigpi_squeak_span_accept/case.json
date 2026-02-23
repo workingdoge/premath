@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/composed_issue_claim_sigpi_squeak_span_accept",
+  "description": "Composed issue-claim mutation accepts when claim semantics and cross-lane span/square routing both hold.",
+  "semanticScenarioId": "change_morphisms_composed_issue_claim_01",
+  "artifacts": {
+    "request": {
+      "mode": "issue_claim",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms",
+        "capabilities.adjoints_sites",
+        "capabilities.squeak_site"
+      ]
+    },
+    "claimedCapabilities": [
+      "capabilities.change_morphisms",
+      "capabilities.adjoints_sites",
+      "capabilities.squeak_site"
+    ],
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-lease-300",
+      "status": "open",
+      "assignee": ""
+    },
+    "claim": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-lease-300_agent.alpha",
+      "leaseExpiresAtUnixMs": 5600000
+    },
+    "expectedAfter": {
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-lease-300_agent.alpha",
+        "owner": "agent.alpha",
+        "state": "active"
+      }
+    },
+    "crossLaneRoute": {
+      "pullbackBaseChange": "span_square_commutation"
+    },
+    "spanSquareWitness": {
+      "squareId": "sq_sigpi_squeak_01",
+      "route": "span_square_commutation",
+      "digest": "sqw1_5d5a2eb23e40035644e5fdf84bf56011c5a91e2f8b7ed0f9c3ceef7604c2192f"
+    },
+    "locationDescriptor": {
+      "worldId": "world.dev",
+      "runtimeProfile": "local",
+      "capabilityVector": [
+        "hk",
+        "mise",
+        "rust",
+        "squeak-site"
+      ],
+      "substrateBindingRef": "runner://local/sigpi"
+    },
+    "expectedLocRef": "loc1_2cdc17797ec81b86247825f33fb5f9d2250dce463085108643d09c80bb6c7797"
+  }
+}

@@ -1,0 +1,76 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.ci_witnesses",
+  "vectorId": "golden/obstruction_algebra_roundtrip_accept",
+  "description": "Cross-layer obstruction rows roundtrip deterministically through typed constructors and issue-discovery tags.",
+  "semanticScenarioId": "ci_obstruction_algebra_roundtrip_01",
+  "artifacts": {
+    "claimedCapabilities": [
+      "capabilities.ci_witnesses"
+    ],
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "obstructionRoundtrip": {
+      "requiredFamilies": [
+        "semantic",
+        "structural",
+        "commutation",
+        "lifecycle"
+      ],
+      "rows": [
+        {
+          "sourceClass": "stability_failure",
+          "expectedConstructor": {
+            "family": "semantic",
+            "tag": "stability"
+          },
+          "expectedCanonicalClass": "stability_failure"
+        },
+        {
+          "sourceClass": "coherence.cwf_substitution_identity.violation",
+          "expectedConstructor": {
+            "family": "structural",
+            "tag": "cwf_substitution_identity"
+          },
+          "expectedCanonicalClass": "coherence.cwf_substitution_identity.violation"
+        },
+        {
+          "sourceClass": "coherence.span_square_commutation.violation",
+          "expectedConstructor": {
+            "family": "commutation",
+            "tag": "span_square_commutation"
+          },
+          "expectedCanonicalClass": "coherence.span_square_commutation.violation"
+        },
+        {
+          "sourceClass": "decision_witness_sha_mismatch",
+          "expectedConstructor": {
+            "family": "lifecycle",
+            "tag": "decision_attestation"
+          },
+          "expectedCanonicalClass": "decision_witness_sha_mismatch"
+        },
+        {
+          "sourceClass": "unification.evidence_factorization.ambiguous",
+          "expectedConstructor": {
+            "family": "lifecycle",
+            "tag": "evidence_factorization_ambiguous"
+          },
+          "expectedCanonicalClass": "unification.evidence_factorization.ambiguous"
+        }
+      ],
+      "issueProjection": {
+        "expectedTags": [
+          "obs.commutation.span_square_commutation",
+          "obs.lifecycle.decision_attestation",
+          "obs.lifecycle.evidence_factorization_ambiguous",
+          "obs.semantic.stability",
+          "obs.structural.cwf_substitution_identity"
+        ]
+      }
+    }
+  }
+}

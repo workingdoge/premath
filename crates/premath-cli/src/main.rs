@@ -5,7 +5,10 @@ mod commands;
 mod support;
 
 use clap::Parser;
-use cli::{Cli, Commands, RefCommands};
+use cli::{
+    Cli, Commands, HarnessFeatureCommands, HarnessSessionCommands, HarnessTrajectoryCommands,
+    RefCommands,
+};
 
 fn main() {
     let cli = Cli::parse();
@@ -86,12 +89,14 @@ fn main() {
             mode,
             instruction_id,
             projection_digest,
+            projection_match,
             json,
         } => commands::observe::run(commands::observe::Args {
             surface,
             mode,
             instruction_id,
             projection_digest,
+            projection_match,
             json,
         }),
 
@@ -220,6 +225,109 @@ fn main() {
         },
 
         Commands::Issue { command } => commands::issue::run(command),
+
+        Commands::HarnessSession { command } => match command {
+            HarnessSessionCommands::Read { path, json } => {
+                commands::harness_session::run_read(path, json)
+            }
+            HarnessSessionCommands::Write {
+                path,
+                session_id,
+                state,
+                issue_id,
+                summary,
+                next_step,
+                instruction_refs,
+                witness_refs,
+                issues,
+                json,
+            } => commands::harness_session::run_write(commands::harness_session::WriteArgs {
+                path,
+                session_id,
+                state,
+                issue_id,
+                summary,
+                next_step,
+                instruction_refs,
+                witness_refs,
+                issues,
+                json,
+            }),
+            HarnessSessionCommands::Bootstrap {
+                path,
+                feature_ledger,
+                json,
+            } => commands::harness_session::run_bootstrap(path, feature_ledger, json),
+        },
+
+        Commands::HarnessFeature { command } => match command {
+            HarnessFeatureCommands::Read { path, json } => {
+                commands::harness_feature::run_read(path, json)
+            }
+            HarnessFeatureCommands::Write {
+                path,
+                feature_id,
+                status,
+                issue_id,
+                summary,
+                session_ref,
+                instruction_refs,
+                verification_refs,
+                json,
+            } => commands::harness_feature::run_write(commands::harness_feature::WriteArgs {
+                path,
+                feature_id,
+                status,
+                issue_id,
+                summary,
+                session_ref,
+                instruction_refs,
+                verification_refs,
+                json,
+            }),
+            HarnessFeatureCommands::Check {
+                path,
+                require_closure,
+                json,
+            } => commands::harness_feature::run_check(path, require_closure, json),
+            HarnessFeatureCommands::Next { path, json } => {
+                commands::harness_feature::run_next(path, json)
+            }
+        },
+
+        Commands::HarnessTrajectory { command } => match command {
+            HarnessTrajectoryCommands::Append {
+                path,
+                step_id,
+                issue_id,
+                action,
+                result_class,
+                instruction_refs,
+                witness_refs,
+                started_at,
+                finished_at,
+                json,
+            } => {
+                commands::harness_trajectory::run_append(commands::harness_trajectory::AppendArgs {
+                    path,
+                    step_id,
+                    issue_id,
+                    action,
+                    result_class,
+                    instruction_refs,
+                    witness_refs,
+                    started_at,
+                    finished_at,
+                    json,
+                })
+            }
+            HarnessTrajectoryCommands::Query {
+                path,
+                mode,
+                limit,
+                json,
+            } => commands::harness_trajectory::run_query(path, mode, limit, json),
+        },
 
         Commands::Dep { command } => commands::dep::run(command),
     }

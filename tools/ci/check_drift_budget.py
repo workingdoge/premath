@@ -299,6 +299,95 @@ def check_control_plane_lane_bindings(
     contract_lane_failure_classes = as_sorted_strings(
         loaded_control_plane_contract.get("laneFailureClasses", ())
     )
+    contract_schema_lifecycle = loaded_control_plane_contract.get("schemaLifecycle", {})
+    if not isinstance(contract_schema_lifecycle, dict):
+        contract_schema_lifecycle = {}
+    contract_schema_governance = contract_schema_lifecycle.get("governance", {})
+    if not isinstance(contract_schema_governance, dict):
+        contract_schema_governance = {}
+    contract_governance_mode = str(contract_schema_governance.get("mode", ""))
+    contract_governance_decision_ref = str(contract_schema_governance.get("decisionRef", ""))
+    contract_governance_owner = str(contract_schema_governance.get("owner", ""))
+    contract_rollover_cadence_months = contract_schema_governance.get(
+        "rolloverCadenceMonths"
+    )
+    contract_freeze_reason = contract_schema_governance.get("freezeReason")
+    contract_harness_retry = loaded_control_plane_contract.get("harnessRetry", {})
+    if not isinstance(contract_harness_retry, dict):
+        contract_harness_retry = {}
+    contract_harness_policy_kind = str(contract_harness_retry.get("policyKind", ""))
+    contract_harness_policy_path = str(contract_harness_retry.get("policyPath", ""))
+    contract_harness_escalation_actions = as_sorted_strings(
+        contract_harness_retry.get("escalationActions", ())
+    )
+    contract_harness_active_issue_env_keys = as_sorted_strings(
+        contract_harness_retry.get("activeIssueEnvKeys", ())
+    )
+    contract_harness_issues_path_env_key = str(
+        contract_harness_retry.get("issuesPathEnvKey", "")
+    )
+    contract_harness_session_path_env_key = str(
+        contract_harness_retry.get("sessionPathEnvKey", "")
+    )
+    contract_harness_session_path_default = str(
+        contract_harness_retry.get("sessionPathDefault", "")
+    )
+    contract_harness_session_issue_field = str(
+        contract_harness_retry.get("sessionIssueField", "")
+    )
+    contract_stage1_parity = loaded_control_plane_contract.get("evidenceStage1Parity", {})
+    if not isinstance(contract_stage1_parity, dict):
+        contract_stage1_parity = {}
+    contract_stage1_parity_profile_kind = str(contract_stage1_parity.get("profileKind", ""))
+    contract_stage1_parity_classes_obj = contract_stage1_parity.get("failureClasses", {})
+    if not isinstance(contract_stage1_parity_classes_obj, dict):
+        contract_stage1_parity_classes_obj = {}
+    contract_stage1_parity_failure_classes = as_sorted_strings(
+        contract_stage1_parity_classes_obj.values()
+    )
+
+    contract_stage1_rollback = loaded_control_plane_contract.get("evidenceStage1Rollback", {})
+    if not isinstance(contract_stage1_rollback, dict):
+        contract_stage1_rollback = {}
+    contract_stage1_rollback_profile_kind = str(contract_stage1_rollback.get("profileKind", ""))
+    contract_stage1_rollback_witness_kind = str(contract_stage1_rollback.get("witnessKind", ""))
+    contract_stage1_rollback_trigger_failure_classes = as_sorted_strings(
+        contract_stage1_rollback.get("triggerFailureClasses", ())
+    )
+    contract_stage1_rollback_classes_obj = contract_stage1_rollback.get("failureClasses", {})
+    if not isinstance(contract_stage1_rollback_classes_obj, dict):
+        contract_stage1_rollback_classes_obj = {}
+    contract_stage1_rollback_failure_classes = as_sorted_strings(
+        contract_stage1_rollback_classes_obj.values()
+    )
+    contract_stage2_authority = loaded_control_plane_contract.get("evidenceStage2Authority", {})
+    if not isinstance(contract_stage2_authority, dict):
+        contract_stage2_authority = {}
+    contract_stage2_profile_kind = str(contract_stage2_authority.get("profileKind", ""))
+    contract_stage2_active_stage = str(contract_stage2_authority.get("activeStage", ""))
+    contract_stage2_alias = contract_stage2_authority.get("compatibilityAlias", {})
+    if not isinstance(contract_stage2_alias, dict):
+        contract_stage2_alias = {}
+    contract_stage2_alias_role = str(contract_stage2_alias.get("role", ""))
+    contract_stage2_alias_support_until_epoch = str(
+        contract_stage2_alias.get("supportUntilEpoch", "")
+    )
+    contract_stage2_classes_obj = contract_stage2_authority.get("failureClasses", {})
+    if not isinstance(contract_stage2_classes_obj, dict):
+        contract_stage2_classes_obj = {}
+    contract_stage2_failure_classes = as_sorted_strings(contract_stage2_classes_obj.values())
+    contract_stage2_bidir_route = contract_stage2_authority.get("bidirEvidenceRoute", {})
+    if not isinstance(contract_stage2_bidir_route, dict):
+        contract_stage2_bidir_route = {}
+    contract_stage2_bidir_required_obligations = as_sorted_strings(
+        contract_stage2_bidir_route.get("requiredObligations", ())
+    )
+    contract_stage2_bidir_classes_obj = contract_stage2_bidir_route.get("failureClasses", {})
+    if not isinstance(contract_stage2_bidir_classes_obj, dict):
+        contract_stage2_bidir_classes_obj = {}
+    contract_stage2_bidir_failure_classes = as_sorted_strings(
+        contract_stage2_bidir_classes_obj.values()
+    )
 
     checker_expected_core = as_sorted_strings(
         lane_registry.get("expectedCheckerCoreOnlyObligations", ())
@@ -306,6 +395,75 @@ def check_control_plane_lane_bindings(
     checker_required_route = lane_registry.get("requiredCrossLaneWitnessRoute")
     checker_required_failures = as_sorted_strings(
         lane_registry.get("requiredLaneFailureClasses", ())
+    )
+    checker_stage1_parity = gate_chain_details.get("stage1Parity")
+    if not isinstance(checker_stage1_parity, dict):
+        checker_stage1_parity = {}
+        reasons.append("coherence witness missing gate_chain_parity stage1Parity details")
+    checker_stage1_parity_required_classes_obj = checker_stage1_parity.get(
+        "requiredFailureClasses", {}
+    )
+    if not isinstance(checker_stage1_parity_required_classes_obj, dict):
+        checker_stage1_parity_required_classes_obj = {}
+    checker_stage1_parity_required_classes = as_sorted_strings(
+        checker_stage1_parity_required_classes_obj.values()
+    )
+
+    checker_stage1_rollback = gate_chain_details.get("stage1Rollback")
+    if not isinstance(checker_stage1_rollback, dict):
+        checker_stage1_rollback = {}
+        reasons.append("coherence witness missing gate_chain_parity stage1Rollback details")
+    checker_stage1_rollback_required_trigger_classes = as_sorted_strings(
+        checker_stage1_rollback.get("requiredTriggerFailureClasses", ())
+    )
+    checker_stage1_rollback_required_classes_obj = checker_stage1_rollback.get(
+        "requiredFailureClasses", {}
+    )
+    if not isinstance(checker_stage1_rollback_required_classes_obj, dict):
+        checker_stage1_rollback_required_classes_obj = {}
+    checker_stage1_rollback_required_classes = as_sorted_strings(
+        checker_stage1_rollback_required_classes_obj.values()
+    )
+    checker_stage2_authority = gate_chain_details.get("stage2Authority")
+    if not isinstance(checker_stage2_authority, dict):
+        checker_stage2_authority = {}
+        if contract_stage2_authority:
+            reasons.append("coherence witness missing gate_chain_parity stage2Authority details")
+    checker_stage2_required_classes_obj = checker_stage2_authority.get(
+        "requiredFailureClasses", {}
+    )
+    if not isinstance(checker_stage2_required_classes_obj, dict):
+        checker_stage2_required_classes_obj = {}
+    checker_stage2_required_classes = as_sorted_strings(
+        checker_stage2_required_classes_obj.values()
+    )
+    checker_stage2_bidir_route = checker_stage2_authority.get("bidirEvidenceRoute", {})
+    if not isinstance(checker_stage2_bidir_route, dict):
+        checker_stage2_bidir_route = {}
+    checker_stage2_bidir_required_obligations = as_sorted_strings(
+        checker_stage2_bidir_route.get("requiredObligations", ())
+    )
+    if not checker_stage2_bidir_required_obligations:
+        checker_stage2_kernel_sentinel = checker_stage2_authority.get(
+            "kernelComplianceSentinel", {}
+        )
+        if isinstance(checker_stage2_kernel_sentinel, dict):
+            checker_stage2_bidir_required_obligations = as_sorted_strings(
+                checker_stage2_kernel_sentinel.get("requiredObligations", ())
+            )
+    checker_stage2_bidir_required_classes_obj = checker_stage2_authority.get(
+        "requiredBidirEvidenceFailureClasses", {}
+    )
+    if not isinstance(checker_stage2_bidir_required_classes_obj, dict):
+        checker_stage2_bidir_required_classes_obj = {}
+    if not checker_stage2_bidir_required_classes_obj:
+        kernel_classes_fallback = checker_stage2_authority.get(
+            "requiredKernelComplianceFailureClasses", {}
+        )
+        if isinstance(kernel_classes_fallback, dict):
+            checker_stage2_bidir_required_classes_obj = kernel_classes_fallback
+    checker_stage2_bidir_required_classes = as_sorted_strings(
+        checker_stage2_bidir_required_classes_obj.values()
     )
     checker_lane_values = lane_registry.get("evidenceLanes")
     if isinstance(checker_lane_values, dict) and checker_lane_values != contract_evidence_lanes:
@@ -327,6 +485,44 @@ def check_control_plane_lane_bindings(
         reasons.append(
             "CONTROL-PLANE-CONTRACT laneFailureClasses missing checker-required failure classes"
         )
+    if checker_stage1_parity_required_classes and (
+        checker_stage1_parity_required_classes != contract_stage1_parity_failure_classes
+    ):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage1Parity.failureClasses differ from checker-required classes"
+        )
+    if checker_stage1_rollback_required_classes and (
+        checker_stage1_rollback_required_classes != contract_stage1_rollback_failure_classes
+    ):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage1Rollback.failureClasses differ from checker-required classes"
+        )
+    if checker_stage1_rollback_required_trigger_classes and not set(
+        checker_stage1_rollback_required_trigger_classes
+    ).issubset(set(contract_stage1_rollback_trigger_failure_classes)):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage1Rollback.triggerFailureClasses missing checker-required trigger classes"
+        )
+    if checker_stage2_required_classes and (
+        checker_stage2_required_classes != contract_stage2_failure_classes
+    ):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.failureClasses differ from checker-required classes"
+        )
+    if checker_stage2_bidir_required_obligations and (
+        checker_stage2_bidir_required_obligations
+        != contract_stage2_bidir_required_obligations
+    ):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.bidirEvidenceRoute.requiredObligations differ from checker-observed values"
+        )
+    if checker_stage2_bidir_required_classes and (
+        checker_stage2_bidir_required_classes
+        != contract_stage2_bidir_failure_classes
+    ):
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.bidirEvidenceRoute.failureClasses differ from checker-required classes"
+        )
 
     loader_evidence_lanes = dict(getattr(control_plane_module, "EVIDENCE_LANES", {}))
     loader_lane_artifact_kinds = normalize_lane_artifact_kinds(
@@ -340,6 +536,81 @@ def check_control_plane_lane_bindings(
     )
     loader_lane_failure_classes = as_sorted_strings(
         getattr(control_plane_module, "LANE_FAILURE_CLASSES", ())
+    )
+    loader_governance_mode = str(
+        getattr(control_plane_module, "SCHEMA_LIFECYCLE_GOVERNANCE_MODE", "")
+    )
+    loader_governance_decision_ref = str(
+        getattr(control_plane_module, "SCHEMA_LIFECYCLE_GOVERNANCE_DECISION_REF", "")
+    )
+    loader_governance_owner = str(
+        getattr(control_plane_module, "SCHEMA_LIFECYCLE_GOVERNANCE_OWNER", "")
+    )
+    loader_rollover_cadence_months = getattr(
+        control_plane_module, "SCHEMA_LIFECYCLE_ROLLOVER_CADENCE_MONTHS", None
+    )
+    loader_freeze_reason = getattr(
+        control_plane_module, "SCHEMA_LIFECYCLE_FREEZE_REASON", None
+    )
+    loader_harness_policy_kind = str(
+        getattr(control_plane_module, "HARNESS_RETRY_POLICY_KIND", "")
+    )
+    loader_harness_policy_path = str(
+        getattr(control_plane_module, "HARNESS_RETRY_POLICY_PATH", "")
+    )
+    loader_harness_escalation_actions = as_sorted_strings(
+        getattr(control_plane_module, "HARNESS_ESCALATION_ACTIONS", ())
+    )
+    loader_harness_active_issue_env_keys = as_sorted_strings(
+        getattr(control_plane_module, "HARNESS_ACTIVE_ISSUE_ENV_KEYS", ())
+    )
+    loader_harness_issues_path_env_key = str(
+        getattr(control_plane_module, "HARNESS_ISSUES_PATH_ENV_KEY", "")
+    )
+    loader_harness_session_path_env_key = str(
+        getattr(control_plane_module, "HARNESS_SESSION_PATH_ENV_KEY", "")
+    )
+    loader_harness_session_path_default = str(
+        getattr(control_plane_module, "HARNESS_SESSION_PATH_DEFAULT", "")
+    )
+    loader_harness_session_issue_field = str(
+        getattr(control_plane_module, "HARNESS_SESSION_ISSUE_FIELD", "")
+    )
+    loader_stage1_parity_profile_kind = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_PARITY_PROFILE_KIND", "")
+    )
+    loader_stage1_parity_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_PARITY_FAILURE_CLASSES", ())
+    )
+    loader_stage1_rollback_profile_kind = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_ROLLBACK_PROFILE_KIND", "")
+    )
+    loader_stage1_rollback_witness_kind = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_ROLLBACK_WITNESS_KIND", "")
+    )
+    loader_stage1_rollback_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE1_ROLLBACK_FAILURE_CLASSES", ())
+    )
+    loader_stage2_profile_kind = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_AUTHORITY_PROFILE_KIND", "")
+    )
+    loader_stage2_active_stage = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_AUTHORITY_ACTIVE_STAGE", "")
+    )
+    loader_stage2_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_AUTHORITY_FAILURE_CLASSES", ())
+    )
+    loader_stage2_alias_role = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_ALIAS_ROLE", "")
+    )
+    loader_stage2_alias_support_until_epoch = str(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH", "")
+    )
+    loader_stage2_bidir_required_obligations = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS", ())
+    )
+    loader_stage2_bidir_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES", ())
     )
 
     if loader_evidence_lanes != contract_evidence_lanes:
@@ -358,6 +629,118 @@ def check_control_plane_lane_bindings(
         reasons.append(
             "control_plane_contract.py LANE_FAILURE_CLASSES drift from contract payload"
         )
+    if loader_governance_mode != contract_governance_mode:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_GOVERNANCE_MODE drift from contract payload"
+        )
+    if loader_governance_decision_ref != contract_governance_decision_ref:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_GOVERNANCE_DECISION_REF drift from contract payload"
+        )
+    if loader_governance_owner != contract_governance_owner:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_GOVERNANCE_OWNER drift from contract payload"
+        )
+    if loader_rollover_cadence_months != contract_rollover_cadence_months:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_ROLLOVER_CADENCE_MONTHS drift from contract payload"
+        )
+    if loader_freeze_reason != contract_freeze_reason:
+        reasons.append(
+            "control_plane_contract.py SCHEMA_LIFECYCLE_FREEZE_REASON drift from contract payload"
+        )
+    if loader_harness_policy_kind != contract_harness_policy_kind:
+        reasons.append(
+            "control_plane_contract.py HARNESS_RETRY_POLICY_KIND drift from contract payload"
+        )
+    if loader_harness_policy_path != contract_harness_policy_path:
+        reasons.append(
+            "control_plane_contract.py HARNESS_RETRY_POLICY_PATH drift from contract payload"
+        )
+    if loader_harness_escalation_actions != contract_harness_escalation_actions:
+        reasons.append(
+            "control_plane_contract.py HARNESS_ESCALATION_ACTIONS drift from contract payload"
+        )
+    if (
+        loader_harness_active_issue_env_keys
+        != contract_harness_active_issue_env_keys
+    ):
+        reasons.append(
+            "control_plane_contract.py HARNESS_ACTIVE_ISSUE_ENV_KEYS drift from contract payload"
+        )
+    if loader_harness_issues_path_env_key != contract_harness_issues_path_env_key:
+        reasons.append(
+            "control_plane_contract.py HARNESS_ISSUES_PATH_ENV_KEY drift from contract payload"
+        )
+    if loader_harness_session_path_env_key != contract_harness_session_path_env_key:
+        reasons.append(
+            "control_plane_contract.py HARNESS_SESSION_PATH_ENV_KEY drift from contract payload"
+        )
+    if loader_harness_session_path_default != contract_harness_session_path_default:
+        reasons.append(
+            "control_plane_contract.py HARNESS_SESSION_PATH_DEFAULT drift from contract payload"
+        )
+    if loader_harness_session_issue_field != contract_harness_session_issue_field:
+        reasons.append(
+            "control_plane_contract.py HARNESS_SESSION_ISSUE_FIELD drift from contract payload"
+        )
+    if loader_stage1_parity_profile_kind != contract_stage1_parity_profile_kind:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_PARITY_PROFILE_KIND drift from contract payload"
+        )
+    if loader_stage1_parity_failure_classes != contract_stage1_parity_failure_classes:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_PARITY_FAILURE_CLASSES drift from contract payload"
+        )
+    if loader_stage1_rollback_profile_kind != contract_stage1_rollback_profile_kind:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_ROLLBACK_PROFILE_KIND drift from contract payload"
+        )
+    if loader_stage1_rollback_witness_kind != contract_stage1_rollback_witness_kind:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_ROLLBACK_WITNESS_KIND drift from contract payload"
+        )
+    if loader_stage1_rollback_failure_classes != contract_stage1_rollback_failure_classes:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE1_ROLLBACK_FAILURE_CLASSES drift from contract payload"
+        )
+    if contract_stage2_profile_kind and loader_stage2_profile_kind != contract_stage2_profile_kind:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE2_AUTHORITY_PROFILE_KIND drift from contract payload"
+        )
+    if contract_stage2_active_stage and loader_stage2_active_stage != contract_stage2_active_stage:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE2_AUTHORITY_ACTIVE_STAGE drift from contract payload"
+        )
+    if contract_stage2_failure_classes and loader_stage2_failure_classes != contract_stage2_failure_classes:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE2_AUTHORITY_FAILURE_CLASSES drift from contract payload"
+        )
+    if contract_stage2_alias_role and loader_stage2_alias_role != contract_stage2_alias_role:
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE2_ALIAS_ROLE drift from contract payload"
+        )
+    if (
+        contract_stage2_alias_support_until_epoch
+        and loader_stage2_alias_support_until_epoch != contract_stage2_alias_support_until_epoch
+    ):
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH drift from contract payload"
+        )
+    if (
+        contract_stage2_bidir_required_obligations
+        and loader_stage2_bidir_required_obligations != contract_stage2_bidir_required_obligations
+    ):
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS drift from contract payload"
+        )
+    if (
+        contract_stage2_bidir_failure_classes
+        and loader_stage2_bidir_failure_classes != contract_stage2_bidir_failure_classes
+    ):
+        reasons.append(
+            "control_plane_contract.py EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES drift from contract payload"
+        )
 
     details = {
         "reasons": reasons,
@@ -367,6 +750,40 @@ def check_control_plane_lane_bindings(
             "checkerCoreOnlyObligations": contract_checker_core,
             "requiredCrossLaneWitnessRoute": contract_required_route,
             "laneFailureClasses": contract_lane_failure_classes,
+            "schemaLifecycleGovernance": {
+                "mode": contract_governance_mode,
+                "decisionRef": contract_governance_decision_ref,
+                "owner": contract_governance_owner,
+                "rolloverCadenceMonths": contract_rollover_cadence_months,
+                "freezeReason": contract_freeze_reason,
+            },
+            "harnessRetry": {
+                "policyKind": contract_harness_policy_kind,
+                "policyPath": contract_harness_policy_path,
+                "escalationActions": contract_harness_escalation_actions,
+                "activeIssueEnvKeys": contract_harness_active_issue_env_keys,
+                "issuesPathEnvKey": contract_harness_issues_path_env_key,
+                "sessionPathEnvKey": contract_harness_session_path_env_key,
+                "sessionPathDefault": contract_harness_session_path_default,
+                "sessionIssueField": contract_harness_session_issue_field,
+            },
+            "stage1": {
+                "parityProfileKind": contract_stage1_parity_profile_kind,
+                "parityFailureClasses": contract_stage1_parity_failure_classes,
+                "rollbackProfileKind": contract_stage1_rollback_profile_kind,
+                "rollbackWitnessKind": contract_stage1_rollback_witness_kind,
+                "rollbackTriggerFailureClasses": contract_stage1_rollback_trigger_failure_classes,
+                "rollbackFailureClasses": contract_stage1_rollback_failure_classes,
+            },
+            "stage2": {
+                "authorityProfileKind": contract_stage2_profile_kind,
+                "activeStage": contract_stage2_active_stage,
+                "aliasRole": contract_stage2_alias_role,
+                "aliasSupportUntilEpoch": contract_stage2_alias_support_until_epoch,
+                "authorityFailureClasses": contract_stage2_failure_classes,
+                "bidirRequiredObligations": contract_stage2_bidir_required_obligations,
+                "bidirFailureClasses": contract_stage2_bidir_failure_classes,
+            },
         },
         "checker": {
             "evidenceLanes": checker_lane_values,
@@ -374,6 +791,16 @@ def check_control_plane_lane_bindings(
             "expectedCheckerCoreOnlyObligations": checker_expected_core,
             "requiredCrossLaneWitnessRoute": checker_required_route,
             "requiredLaneFailureClasses": checker_required_failures,
+            "stage1": {
+                "parityRequiredFailureClasses": checker_stage1_parity_required_classes,
+                "rollbackRequiredTriggerFailureClasses": checker_stage1_rollback_required_trigger_classes,
+                "rollbackRequiredFailureClasses": checker_stage1_rollback_required_classes,
+            },
+            "stage2": {
+                "authorityRequiredFailureClasses": checker_stage2_required_classes,
+                "bidirRequiredObligations": checker_stage2_bidir_required_obligations,
+                "bidirRequiredFailureClasses": checker_stage2_bidir_required_classes,
+            },
         },
         "loader": {
             "evidenceLanes": loader_evidence_lanes,
@@ -381,6 +808,39 @@ def check_control_plane_lane_bindings(
             "checkerCoreOnlyObligations": loader_checker_core,
             "requiredCrossLaneWitnessRoute": loader_required_route,
             "laneFailureClasses": loader_lane_failure_classes,
+            "schemaLifecycleGovernance": {
+                "mode": loader_governance_mode,
+                "decisionRef": loader_governance_decision_ref,
+                "owner": loader_governance_owner,
+                "rolloverCadenceMonths": loader_rollover_cadence_months,
+                "freezeReason": loader_freeze_reason,
+            },
+            "harnessRetry": {
+                "policyKind": loader_harness_policy_kind,
+                "policyPath": loader_harness_policy_path,
+                "escalationActions": loader_harness_escalation_actions,
+                "activeIssueEnvKeys": loader_harness_active_issue_env_keys,
+                "issuesPathEnvKey": loader_harness_issues_path_env_key,
+                "sessionPathEnvKey": loader_harness_session_path_env_key,
+                "sessionPathDefault": loader_harness_session_path_default,
+                "sessionIssueField": loader_harness_session_issue_field,
+            },
+            "stage1": {
+                "parityProfileKind": loader_stage1_parity_profile_kind,
+                "parityFailureClasses": loader_stage1_parity_failure_classes,
+                "rollbackProfileKind": loader_stage1_rollback_profile_kind,
+                "rollbackWitnessKind": loader_stage1_rollback_witness_kind,
+                "rollbackFailureClasses": loader_stage1_rollback_failure_classes,
+            },
+            "stage2": {
+                "authorityProfileKind": loader_stage2_profile_kind,
+                "activeStage": loader_stage2_active_stage,
+                "aliasRole": loader_stage2_alias_role,
+                "aliasSupportUntilEpoch": loader_stage2_alias_support_until_epoch,
+                "authorityFailureClasses": loader_stage2_failure_classes,
+                "bidirRequiredObligations": loader_stage2_bidir_required_obligations,
+                "bidirFailureClasses": loader_stage2_bidir_failure_classes,
+            },
         },
     }
     return bool(reasons), details

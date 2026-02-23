@@ -36,7 +36,29 @@ class DriftBudgetChecksTests(unittest.TestCase):
                 "checkerCoreOnlyObligations": ("cwf_substitution_identity",),
                 "requiredCrossLaneWitnessRoute": "span_square_commutation",
             },
+            "schemaLifecycle": {
+                "governance": {
+                    "mode": "rollover",
+                    "decisionRef": "decision-0105",
+                    "owner": "premath-core",
+                    "rolloverCadenceMonths": 6,
+                    "freezeReason": None,
+                }
+            },
             "laneFailureClasses": ("lane_unknown", "lane_kind_unbound"),
+            "harnessRetry": {
+                "policyKind": "ci.harness.retry.policy.v1",
+                "policyPath": "policies/control/harness-retry-policy-v1.json",
+                "escalationActions": ("issue_discover", "mark_blocked", "stop"),
+                "activeIssueEnvKeys": (
+                    "PREMATH_ACTIVE_ISSUE_ID",
+                    "PREMATH_ISSUE_ID",
+                ),
+                "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+                "sessionPathEnvKey": "PREMATH_HARNESS_SESSION_PATH",
+                "sessionPathDefault": ".premath/harness_session.json",
+                "sessionIssueField": "issueId",
+            },
         }
         control_plane_module = SimpleNamespace(
             EVIDENCE_LANES=loaded_contract["evidenceLanes"],
@@ -46,6 +68,41 @@ class DriftBudgetChecksTests(unittest.TestCase):
             ],
             REQUIRED_CROSS_LANE_WITNESS_ROUTE="span_square_commutation",
             LANE_FAILURE_CLASSES=loaded_contract["laneFailureClasses"],
+            SCHEMA_LIFECYCLE_GOVERNANCE_MODE=loaded_contract["schemaLifecycle"][
+                "governance"
+            ]["mode"],
+            SCHEMA_LIFECYCLE_GOVERNANCE_DECISION_REF=loaded_contract[
+                "schemaLifecycle"
+            ]["governance"]["decisionRef"],
+            SCHEMA_LIFECYCLE_GOVERNANCE_OWNER=loaded_contract["schemaLifecycle"][
+                "governance"
+            ]["owner"],
+            SCHEMA_LIFECYCLE_ROLLOVER_CADENCE_MONTHS=loaded_contract[
+                "schemaLifecycle"
+            ]["governance"]["rolloverCadenceMonths"],
+            SCHEMA_LIFECYCLE_FREEZE_REASON=loaded_contract["schemaLifecycle"][
+                "governance"
+            ]["freezeReason"],
+            HARNESS_RETRY_POLICY_KIND=loaded_contract["harnessRetry"]["policyKind"],
+            HARNESS_RETRY_POLICY_PATH=loaded_contract["harnessRetry"]["policyPath"],
+            HARNESS_ESCALATION_ACTIONS=loaded_contract["harnessRetry"][
+                "escalationActions"
+            ],
+            HARNESS_ACTIVE_ISSUE_ENV_KEYS=loaded_contract["harnessRetry"][
+                "activeIssueEnvKeys"
+            ],
+            HARNESS_ISSUES_PATH_ENV_KEY=loaded_contract["harnessRetry"][
+                "issuesPathEnvKey"
+            ],
+            HARNESS_SESSION_PATH_ENV_KEY=loaded_contract["harnessRetry"][
+                "sessionPathEnvKey"
+            ],
+            HARNESS_SESSION_PATH_DEFAULT=loaded_contract["harnessRetry"][
+                "sessionPathDefault"
+            ],
+            HARNESS_SESSION_ISSUE_FIELD=loaded_contract["harnessRetry"][
+                "sessionIssueField"
+            ],
         )
         gate_chain_details = {
             "laneRegistry": {

@@ -65,6 +65,15 @@ def _sha256_file(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _non_empty_string(value: Any) -> Optional[str]:
+    if not isinstance(value, str):
+        return None
+    trimmed = value.strip()
+    if not trimmed:
+        return None
+    return trimmed
+
+
 def _resolve_side_paths(
     root: Path,
     out_dir: Path,
@@ -166,12 +175,30 @@ def main() -> int:
         return 1
 
     derived = payload.get("derived", {})
-    decision_value = derived.get("decision") or decision.get("decision")
-    projection_digest = derived.get("projectionDigest") or decision.get("projectionDigest")
+    decision_value = _non_empty_string(derived.get("decision")) or _non_empty_string(
+        decision.get("decision")
+    )
+    typed_core_projection_digest = _non_empty_string(
+        derived.get("typedCoreProjectionDigest")
+    ) or _non_empty_string(decision.get("typedCoreProjectionDigest"))
+    if typed_core_projection_digest is None:
+        print(
+            "[verify-decision] FAIL (missing typedCoreProjectionDigest in verified decision chain)",
+            file=sys.stderr,
+        )
+        return 1
+    projection_digest = typed_core_projection_digest
+    authority_payload_digest = _non_empty_string(
+        derived.get("authorityPayloadDigest")
+    ) or _non_empty_string(decision.get("authorityPayloadDigest"))
     print(
         "[verify-decision] OK "
         f"(decision={decision_value}, projection={projection_digest})"
     )
+    if typed_core_projection_digest:
+        print(f"[verify-decision] typed authority: {typed_core_projection_digest}")
+    if authority_payload_digest:
+        print(f"[verify-decision] compatibility alias: {authority_payload_digest}")
     print(f"[verify-decision] decision: {decision_path}")
     print(f"[verify-decision] witness: {witness_path}")
     print(f"[verify-decision] delta: {delta_path}")

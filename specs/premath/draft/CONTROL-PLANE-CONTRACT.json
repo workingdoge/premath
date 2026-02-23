@@ -4,6 +4,12 @@
   "contractId": "control-plane.default.v1",
   "schemaLifecycle": {
     "activeEpoch": "2026-02",
+    "governance": {
+      "mode": "rollover",
+      "decisionRef": "decision-0105",
+      "owner": "premath-core",
+      "rolloverCadenceMonths": 6
+    },
     "kindFamilies": {
       "controlPlaneContractKind": {
         "canonicalKind": "premath.control_plane.contract.v1",
@@ -119,6 +125,50 @@
     "lane_ownership_violation",
     "lane_route_missing"
   ],
+  "workerLaneAuthority": {
+    "mutationPolicy": {
+      "defaultMode": "instruction-linked",
+      "allowedModes": [
+        "instruction-linked",
+        "human-override"
+      ],
+      "compatibilityOverrides": [
+        {
+          "mode": "human-override",
+          "supportUntilEpoch": "2026-06",
+          "requiresReason": true
+        }
+      ]
+    },
+    "mutationRoutes": {
+      "issueClaim": "capabilities.change_morphisms.issue_claim",
+      "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
+      "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
+      "issueDiscover": "capabilities.change_morphisms.issue_discover"
+    },
+    "failureClasses": {
+      "policyDrift": "worker_lane_policy_drift",
+      "mutationModeDrift": "worker_lane_mutation_mode_drift",
+      "routeUnbound": "worker_lane_route_unbound"
+    }
+  },
+  "harnessRetry": {
+    "policyKind": "ci.harness.retry.policy.v1",
+    "policyPath": "policies/control/harness-retry-policy-v1.json",
+    "escalationActions": [
+      "issue_discover",
+      "mark_blocked",
+      "stop"
+    ],
+    "activeIssueEnvKeys": [
+      "PREMATH_ACTIVE_ISSUE_ID",
+      "PREMATH_ISSUE_ID"
+    ],
+    "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
+    "sessionPathEnvKey": "PREMATH_HARNESS_SESSION_PATH",
+    "sessionPathDefault": ".premath/harness_session.json",
+    "sessionIssueField": "issueId"
+  },
   "requiredGateProjection": {
     "projectionPolicy": "ci-topos-v0",
     "checkIds": {
@@ -150,5 +200,84 @@
     "witnessKind": "ci.instruction.v1",
     "policyKind": "ci.instruction.policy.v1",
     "policyDigestPrefix": "pol1_"
+  },
+  "evidenceStage1Parity": {
+    "profileKind": "ev.stage1.core.v1",
+    "authorityToTypedCoreRoute": "authority_to_typed_core_projection",
+    "comparisonTuple": {
+      "authorityDigestRef": "authorityPayloadDigest",
+      "typedCoreDigestRef": "typedCoreProjectionDigest",
+      "normalizerIdRef": "normalizerId",
+      "policyDigestRef": "policyDigest"
+    },
+    "failureClasses": {
+      "missing": "unification.evidence_stage1.parity.missing",
+      "mismatch": "unification.evidence_stage1.parity.mismatch",
+      "unbound": "unification.evidence_stage1.parity.unbound"
+    }
+  },
+  "evidenceStage1Rollback": {
+    "profileKind": "ev.stage1.rollback.v1",
+    "witnessKind": "ev.stage1.rollback.witness.v1",
+    "fromStage": "stage1",
+    "toStage": "stage0",
+    "triggerFailureClasses": [
+      "unification.evidence_stage1.parity.missing",
+      "unification.evidence_stage1.parity.mismatch",
+      "unification.evidence_stage1.parity.unbound"
+    ],
+    "identityRefs": {
+      "authorityDigestRef": "authorityPayloadDigest",
+      "rollbackAuthorityDigestRef": "rollbackAuthorityPayloadDigest",
+      "normalizerIdRef": "normalizerId",
+      "policyDigestRef": "policyDigest"
+    },
+    "failureClasses": {
+      "precondition": "unification.evidence_stage1.rollback.precondition",
+      "identityDrift": "unification.evidence_stage1.rollback.identity_drift",
+      "unbound": "unification.evidence_stage1.rollback.unbound"
+    }
+  },
+  "evidenceStage2Authority": {
+    "profileKind": "ev.stage2.authority.v1",
+    "activeStage": "stage2",
+    "typedAuthority": {
+      "kindRef": "ev.stage1.core.v1",
+      "digestRef": "typedCoreProjectionDigest",
+      "normalizerIdRef": "normalizerId",
+      "policyDigestRef": "policyDigest"
+    },
+    "compatibilityAlias": {
+      "kindRef": "ev.legacy.payload.v1",
+      "digestRef": "authorityPayloadDigest",
+      "role": "projection_only",
+      "supportUntilEpoch": "2026-06"
+    },
+    "bidirEvidenceRoute": {
+      "routeKind": "direct_checker_discharge",
+      "obligationFieldRef": "bidirCheckerObligations",
+      "requiredObligations": [
+        "stability",
+        "locality",
+        "descent_exists",
+        "descent_contractible",
+        "adjoint_triple",
+        "ext_gap",
+        "ext_ambiguous"
+      ],
+      "failureClasses": {
+        "missing": "unification.evidence_stage2.kernel_compliance_missing",
+        "drift": "unification.evidence_stage2.kernel_compliance_drift"
+      },
+      "fallback": {
+        "mode": "profile_gated_sentinel",
+        "profileKinds": []
+      }
+    },
+    "failureClasses": {
+      "authorityAliasViolation": "unification.evidence_stage2.authority_alias_violation",
+      "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
+      "unbound": "unification.evidence_stage2.unbound"
+    }
   }
 }

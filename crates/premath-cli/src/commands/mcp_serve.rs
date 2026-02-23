@@ -6,10 +6,15 @@ use crate::support::{
 };
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
-use premath_bd::{DepType, Issue, IssueLease, IssueLeaseState, MemoryStore, store_snapshot_ref};
+use premath_bd::DEFAULT_NOTE_WARN_THRESHOLD;
+use premath_bd::issue::{issue_type_variants, parse_issue_type};
+use premath_bd::{
+    AtomicStoreMutationError, DepType, DependencyGraphScope, Issue, IssueLease, IssueLeaseState,
+    MemoryStore, mutate_store_jsonl, store_snapshot_ref,
+};
 use premath_coherence::validate_instruction_envelope_payload;
 use premath_jj::JjClient;
-use premath_surreal::QueryCache;
+use premath_surreal::{ProjectionMatchMode, QueryCache};
 use premath_ux::{ObserveQuery, SurrealObservationBackend, UxService};
 use rust_mcp_sdk::{
     McpServer, StdioTransport, ToMcpServerHandler, TransportOptions,
@@ -162,7 +167,7 @@ async fn run_async(args: Args) -> Result<(), String> {
         },
         protocol_version: ProtocolVersion::V2025_11_25.into(),
         instructions: Some(
-            "Use init_tool to initialize canonical .premath/issues.jsonl memory. issue/dep mutation tools (including issue_claim, issue_lease_renew, issue_lease_release, and issue_discover) are instruction-mediated by policy (default: instruction-linked) and reads may use jsonl or surreal projection backends. Use issue_backend_status for backend integration state and issue_lease_projection for deterministic stale/contended lease views. Use instruction_* tools for doctrine-gated runs (instruction envelopes require normalizerId + policyDigest, requestedChecks must be policy-allowlisted, optional capabilityClaims are carried to witness for mutation gating, and optional proposal ingestion uses proposal/llmProposal) and observe_* tools for observation queries."
+            "Use init_tool to initialize canonical .premath/issues.jsonl memory. issue/dep mutation tools (including issue_claim, issue_lease_renew, issue_lease_release, and issue_discover) are instruction-mediated by policy (default: instruction-linked) and reads may use jsonl or surreal projection backends. Use issue_backend_status for backend integration state, issue_lease_projection for deterministic stale/contended lease views, and dep_diagnostics for scoped dependency-cycle diagnostics. Use instruction_* tools for doctrine-gated runs (instruction envelopes require normalizerId + policyDigest, requestedChecks must be policy-allowlisted, optional capabilityClaims are carried to witness for mutation gating, and optional proposal ingestion uses proposal/llmProposal) and observe_* tools for observation queries."
                 .into(),
         ),
         meta: None,
@@ -211,6 +216,7 @@ impl ServerHandler for PremathMcpHandler {
         match tool_params {
             PremathTools::IssueReadyTool(tool) => call_issue_ready(&self.config, tool),
             PremathTools::IssueListTool(tool) => call_issue_list(&self.config, tool),
+            PremathTools::IssueCheckTool(tool) => call_issue_check(&self.config, tool),
             PremathTools::IssueBackendStatusTool(tool) => {
                 call_issue_backend_status(&self.config, tool)
             }
@@ -226,6 +232,7 @@ impl ServerHandler for PremathMcpHandler {
             PremathTools::DepAddTool(tool) => call_dep_add(&self.config, tool),
             PremathTools::DepRemoveTool(tool) => call_dep_remove(&self.config, tool),
             PremathTools::DepReplaceTool(tool) => call_dep_replace(&self.config, tool),
+            PremathTools::DepDiagnosticsTool(tool) => call_dep_diagnostics(&self.config, tool),
             PremathTools::InitTool(tool) => call_init_tool(&self.config, tool),
             PremathTools::IssueLeaseProjectionTool(tool) => {
                 call_issue_lease_projection(&self.config, tool)
@@ -272,6 +279,20 @@ struct IssueListTool {
     assignee: Option<String>,
     #[serde(default)]
     issues_path: Option<String>,
+}
+
+#[mcp_tool(
+    name = "issue_check",
+    description = "Run deterministic issue-graph contract checks",
+    read_only_hint = true
+)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "camelCase")]
+struct IssueCheckTool {
+    #[serde(default)]
+    issues_path: Option<String>,
+    #[serde(default)]
+    note_warn_threshold: Option<u64>,
 }
 
 #[mcp_tool(
@@ -514,6 +535,37 @@ struct DepReplaceTool {
     issues_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+enum DepGraphScopeToolArg {
+    #[default]
+    Active,
+    Full,
+}
+
+impl From<DepGraphScopeToolArg> for DependencyGraphScope {
+    fn from(value: DepGraphScopeToolArg) -> Self {
+        match value {
+            DepGraphScopeToolArg::Active => DependencyGraphScope::Active,
+            DepGraphScopeToolArg::Full => DependencyGraphScope::Full,
+        }
+    }
+}
+
+#[mcp_tool(
+    name = "dep_diagnostics",
+    description = "Report dependency graph cycle diagnostics for active or full graph scope",
+    read_only_hint = true
+)]
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "camelCase")]
+struct DepDiagnosticsTool {
+    #[serde(default)]
+    issues_path: Option<String>,
+    #[serde(default)]
+    graph_scope: DepGraphScopeToolArg,
+}
+
 #[mcp_tool(
     name = "init_tool",
     description = "Initialize premath local substrate (.premath/issues.jsonl), migrating legacy .beads store when present",
@@ -564,6 +616,25 @@ struct ObserveInstructionTool {
     surface_path: Option<String>,
 }
 
+#[derive(Debug, Clone, Deserialize, Serialize, JsonSchema, Default)]
+#[serde(rename_all = "snake_case")]
+enum ObserveProjectionMatchArg {
+    #[default]
+    Typed,
+    CompatibilityAlias,
+}
+
+impl From<ObserveProjectionMatchArg> for ProjectionMatchMode {
+    fn from(value: ObserveProjectionMatchArg) -> Self {
+        match value {
+            ObserveProjectionMatchArg::Typed => ProjectionMatchMode::Typed,
+            ObserveProjectionMatchArg::CompatibilityAlias => {
+                ProjectionMatchMode::CompatibilityAlias
+            }
+        }
+    }
+}
+
 #[mcp_tool(
     name = "observe_projection",
     description = "Return one projection view from observation surface",
@@ -573,6 +644,8 @@ struct ObserveInstructionTool {
 #[serde(rename_all = "camelCase")]
 struct ObserveProjectionTool {
     projection_digest: String,
+    #[serde(default)]
+    projection_match: ObserveProjectionMatchArg,
     #[serde(default)]
     surface_path: Option<String>,
 }
@@ -619,6 +692,7 @@ tool_box!(
     [
         IssueReadyTool,
         IssueListTool,
+        IssueCheckTool,
         IssueBackendStatusTool,
         IssueBlockedTool,
         IssueAddTool,
@@ -630,6 +704,7 @@ tool_box!(
         DepAddTool,
         DepRemoveTool,
         DepReplaceTool,
+        DepDiagnosticsTool,
         InitTool,
         IssueLeaseProjectionTool,
         ObserveLatestTool,
@@ -730,6 +805,9 @@ const FAILURE_LEASE_MISSING: &str = "lease_missing";
 const FAILURE_LEASE_STALE: &str = "lease_stale";
 const FAILURE_LEASE_OWNER_MISMATCH: &str = "lease_owner_mismatch";
 const FAILURE_LEASE_ID_MISMATCH: &str = "lease_id_mismatch";
+const FAILURE_LEASE_MUTATION_LOCK_BUSY: &str = "lease_mutation_lock_busy";
+const FAILURE_LEASE_MUTATION_LOCK_IO: &str = "lease_mutation_lock_io";
+const FAILURE_LEASE_MUTATION_STORE_IO: &str = "lease_mutation_store_io";
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -828,6 +906,23 @@ fn compute_lease_projection(store: &MemoryStore, now: DateTime<Utc>) -> LeasePro
 
 fn lease_error(failure_class: &str, detail: impl Into<String>) -> CallToolError {
     call_tool_error(format!("[failureClass={failure_class}] {}", detail.into()))
+}
+
+fn map_atomic_store_mutation_error(err: AtomicStoreMutationError<CallToolError>) -> CallToolError {
+    match err {
+        AtomicStoreMutationError::Mutation(inner) => inner,
+        AtomicStoreMutationError::LockBusy { lock_path } => lease_error(
+            FAILURE_LEASE_MUTATION_LOCK_BUSY,
+            format!("issue-memory lock busy: {lock_path}"),
+        ),
+        AtomicStoreMutationError::LockIo { lock_path, message } => lease_error(
+            FAILURE_LEASE_MUTATION_LOCK_IO,
+            format!("failed to acquire issue-memory lock {lock_path}: {message}"),
+        ),
+        AtomicStoreMutationError::Store(source) => {
+            lease_error(FAILURE_LEASE_MUTATION_STORE_IO, source.to_string())
+        }
+    }
 }
 
 fn parse_lease_ttl_seconds(ttl_seconds: Option<i64>) -> std::result::Result<i64, CallToolError> {
@@ -963,6 +1058,39 @@ fn call_issue_list(
     }))
 }
 
+fn call_issue_check(
+    config: &PremathMcpConfig,
+    tool: IssueCheckTool,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    let path = resolve_path(tool.issues_path, &config.issues_path);
+    let store = load_store_existing(&path)?;
+    let note_warn_threshold = tool
+        .note_warn_threshold
+        .map(|value| {
+            usize::try_from(value).map_err(|_| {
+                call_tool_error(format!(
+                    "note_warn_threshold exceeds platform usize: {}",
+                    value
+                ))
+            })
+        })
+        .transpose()?
+        .unwrap_or(DEFAULT_NOTE_WARN_THRESHOLD);
+    let report = store.check_issue_graph(note_warn_threshold);
+
+    json_result(json!({
+        "action": "issue.check",
+        "issuesPath": path.display().to_string(),
+        "checkKind": report.check_kind,
+        "result": report.result,
+        "failureClasses": report.failure_classes,
+        "warningClasses": report.warning_classes,
+        "errors": report.errors,
+        "warnings": report.warnings,
+        "summary": report.summary
+    }))
+}
+
 fn call_issue_backend_status(
     config: &PremathMcpConfig,
     tool: IssueBackendStatusTool,
@@ -1053,7 +1181,14 @@ fn call_issue_add(
     let mut issue = Issue::new(issue_id.clone(), tool.title);
     issue.description = tool.description.unwrap_or_default();
     issue.priority = tool.priority.unwrap_or(2);
-    issue.issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    let raw_issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    issue.issue_type = parse_issue_type(&raw_issue_type).ok_or_else(|| {
+        call_tool_error(format!(
+            "invalid issue_type `{}` (expected one of: {})",
+            raw_issue_type,
+            issue_type_variants().join(", ")
+        ))
+    })?;
     issue.assignee = tool.assignee.unwrap_or_default();
     issue.owner = tool.owner.unwrap_or_default();
     issue.set_status(non_empty(tool.status).unwrap_or_else(|| "open".to_string()));
@@ -1082,7 +1217,6 @@ fn call_issue_claim(
     tool: IssueClaimTool,
 ) -> std::result::Result<CallToolResult, CallToolError> {
     let path = resolve_path(tool.issues_path, &config.issues_path);
-    let mut store = load_store_existing(&path)?;
     let instruction =
         resolve_instruction_link(config, tool.instruction_id, MutationAction::IssueClaim)?;
     let assignee = tool.assignee.trim().to_string();
@@ -1099,7 +1233,7 @@ fn call_issue_claim(
     let write_witness =
         build_write_witness(config, "issue.claim", &tool.id, &path, instruction.as_ref());
 
-    let (updated, changed) = {
+    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
         let issue = store
             .issue_mut(&tool.id)
             .ok_or_else(|| call_tool_error(format!("issue not found: {}", tool.id)))?;
@@ -1192,11 +1326,13 @@ fn call_issue_claim(
         if changed {
             issue_attach_write_witness(issue, write_witness.clone());
         }
-        (issue.clone(), changed)
-    };
+        let updated = issue.clone();
+
+        Ok(((updated, changed, store.clone()), changed))
+    })
+    .map_err(map_atomic_store_mutation_error)?;
 
     if changed {
-        save_store(&store, &path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
     let lease_projection = compute_lease_projection(&store, now);
@@ -1218,7 +1354,6 @@ fn call_issue_lease_renew(
     tool: IssueLeaseRenewTool,
 ) -> std::result::Result<CallToolResult, CallToolError> {
     let path = resolve_path(tool.issues_path, &config.issues_path);
-    let mut store = load_store_existing(&path)?;
     let instruction =
         resolve_instruction_link(config, tool.instruction_id, MutationAction::IssueLeaseRenew)?;
     let assignee = tool.assignee.trim().to_string();
@@ -1245,7 +1380,7 @@ fn call_issue_lease_renew(
         instruction.as_ref(),
     );
 
-    let (updated, changed) = {
+    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
         let issue = store.issue_mut(&tool.id).ok_or_else(|| {
             lease_error(
                 FAILURE_LEASE_NOT_FOUND,
@@ -1322,11 +1457,13 @@ fn call_issue_lease_renew(
         if changed {
             issue_attach_write_witness(issue, write_witness.clone());
         }
-        (issue.clone(), changed)
-    };
+        let updated = issue.clone();
+
+        Ok(((updated, changed, store.clone()), changed))
+    })
+    .map_err(map_atomic_store_mutation_error)?;
 
     if changed {
-        save_store(&store, &path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
     let lease_projection = compute_lease_projection(&store, now);
@@ -1348,7 +1485,6 @@ fn call_issue_lease_release(
     tool: IssueLeaseReleaseTool,
 ) -> std::result::Result<CallToolResult, CallToolError> {
     let path = resolve_path(tool.issues_path, &config.issues_path);
-    let mut store = load_store_existing(&path)?;
     let instruction = resolve_instruction_link(
         config,
         tool.instruction_id,
@@ -1365,7 +1501,7 @@ fn call_issue_lease_release(
         instruction.as_ref(),
     );
 
-    let (updated, changed) = {
+    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
         let issue = store.issue_mut(&tool.id).ok_or_else(|| {
             lease_error(
                 FAILURE_LEASE_NOT_FOUND,
@@ -1427,12 +1563,13 @@ fn call_issue_lease_release(
             }
             issue_attach_write_witness(issue, write_witness.clone());
         }
+        let updated = issue.clone();
 
-        (issue.clone(), changed)
-    };
+        Ok(((updated, changed, store.clone()), changed))
+    })
+    .map_err(map_atomic_store_mutation_error)?;
 
     if changed {
-        save_store(&store, &path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
     let lease_projection = compute_lease_projection(&store, now);
@@ -1506,7 +1643,14 @@ fn call_issue_discover(
     let mut issue = Issue::new(issue_id.clone(), tool.title);
     issue.description = tool.description.unwrap_or_default();
     issue.priority = tool.priority.unwrap_or(2);
-    issue.issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    let raw_issue_type = non_empty(tool.issue_type).unwrap_or_else(|| "task".to_string());
+    issue.issue_type = parse_issue_type(&raw_issue_type).ok_or_else(|| {
+        call_tool_error(format!(
+            "invalid issue_type `{}` (expected one of: {})",
+            raw_issue_type,
+            issue_type_variants().join(", ")
+        ))
+    })?;
     issue.assignee = tool.assignee.unwrap_or_default();
     issue.owner = tool.owner.unwrap_or_default();
     issue.set_status("open".to_string());
@@ -1782,6 +1926,27 @@ fn call_dep_replace(
     }))
 }
 
+fn call_dep_diagnostics(
+    config: &PremathMcpConfig,
+    tool: DepDiagnosticsTool,
+) -> std::result::Result<CallToolResult, CallToolError> {
+    let path = resolve_path(tool.issues_path, &config.issues_path);
+    let store = load_store_existing(&path)?;
+    let graph_scope: DependencyGraphScope = tool.graph_scope.into();
+    let cycle = store.find_any_dependency_cycle_in_scope(graph_scope);
+
+    json_result(json!({
+        "action": "dep.diagnostics",
+        "issuesPath": path.display().to_string(),
+        "queryBackend": config.issue_query_backend.as_str(),
+        "graphScope": graph_scope.as_str(),
+        "integrity": {
+            "hasCycle": cycle.is_some(),
+            "cyclePath": cycle
+        }
+    }))
+}
+
 fn call_init_tool(
     config: &PremathMcpConfig,
     tool: InitTool,
@@ -1869,6 +2034,7 @@ fn call_observe_projection(
     let value = service
         .query_json(ObserveQuery::Projection {
             projection_digest: tool.projection_digest,
+            projection_match: tool.projection_match.into(),
         })
         .map_err(|e| call_tool_error(format!("failed to query projection: {e}")))?;
 
@@ -2615,6 +2781,50 @@ mod tests {
     }
 
     #[test]
+    fn issue_check_reports_core_invariants() {
+        let root = temp_dir("issue-check");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+
+        let _ = call_issue_add(
+            &config,
+            IssueAddTool {
+                title: "[EPIC] Missing epic type".to_string(),
+                id: Some("bd-epic".to_string()),
+                description: Some(
+                    "Acceptance:\n- done\n\nVerification commands:\n- `mise run baseline`\n"
+                        .to_string(),
+                ),
+                status: Some("open".to_string()),
+                priority: Some(2),
+                issue_type: Some("task".to_string()),
+                assignee: None,
+                owner: None,
+                instruction_id: None,
+                issues_path: None,
+            },
+        )
+        .expect("issue add should succeed");
+
+        let check = call_issue_check(
+            &config,
+            IssueCheckTool {
+                issues_path: None,
+                note_warn_threshold: None,
+            },
+        )
+        .expect("issue check should execute");
+        let payload = parse_tool_json(check);
+        assert_eq!(payload["action"], "issue.check");
+        assert_eq!(payload["checkKind"], "premath.issue_graph.check.v1");
+        assert_eq!(payload["result"], "rejected");
+        assert_eq!(
+            payload["failureClasses"],
+            serde_json::json!(["issue_graph.issue_type.epic_mismatch"])
+        );
+    }
+
+    #[test]
     fn dep_replace_and_remove_update_ready_status() {
         let root = temp_dir("dep-replace-remove-ready");
         let issues = root.join("issues.jsonl");
@@ -2771,6 +2981,55 @@ mod tests {
         assert!(
             err.to_string().contains("dependency cycle detected"),
             "expected cycle diagnostic, got: {err}"
+        );
+    }
+
+    #[test]
+    fn dep_diagnostics_reports_scoped_cycle_integrity() {
+        let root = temp_dir("dep-diagnostics-scope");
+        let issues = root.join("issues.jsonl");
+        let config = test_config(&root, &issues, &root.join("surface.json"));
+        fs::write(
+            &issues,
+            concat!(
+                r#"{"id":"bd-a","title":"A","status":"closed","dependencies":[{"issue_id":"bd-a","depends_on_id":"bd-b","type":"blocks"}]}"#,
+                "\n",
+                r#"{"id":"bd-b","title":"B","status":"closed","dependencies":[{"issue_id":"bd-b","depends_on_id":"bd-a","type":"blocks"}]}"#,
+                "\n",
+                r#"{"id":"bd-c","title":"C","status":"open"}"#,
+                "\n"
+            ),
+        )
+        .expect("issues fixture should write");
+
+        let active = call_dep_diagnostics(
+            &config,
+            DepDiagnosticsTool {
+                issues_path: None,
+                graph_scope: DepGraphScopeToolArg::Active,
+            },
+        )
+        .expect("active diagnostics should succeed");
+        let active_payload = parse_tool_json(active);
+        assert_eq!(active_payload["action"], "dep.diagnostics");
+        assert_eq!(active_payload["graphScope"], "active");
+        assert_eq!(active_payload["integrity"]["hasCycle"], false);
+        assert_eq!(active_payload["integrity"]["cyclePath"], Value::Null);
+
+        let full = call_dep_diagnostics(
+            &config,
+            DepDiagnosticsTool {
+                issues_path: None,
+                graph_scope: DepGraphScopeToolArg::Full,
+            },
+        )
+        .expect("full diagnostics should succeed");
+        let full_payload = parse_tool_json(full);
+        assert_eq!(full_payload["graphScope"], "full");
+        assert_eq!(full_payload["integrity"]["hasCycle"], true);
+        assert_eq!(
+            full_payload["integrity"]["cyclePath"],
+            json!(["bd-a", "bd-b", "bd-a"])
         );
     }
 

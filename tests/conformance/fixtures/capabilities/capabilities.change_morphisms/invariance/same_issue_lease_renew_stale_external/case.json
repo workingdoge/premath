@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "invariance/same_issue_lease_renew_stale_external",
+  "profile": "external",
+  "semanticScenarioId": "change_projection_issue_lease_renew_stale_invariance_01",
+  "description": "External profile pair for stale lease-renew invariance.",
+  "artifacts": {
+    "request": {
+      "mode": "issue_lease_renew",
+      "claimedCapabilities": [
+        "capabilities.change_morphisms"
+      ]
+    },
+    "nowUnixMs": 1000000,
+    "issueBefore": {
+      "id": "bd-renew-202",
+      "status": "in_progress",
+      "assignee": "agent.alpha",
+      "lease": {
+        "leaseId": "lease1_bd-renew-202_agent.alpha",
+        "owner": "agent.alpha",
+        "expiresAtUnixMs": 999999
+      }
+    },
+    "renew": {
+      "assignee": "agent.alpha",
+      "leaseId": "lease1_bd-renew-202_agent.alpha",
+      "leaseExpiresAtUnixMs": 5600000
+    }
+  }
+}

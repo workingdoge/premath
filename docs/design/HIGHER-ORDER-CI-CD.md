@@ -22,7 +22,8 @@ Implemented in this repo:
 - optional infra provisioning scaffold via `mise run infra-up|infra-down|ci-check-tf`
 - doctrine-to-operation site map and checker:
   `specs/premath/draft/DOCTRINE-SITE.{md,json}` +
-  `python3 tools/conformance/check_doctrine_site.py`
+  `python3 tools/conformance/check_doctrine_site.py` +
+  `python3 tools/conformance/check_doctrine_mcp_parity.py`
 - instruction typing/binding doctrine:
   `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
 

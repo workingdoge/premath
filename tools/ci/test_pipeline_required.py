@@ -10,6 +10,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
+from harness_escalation import EscalationResult
+from harness_retry_policy import RetryDecision
+
 import pipeline_required
 
 
@@ -32,6 +35,8 @@ class PipelineRequiredTests(unittest.TestCase):
                 json.dumps(
                     {
                         "projectionDigest": "proj1_test_digest",
+                        "typedCoreProjectionDigest": "ev1_test_digest",
+                        "authorityPayloadDigest": "proj1_test_digest",
                         "verdictClass": "accepted",
                         "requiredChecks": ["baseline", "test"],
                     },
@@ -58,6 +63,8 @@ class PipelineRequiredTests(unittest.TestCase):
                     {
                         "decision": "accept",
                         "reasonClass": "verified_accept",
+                        "typedCoreProjectionDigest": "ev1_test_digest",
+                        "authorityPayloadDigest": "proj1_test_digest",
                         "witnessSha256": "witness_hash",
                         "deltaSha256": "delta_hash",
                     },
@@ -73,13 +80,15 @@ class PipelineRequiredTests(unittest.TestCase):
             self.assertEqual(summary_a, summary_b)
 
             self.assertIn("### CI Required Attestation", summary_a)
-            self.assertIn("- projection digest: `proj1_test_digest`", summary_a)
+            self.assertIn("- typed authority digest: `ev1_test_digest`", summary_a)
+            self.assertIn("- compatibility alias digest: `proj1_test_digest`", summary_a)
             self.assertIn("- witness verdict: `accepted`", summary_a)
             self.assertIn("- required checks: `baseline, test`", summary_a)
             self.assertIn("- delta source: `explicit`", summary_a)
             self.assertIn("- delta changed paths: `2`", summary_a)
             self.assertIn("- decision: `accept`", summary_a)
             self.assertIn("- decision reason: `verified_accept`", summary_a)
+            self.assertIn("- decision typed authority: `ev1_test_digest`", summary_a)
 
             witness_sha_path = ciwitness / "latest-required.sha256"
             delta_sha_path = ciwitness / "latest-delta.sha256"
@@ -132,6 +141,61 @@ class PipelineRequiredTests(unittest.TestCase):
                 os.environ.pop("GITHUB_SHA", None)
             else:
                 os.environ["GITHUB_SHA"] = original_gh_sha
+
+    def test_render_summary_includes_retry_policy_and_history(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-required-retry-") as tmp:
+            root = Path(tmp)
+            ciwitness = root / "artifacts" / "ciwitness"
+            ciwitness.mkdir(parents=True, exist_ok=True)
+            (ciwitness / "latest-required.json").write_text(
+                json.dumps(
+                    {
+                        "projectionDigest": "proj1_retry",
+                        "typedCoreProjectionDigest": "ev1_retry",
+                        "authorityPayloadDigest": "proj1_retry",
+                        "verdictClass": "accepted",
+                        "requiredChecks": ["baseline"],
+                    },
+                    indent=2,
+                    ensure_ascii=False,
+                )
+                + "\n",
+                encoding="utf-8",
+            )
+
+            history = (
+                RetryDecision(
+                    attempt=1,
+                    retry=True,
+                    max_attempts=2,
+                    backoff_class="fixed_short",
+                    escalation_action="issue_discover",
+                    rule_id="operational_retry",
+                    matched_failure_class="pipeline_missing_witness",
+                    failure_classes=("pipeline_missing_witness",),
+                ),
+            )
+
+            summary = pipeline_required.render_summary(
+                root,
+                retry_history=history,
+                retry_policy_digest="pol1_retry",
+                retry_policy_id="policy.harness.retry.v1",
+                escalation=EscalationResult(
+                    action="mark_blocked",
+                    outcome="applied",
+                    issue_id="bd-10",
+                    created_issue_id=None,
+                    note_digest="note1_abc",
+                    witness_ref="artifacts/ciwitness/latest-required.json",
+                    details="issuesPath=.premath/issues.jsonl",
+                ),
+            )
+            self.assertIn("- retry policy: `policy.harness.retry.v1` (`pol1_retry`)", summary)
+            self.assertIn("rule=operational_retry", summary)
+            self.assertIn("matched=pipeline_missing_witness", summary)
+            self.assertIn("- escalation: action=`mark_blocked` outcome=`applied`", summary)
+            self.assertIn("- escalation issue id: `bd-10`", summary)
 
 
 if __name__ == "__main__":

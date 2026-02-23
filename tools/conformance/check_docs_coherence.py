@@ -33,9 +33,138 @@ ROADMAP_AUTHORITY_MARKERS: Tuple[str, ...] = (
     "`.premath/issues.jsonl`",
     "`specs/process/decision-log.md`",
 )
+README_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "doctrine-to-operation site coherence validation (including MCP",
+    "mise run doctrine-check",
+)
+ARCHITECTURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "`tools/conformance/check_doctrine_mcp_parity.py`",
+    "doctrine-operation parity (`check_doctrine_site.py`,",
+    "`check_doctrine_mcp_parity.py`),",
+)
 EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
     "python3 tools/conformance/check_doctrine_site.py",
+    "python3 tools/conformance/check_doctrine_mcp_parity.py",
     "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
+)
+CI_CLOSURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "`doctrine-check` (site coherence + MCP doctrine-operation parity +",
+    "doctrine-inf vectors)",
+)
+UNIFICATION_EVIDENCE_MARKERS: Tuple[str, ...] = (
+    "### 10.2 Universal factoring rule",
+    "there MUST be one deterministic natural transformation:",
+    "`eta_F : F => Ev`",
+    "### 10.5 Fail-closed factorization boundary",
+    "`unification.evidence_factorization.missing`",
+    "`unification.evidence_factorization.ambiguous`",
+    "`unification.evidence_factorization.unbound`",
+)
+UNIFICATION_INTERNALIZATION_MARKERS: Tuple[str, ...] = (
+    "### 10.6 Typed evidence-object internalization stages (v0)",
+    "Stage 0 (projection-locked):",
+    "Stage 1 (typed-core dual projection):",
+    "Stage 2 (canonical typed authority with compatibility alias):",
+    "Stage 3 (typed-first cleanup):",
+    "Rollback requirements:",
+    "rollback MUST NOT introduce a second authority artifact,",
+)
+UNIFICATION_STAGE1_PROFILE_MARKERS: Tuple[str, ...] = (
+    "#### 10.6.1 Stage 1 typed-core profile (minimum)",
+    "one profile kind identifier (for example `ev.stage1.core.v1`),",
+    "one canonical typed-core identity function over canonicalized profile bytes",
+    "#### 10.6.2 Stage 1 dual-projection parity contract",
+    "`unification.evidence_stage1.parity.missing`",
+    "`unification.evidence_stage1.parity.mismatch`",
+    "`unification.evidence_stage1.parity.unbound`",
+    "#### 10.6.3 Stage 1 deterministic rollback witness contract",
+    "`unification.evidence_stage1.rollback.precondition`",
+    "`unification.evidence_stage1.rollback.identity_drift`",
+    "`unification.evidence_stage1.rollback.unbound`",
+)
+UNIFICATION_STAGE3_CLOSURE_MARKERS: Tuple[str, ...] = (
+    "#### 10.6.5 Stage 3 typed-first closure mapping (normative)",
+    "`evidenceStage2Authority.bidirEvidenceRoute`",
+    "`routeKind=direct_checker_discharge`",
+    "`obligationFieldRef=bidirCheckerObligations`",
+    "`bidirEvidenceRoute.fallback.mode=profile_gated_sentinel`",
+    "Compatibility alias lookup MAY exist only behind an explicit",
+)
+SPEC_INDEX_UNIFIED_FACTORIZATION_RE = re.compile(
+    r"Unified evidence factoring MUST route control-plane artifact families through\s+"
+    r"one attested surface"
+)
+SPAN_SQUARE_COMPOSITION_MARKERS: Tuple[str, ...] = (
+    "## 4. Composition Law Surface (Bicategory Profile)",
+    "`compositionLaws`",
+    "`span_identity`",
+    "`square_interchange`",
+    "digest = \"sqlw1_\" + SHA256(JCS(LawCore))",
+)
+PREMATH_COHERENCE_SPAN_COMPOSITION_RE = re.compile(
+    r"accepted coverage includes span identity/associativity and square\s+"
+    r"identity/associativity \(horizontal \+ vertical\), horizontal/vertical\s+"
+    r"compatibility, and interchange",
+    re.IGNORECASE,
+)
+ADJOINTS_CWF_SIGPI_BRIDGE_MARKERS: Tuple[str, ...] = (
+    "## 11. CwF <-> sig\\Pi Bridge Contract (Strict vs Semantic)",
+    "`bridge.reindex`",
+    "`bridge.comprehension`",
+    "`bridge.adjoint_reflection`",
+    "bridge rules MUST NOT add new coherence",
+)
+PREMATH_COHERENCE_CWF_SIGPI_BRIDGE_RE = re.compile(
+    r"bridge routing MUST NOT introduce new coherence obligation IDs",
+    re.IGNORECASE,
+)
+SPEC_INDEX_CWF_SIGPI_BRIDGE_RE = re.compile(
+    r"CwF<->sig\\Pi bridge mapping is normative in\s+"
+    r"`profile/ADJOINTS-AND-SITES` §11",
+    re.IGNORECASE,
+)
+UNIFICATION_OBSTRUCTION_MARKERS: Tuple[str, ...] = (
+    "## 11. Cross-layer Obstruction Algebra (v0)",
+    "`semantic(tag)`",
+    "`structural(tag)`",
+    "`lifecycle(tag)`",
+    "`commutation(tag)`",
+    "`project_obstruction(sourceFailureClass) -> constructor`",
+    "`canonical_obstruction_class(constructor) -> canonicalFailureClass`",
+    "commutation(span_square_commutation)",
+    "`obs.<family>.<tag>`",
+)
+CAPABILITY_VECTORS_OBSTRUCTION_RE = re.compile(
+    r"cross-layer obstruction rows roundtrip deterministically",
+    re.IGNORECASE,
+)
+STAGE1_PARITY_CANONICAL_CLASSES: Tuple[str, str, str] = (
+    "unification.evidence_stage1.parity.missing",
+    "unification.evidence_stage1.parity.mismatch",
+    "unification.evidence_stage1.parity.unbound",
+)
+STAGE1_ROLLBACK_CANONICAL_CLASSES: Tuple[str, str, str] = (
+    "unification.evidence_stage1.rollback.precondition",
+    "unification.evidence_stage1.rollback.identity_drift",
+    "unification.evidence_stage1.rollback.unbound",
+)
+STAGE2_AUTHORITY_CANONICAL_CLASSES: Tuple[str, str, str] = (
+    "unification.evidence_stage2.authority_alias_violation",
+    "unification.evidence_stage2.alias_window_violation",
+    "unification.evidence_stage2.unbound",
+)
+STAGE2_KERNEL_COMPLIANCE_CANONICAL_CLASSES: Tuple[str, str] = (
+    "unification.evidence_stage2.kernel_compliance_missing",
+    "unification.evidence_stage2.kernel_compliance_drift",
+)
+STAGE2_REQUIRED_KERNEL_OBLIGATIONS: Tuple[str, ...] = (
+    "stability",
+    "locality",
+    "descent_exists",
+    "descent_contractible",
+    "adjoint_triple",
+    "ext_gap",
+    "ext_ambiguous",
 )
 
 
@@ -169,6 +298,325 @@ def parse_control_plane_projection_checks(contract_path: Path) -> List[str]:
     return parsed
 
 
+def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[str, object]]:
+    payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{contract_path}: root must be an object")
+    if payload.get("schema") != 1:
+        raise ValueError(f"{contract_path}: schema must be 1")
+    if payload.get("contractKind") != "premath.control_plane.contract.v1":
+        raise ValueError(f"{contract_path}: contractKind mismatch")
+    lifecycle_rollover_epoch: str | None = None
+    schema_lifecycle = payload.get("schemaLifecycle")
+    if isinstance(schema_lifecycle, dict):
+        kind_families = schema_lifecycle.get("kindFamilies")
+        if isinstance(kind_families, dict):
+            support_epochs = set()
+            for family in kind_families.values():
+                if not isinstance(family, dict):
+                    continue
+                aliases = family.get("compatibilityAliases")
+                if not isinstance(aliases, list):
+                    continue
+                for alias in aliases:
+                    if not isinstance(alias, dict):
+                        continue
+                    epoch = alias.get("supportUntilEpoch")
+                    if isinstance(epoch, str) and epoch.strip():
+                        support_epochs.add(epoch.strip())
+            if len(support_epochs) == 1:
+                lifecycle_rollover_epoch = next(iter(support_epochs))
+
+    stage1_parity = payload.get("evidenceStage1Parity")
+    if not isinstance(stage1_parity, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Parity must be an object")
+    profile_kind = stage1_parity.get("profileKind")
+    route = stage1_parity.get("authorityToTypedCoreRoute")
+    if not isinstance(profile_kind, str) or not profile_kind.strip():
+        raise ValueError(f"{contract_path}: evidenceStage1Parity.profileKind must be a non-empty string")
+    if not isinstance(route, str) or not route.strip():
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.authorityToTypedCoreRoute must be a non-empty string"
+        )
+    comparison_tuple = stage1_parity.get("comparisonTuple")
+    if not isinstance(comparison_tuple, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Parity.comparisonTuple must be an object")
+    for key in ("authorityDigestRef", "typedCoreDigestRef", "normalizerIdRef", "policyDigestRef"):
+        value = comparison_tuple.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage1Parity.comparisonTuple.{key} must be a non-empty string"
+            )
+    if comparison_tuple.get("normalizerIdRef") != "normalizerId":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.comparisonTuple.normalizerIdRef must be `normalizerId`"
+        )
+    if comparison_tuple.get("policyDigestRef") != "policyDigest":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.comparisonTuple.policyDigestRef must be `policyDigest`"
+        )
+    parity_classes = stage1_parity.get("failureClasses")
+    if not isinstance(parity_classes, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Parity.failureClasses must be an object")
+    parsed_parity_classes = (
+        parity_classes.get("missing"),
+        parity_classes.get("mismatch"),
+        parity_classes.get("unbound"),
+    )
+    if parsed_parity_classes != STAGE1_PARITY_CANONICAL_CLASSES:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Parity.failureClasses must map to canonical Stage 1 parity classes"
+        )
+
+    stage1_rollback = payload.get("evidenceStage1Rollback")
+    if not isinstance(stage1_rollback, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback must be an object")
+    for key in ("profileKind", "witnessKind", "fromStage", "toStage"):
+        value = stage1_rollback.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{contract_path}: evidenceStage1Rollback.{key} must be a non-empty string")
+    if stage1_rollback.get("fromStage") != "stage1":
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.fromStage must be `stage1`")
+    if stage1_rollback.get("toStage") != "stage0":
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.toStage must be `stage0`")
+    trigger_failure_classes = stage1_rollback.get("triggerFailureClasses")
+    if not isinstance(trigger_failure_classes, list) or not trigger_failure_classes:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses must be a non-empty list"
+        )
+    parsed_trigger_classes: List[str] = []
+    for idx, item in enumerate(trigger_failure_classes):
+        if not isinstance(item, str) or not item.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses[{idx}] must be a non-empty string"
+            )
+        parsed_trigger_classes.append(item.strip())
+    if len(set(parsed_trigger_classes)) != len(parsed_trigger_classes):
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses must not contain duplicates"
+        )
+    missing_trigger_classes = sorted(set(STAGE1_PARITY_CANONICAL_CLASSES) - set(parsed_trigger_classes))
+    if missing_trigger_classes:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.triggerFailureClasses missing canonical Stage 1 parity classes: {missing_trigger_classes}"
+        )
+
+    identity_refs = stage1_rollback.get("identityRefs")
+    if not isinstance(identity_refs, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.identityRefs must be an object")
+    for key in ("authorityDigestRef", "rollbackAuthorityDigestRef", "normalizerIdRef", "policyDigestRef"):
+        value = identity_refs.get(key)
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage1Rollback.identityRefs.{key} must be a non-empty string"
+            )
+    if identity_refs.get("authorityDigestRef") == identity_refs.get("rollbackAuthorityDigestRef"):
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.identityRefs authority/rollback refs must differ"
+        )
+    if identity_refs.get("normalizerIdRef") != "normalizerId":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.identityRefs.normalizerIdRef must be `normalizerId`"
+        )
+    if identity_refs.get("policyDigestRef") != "policyDigest":
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.identityRefs.policyDigestRef must be `policyDigest`"
+        )
+
+    rollback_classes = stage1_rollback.get("failureClasses")
+    if not isinstance(rollback_classes, dict):
+        raise ValueError(f"{contract_path}: evidenceStage1Rollback.failureClasses must be an object")
+    parsed_rollback_classes = (
+        rollback_classes.get("precondition"),
+        rollback_classes.get("identityDrift"),
+        rollback_classes.get("unbound"),
+    )
+    if parsed_rollback_classes != STAGE1_ROLLBACK_CANONICAL_CLASSES:
+        raise ValueError(
+            f"{contract_path}: evidenceStage1Rollback.failureClasses must map to canonical Stage 1 rollback classes"
+        )
+
+    out: Dict[str, Dict[str, object]] = {
+        "parity": {
+            "profileKind": profile_kind.strip(),
+            "authorityToTypedCoreRoute": route.strip(),
+            "failureClasses": parsed_parity_classes,
+        },
+        "rollback": {
+            "profileKind": str(stage1_rollback.get("profileKind", "")).strip(),
+            "witnessKind": str(stage1_rollback.get("witnessKind", "")).strip(),
+            "triggerFailureClasses": parsed_trigger_classes,
+            "failureClasses": parsed_rollback_classes,
+        },
+    }
+
+    stage2_authority = payload.get("evidenceStage2Authority")
+    if stage2_authority is not None:
+        if not isinstance(stage2_authority, dict):
+            raise ValueError(f"{contract_path}: evidenceStage2Authority must be an object")
+        stage2_profile_kind = stage2_authority.get("profileKind")
+        stage2_active_stage = stage2_authority.get("activeStage")
+        if not isinstance(stage2_profile_kind, str) or not stage2_profile_kind.strip():
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.profileKind must be a non-empty string"
+            )
+        if stage2_active_stage != "stage2":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.activeStage must be `stage2`"
+            )
+        typed_authority = stage2_authority.get("typedAuthority")
+        if not isinstance(typed_authority, dict):
+            raise ValueError(f"{contract_path}: evidenceStage2Authority.typedAuthority must be an object")
+        for key in ("kindRef", "digestRef", "normalizerIdRef", "policyDigestRef"):
+            value = typed_authority.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.typedAuthority.{key} must be a non-empty string"
+                )
+        if typed_authority.get("normalizerIdRef") != "normalizerId":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.typedAuthority.normalizerIdRef must be `normalizerId`"
+            )
+        if typed_authority.get("policyDigestRef") != "policyDigest":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.typedAuthority.policyDigestRef must be `policyDigest`"
+            )
+
+        compatibility_alias = stage2_authority.get("compatibilityAlias")
+        if not isinstance(compatibility_alias, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.compatibilityAlias must be an object"
+            )
+        for key in ("kindRef", "digestRef", "role", "supportUntilEpoch"):
+            value = compatibility_alias.get(key)
+            if not isinstance(value, str) or not value.strip():
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.compatibilityAlias.{key} must be a non-empty string"
+                )
+        if compatibility_alias.get("role") != "projection_only":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.compatibilityAlias.role must be `projection_only`"
+            )
+        if lifecycle_rollover_epoch is None:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority requires one lifecycle rollover epoch"
+            )
+        if compatibility_alias.get("supportUntilEpoch") != lifecycle_rollover_epoch:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.compatibilityAlias.supportUntilEpoch must align with lifecycle rollover epoch"
+            )
+
+        bidir_route = stage2_authority.get("bidirEvidenceRoute")
+        if not isinstance(bidir_route, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute must be an object"
+            )
+        route_kind = bidir_route.get("routeKind")
+        if route_kind != "direct_checker_discharge":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.routeKind must be `direct_checker_discharge`"
+            )
+        obligation_field_ref = bidir_route.get("obligationFieldRef")
+        if obligation_field_ref != "bidirCheckerObligations":
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.obligationFieldRef must be `bidirCheckerObligations`"
+            )
+        required_obligations = bidir_route.get("requiredObligations")
+        if not isinstance(required_obligations, list) or not required_obligations:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must be a non-empty list"
+            )
+        parsed_required_obligations: List[str] = []
+        for idx, item in enumerate(required_obligations):
+            if not isinstance(item, str) or not item.strip():
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations[{idx}] must be a non-empty string"
+                )
+            parsed_required_obligations.append(item.strip())
+        if len(set(parsed_required_obligations)) != len(parsed_required_obligations):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must not contain duplicates"
+            )
+        if set(parsed_required_obligations) != set(STAGE2_REQUIRED_KERNEL_OBLIGATIONS):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must match canonical Stage 2 kernel obligations"
+            )
+        bidir_failure_classes = bidir_route.get("failureClasses")
+        if not isinstance(bidir_failure_classes, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.failureClasses must be an object"
+            )
+        parsed_bidir_classes = (
+            bidir_failure_classes.get("missing"),
+            bidir_failure_classes.get("drift"),
+        )
+        if parsed_bidir_classes != STAGE2_KERNEL_COMPLIANCE_CANONICAL_CLASSES:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.bidirEvidenceRoute.failureClasses must map to canonical Stage 2 kernel-compliance classes"
+            )
+        kernel_sentinel = stage2_authority.get("kernelComplianceSentinel")
+        if kernel_sentinel is not None:
+            if not isinstance(kernel_sentinel, dict):
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel must be an object when present"
+                )
+            sentinel_required_obligations = kernel_sentinel.get("requiredObligations")
+            if not isinstance(sentinel_required_obligations, list) or not sentinel_required_obligations:
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must be a non-empty list when present"
+                )
+            parsed_sentinel_required: List[str] = []
+            for idx, item in enumerate(sentinel_required_obligations):
+                if not isinstance(item, str) or not item.strip():
+                    raise ValueError(
+                        f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations[{idx}] must be a non-empty string"
+                    )
+                parsed_sentinel_required.append(item.strip())
+            if set(parsed_sentinel_required) != set(parsed_required_obligations):
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match evidenceStage2Authority.bidirEvidenceRoute.requiredObligations"
+                )
+            sentinel_failure_classes = kernel_sentinel.get("failureClasses")
+            if not isinstance(sentinel_failure_classes, dict):
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must be an object"
+                )
+            parsed_sentinel_classes = (
+                sentinel_failure_classes.get("missing"),
+                sentinel_failure_classes.get("drift"),
+            )
+            if parsed_sentinel_classes != parsed_bidir_classes:
+                raise ValueError(
+                    f"{contract_path}: evidenceStage2Authority.kernelComplianceSentinel.failureClasses must match evidenceStage2Authority.bidirEvidenceRoute.failureClasses"
+                )
+
+        stage2_failure_classes = stage2_authority.get("failureClasses")
+        if not isinstance(stage2_failure_classes, dict):
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.failureClasses must be an object"
+            )
+        parsed_stage2_classes = (
+            stage2_failure_classes.get("authorityAliasViolation"),
+            stage2_failure_classes.get("aliasWindowViolation"),
+            stage2_failure_classes.get("unbound"),
+        )
+        if parsed_stage2_classes != STAGE2_AUTHORITY_CANONICAL_CLASSES:
+            raise ValueError(
+                f"{contract_path}: evidenceStage2Authority.failureClasses must map to canonical Stage 2 classes"
+            )
+        out["stage2"] = {
+            "profileKind": stage2_profile_kind.strip(),
+            "activeStage": "stage2",
+            "routeKind": route_kind,
+            "obligationFieldRef": obligation_field_ref,
+            "requiredObligations": parsed_required_obligations,
+            "failureClasses": parsed_stage2_classes,
+            "bidirFailureClasses": parsed_bidir_classes,
+        }
+
+    return out
+
+
 def parse_spec_index_capability_doc_map(section_54: str) -> Dict[str, str]:
     pattern = re.compile(r"- `([^`]+)`\s+\(for `([^`]+)`\)")
     out: Dict[str, str] = {}
@@ -204,7 +652,13 @@ def main() -> int:
     readme = root / "README.md"
     conformance_readme = root / "tools" / "conformance" / "README.md"
     ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
+    architecture_map = root / "docs" / "design" / "ARCHITECTURE-MAP.md"
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
+    unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
+    span_square_checking = root / "specs" / "premath" / "draft" / "SPAN-SQUARE-CHECKING.md"
+    pre_math_coherence = root / "specs" / "premath" / "draft" / "PREMATH-COHERENCE.md"
+    capability_vectors = root / "specs" / "premath" / "draft" / "CAPABILITY-VECTORS.md"
+    adjoints_profile = root / "specs" / "premath" / "profile" / "ADJOINTS-AND-SITES.md"
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
@@ -222,9 +676,16 @@ def main() -> int:
             errors.append(f"capability manifests include non-executable capabilities: {extra}")
 
     readme_caps = set(BACKTICK_CAP_RE.findall(load_text(readme)))
+    readme_text = load_text(readme)
     conformance_readme_caps = set(BACKTICK_CAP_RE.findall(load_text(conformance_readme)))
+    architecture_text = load_text(architecture_map)
 
     spec_index_text = load_text(spec_index)
+    unification_text = load_text(unification_doctrine)
+    span_square_text = load_text(span_square_checking)
+    coherence_text = load_text(pre_math_coherence)
+    capability_vectors_text = load_text(capability_vectors)
+    adjoints_text = load_text(adjoints_profile)
     section_54 = extract_heading_section(spec_index_text, "5.4")
     section_55 = extract_heading_section(spec_index_text, "5.5")
     spec_index_caps = set(BACKTICK_CAP_RE.findall(section_54))
@@ -235,6 +696,14 @@ def main() -> int:
             "README capability list mismatch with executable capabilities: "
             f"expected=[{sorted_csv(executable_capabilities)}], got=[{sorted_csv(readme_caps)}]"
         )
+    missing_readme_doctrine_markers = find_missing_markers(readme_text, README_DOCTRINE_MARKERS)
+    for marker in missing_readme_doctrine_markers:
+        errors.append(f"README doctrine-check marker missing: {marker}")
+    missing_architecture_doctrine_markers = find_missing_markers(
+        architecture_text, ARCHITECTURE_DOCTRINE_MARKERS
+    )
+    for marker in missing_architecture_doctrine_markers:
+        errors.append(f"ARCHITECTURE-MAP doctrine marker missing: {marker}")
     if conformance_readme_caps != executable_capability_set:
         errors.append(
             "tools/conformance/README capability list mismatch with executable capabilities: "
@@ -266,6 +735,67 @@ def main() -> int:
     missing_raw_lifecycle_markers = find_missing_markers(section_55, SPEC_INDEX_RAW_LIFECYCLE_MARKERS)
     for marker in missing_raw_lifecycle_markers:
         errors.append(f"SPEC-INDEX §5.5 raw lifecycle policy missing marker: {marker}")
+    if SPEC_INDEX_UNIFIED_FACTORIZATION_RE.search(spec_index_text) is None:
+        errors.append(
+            "SPEC-INDEX lane ownership note must require Unified Evidence factoring as MUST"
+        )
+    missing_unification_markers = find_missing_markers(
+        unification_text, UNIFICATION_EVIDENCE_MARKERS
+    )
+    for marker in missing_unification_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing Unified Evidence marker: {marker}")
+    missing_internalization_markers = find_missing_markers(
+        unification_text, UNIFICATION_INTERNALIZATION_MARKERS
+    )
+    for marker in missing_internalization_markers:
+        errors.append(
+            f"UNIFICATION-DOCTRINE missing typed evidence internalization marker: {marker}"
+        )
+    missing_stage1_markers = find_missing_markers(
+        unification_text, UNIFICATION_STAGE1_PROFILE_MARKERS
+    )
+    for marker in missing_stage1_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing Stage 1 profile marker: {marker}")
+    missing_stage3_markers = find_missing_markers(
+        unification_text, UNIFICATION_STAGE3_CLOSURE_MARKERS
+    )
+    for marker in missing_stage3_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing Stage 3 closure marker: {marker}")
+    missing_span_square_markers = find_missing_markers(
+        span_square_text, SPAN_SQUARE_COMPOSITION_MARKERS
+    )
+    for marker in missing_span_square_markers:
+        errors.append(f"SPAN-SQUARE-CHECKING missing composition marker: {marker}")
+    if PREMATH_COHERENCE_SPAN_COMPOSITION_RE.search(coherence_text) is None:
+        errors.append(
+            "PREMATH-COHERENCE §4.7 must require composition-law coverage "
+            "(identity/associativity/h-v/interchange)"
+        )
+    missing_adjoints_bridge_markers = find_missing_markers(
+        adjoints_text, ADJOINTS_CWF_SIGPI_BRIDGE_MARKERS
+    )
+    for marker in missing_adjoints_bridge_markers:
+        errors.append(f"ADJOINTS-AND-SITES missing CwF/SigPi bridge marker: {marker}")
+    if PREMATH_COHERENCE_CWF_SIGPI_BRIDGE_RE.search(coherence_text) is None:
+        errors.append(
+            "PREMATH-COHERENCE must keep CwF/SigPi bridge fail-closed and "
+            "vocabulary-preserving"
+        )
+    if SPEC_INDEX_CWF_SIGPI_BRIDGE_RE.search(spec_index_text) is None:
+        errors.append(
+            "SPEC-INDEX lane ownership note must include CwF<->sig\\Pi bridge "
+            "normative reference"
+        )
+    missing_unification_obstruction_markers = find_missing_markers(
+        unification_text, UNIFICATION_OBSTRUCTION_MARKERS
+    )
+    for marker in missing_unification_obstruction_markers:
+        errors.append(f"UNIFICATION-DOCTRINE missing obstruction marker: {marker}")
+    if CAPABILITY_VECTORS_OBSTRUCTION_RE.search(capability_vectors_text) is None:
+        errors.append(
+            "CAPABILITY-VECTORS must include cross-layer obstruction roundtrip "
+            "coverage for capabilities.ci_witnesses"
+        )
 
     mise_text = load_text(mise_toml)
     baseline_commands = parse_mise_task_commands(mise_text, "baseline")
@@ -287,6 +817,7 @@ def main() -> int:
 
     projection_checks = parse_control_plane_projection_checks(control_plane_contract)
     projection_check_set = set(projection_checks)
+    parse_control_plane_stage1_contract(control_plane_contract)
 
     ci_projection_section = extract_section_between(
         ci_closure_text,
@@ -299,6 +830,11 @@ def main() -> int:
             "CI-CLOSURE projected check ID list mismatch with CONTROL-PLANE-CONTRACT checkOrder: "
             f"expected=[{sorted_csv(projection_checks)}], got=[{sorted_csv(ci_projection_checks)}]"
         )
+    missing_ci_doctrine_markers = find_missing_markers(
+        ci_closure_text, CI_CLOSURE_DOCTRINE_MARKERS
+    )
+    for marker in missing_ci_doctrine_markers:
+        errors.append(f"CI-CLOSURE doctrine-check semantics missing marker: {marker}")
 
     doctrine_check_commands = parse_mise_task_commands(mise_text, "doctrine-check")
     if doctrine_check_commands != list(EXPECTED_DOCTRINE_CHECK_COMMANDS):

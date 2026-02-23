@@ -2721,3 +2721,631 @@ drift and silently accumulate long-lived aliases.
   diagnostics.
 - unit coverage in `tools/ci/test_control_plane_contract.py` now includes
   mixed-epoch and overlong-runway rejection paths.
+
+---
+
+## 2026-02-22 — Decision 0095: Make Unified Evidence Plane factorization explicitly fail-closed
+
+### Decision
+Tighten `draft/UNIFICATION-DOCTRINE` Unified Evidence Plane (`§10`) to require
+explicit universal factorization semantics:
+
+1. implementations claiming Unified Evidence Plane MUST define one indexed
+   evidence family `Ev : Ctx^op -> V`,
+2. each control-plane artifact family MUST factor through one deterministic
+   natural transformation `eta_F : F => Ev`,
+3. factorization MUST be unique up to canonical projection equality for fixed
+   deterministic bindings,
+4. non-factorable or ambiguous factorization MUST reject deterministically via
+   fail-closed factorization classes.
+
+### Rationale
+The doctrine already declared one evidence surface, but wording remained partly
+advisory (`SHOULD`) and did not state the fail-closed boundary when routing is
+missing or ambiguous. Explicit factorization semantics tighten the authority
+boundary with minimum additional encoding.
+
+### Consequences
+- `draft/UNIFICATION-DOCTRINE` now defines deterministic fail-closed
+  factorization classes:
+  - `unification.evidence_factorization.missing`
+  - `unification.evidence_factorization.ambiguous`
+  - `unification.evidence_factorization.unbound`
+- `draft/SPEC-INDEX` now requires (MUST) unified evidence factoring in lane
+  ownership guidance.
+- `tools/conformance/check_docs_coherence.py` now enforces marker-level presence
+  for Unified Evidence factoring and fail-closed boundary language in normative
+  docs.
+
+---
+
+## 2026-02-22 — Decision 0096: Promote span/square composition laws to executable coherence surface
+
+### Decision
+Extend `draft/SPAN-SQUARE-CHECKING` and `span_square_commutation` checking to
+cover composition laws explicitly:
+
+1. add optional `compositionLaws` witness surface for span/square law rows,
+2. bind each composition law row to deterministic digest
+   (`sqlw1_ + SHA256(JCS(LawCore))`),
+3. require accepted-law coverage for:
+   - `span_identity`,
+   - `span_associativity`,
+   - `square_identity`,
+   - `square_associativity_horizontal`,
+   - `square_associativity_vertical`,
+   - `square_hv_compatibility`,
+   - `square_interchange`,
+4. evaluate square expressions through deterministic horizontal/vertical
+   composition normalization with fail-closed shape checks.
+
+### Rationale
+Span/square checking previously validated only single-square commutation. The
+algebraic closure track (`bd-123`) requires composition as first-class witness
+data so pipeline/base-change coherence is expressed as one typed executable
+surface, not as implicit prose-only laws.
+
+### Consequences
+- `premath-coherence` now evaluates optional composition-law expressions and
+  enforces deterministic accepted/rejected law semantics.
+- coherence-site fixtures include new vectors:
+  - `golden/span_square_commutation_composition_accept`
+  - `adversarial/span_square_commutation_composition_missing_law_reject`
+  - `invariance/span_square_commutation_composition_accept`
+  - `invariance/span_square_commutation_composition_accept_external`
+- docs coherence checks now enforce composition-law markers in
+  `SPAN-SQUARE-CHECKING` and `PREMATH-COHERENCE`.
+
+---
+
+## 2026-02-22 — Decision 0097: Define CwF <-> sig\Pi bridge as vocabulary-preserving boundary
+
+### Decision
+Specify an explicit bridge contract between strict CwF checker equalities and
+semantic SigPi obligations without changing ownership lanes.
+
+Implemented scope:
+
+1. add normative bridge section to `profile/ADJOINTS-AND-SITES`:
+   - strict vs semantic authority split,
+   - admissible bridge morphisms,
+   - CwF->semantic law mapping table,
+   - deterministic failure/ownership constraints;
+2. add checker-boundary clause in `draft/PREMATH-COHERENCE` requiring bridge
+   routing to preserve existing obligation IDs;
+3. add lane-reference updates in `draft/SPEC-INDEX` and
+   `draft/UNIFICATION-DOCTRINE` so bridge behavior remains explicit in the
+   canonical unification path.
+
+### Rationale
+CwF strict equalities and SigPi semantic obligations were already present but
+their translation boundary was implicit. Explicit bridge mapping closes a drift
+gap while preserving the minimum-encoding rule: no new authority vocabulary and
+no re-ownership of checker/semantic lanes.
+
+### Consequences
+- CwF bridge semantics are now explicit and traceable in normative docs.
+- Bridge mapping is fail-closed and vocabulary-preserving:
+  checker keeps `cwf_*`; semantic lane keeps
+  `stability/locality/descent_*/adjoint_*`.
+- `tools/conformance/check_docs_coherence.py` now enforces bridge markers in
+  `ADJOINTS-AND-SITES`, `PREMATH-COHERENCE`, and `SPEC-INDEX`.
+
+---
+
+## 2026-02-22 — Decision 0098: Add cross-layer obstruction algebra and conformance roundtrip
+
+### Decision
+Adopt a typed cross-layer obstruction algebra as a secondary projection over
+existing failure classes, with deterministic roundtrip semantics.
+
+Implemented scope:
+
+1. `draft/UNIFICATION-DOCTRINE` now defines §11 (`Cross-layer Obstruction
+   Algebra`) with:
+   - constructor families (`semantic`, `structural`, `lifecycle`,
+     `commutation`),
+   - deterministic projection pair (`project_obstruction`,
+     `canonical_obstruction_class`),
+   - initial mapping table spanning Gate/BIDIR, coherence, lifecycle, and
+     unification factorization classes,
+   - issue-memory projection tag convention (`obs.<family>.<tag>`).
+2. `capabilities.ci_witnesses` now includes executable obstruction roundtrip
+   vectors (golden + adversarial).
+3. capability evaluator now checks deterministic constructor/class roundtrip and
+   deterministic issue-tag projection for fixed source classes.
+
+### Rationale
+Failure classes were already deterministic inside each lane, but cross-layer
+reasoning lacked one typed projection surface for analysis/discovery. Adding an
+algebraic projection keeps minimum encoding (source classes unchanged) while
+improving expressiveness for coherence/issue-memory workflows.
+
+### Consequences
+- Source failure-class authority remains unchanged; obstruction constructors are
+  additive metadata only.
+- Cross-layer roundtrip is now executable under `capabilities.ci_witnesses`.
+- docs coherence checks enforce presence of obstruction algebra clauses and
+  capability-vector coverage language.
+
+---
+
+## 2026-02-22 — Decision 0099: Define Tusk harness contract as runtime-control overlay
+
+### Decision
+Adopt a concise harness contract for long-running agents as a Tusk runtime
+control overlay (design layer), without adding a new semantic authority path.
+
+Implemented scope:
+
+1. add `docs/design/TUSK-HARNESS-CONTRACT.md` defining:
+   - hook model: `boot` / `step` / `stop`,
+   - durability boundaries (fresh-context restartability, compaction/offload,
+     explicit sub-agent boundaries),
+   - deterministic verification/retry boundary,
+   - trajectory/evidence capture contract;
+2. map harness clauses to existing surfaces:
+   - `mcp-serve` (instruction-linked mutation path),
+   - instruction pipeline + witness verification/decision,
+   - Observation Surface v0 projection/query,
+   - issue/event memory substrates;
+3. record explicit current gaps and a 2-4 slice implementation plan
+   (handoff artifact, feature ledger, trajectory rows, retry-policy table);
+4. cross-link harness overlay from `docs/design/README.md`,
+   `docs/design/TUSK-ARCHITECTURE.md`, and `docs/design/ARCHITECTURE-MAP.md`.
+
+### Rationale
+The unification closure track needs a concrete long-run execution contract for
+agents, but semantic authority must remain in kernel/checker/discharge
+surfaces. A Tusk harness overlay gives operational structure with minimum
+encoding and avoids duplicating admissibility semantics in CI or planner layers.
+
+### Consequences
+- Harness behavior is now explicit and composable with existing runtime/control
+  surfaces.
+- No change to semantic authority boundaries:
+  model outputs remain proposals; checker/discharge/witness artifacts remain
+  authoritative.
+- Follow-on implementation can proceed as bounded slices without forcing full
+  mathematical generalization up front.
+
+---
+
+## 2026-02-22 — Decision 0100: Canonical harness retry-policy contract for pipeline wrappers
+
+### Decision
+Adopt one digest-bound retry-policy artifact for provider-neutral pipeline
+wrappers and enforce it through a shared helper.
+
+Implemented scope:
+
+1. add canonical retry policy registry + artifact:
+   - `policies/control/README.md`
+   - `policies/control/harness-retry-policy-v1.json`
+2. add shared deterministic policy helper:
+   - `tools/ci/harness_retry_policy.py`
+   - validates schema + digest
+   - parses witness failure classes
+   - returns typed attempt-level retry/escalation decisions
+3. enforce policy in wrapper entrypoints:
+   - `tools/ci/pipeline_required.py`
+   - `tools/ci/pipeline_instruction.py`
+4. emit retry policy + retry history in wrapper summary outputs.
+
+### Rationale
+The harness contract required fail-closed classify/retry/escalate behavior, but
+the operational table was implicit. A single digest-bound policy keeps retry
+logic deterministic and shared across required/instruction wrapper paths without
+moving semantic authority out of checker/witness surfaces.
+
+### Consequences
+- Retry behavior is now explicit, auditable, and test-covered in one policy
+  surface.
+- Wrapper failures classify from emitted witness artifacts, not ad-hoc stderr.
+- Escalation actions are typed (`issue_discover`, `mark_blocked`, `stop`), with
+  automatic issue-memory mutation wiring left as follow-on work.
+
+---
+
+## 2026-02-22 — Decision 0101: Bind terminal retry escalation actions to premath-bd mutations
+
+### Decision
+Bind terminal retry escalation actions from provider-neutral pipeline wrappers
+to `premath issue` mutation commands via one shared bridge.
+
+Implemented scope:
+
+1. add shared bridge:
+   - `tools/ci/harness_escalation.py`
+2. wrapper integration:
+   - `tools/ci/pipeline_required.py`
+   - `tools/ci/pipeline_instruction.py`
+3. action mapping:
+   - `issue_discover` -> `premath issue discover`
+   - `mark_blocked` -> `premath issue update --status blocked --notes ...`
+   - `stop` -> no mutation
+4. active issue context contract:
+   - `PREMATH_ACTIVE_ISSUE_ID` (fallback `PREMATH_ISSUE_ID`)
+   - optional `PREMATH_ISSUES_PATH`
+
+### Rationale
+Retry policy classification without mutation execution leaves escalation as
+informational output only. Binding terminal actions into `premath-bd` keeps
+harness state progression in the same issue-memory authority surface and closes
+the operational loop for long-running workflows.
+
+### Consequences
+- Terminal escalation now creates/updates issue-memory state deterministically
+  when active issue context is present.
+- Missing issue context produces deterministic skipped-escalation metadata.
+- Mutation command failures are fail-closed in wrappers (non-success return
+  with typed escalation error metadata).
+
+---
+
+## 2026-02-22 — Decision 0102: Promote harness retry/escalation bindings into typed spec surfaces
+
+### Decision
+Bind harness retry/escalation semantics into normative control-plane spec
+artifacts rather than design docs only.
+
+Implemented scope:
+
+1. extend `draft/CONTROL-PLANE-CONTRACT.json` with `harnessRetry`:
+   - policy kind/path,
+   - escalation action vocabulary,
+   - active issue context env keys and issues-path env key.
+2. extend `tools/ci/control_plane_contract.py` loader + exported constants for
+   `harnessRetry` and fail-closed contract validation.
+3. extend drift-budget sentinel parity checks for harness retry fields.
+4. update spec text:
+   - `draft/PREMATH-COHERENCE` gate-chain parity semantics include
+     `harnessRetry` contract presence/shape checks.
+   - `raw/PREMATH-CI` adds retry/escalation control-loop binding clauses.
+   - `draft/SPEC-INDEX` marks harness retry/escalation as part of
+     `draft/CONTROL-PLANE-CONTRACT` informative control-plane constants.
+
+### Rationale
+The implementation had working retry/escalation behavior, but spec authority
+was primarily in design docs + decision log. Typing these bindings into the
+control-plane contract reduces drift risk and keeps CI/coherence loaders
+fail-closed on schema divergence.
+
+### Consequences
+- Harness retry/escalation contract is now machine-bound in typed spec payloads.
+- Drift checks enforce loader/contract parity for retry/escalation fields.
+- Control-plane semantics remain non-authoritative for kernel admissibility.
+
+---
+
+## 2026-02-22 — Decision 0103: Resolve retry escalation issue context via harness-session fallback
+
+### Decision
+Extend terminal retry escalation issue-context resolution with a deterministic
+fallback to harness-session artifacts, and bind that fallback into control-plane
+contract checks.
+
+Implemented scope:
+
+1. escalation issue-context resolution order in `tools/ci/harness_escalation.py`:
+   - `PREMATH_ACTIVE_ISSUE_ID`,
+   - `PREMATH_ISSUE_ID`,
+   - harness-session artifact `issueId` from:
+     - `PREMATH_HARNESS_SESSION_PATH` (override),
+     - `.premath/harness_session.json` (default).
+2. fail-closed behavior for malformed/unreadable harness-session artifacts:
+   - `escalation_session_invalid`,
+   - `escalation_session_read_failed`.
+3. contract + loader + drift-budget bindings:
+   - `draft/CONTROL-PLANE-CONTRACT.json` `harnessRetry` adds:
+     `sessionPathEnvKey`, `sessionPathDefault`, `sessionIssueField`,
+   - `tools/ci/control_plane_contract.py` exports corresponding constants,
+   - `tools/ci/check_drift_budget.py` enforces parity.
+4. tests/docs/spec updates:
+   - escalation fallback + fail-closed tests,
+   - design docs now document env+session fallback as canonical path,
+   - `draft/PREMATH-COHERENCE` parity text includes harness-session bindings.
+
+### Rationale
+Retry escalation mutation paths were wired but depended on explicit env setup in
+every run context. Harness-session artifacts already carry active issue identity
+for long-run continuity, so they should participate in deterministic fallback
+resolution to reduce skipped escalations without adding parallel semantics.
+
+### Consequences
+- Escalation mutation paths are available in more harness executions by default.
+- Missing issue context remains explicit (`skipped_missing_issue_context`) only
+  after env+session resolution fails.
+- Control-plane drift checks now fail closed if harness-session contract fields
+  drift between spec payload and loader/checker surfaces.
+
+---
+
+## 2026-02-22 — Decision 0104: Adopt multi-lane work-memory contract
+
+### Decision
+Adopt one explicit work-memory lane split and write-discipline contract:
+
+1. issue graph lane: `.premath/issues.jsonl` (authoritative mutable work state),
+2. operations lane: `.premath/OPERATIONS.md` (operational conventions/evidence),
+3. doctrine/decision lane: `specs/*` + `specs/process/decision-log.md`
+   (boundary/lifecycle authority).
+
+Implementation documentation:
+
+- `docs/design/MEMORY-LANES-CONTRACT.md`
+
+Associated surface updates:
+
+- `docs/design/README.md` lane-map index,
+- `AGENTS.md` memory-lane discipline section,
+- `.premath/OPERATIONS.md` evidence table now carries `Issue` + `Decision`
+  columns for deterministic cross-lane references.
+
+### Rationale
+Issue rows alone are insufficient for long-run agent memory: we also need stable
+operational conventions/evidence and explicit doctrine decisions. Making the
+lane split explicit keeps memory expressive while preserving one authority
+boundary per concern.
+
+### Consequences
+- Agents/operators now have a canonical location for each class of memory write.
+- Cross-lane references become deterministic (`issue-id`, optional
+  `decision-id`) instead of ad-hoc note expansion.
+- Issue-note compaction work (`bd-129`) is now naturally scoped as lane hygiene
+  instead of implicit style preference.
+
+---
+
+## 2026-02-22 — Decision 0105: Add schema lifecycle governance modes (`rollover|freeze`)
+
+### Decision
+Extend control-plane schema lifecycle semantics with explicit governance mode
+metadata and fail-closed validation.
+
+Implemented scope:
+
+1. add `schemaLifecycle.governance` in
+   `draft/CONTROL-PLANE-CONTRACT.json` with:
+   - `mode` (`rollover|freeze`)
+   - `decisionRef`
+   - `owner`
+   - `rolloverCadenceMonths` (rollover-only)
+   - `freezeReason` (freeze-only)
+2. enforce deterministic governance validation in
+   `tools/ci/control_plane_contract.py`:
+   - rollover requires aliases and cadence-bound runway,
+   - freeze requires no aliases and explicit freeze reason.
+3. enforce schema-lifecycle governance checking in
+   `crates/premath-coherence` gate-chain parity path.
+4. extend drift-budget parity checks for loader-exported governance fields.
+5. add process-level governance contract doc:
+   - `specs/process/SCHEMA-LIFECYCLE-GOVERNANCE.md`
+6. wire cross-references from lifecycle specs/design docs.
+
+### Rationale
+Lifecycle policy previously encoded epoch/runway mechanics but did not make
+governance state explicit. We need deterministic distinction between active
+rollover and explicit freeze states, plus accountable references for each
+transition.
+
+### Consequences
+- Lifecycle checks now fail closed on governance-state mismatches, not only on
+  alias expiry/format errors.
+- Rollover cadence and freeze exceptions are now machine-checkable and linked to
+  decision-log authority.
+- Lifecycle semantics are no longer CI-loader-only; coherence checker now
+  enforces the same governance state boundary.
+
+---
+
+## 2026-02-22 — Decision 0106: Stage Unified Evidence Plane typed internalization with deterministic rollback
+
+### Decision
+Define a normative staged migration path for Premath-native typed evidence
+objects under `draft/UNIFICATION-DOCTRINE` §10.6.
+
+Implemented scope:
+
+1. add `§10.6 Typed evidence-object internalization stages (v0)` with four
+   stages:
+   - Stage 0: projection-locked parity,
+   - Stage 1: typed-core dual projection,
+   - Stage 2: canonical typed authority with compatibility alias,
+   - Stage 3: typed-first cleanup.
+2. require deterministic stage-gate preservation of:
+   - universal factoring (`eta_F : F => Ev`),
+   - deterministic bindings (`normalizerId + policyDigest`),
+   - fail-closed factorization boundaries.
+3. require deterministic rollback semantics:
+   - no second authority artifact,
+   - prior canonical identity bindings preserved,
+   - decision-log + issue linkage before re-promotion.
+4. cross-link migration guidance from `draft/SPEC-INDEX` lane ownership and the
+   Unified Evidence Plane reading path.
+5. enforce marker-level docs coherence checks for the new staged contract.
+
+### Rationale
+Unified Evidence Plane factorization was explicit, but migration from
+payload-first witnesses to typed evidence objects remained roadmap-level.
+Explicit staged gates and rollback constraints keep migration expressive while
+preserving the minimum-encoding authority boundary.
+
+### Consequences
+- Typed `Ev` migration is now normative and replay-auditable.
+- Compatibility windows remain lifecycle-governed rather than ad-hoc.
+- Stage failures are handled by deterministic rollback, not parallel authority
+  execution paths.
+
+---
+
+## 2026-02-22 — Decision 0107: Define Stage 1 typed-core profile and parity class boundary for `Ev`
+
+### Decision
+Add a minimal normative Stage 1 profile/class contract under
+`draft/UNIFICATION-DOCTRINE` §10.6 to make typed-core dual-projection claims
+machine-checkable.
+
+Implemented scope:
+
+1. add `§10.6.1 Stage 1 typed-core profile (minimum)` requiring:
+   - one profile kind identifier,
+   - deterministic binding fields (`normalizerId`, `policyDigest`),
+   - one canonical typed-core identity function,
+   - one deterministic authority->typed-core projection.
+2. add `§10.6.2 Stage 1 dual-projection parity contract` requiring deterministic
+   parity tuple evaluation and fail-closed rejection classes:
+   - `unification.evidence_stage1.parity.missing`
+   - `unification.evidence_stage1.parity.mismatch`
+   - `unification.evidence_stage1.parity.unbound`
+3. clarify in `draft/SPEC-INDEX` lane guidance that Stage 1 parity claims are
+   bound to `§10.6.2` fail-closed class boundary.
+4. extend docs-coherence checks/tests to enforce marker-level presence for the
+   new Stage 1 profile and class contract text.
+
+### Rationale
+`§10.6` already defined staged internalization, but Stage 1 lacked explicit
+minimal profile fields and deterministic parity error vocabulary. That left the
+first implementation step underspecified.
+
+### Consequences
+- Stage 1 now has a precise minimum contract without introducing parallel
+  semantic authority.
+- Implementations can assert/reject Stage 1 parity deterministically with one
+  stable class surface.
+- Docs coherence checks now fail closed if Stage 1 profile/class clauses drift.
+
+---
+
+## 2026-02-22 — Decision 0108: Bind Stage 1 parity/rollback to executable vectors and deterministic rollback witness classes
+
+### Decision
+Complete Stage 1 execution slices by binding parity + rollback contracts into
+coherence-site vectors, checker details, and normative rollback class surfaces.
+
+Implemented scope:
+
+1. extend `draft/UNIFICATION-DOCTRINE` with
+   `§10.6.3 Stage 1 deterministic rollback witness contract`, including
+   canonical rollback classes:
+   - `unification.evidence_stage1.rollback.precondition`
+   - `unification.evidence_stage1.rollback.identity_drift`
+   - `unification.evidence_stage1.rollback.unbound`
+2. extend `draft/CONTROL-PLANE-CONTRACT.json` with:
+   - `evidenceStage1Parity` (typed-core parity metadata),
+   - `evidenceStage1Rollback` (rollback witness metadata).
+3. extend `premath-coherence` `gate_chain_parity` checks with fail-closed
+   Stage 1 rollback validation classes:
+   - `coherence.gate_chain_parity.stage1_rollback_invalid`
+   - `coherence.gate_chain_parity.stage1_rollback_precondition_missing`
+   - `coherence.gate_chain_parity.stage1_rollback_failure_class_mismatch`
+   - `coherence.gate_chain_parity.stage1_rollback_unbound`
+4. extend coherence-site `gate_chain_parity` vectors with Stage 1
+   accept/reject rows (`gate_chain_parity_stage1_*`) and route site evaluator
+   details through `stage1Parity` + `stage1Rollback`.
+5. extend docs/traceability + control-plane loader parity:
+   - docs coherence enforces Stage 1 parity/rollback marker language and
+     contract shape checks,
+   - traceability row for `UNIFICATION-DOCTRINE` now names Stage 1 vector
+     surface,
+   - `tools/ci/control_plane_contract.py` + drift-budget checks include Stage 1
+     parity/rollback typed fields.
+
+### Rationale
+Stage 1 parity classes existed normatively, but executable coverage and rollback
+class boundaries were still split across prose/checker-only surfaces. We need
+one deterministic contract path from doctrine text to vectors to checker output.
+
+### Consequences
+- Stage 1 parity and rollback paths are now machine-checkable end-to-end in
+  the same gate-chain parity pipeline.
+- Rollback metadata is no longer an implicit design note; it is typed contract
+  material with deterministic class mapping.
+- Coherence and drift-budget checks now fail closed on Stage 1 parity/rollback
+  contract drift.
+
+---
+
+## 2026-02-22 — Decision 0109: Close Stage 2 authority-flip docs/traceability with executable clause mapping
+
+### Decision
+Promote Stage 2 authority-flip documentation from prose-only status to explicit
+clause-to-surface executable mapping and close traceability status for
+`UNIFICATION-DOCTRINE`.
+
+Implemented scope:
+
+1. extend `draft/UNIFICATION-DOCTRINE` with
+   `§10.6.4 Stage 2 authority mapping table (normative)` binding Stage 2
+   doctrine clauses to:
+   - typed contract fields (`draft/CONTROL-PLANE-CONTRACT.json`),
+   - coherence checker surfaces (`gate_chain_parity` Stage 2 checks),
+   - executable vector rows (`gate_chain_parity_stage2_*` and
+     `capabilities.ci_witnesses` boundary-authority vectors).
+2. update `draft/SPEC-INDEX` to state Stage 2 typed-authority claims must bind
+   to `§10.6.4` mapping (including boundary-authority vectors).
+3. update `draft/SPEC-TRACEABILITY` to mark `UNIFICATION-DOCTRINE.md` as
+   `covered` with Stage 1+Stage 2 checker/vector surfaces explicitly listed.
+
+### Rationale
+Stage 2 implementation surfaces were already executable, but the documentation
+still left the authority-flip closure partially implicit. We need one explicit
+normative map from doctrine clauses to checker/vector evidence so Stage 2
+status is auditable and replayable.
+
+### Consequences
+- Stage 2 authority boundaries are now documented as executable mappings, not
+  narrative guidance.
+- Traceability status for `UNIFICATION-DOCTRINE` now reflects actual checker and
+  vector coverage.
+- Future Stage 2 drift can be detected against one canonical docs contract.
+
+---
+
+## 2026-02-23 — Decision 0110: Close Stage 3 typed-first authority cleanup with bounded fallback and rollback
+
+### Decision
+Close Stage 3 authority cleanup by making direct checker/discharge evidence the
+canonical Stage 2 authority route, documenting Stage 3 closure mapping, and
+recording explicit fallback/rollback bounds.
+
+Implemented scope:
+
+1. migrate Stage 2 authority contract/checker surfaces to direct bidir route:
+   - canonical field `evidenceStage2Authority.bidirEvidenceRoute`,
+   - required constants `routeKind=direct_checker_discharge` and
+     `obligationFieldRef=bidirCheckerObligations`,
+   - canonical obligation + failure-class parity checks through
+     `gate_chain_parity`.
+2. keep transitional sentinel path compatibility-only and bounded:
+   - optional `kernelComplianceSentinel` accepted only when
+     `bidirEvidenceRoute.fallback.mode=profile_gated_sentinel`,
+   - current profile kind MUST be explicitly allowlisted in
+     `fallback.profileKinds`,
+   - default contract keeps fallback allowlist empty.
+3. close docs/traceability loop:
+   - add `§10.6.5 Stage 3 typed-first closure mapping (normative)` to
+     `draft/UNIFICATION-DOCTRINE`,
+   - update `draft/SPEC-INDEX` staged-gate lane note to include Stage 3 closure
+     constraints,
+   - update `draft/SPEC-TRACEABILITY` Stage 3 surface wording.
+
+Rollback notes (bounded):
+
+1. rollback MAY temporarily re-enable sentinel fallback for a profile only under
+   the profile-gated rule above;
+2. rollback MUST NOT introduce a second authority artifact or alias-as-authority
+   path;
+3. rollback + re-promotion MUST be issue-linked and decision-logged before
+   widening profile allowlists.
+
+### Rationale
+Stage 3 intent (typed-first authority) was implemented in code paths but remained
+partly implicit in doctrine closure language and decision-bound fallback limits.
+This decision makes the migration boundary explicit and replay-auditable.
+
+### Consequences
+- Stage 3 now has one canonical authority route across contract/checker/docs.
+- Transitional fallback is explicit, narrow, and profile-scoped instead of open-ended.
+- Future fallback expansion/reduction is constrained by deterministic governance
+  instead of ad-hoc implementation drift.

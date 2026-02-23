@@ -1,4 +1,5 @@
-use crate::cli::ObserveModeArg;
+use crate::cli::{ObserveModeArg, ProjectionMatchArg};
+use premath_surreal::ProjectionMatchMode;
 use premath_ux::{SurrealObservationBackend, UxService};
 use serde_json::Value;
 use std::process;
@@ -8,6 +9,7 @@ pub struct Args {
     pub mode: ObserveModeArg,
     pub instruction_id: Option<String>,
     pub projection_digest: Option<String>,
+    pub projection_match: ProjectionMatchArg,
     pub json: bool,
 }
 
@@ -119,10 +121,15 @@ pub fn run(args: Args) {
                 eprintln!("error: --projection-digest is required for --mode projection");
                 process::exit(1);
             });
-            let view = service.projection(&projection_digest).unwrap_or_else(|| {
-                eprintln!("error: projection not found in latest observation: {projection_digest}");
-                process::exit(1);
-            });
+            let projection_match = projection_match_from_arg(&args.projection_match);
+            let view = service
+                .projection(&projection_digest, projection_match)
+                .unwrap_or_else(|| {
+                    eprintln!(
+                        "error: projection not found in latest observation: {projection_digest}"
+                    );
+                    process::exit(1);
+                });
 
             if args.json {
                 println!(
@@ -131,11 +138,25 @@ pub fn run(args: Args) {
                 );
             } else {
                 println!("premath observe projection {projection_digest}");
+                println!(
+                    "  match mode: {}",
+                    match projection_match {
+                        ProjectionMatchMode::Typed => "typed",
+                        ProjectionMatchMode::CompatibilityAlias => "compatibility_alias",
+                    }
+                );
                 println!("  required witness: {}", yes_no(view.required.is_some()));
                 println!("  delta snapshot: {}", yes_no(view.delta.is_some()));
                 println!("  decision: {}", yes_no(view.decision.is_some()));
             }
         }
+    }
+}
+
+fn projection_match_from_arg(arg: &ProjectionMatchArg) -> ProjectionMatchMode {
+    match arg {
+        ProjectionMatchArg::Typed => ProjectionMatchMode::Typed,
+        ProjectionMatchArg::CompatibilityAlias => ProjectionMatchMode::CompatibilityAlias,
     }
 }
 
@@ -159,10 +180,27 @@ fn print_coherence_summary(coherence: &Value) {
             yes_no(partition_coherent)
         );
     }
+    let active_cycle =
+        json_bool(coherence, "/dependencyIntegrity/active/hasCycle").unwrap_or(false);
+    let full_cycle = json_bool(coherence, "/dependencyIntegrity/full/hasCycle").unwrap_or(false);
+    println!(
+        "  dependency cycles (active/full): {}/{}",
+        yes_no(active_cycle),
+        yes_no(full_cycle)
+    );
     let stale = json_i64(coherence, "/leaseHealth/staleCount").unwrap_or(0);
     let contended = json_i64(coherence, "/leaseHealth/contendedCount").unwrap_or(0);
     if stale > 0 || contended > 0 {
         println!("  stale/contended claims: {stale}/{contended}");
+    }
+    let worker_count = json_i64(coherence, "/workerLaneThroughput/workerCount").unwrap_or(0);
+    let in_progress = json_i64(coherence, "/workerLaneThroughput/inProgressCount").unwrap_or(0);
+    let unassigned =
+        json_i64(coherence, "/workerLaneThroughput/unassignedInProgressCount").unwrap_or(0);
+    if worker_count > 0 || in_progress > 0 {
+        println!(
+            "  worker-lane WIP (workers/in-progress/unassigned): {worker_count}/{in_progress}/{unassigned}"
+        );
     }
 }
 

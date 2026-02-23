@@ -48,6 +48,9 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
     required_string_fields = (
         "projectionPolicy",
         "projectionDigest",
+        "typedCoreProjectionDigest",
+        "authorityPayloadDigest",
+        "normalizerId",
         "verdictClass",
         "deltaSource",
         "policyDigest",

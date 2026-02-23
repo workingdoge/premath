@@ -142,6 +142,29 @@ Capability-specific normative specs include:
 
 Normative requirements apply only when the corresponding capability is claimed.
 
+Worker-operation doctrine-site routing note:
+
+- Mutation/session operation surfaces for
+  `capabilities.change_morphisms` are mapped in
+  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
+  (`op/mcp.issue_add`, `op/mcp.issue_update`, `op/mcp.issue_claim`,
+  `op/mcp.issue_lease_renew`, `op/mcp.issue_lease_release`,
+  `op/mcp.issue_discover`, `op/mcp.dep_add`, `op/mcp.dep_remove`,
+  `op/mcp.dep_replace`,
+  `op/harness.session_read`, `op/harness.session_write`,
+  `op/harness.session_bootstrap`).
+- Read-only dependency integrity projection route is also mapped in
+  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
+  (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
+  `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
+  `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
+- Instruction/observation/init MCP surfaces are also mapped in
+  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
+  (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
+  `op/mcp.observe_latest`, `op/mcp.observe_needs_attention`,
+  `op/mcp.observe_instruction`, `op/mcp.observe_projection`,
+  `op/mcp.init_tool`).
+
 ### 5.5 Informative and optional
 
 The entries below are informative/default reading surfaces unless they are
@@ -149,7 +172,8 @@ explicitly claimed under §5.4 or §5.6.
 
 - `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
   (`draft/DOCTRINE-SITE-SOURCE.json` + `draft/DOCTRINE-OP-REGISTRY.json` ->
-  `draft/DOCTRINE-SITE.json`).
+  `draft/DOCTRINE-SITE.json`, including worker mutation and harness-session
+  operation routes).
 - `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
   explicit gap targets.
 - `draft/PREMATH-COHERENCE` — typed coherence-contract checker/witness model
@@ -158,9 +182,14 @@ explicitly claimed under §5.4 or §5.6.
   deterministic checker execution.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
-  for contract/witness/projection kind families) consumed by CI/coherence
-  adapter surfaces; lifecycle semantics follow
-  `draft/UNIFICATION-DOCTRINE` §5.1.
+  for contract/witness/projection kind families + harness retry/escalation
+  bindings + worker mutation authority policy/routes + Stage 2/Stage 3
+  typed-authority metadata) consumed by
+  CI/coherence adapter
+  surfaces; lifecycle semantics follow `draft/UNIFICATION-DOCTRINE` §5.1
+  including governance-mode metadata
+  (`rollover|freeze`) and process contract in
+  `../../process/SCHEMA-LIFECYCLE-GOVERNANCE.md`.
 - `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability
   registry consumed by conformance/docs/coherence parity surfaces.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
@@ -171,9 +200,12 @@ explicitly claimed under §5.4 or §5.6.
   `capabilities.instruction_typing` is claimed).
 - `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries and deterministic projections
-  (including Unified Evidence Plane contract in §10).
+  (including Unified Evidence Plane contract in §10 and cross-layer obstruction
+  algebra in §11).
 - `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
-  pipeline/base-change commutation in coherence checker surfaces.
+  pipeline/base-change commutation plus composition-law (identity,
+  associativity, h/v compatibility, interchange) surfaces in coherence checker
+  paths.
 - `raw/CTX-SITE` — informational site base (`Ctx`) + coverage (`J`) model for
   context/refinement decomposition.
 - `raw/SHEAF-STACK` — informational presheaf/sheaf/stack rendering of
@@ -237,11 +269,27 @@ Lane ownership note:
 
 - CwF strict substitution/comprehension obligations are checker-core
   (`draft/PREMATH-COHERENCE`) and are not profile-scoped.
+- CwF<->sig\Pi bridge mapping is normative in
+  `profile/ADJOINTS-AND-SITES` §11 and MUST preserve existing obligation
+  vocabularies (no new bridge-owned obligation IDs).
 - Span/square commutation is a typed witness contract
   (`draft/SPAN-SQUARE-CHECKING`) that composed profiles MUST route through for
-  cross-lane pullback/base-change claims.
-- Unified evidence factoring SHOULD route control-plane artifact families through
-  one attested surface (`draft/UNIFICATION-DOCTRINE` §10).
+  cross-lane pullback/base-change claims, including composition-law witness
+  coverage for identity/associativity/h-v/interchange.
+- Unified evidence factoring MUST route control-plane artifact families through
+  one attested surface (`draft/UNIFICATION-DOCTRINE` §10, including fail-closed
+  factorization boundary in §10.5).
+- Typed evidence-object migration MUST follow staged internalization gates in
+  `draft/UNIFICATION-DOCTRINE` §10.6 (single authority artifact per stage with
+  deterministic compatibility/rollback boundaries). Stage 1 typed-core parity
+  claims MUST use the fail-closed class boundary in §10.6.2, and Stage 1
+  rollback claims MUST use the deterministic rollback witness boundary in
+  §10.6.3. Stage 2 typed-authority claims MUST use the clause-to-surface
+  mapping in §10.6.4 (including Stage 2 gate-chain parity vectors and
+  `capabilities.ci_witnesses` boundary-authority vectors). Stage 3 typed-first
+  closure claims MUST use §10.6.5 mapping (direct bidir checker/discharge route
+  canonical, sentinel fallback profile-gated only, typed-first consumer
+  lineage).
 
 ## 6. Suggested reading order
 
@@ -300,7 +348,7 @@ If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`
 2) `draft/GATE`
 3) `draft/BIDIR-DESCENT`
-4) `profile/ADJOINTS-AND-SITES`
+4) `profile/ADJOINTS-AND-SITES` (§11 for CwF<->sig\Pi bridge)
 
 If you are integrating SigPi + Squeak + spans in one system:
 1) `draft/PREMATH-KERNEL`
@@ -311,8 +359,18 @@ If you are integrating SigPi + Squeak + spans in one system:
 6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
 7) `draft/UNIFICATION-DOCTRINE` (§9 lane separation)
 
+If you are implementing multithread worker orchestration:
+1) `draft/UNIFICATION-DOCTRINE` (§9 lane separation; one authority artifact per boundary)
+2) `raw/CTX-SITE` + `raw/SHEAF-STACK` (refinement/cover + glue-or-witness discipline)
+3) `profile/ADJOINTS-AND-SITES` (§10/§11) (when `capabilities.adjoints_sites` is claimed)
+4) `draft/CHANGE-MORPHISMS` + `draft/CAPABILITY-VECTORS`
+   (`capabilities.change_morphisms`)
+5) `raw/SQUEAK-SITE` (only when `capabilities.squeak_site` is claimed)
+6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+7) operational companion: `docs/design/MULTITHREAD-LANE-SITE-ADJOINTS.md`
+
 If you are implementing the Unified Evidence Plane:
-1) `draft/UNIFICATION-DOCTRINE` (§10)
+1) `draft/UNIFICATION-DOCTRINE` (§10, especially §10.6)
 2) `draft/CONTROL-PLANE-CONTRACT.json`
 3) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
 4) `draft/SPAN-SQUARE-CHECKING`

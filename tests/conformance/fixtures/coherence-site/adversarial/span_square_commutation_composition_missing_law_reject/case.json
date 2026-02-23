@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "span_square_commutation",
+  "artifacts": {
+    "spanSquare": {
+      "spans": [
+        {
+          "id": "span_id",
+          "kind": "identity",
+          "left": {"ctx": "Gamma"},
+          "apex": {"id": true},
+          "right": {"ctx": "Gamma"}
+        },
+        {
+          "id": "run_on_base",
+          "kind": "pipeline",
+          "left": {"ctx": "Gamma"},
+          "apex": {"run": "base"},
+          "right": {"out": "y"}
+        },
+        {
+          "id": "run_after_reindex",
+          "kind": "pipeline",
+          "left": {"ctx": "Gamma"},
+          "apex": {"run": "base"},
+          "right": {"out": "y"}
+        },
+        {
+          "id": "reindex_input",
+          "kind": "base_change",
+          "left": {"ctx": "Delta"},
+          "apex": {"map": "rho"},
+          "right": {"ctx": "Gamma"}
+        },
+        {
+          "id": "reindex_output",
+          "kind": "base_change",
+          "left": {"out": "y"},
+          "apex": {"map": "rho"},
+          "right": {"out": "y"}
+        }
+      ],
+      "squares": [
+        {
+          "id": "sq_accept",
+          "top": "run_on_base",
+          "bottom": "run_after_reindex",
+          "left": "reindex_input",
+          "right": "reindex_output",
+          "result": "accepted",
+          "failureClasses": [],
+          "digest": "sqw1_4f42fafb0510c945ce414ca03c9e5668c05b7d4aabd6041f05d0eafa51474235"
+        }
+      ],
+      "compositionLaws": {
+        "identitySpanIds": ["span_id"],
+        "identitySquareIds": [],
+        "laws": [
+          {
+            "id": "law_span_identity_only",
+            "kind": "span",
+            "law": "span_identity",
+            "left": {
+              "compose": {
+                "left": {"span": "span_id"},
+                "right": {"span": "run_on_base"}
+              }
+            },
+            "right": {"span": "run_on_base"},
+            "result": "accepted",
+            "failureClasses": [],
+            "digest": "sqlw1_3a557a20700b55a8ce5e817117b48ac3837f8de70e784fdeda101b2e94213a6b"
+          }
+        ]
+      }
+    }
+  }
+}

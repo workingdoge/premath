@@ -1,4 +1,4 @@
-use crate::required::RequiredWitnessError;
+use crate::required::{RequiredWitnessError, compute_typed_core_projection_digest};
 use crate::required_projection::{
     PROJECTION_POLICY, normalize_paths as normalize_projection_paths, project_required_checks,
 };
@@ -16,6 +16,14 @@ const REQUIRED_WITNESS_KIND: &str = "ci.required.v1";
 pub struct RequiredWitnessVerifyDerived {
     pub changed_paths: Vec<String>,
     pub projection_digest: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub normalizer_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_digest: Option<String>,
     pub required_checks: Vec<String>,
     pub executed_checks: Vec<String>,
     pub gate_witness_source_by_check: BTreeMap<String, String>,
@@ -123,6 +131,24 @@ fn check_str_field(
             value
         ));
     }
+}
+
+fn optional_non_empty_string_field(
+    witness: &Map<String, Value>,
+    key: &str,
+    errors: &mut Vec<String>,
+) -> Option<String> {
+    let value = witness.get(key).cloned().unwrap_or(Value::Null);
+    let Some(text) = value.as_str() else {
+        errors.push(format!("{key} must be a non-empty string"));
+        return None;
+    };
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        errors.push(format!("{key} must be a non-empty string"));
+        return None;
+    }
+    Some(trimmed.to_string())
 }
 
 fn normalize_rel_path(path: &str) -> String {
@@ -465,6 +491,10 @@ pub fn verify_required_witness_payload(
             let derived = RequiredWitnessVerifyDerived {
                 changed_paths: normalized_paths,
                 projection_digest: projection.projection_digest,
+                typed_core_projection_digest: None,
+                authority_payload_digest: None,
+                normalizer_id: None,
+                policy_digest: None,
                 required_checks: expected_required,
                 executed_checks: Vec::new(),
                 gate_witness_source_by_check: BTreeMap::new(),
@@ -496,6 +526,11 @@ pub fn verify_required_witness_payload(
         &mut errors,
     );
     check_str_field(&witness_obj, "policyDigest", PROJECTION_POLICY, &mut errors);
+    let normalizer_id = optional_non_empty_string_field(&witness_obj, "normalizerId", &mut errors);
+    let authority_payload_digest =
+        optional_non_empty_string_field(&witness_obj, "authorityPayloadDigest", &mut errors);
+    let typed_core_projection_digest =
+        optional_non_empty_string_field(&witness_obj, "typedCoreProjectionDigest", &mut errors);
 
     let witness_changed_paths = normalize_projection_paths(&string_list(
         witness_obj.get("changedPaths"),
@@ -513,6 +548,25 @@ pub fn verify_required_witness_payload(
         errors.push(format!(
             "projectionDigest mismatch (expected={:?}, actual={projection_digest:?})",
             projection.projection_digest
+        ));
+    }
+    if authority_payload_digest.as_deref() != Some(projection.projection_digest.as_str()) {
+        errors.push(format!(
+            "authorityPayloadDigest mismatch (expected={:?}, actual={:?})",
+            projection.projection_digest, authority_payload_digest
+        ));
+    }
+    let expected_typed_core_projection_digest = normalizer_id.as_deref().map(|normalizer| {
+        compute_typed_core_projection_digest(
+            projection.projection_digest.as_str(),
+            normalizer,
+            PROJECTION_POLICY,
+        )
+    });
+    if typed_core_projection_digest.as_deref() != expected_typed_core_projection_digest.as_deref() {
+        errors.push(format!(
+            "typedCoreProjectionDigest mismatch (expected={:?}, actual={:?})",
+            expected_typed_core_projection_digest, typed_core_projection_digest
         ));
     }
 
@@ -547,6 +601,10 @@ pub fn verify_required_witness_payload(
         let derived = RequiredWitnessVerifyDerived {
             changed_paths: projection.changed_paths,
             projection_digest: projection.projection_digest,
+            typed_core_projection_digest: None,
+            authority_payload_digest: None,
+            normalizer_id: None,
+            policy_digest: None,
             required_checks: expected_required,
             executed_checks,
             gate_witness_source_by_check: BTreeMap::new(),
@@ -751,9 +809,14 @@ pub fn verify_required_witness_payload(
         ));
     }
 
+    let derived_projection_digest = projection.projection_digest.clone();
     let derived = RequiredWitnessVerifyDerived {
         changed_paths: normalized_paths,
-        projection_digest: projection.projection_digest,
+        projection_digest: derived_projection_digest.clone(),
+        typed_core_projection_digest: expected_typed_core_projection_digest,
+        authority_payload_digest: Some(derived_projection_digest),
+        normalizer_id,
+        policy_digest: Some(PROJECTION_POLICY.to_string()),
         required_checks: expected_required,
         executed_checks,
         gate_witness_source_by_check: source_by_check,
@@ -788,6 +851,13 @@ mod tests {
         let changed_paths = vec!["crates/premath-bd/src/lib.rs".to_string()];
         let projection = project_required_checks(&changed_paths);
         let required_checks = projection.required_checks.clone();
+        let normalizer_id = "normalizer.ci.required.v1".to_string();
+        let authority_payload_digest = projection.projection_digest.clone();
+        let typed_core_projection_digest = compute_typed_core_projection_digest(
+            &authority_payload_digest,
+            &normalizer_id,
+            PROJECTION_POLICY,
+        );
 
         let gate_build = json!({
             "witnessKind": "gate",
@@ -816,6 +886,9 @@ mod tests {
             "witnessKind": "ci.required.v1",
             "projectionPolicy": PROJECTION_POLICY,
             "projectionDigest": projection.projection_digest,
+            "typedCoreProjectionDigest": typed_core_projection_digest,
+            "authorityPayloadDigest": authority_payload_digest,
+            "normalizerId": normalizer_id,
             "policyDigest": PROJECTION_POLICY,
             "changedPaths": changed_paths,
             "requiredChecks": required_checks,

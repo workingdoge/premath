@@ -127,14 +127,36 @@ Minimum parity set includes:
 - shared control-plane witness/policy identifiers are present and well-formed
   in `draft/CONTROL-PLANE-CONTRACT.json` (`requiredWitness`,
   `instructionWitness`),
+- shared harness retry/escalation bindings are present and well-formed in
+  `draft/CONTROL-PLANE-CONTRACT.json` (`harnessRetry` policy kind/path,
+  escalation action set, active-issue env keys, harness-session path bindings,
+  session issue-field binding, issues-path env key),
 - control-plane schema lifecycle table is present and deterministic
   (`schemaLifecycle`): canonical kind families + alias windows +
-  fail-closed expiry semantics for contract/witness/projection kinds,
+  fail-closed expiry semantics for contract/witness/projection kinds +
+  governance mode metadata (`rollover|freeze`) with decision/accountability
+  bindings,
+- when optional `evidenceStage1Parity` is present in
+  `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
+  missing authority-to-typed-core route metadata, unbound deterministic binding
+  tuple metadata (`normalizerId`, `policyDigest`), and mismatch between declared
+  parity failure classes and canonical Stage 1 doctrine classes,
+- when optional `evidenceStage1Rollback` is present in
+  `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
+  missing deterministic rollback trigger class coverage, unbound rollback
+  binding metadata (`normalizerId`, `policyDigest`), and mismatch between
+  declared rollback failure classes and canonical Stage 1 rollback doctrine
+  classes,
 - when lane-registry fields are present in
   `draft/CONTROL-PLANE-CONTRACT.json`, checker parity MUST fail closed on:
   unknown/duplicate lane IDs, unbound lane artifact-kind mappings, lane
   ownership violations (including checker-core CwF ownership boundaries), and
-  missing required cross-lane witness routes.
+  missing required cross-lane witness routes,
+- worker mutation authority metadata in
+  `draft/CONTROL-PLANE-CONTRACT.json` (`workerLaneAuthority`) MUST fail closed
+  on policy drift (expired/unbounded compatibility override windows),
+  mutation-mode drift (default/allowed mode mismatch from
+  `instruction-linked`-first contract), and unbound mutation capability routes.
 
 ### 4.4 `operation_reachability`
 
@@ -169,6 +191,14 @@ pipeline/base-change witness layer:
 - accepted squares have empty failure classes and commuting top/bottom span
   semantics,
 - rejected squares carry non-empty failure classes.
+- when optional composition-law artifacts are present:
+  - composition-law digests are deterministic and match canonical fields,
+  - accepted composition laws have empty failure classes and normalized
+    left/right equality,
+  - rejected composition laws carry non-empty failure classes,
+  - accepted coverage includes span identity/associativity and square
+    identity/associativity (horizontal + vertical), horizontal/vertical
+    compatibility, and interchange.
 
 This obligation keeps pipeline + base-change witness squares inside the same
 deterministic coherence contract surface (no side-channel planner authority).
@@ -268,6 +298,22 @@ Those two vectors MUST evaluate to the same `actualResult` and the same
 `actualFailureClasses` set.
 
 Violations of this invariance-pair contract MUST reject deterministically.
+
+### 4.16 CwF <-> SigPi bridge ownership boundary
+
+The CwF obligations in §4.11-§4.14 are strict operational equalities (`≡`) and
+MAY be used as bridge inputs to semantic obligations (`stability`, `locality`,
+`descent_exists`, `descent_contractible`) in kernel/profile discharge paths.
+
+This bridge is vocabulary-preserving:
+
+- checker obligations remain `cwf_*` only in this spec,
+- semantic adjoint/site obligations remain in `draft/BIDIR-DESCENT` and
+  `profile/ADJOINTS-AND-SITES`,
+- bridge routing MUST NOT introduce new coherence obligation IDs.
+
+Any bridge drift MUST reject deterministically through existing obligation/fail
+surfaces (no bridge-local admissibility authority).
 
 ## 5. Deterministic Failure Classes
 

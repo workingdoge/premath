@@ -30,6 +30,14 @@ pub struct RequiredWitnessDecideResult {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub projection_digest: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub typed_core_projection_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub authority_payload_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub normalizer_id: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub policy_digest: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub required_checks: Option<Vec<String>>,
     pub errors: Vec<String>,
 }
@@ -79,18 +87,31 @@ fn extract_string_list(value: Option<&Value>, label: &str) -> Result<Vec<String>
     }
 }
 
+#[derive(Debug, Clone, Default)]
+struct RejectMetadata {
+    projection_digest: Option<String>,
+    typed_core_projection_digest: Option<String>,
+    authority_payload_digest: Option<String>,
+    normalizer_id: Option<String>,
+    policy_digest: Option<String>,
+    required_checks: Option<Vec<String>>,
+}
+
 fn reject_result(
     reason_class: &str,
     errors: Vec<String>,
-    projection_digest: Option<String>,
-    required_checks: Option<Vec<String>>,
+    metadata: RejectMetadata,
 ) -> RequiredWitnessDecideResult {
     RequiredWitnessDecideResult {
         decision_kind: DECISION_KIND.to_string(),
         decision: "reject".to_string(),
         reason_class: reason_class.to_string(),
-        projection_digest,
-        required_checks,
+        projection_digest: metadata.projection_digest,
+        typed_core_projection_digest: metadata.typed_core_projection_digest,
+        authority_payload_digest: metadata.authority_payload_digest,
+        normalizer_id: metadata.normalizer_id,
+        policy_digest: metadata.policy_digest,
+        required_checks: metadata.required_checks,
         errors,
     }
 }
@@ -102,15 +123,14 @@ pub fn decide_required_witness_request(
         return reject_result(
             "invalid_witness_shape",
             vec!["witness must be an object".to_string()],
-            None,
-            None,
+            RejectMetadata::default(),
         );
     };
 
     let changed_paths = match extract_string_list(witness.get("changedPaths"), "changedPaths") {
         Ok(paths) => paths,
         Err(errors) => {
-            return reject_result("invalid_witness_shape", errors, None, None);
+            return reject_result("invalid_witness_shape", errors, RejectMetadata::default());
         }
     };
 
@@ -157,6 +177,10 @@ pub fn decide_required_witness_request(
         decision: decision.to_string(),
         reason_class: reason_class.to_string(),
         projection_digest: Some(verify.derived.projection_digest),
+        typed_core_projection_digest: verify.derived.typed_core_projection_digest,
+        authority_payload_digest: verify.derived.authority_payload_digest,
+        normalizer_id: verify.derived.normalizer_id,
+        policy_digest: verify.derived.policy_digest,
         required_checks: Some(verify.derived.required_checks),
         errors,
     }
@@ -207,6 +231,12 @@ mod tests {
         let changed_paths: Vec<String> = Vec::new();
         let required_checks = vec!["baseline".to_string()];
         let projection_digest = projection_digest_for(&changed_paths, &required_checks);
+        let normalizer_id = "normalizer.ci.required.v1";
+        let typed_core_projection_digest = crate::required::compute_typed_core_projection_digest(
+            projection_digest.as_str(),
+            normalizer_id,
+            "ci-topos-v0",
+        );
 
         let gate_baseline = json!({
             "witnessKind": "gate",
@@ -223,6 +253,9 @@ mod tests {
             "witnessKind": "ci.required.v1",
             "projectionPolicy": "ci-topos-v0",
             "projectionDigest": projection_digest,
+            "typedCoreProjectionDigest": typed_core_projection_digest,
+            "authorityPayloadDigest": projection_digest,
+            "normalizerId": normalizer_id,
             "policyDigest": "ci-topos-v0",
             "changedPaths": [],
             "requiredChecks": ["baseline"],

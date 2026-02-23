@@ -177,6 +177,10 @@ pub enum Commands {
         #[arg(long)]
         projection_digest: Option<String>,
 
+        /// Projection lookup match mode (typed authority only by default)
+        #[arg(long, default_value = "typed")]
+        projection_match: ProjectionMatchArg,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -419,6 +423,24 @@ pub enum Commands {
         command: IssueCommands,
     },
 
+    /// Manage Tusk harness-session handoff artifacts
+    HarnessSession {
+        #[command(subcommand)]
+        command: HarnessSessionCommands,
+    },
+
+    /// Manage Tusk harness feature-ledger artifacts
+    HarnessFeature {
+        #[command(subcommand)]
+        command: HarnessFeatureCommands,
+    },
+
+    /// Manage append-only Tusk harness step trajectory rows
+    HarnessTrajectory {
+        #[command(subcommand)]
+        command: HarnessTrajectoryCommands,
+    },
+
     /// Manage dependencies between issues
     Dep {
         #[command(subcommand)]
@@ -452,6 +474,14 @@ pub enum ObserveModeArg {
     Instruction,
     #[value(name = "projection")]
     Projection,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum ProjectionMatchArg {
+    #[value(name = "typed")]
+    Typed,
+    #[value(name = "compatibility_alias")]
+    CompatibilityAlias,
 }
 
 #[derive(Subcommand, Clone, Debug)]
@@ -558,6 +588,21 @@ pub enum IssueCommands {
         json: bool,
     },
 
+    /// Check issue-graph contract invariants
+    Check {
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Warning threshold for notes length
+        #[arg(long, default_value_t = 2000)]
+        note_warn_threshold: usize,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Update an existing issue
     Update {
         /// Issue ID
@@ -608,6 +653,29 @@ pub enum IssueCommands {
         /// Assignee to claim with
         #[arg(long)]
         assignee: String,
+
+        /// Path to issues JSONL
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Atomically claim the next ready/open issue for work
+    ClaimNext {
+        /// Assignee to claim with
+        #[arg(long)]
+        assignee: String,
+
+        /// Optional explicit lease identifier
+        #[arg(long)]
+        lease_id: Option<String>,
+
+        /// Optional lease TTL in seconds
+        #[arg(long)]
+        lease_ttl_seconds: Option<i64>,
 
         /// Path to issues JSONL
         #[arg(long, default_value = ".premath/issues.jsonl")]
@@ -792,6 +860,10 @@ pub enum DepCommands {
         #[arg(long, default_value = ".premath/issues.jsonl")]
         issues: String,
 
+        /// Graph scope for diagnostics (`active` excludes closed issues, `full` includes all)
+        #[arg(long = "graph-scope", default_value = "active")]
+        graph_scope: DepGraphScopeArg,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -830,6 +902,260 @@ pub enum DepViewArg {
     Gtd,
     #[value(name = "groupoid")]
     Groupoid,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum DepGraphScopeArg {
+    #[value(name = "active")]
+    Active,
+    #[value(name = "full")]
+    Full,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum HarnessSessionCommands {
+    /// Read one harness-session artifact
+    Read {
+        /// Harness-session artifact path
+        #[arg(long, default_value = ".premath/harness_session.json")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Write/update one harness-session artifact
+    Write {
+        /// Harness-session artifact path
+        #[arg(long, default_value = ".premath/harness_session.json")]
+        path: String,
+
+        /// Explicit session id override
+        #[arg(long)]
+        session_id: Option<String>,
+
+        /// Session state
+        #[arg(long, default_value = "stopped")]
+        state: HarnessSessionStateArg,
+
+        /// Current or resumed issue id
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Compact handoff summary
+        #[arg(long)]
+        summary: Option<String>,
+
+        /// Next-step recommendation for bootstrap
+        #[arg(long)]
+        next_step: Option<String>,
+
+        /// Instruction witness references (repeatable)
+        #[arg(long = "instruction-ref")]
+        instruction_refs: Vec<String>,
+
+        /// Gate/CI witness references (repeatable)
+        #[arg(long = "witness-ref")]
+        witness_refs: Vec<String>,
+
+        /// Optional issues JSONL path for snapshot reference derivation
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Build one bootstrap payload from a harness-session artifact
+    Bootstrap {
+        /// Harness-session artifact path
+        #[arg(long, default_value = ".premath/harness_session.json")]
+        path: String,
+
+        /// Harness feature-ledger artifact path used for deterministic next-step projection
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        feature_ledger: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum HarnessSessionStateArg {
+    #[value(name = "active")]
+    Active,
+    #[value(name = "stopped")]
+    Stopped,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum HarnessFeatureCommands {
+    /// Read one harness feature-ledger artifact
+    Read {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Upsert one feature row in a harness feature-ledger artifact
+    Write {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Feature identifier
+        #[arg(long)]
+        feature_id: String,
+
+        /// Feature status
+        #[arg(long)]
+        status: HarnessFeatureStatusArg,
+
+        /// Optional issue ID linked to this feature row
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Optional compact summary
+        #[arg(long)]
+        summary: Option<String>,
+
+        /// Optional session reference for boot continuity
+        #[arg(long)]
+        session_ref: Option<String>,
+
+        /// Instruction references (repeatable)
+        #[arg(long = "instruction-ref")]
+        instruction_refs: Vec<String>,
+
+        /// Verification references (repeatable)
+        #[arg(long = "verification-ref")]
+        verification_refs: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate ledger shape and deterministic closure status
+    Check {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Require complete closure (all features completed with verification refs)
+        #[arg(long)]
+        require_closure: bool,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Select deterministic next unfinished feature
+    Next {
+        /// Harness feature-ledger artifact path
+        #[arg(long, default_value = ".premath/harness_feature_ledger.json")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum HarnessFeatureStatusArg {
+    #[value(name = "pending")]
+    Pending,
+    #[value(name = "in_progress")]
+    InProgress,
+    #[value(name = "blocked")]
+    Blocked,
+    #[value(name = "completed")]
+    Completed,
+}
+
+#[derive(Subcommand, Clone, Debug)]
+pub enum HarnessTrajectoryCommands {
+    /// Append one harness step trajectory row
+    Append {
+        /// Harness trajectory JSONL path
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        path: String,
+
+        /// Deterministic step identifier
+        #[arg(long)]
+        step_id: String,
+
+        /// Optional issue identifier linked to this step
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Action label for this step (e.g. apply.patch)
+        #[arg(long)]
+        action: String,
+
+        /// Result class label for this step
+        #[arg(long)]
+        result_class: String,
+
+        /// Optional instruction refs (repeatable)
+        #[arg(long = "instruction-ref")]
+        instruction_refs: Vec<String>,
+
+        /// Witness refs (repeatable)
+        #[arg(long = "witness-ref")]
+        witness_refs: Vec<String>,
+
+        /// Optional started-at timestamp (RFC3339)
+        #[arg(long)]
+        started_at: Option<String>,
+
+        /// Optional finished-at timestamp (RFC3339; default now)
+        #[arg(long)]
+        finished_at: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Query deterministic trajectory projections
+    Query {
+        /// Harness trajectory JSONL path
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        path: String,
+
+        /// Projection mode
+        #[arg(long, default_value = "latest")]
+        mode: HarnessTrajectoryModeArg,
+
+        /// Maximum rows returned
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum HarnessTrajectoryModeArg {
+    #[value(name = "latest")]
+    Latest,
+    #[value(name = "failed")]
+    Failed,
+    #[value(name = "retry-needed")]
+    RetryNeeded,
 }
 
 #[derive(Subcommand, Clone, Debug)]

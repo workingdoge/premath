@@ -18,6 +18,22 @@ Authority rule:
 - `TUSK-REFINEMENT.md`: refinement taxonomy and activation rules.
 - `TUSK-IDENTITY.md`: run identity and deterministic bindings.
 - `TUSK-WITNESSING.md`: Gate vs transport witnessing split.
+- `TUSK-HARNESS-CONTRACT.md`: long-running harness hooks (`boot/step/stop`),
+  durability boundaries, and trajectory/evidence mapping.
+- `TUSK-HARNESS-RETRY-POLICY.md`: canonical retry classification/escalation
+  table for harness pipeline wrappers.
+- `TUSK-HARNESS-SESSION.md`: compact handoff artifact + bootstrap payload
+  contract for fresh-context restartability.
+- `TUSK-HARNESS-FEATURE-LEDGER.md`: typed per-feature progress ledger, closure
+  checks, and deterministic next-feature selection.
+- `TUSK-HARNESS-TRAJECTORY.md`: append-only step trajectory rows with
+  witness-linked deterministic query projections.
+- `TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`: deterministic coordinator/worker loop
+  over `N` worktrees (`issue_ready -> claim -> work -> verify -> release/update`)
+  with explicit heartbeat/recovery guidance.
+- `TUSK-HARNESS-KPI-BENCHMARK.md`: canonical multithread throughput KPI
+  definition, deterministic benchmark procedure, and rollback trigger
+  thresholds.
 
 ### Squeak/SigPi transport + runtime placement (between worlds)
 
@@ -29,8 +45,24 @@ Authority rule:
 - `ARCHITECTURE-MAP.md`: doctrine-to-operation map + active execution order.
 - `CI-CLOSURE.md`: closure gate and change-projected entry minimization.
 - `CI-PROVIDER-BINDINGS.md`: provider bindings to canonical CI contract.
+- `EV-COHERENCE-OVERVIEW.md`: compact status snapshot for Unified Evidence
+  Plane contracts, coherence boundaries, and issue posture.
+- `EV-STAGE1-CHECKLIST.md`: execution checklist for `Ev` Stage 1
+  (typed-core dual projection) delivery.
+- `EV-STAGE3-EXECUTION-RUNBOOK.md`: deterministic Stage 3 execution order,
+  per-task gate set, and commit/issue hygiene cadence.
+- `DEVELOPMENT-META-LOOP.md`: canonical development workflow contract
+  (architecture-first ordering, multithread worker loop, and lane/gate
+  discipline).
+- `MULTITHREAD-LANE-SITE-ADJOINTS.md`: canonical concurrent-worker contract
+  aligned with lane ownership, site refinement/covers, and optional SigPi/Squeak
+  capability overlays.
 - `LIFECYCLE-COHERENCE-FLOWS.md`: operator flow for schema lifecycle policy and
   coherence gate-chain enforcement.
+- `ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split and plan to move
+  issue-graph invariants from CI wrappers into `premath-bd` core.
+- `MEMORY-LANES-CONTRACT.md`: canonical work-memory lane split (issues,
+  operations, doctrine/decision) and write-discipline rules.
 - `CONTROL-PLANE-THREAT-MODEL.md`: threat/hardening matrix for control-plane
   mutation, witness, and projection surfaces.
 - `HIGHER-ORDER-CI-CD.md`: control-loop framing inside coding environment.
@@ -47,3 +79,12 @@ Design docs do not replace normative specs.
   - `specs/premath/raw/SQUEAK-CORE.md`
   - `specs/premath/raw/SQUEAK-SITE.md`
   - `specs/premath/raw/CI-TOPOS.md`
+
+## Live Roadmap Source
+
+Design docs may reference historical issue IDs, but active execution order is
+always read from issue memory:
+
+- `.premath/issues.jsonl`
+- `premath issue ready`
+- `premath issue list`

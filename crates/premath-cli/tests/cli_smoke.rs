@@ -1,4 +1,5 @@
 use serde_json::Value;
+use sha2::{Digest, Sha256};
 use std::ffi::{OsStr, OsString};
 use std::fs;
 use std::path::{Path, PathBuf};
@@ -72,6 +73,15 @@ fn write_sample_issues(path: &Path) {
         r#"{"id":"bd-b","title":"Issue B","status":"closed"}"#,
     ];
     fs::write(path, format!("{}\n", lines.join("\n"))).expect("sample issues should be written");
+}
+
+fn write_claim_next_issues(path: &Path) {
+    let lines = [
+        r#"{"id":"bd-1","title":"Issue 1","status":"open"}"#,
+        r#"{"id":"bd-2","title":"Issue 2","status":"open"}"#,
+    ];
+    fs::write(path, format!("{}\n", lines.join("\n")))
+        .expect("claim-next issues should be written");
 }
 
 fn write_tusk_eval_inputs(dir: &Path) -> (PathBuf, PathBuf) {
@@ -173,9 +183,18 @@ fn write_instruction_runtime_input(dir: &Path, instruction_ref: &str, failed: bo
 }
 
 fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
+    let normalizer_id = "normalizer.ci.required.v1";
+    let projection_digest = "proj1_demo";
+    let typed_core_projection_digest = format!(
+        "ev1_{:x}",
+        Sha256::digest(format!(
+            "{projection_digest}\0{normalizer_id}\0{}\0",
+            "ci-topos-v0"
+        ))
+    );
     let runtime = serde_json::json!({
         "projectionPolicy": "ci-topos-v0",
-        "projectionDigest": "proj1_demo",
+        "projectionDigest": projection_digest,
         "changedPaths": ["README.md"],
         "requiredChecks": ["baseline"],
         "results": [{
@@ -199,7 +218,10 @@ fn write_required_runtime_input(dir: &Path, failed: bool) -> PathBuf {
         "deltaSource": "explicit",
         "fromRef": "origin/main",
         "toRef": "HEAD",
+        "normalizerId": normalizer_id,
         "policyDigest": "ci-topos-v0",
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": projection_digest,
         "squeakSiteProfile": "local",
         "runStartedAt": "2026-02-22T00:00:00Z",
         "runFinishedAt": "2026-02-22T00:00:01Z",
@@ -323,19 +345,35 @@ fn write_required_decide_input(dir: &Path, failed: bool) -> PathBuf {
 }
 
 fn write_required_decision_verify_input(dir: &Path) -> PathBuf {
+    let typed_core_projection_digest = "ev1_demo";
+    let authority_payload_digest = "proj1_demo";
+    let normalizer_id = "normalizer.ci.required.v1";
+    let policy_digest = "ci-topos-v0";
     let decision = serde_json::json!({
         "decisionKind": "ci.required.decision.v1",
         "decision": "accept",
         "projectionDigest": "proj1_demo",
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": authority_payload_digest,
+        "normalizerId": normalizer_id,
+        "policyDigest": policy_digest,
         "requiredChecks": ["baseline"],
         "witnessSha256": "witness_hash",
         "deltaSha256": "delta_hash"
     });
     let witness = serde_json::json!({
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": authority_payload_digest,
+        "normalizerId": normalizer_id,
+        "policyDigest": policy_digest,
         "projectionDigest": "proj1_demo",
         "requiredChecks": ["baseline"]
     });
     let delta = serde_json::json!({
+        "typedCoreProjectionDigest": typed_core_projection_digest,
+        "authorityPayloadDigest": authority_payload_digest,
+        "normalizerId": normalizer_id,
+        "policyDigest": policy_digest,
         "projectionDigest": "proj1_demo",
         "requiredChecks": ["baseline"]
     });
@@ -385,7 +423,7 @@ fn write_observation_surface(path: &Path) {
             "state": "accepted",
             "needsAttention": false,
             "topFailureClass": "verified_accept",
-            "latestProjectionDigest": "proj1_alpha",
+            "latestProjectionDigest": "ev1_alpha",
             "latestInstructionId": "20260221T010000Z-ci-wiring-golden",
             "requiredCheckCount": 1,
             "executedCheckCount": 1,
@@ -396,6 +434,7 @@ fn write_observation_surface(path: &Path) {
                 "ref": "artifacts/ciwitness/latest-delta.json",
                 "projectionPolicy": "ci-topos-v0",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "deltaSource": "explicit",
                 "fromRef": "origin/main",
                 "toRef": "HEAD",
@@ -407,6 +446,7 @@ fn write_observation_surface(path: &Path) {
                 "witnessKind": "ci.required.v1",
                 "projectionPolicy": "ci-topos-v0",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "verdictClass": "accepted",
                 "requiredChecks": ["baseline"],
                 "executedChecks": ["baseline"],
@@ -416,6 +456,7 @@ fn write_observation_surface(path: &Path) {
                 "ref": "artifacts/ciwitness/latest-decision.json",
                 "decisionKind": "ci.required.decision.v1",
                 "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
                 "decision": "accept",
                 "reasonClass": "verified_accept",
                 "witnessPath": "artifacts/ciwitness/latest-required.json",
@@ -489,6 +530,62 @@ fn verify_json_smoke() {
     assert!(payload["axioms"]["gluing"].is_boolean());
     assert!(payload["axioms"]["uniqueness"].is_boolean());
     assert!(payload["violations"]["descent_conflict_count"].is_number());
+}
+
+#[test]
+fn issue_claim_next_json_smoke() {
+    let tmp = TempDirGuard::new("issue-claim-next");
+    let issues = tmp.path().join("issues.jsonl");
+    write_claim_next_issues(&issues);
+
+    let first = run_premath([
+        OsString::from("issue"),
+        OsString::from("claim-next"),
+        OsString::from("--assignee"),
+        OsString::from("worker-a"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&first);
+    let first_payload = parse_json_stdout(&first);
+    assert_eq!(first_payload["action"], "issue.claim_next");
+    assert_eq!(first_payload["claimed"], true);
+    assert_eq!(first_payload["issue"]["id"], "bd-1");
+    assert_eq!(first_payload["issue"]["status"], "in_progress");
+    assert_eq!(first_payload["issue"]["assignee"], "worker-a");
+    assert_eq!(
+        first_payload["issue"]["lease"]["leaseId"],
+        serde_json::json!("lease1_bd-1_worker-a")
+    );
+
+    let second = run_premath([
+        OsString::from("issue"),
+        OsString::from("claim-next"),
+        OsString::from("--assignee"),
+        OsString::from("worker-a"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&second);
+    let second_payload = parse_json_stdout(&second);
+    assert_eq!(second_payload["claimed"], true);
+    assert_eq!(second_payload["issue"]["id"], "bd-2");
+
+    let third = run_premath([
+        OsString::from("issue"),
+        OsString::from("claim-next"),
+        OsString::from("--assignee"),
+        OsString::from("worker-a"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&third);
+    let third_payload = parse_json_stdout(&third);
+    assert_eq!(third_payload["claimed"], false);
+    assert_eq!(third_payload["issue"], Value::Null);
 }
 
 #[test]
@@ -902,7 +999,7 @@ fn observe_latest_json_smoke() {
 
     let payload = parse_json_stdout(&output);
     assert_eq!(payload["summary"]["state"], "accepted");
-    assert_eq!(payload["summary"]["latestProjectionDigest"], "proj1_alpha");
+    assert_eq!(payload["summary"]["latestProjectionDigest"], "ev1_alpha");
     assert_eq!(
         payload["latest"]["required"]["requiredChecks"][0],
         "baseline"
@@ -936,6 +1033,74 @@ fn observe_instruction_json_smoke() {
 }
 
 #[test]
+fn observe_projection_uses_typed_default() {
+    let tmp = TempDirGuard::new("observe-projection-typed-default");
+    let surface = tmp.path().join("surface.json");
+    write_observation_surface(&surface);
+
+    let output = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("projection"),
+        OsString::from("--projection-digest"),
+        OsString::from("ev1_alpha"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["projectionDigest"], "ev1_alpha");
+    assert_eq!(
+        payload["required"]["typedCoreProjectionDigest"],
+        "ev1_alpha"
+    );
+}
+
+#[test]
+fn observe_projection_alias_requires_compatibility_mode() {
+    let tmp = TempDirGuard::new("observe-projection-alias-mode");
+    let surface = tmp.path().join("surface.json");
+    write_observation_surface(&surface);
+
+    let default_mode = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("projection"),
+        OsString::from("--projection-digest"),
+        OsString::from("proj1_alpha"),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !default_mode.status.success(),
+        "alias lookup should fail in typed default mode"
+    );
+
+    let compat_mode = run_premath([
+        OsString::from("observe"),
+        OsString::from("--surface"),
+        surface.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("projection"),
+        OsString::from("--projection-digest"),
+        OsString::from("proj1_alpha"),
+        OsString::from("--projection-match"),
+        OsString::from("compatibility_alias"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&compat_mode);
+    let payload = parse_json_stdout(&compat_mode);
+    assert_eq!(payload["projectionDigest"], "proj1_alpha");
+    assert_eq!(
+        payload["required"]["typedCoreProjectionDigest"],
+        "ev1_alpha"
+    );
+}
+
+#[test]
 fn observe_build_json_smoke() {
     let tmp = TempDirGuard::new("observe-build-json");
     let repo_root = tmp.path();
@@ -950,6 +1115,7 @@ fn observe_build_json_smoke() {
         serde_json::to_vec_pretty(&serde_json::json!({
             "projectionPolicy": "ci-topos-v0",
             "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
             "deltaSource": "explicit",
             "changedPaths": ["README.md"]
         }))
@@ -962,6 +1128,7 @@ fn observe_build_json_smoke() {
             "witnessKind": "ci.required.v1",
             "projectionPolicy": "ci-topos-v0",
             "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
             "verdictClass": "accepted",
             "requiredChecks": ["baseline"],
             "executedChecks": ["baseline"],
@@ -975,6 +1142,7 @@ fn observe_build_json_smoke() {
         serde_json::to_vec_pretty(&serde_json::json!({
             "decisionKind": "ci.required.decision.v1",
             "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
             "decision": "accept",
             "reasonClass": "verified_accept"
         }))
@@ -1023,7 +1191,7 @@ fn observe_build_json_smoke() {
 
     let payload = parse_json_stdout(&output);
     assert_eq!(payload["summary"]["state"], "accepted");
-    assert_eq!(payload["summary"]["latestProjectionDigest"], "proj1_alpha");
+    assert_eq!(payload["summary"]["latestProjectionDigest"], "ev1_alpha");
     assert_eq!(payload["summary"]["requiredCheckCount"], 1);
     assert!(payload["summary"]["coherence"].is_object());
     assert!(out_json.exists());
@@ -1233,6 +1401,66 @@ fn issue_update_and_list_json_smoke() {
     let listed = parse_json_stdout(&out_list);
     assert_eq!(listed["count"], 1);
     assert_eq!(listed["items"][0]["id"], "bd-a");
+}
+
+#[test]
+fn issue_check_json_smoke() {
+    let tmp = TempDirGuard::new("issue-check");
+    let issues_ok = tmp.path().join("issues-ok.jsonl");
+    let issues_bad = tmp.path().join("issues-bad.jsonl");
+
+    fs::write(
+        &issues_ok,
+        concat!(
+            "{\"id\":\"bd-ok\",\"title\":\"Issue ok\",\"status\":\"open\",\"issue_type\":\"task\",",
+            "\"description\":\"Acceptance:\\n- complete work\\n\\nVerification commands:\\n- `mise run baseline`\"}\n"
+        ),
+    )
+    .expect("valid issues should be written");
+
+    let out_ok = run_premath([
+        OsString::from("issue"),
+        OsString::from("check"),
+        OsString::from("--issues"),
+        issues_ok.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_ok);
+    let ok_payload = parse_json_stdout(&out_ok);
+    assert_eq!(ok_payload["action"], "issue.check");
+    assert_eq!(ok_payload["checkKind"], "premath.issue_graph.check.v1");
+    assert_eq!(ok_payload["result"], "accepted");
+    assert_eq!(ok_payload["summary"]["errorCount"], 0);
+
+    fs::write(
+        &issues_bad,
+        concat!(
+            "{\"id\":\"bd-epic\",\"title\":\"[EPIC] Broken\",\"status\":\"open\",\"issue_type\":\"task\",",
+            "\"description\":\"Acceptance:\\n- done\\n\\nVerification commands:\\n- `mise run baseline`\"}\n"
+        ),
+    )
+    .expect("invalid issues should be written");
+
+    let out_bad = run_premath([
+        OsString::from("issue"),
+        OsString::from("check"),
+        OsString::from("--issues"),
+        issues_bad.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_bad.status.success(),
+        "expected issue check to fail, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out_bad.stdout),
+        String::from_utf8_lossy(&out_bad.stderr)
+    );
+    let bad_payload = parse_json_stdout(&out_bad);
+    assert_eq!(bad_payload["action"], "issue.check");
+    assert_eq!(bad_payload["result"], "rejected");
+    assert_eq!(
+        bad_payload["failureClasses"],
+        serde_json::json!(["issue_graph.issue_type.epic_mismatch"])
+    );
 }
 
 #[test]
@@ -1635,6 +1863,7 @@ fn dep_remove_replace_and_diagnostics_json_smoke() {
     assert_success(&out_diag);
     let diag_payload = parse_json_stdout(&out_diag);
     assert_eq!(diag_payload["action"], "dep.diagnostics");
+    assert_eq!(diag_payload["graphScope"], "active");
     assert_eq!(diag_payload["integrity"]["hasCycle"], false);
     assert_eq!(diag_payload["integrity"]["cyclePath"], Value::Null);
 
@@ -1672,6 +1901,55 @@ fn dep_remove_replace_and_diagnostics_json_smoke() {
         String::from_utf8_lossy(&out_cycle.stderr).contains("dependency cycle detected"),
         "expected cycle diagnostic in stderr, got:\n{}",
         String::from_utf8_lossy(&out_cycle.stderr)
+    );
+}
+
+#[test]
+fn dep_diagnostics_scope_filters_closed_cycle_noise() {
+    let tmp = TempDirGuard::new("dep-diagnostics-scope");
+    let issues = tmp.path().join("issues.jsonl");
+    fs::write(
+        &issues,
+        concat!(
+            r#"{"id":"bd-a","title":"A","status":"closed","dependencies":[{"issue_id":"bd-a","depends_on_id":"bd-b","type":"blocks"}]}"#,
+            "\n",
+            r#"{"id":"bd-b","title":"B","status":"closed","dependencies":[{"issue_id":"bd-b","depends_on_id":"bd-a","type":"blocks"}]}"#,
+            "\n",
+            r#"{"id":"bd-c","title":"C","status":"open"}"#,
+            "\n"
+        ),
+    )
+    .expect("issues fixture should write");
+
+    let out_active = run_premath([
+        OsString::from("dep"),
+        OsString::from("diagnostics"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_active);
+    let active_payload = parse_json_stdout(&out_active);
+    assert_eq!(active_payload["graphScope"], "active");
+    assert_eq!(active_payload["integrity"]["hasCycle"], false);
+    assert_eq!(active_payload["integrity"]["cyclePath"], Value::Null);
+
+    let out_full = run_premath([
+        OsString::from("dep"),
+        OsString::from("diagnostics"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--graph-scope"),
+        OsString::from("full"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_full);
+    let full_payload = parse_json_stdout(&out_full);
+    assert_eq!(full_payload["graphScope"], "full");
+    assert_eq!(full_payload["integrity"]["hasCycle"], true);
+    assert_eq!(
+        full_payload["integrity"]["cyclePath"],
+        serde_json::json!(["bd-a", "bd-b", "bd-a"])
     );
 }
 
@@ -1786,4 +2064,479 @@ fn coherence_check_rejects_on_coherence_spec_obligation_drift() {
         }),
         "expected unknown-obligation failure class in top-level union"
     );
+}
+
+#[test]
+fn harness_session_write_read_bootstrap_json_smoke() {
+    let tmp = TempDirGuard::new("harness-session");
+    let session_path = tmp.path().join("harness-session.json");
+    let issues = tmp.path().join("issues.jsonl");
+    write_sample_issues(&issues);
+
+    let out_write_stopped = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--state"),
+        OsString::from("stopped"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-a"),
+        OsString::from("--summary"),
+        OsString::from("finished slice"),
+        OsString::from("--next-step"),
+        OsString::from("run ci-hygiene-check"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/i-2.json"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/i-1.json"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/i-2.json"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w-2.json"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w-1.json"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_stopped);
+    let write_stopped = parse_json_stdout(&out_write_stopped);
+    assert_eq!(write_stopped["action"], "harness-session.write");
+    let session = &write_stopped["session"];
+    assert_eq!(session["schema"], 1);
+    assert_eq!(session["sessionKind"], "premath.harness.session.v1");
+    assert_eq!(session["state"], "stopped");
+    assert_eq!(session["issueId"], "bd-a");
+    assert_eq!(session["summary"], "finished slice");
+    assert_eq!(session["nextStep"], "run ci-hygiene-check");
+    assert_eq!(
+        session["instructionRefs"],
+        serde_json::json!(["instructions/i-1.json", "instructions/i-2.json"])
+    );
+    assert_eq!(
+        session["witnessRefs"],
+        serde_json::json!([
+            "artifacts/ciwitness/w-1.json",
+            "artifacts/ciwitness/w-2.json"
+        ])
+    );
+    assert_eq!(session["issuesPath"], issues.display().to_string());
+    let session_id = session["sessionId"]
+        .as_str()
+        .expect("sessionId should be string")
+        .to_string();
+    assert!(session_id.starts_with("hs1_"));
+    assert!(
+        session["issuesSnapshotRef"]
+            .as_str()
+            .expect("issuesSnapshotRef should be string")
+            .starts_with("iss1_")
+    );
+
+    let out_bootstrap_resume = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("bootstrap"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_bootstrap_resume);
+    let bootstrap_resume = parse_json_stdout(&out_bootstrap_resume);
+    assert_eq!(bootstrap_resume["action"], "harness-session.bootstrap");
+    assert_eq!(
+        bootstrap_resume["bootstrapKind"],
+        "premath.harness.bootstrap.v1"
+    );
+    assert_eq!(bootstrap_resume["mode"], "resume");
+    assert_eq!(bootstrap_resume["resumeIssueId"], "bd-a");
+    assert_eq!(bootstrap_resume["sessionId"], session_id);
+    assert_eq!(
+        bootstrap_resume["sessionRef"],
+        session_path.display().to_string()
+    );
+
+    let out_write_active = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--state"),
+        OsString::from("active"),
+        OsString::from("--summary"),
+        OsString::from("continue work"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_active);
+    let write_active = parse_json_stdout(&out_write_active);
+    assert_eq!(write_active["session"]["sessionId"], session_id);
+    assert_eq!(write_active["session"]["state"], "active");
+    assert_eq!(write_active["session"]["stoppedAt"], Value::Null);
+    assert_eq!(write_active["session"]["summary"], "continue work");
+
+    let out_read = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("read"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_read);
+    let read = parse_json_stdout(&out_read);
+    assert_eq!(read["action"], "harness-session.read");
+    assert_eq!(read["session"]["sessionId"], session_id);
+    assert_eq!(read["session"]["state"], "active");
+    assert_eq!(read["session"]["issueId"], "bd-a");
+    assert_eq!(read["session"]["nextStep"], "run ci-hygiene-check");
+
+    let out_bootstrap_attach = run_premath([
+        OsString::from("harness-session"),
+        OsString::from("bootstrap"),
+        OsString::from("--path"),
+        session_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_bootstrap_attach);
+    let bootstrap_attach = parse_json_stdout(&out_bootstrap_attach);
+    assert_eq!(bootstrap_attach["mode"], "attach");
+    assert_eq!(bootstrap_attach["sessionId"], session_id);
+}
+
+#[test]
+fn harness_feature_ledger_incomplete_rejects_when_require_closure() {
+    let tmp = TempDirGuard::new("harness-feature-incomplete");
+    let ledger_path = tmp.path().join("feature-ledger.json");
+
+    let out_write = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.alpha"),
+        OsString::from("--status"),
+        OsString::from("pending"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write);
+
+    let out_check = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("check"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--require-closure"),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_check.status.success(),
+        "expected closure check rejection, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out_check.stdout),
+        String::from_utf8_lossy(&out_check.stderr)
+    );
+    let payload = parse_json_stdout(&out_check);
+    assert_eq!(payload["action"], "harness-feature.check");
+    assert_eq!(payload["result"], "rejected");
+    assert_eq!(payload["nextFeatureId"], "feature.alpha");
+    assert!(
+        payload["failureClasses"]
+            .as_array()
+            .expect("failureClasses should be an array")
+            .iter()
+            .any(|row| row.as_str() == Some("harness_feature_ledger.closure_incomplete"))
+    );
+}
+
+#[test]
+fn harness_feature_ledger_malformed_rejects() {
+    let tmp = TempDirGuard::new("harness-feature-malformed");
+    let ledger_path = tmp.path().join("feature-ledger.json");
+    fs::write(
+        &ledger_path,
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "schema": 1,
+            "ledgerKind": "premath.harness.feature_ledger.v1",
+            "updatedAt": "2026-02-22T00:00:00Z",
+            "features": [{
+                "featureId": "feature.alpha",
+                "status": "completed",
+                "updatedAt": "2026-02-22T00:00:00Z",
+                "verificationRefs": []
+            }]
+        }))
+        .expect("malformed ledger should serialize"),
+    )
+    .expect("malformed ledger should write");
+
+    let out_check = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("check"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_check.status.success(),
+        "expected malformed ledger rejection, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&out_check.stdout),
+        String::from_utf8_lossy(&out_check.stderr)
+    );
+    let payload = parse_json_stdout(&out_check);
+    assert_eq!(payload["result"], "rejected");
+    assert!(
+        payload["failureClasses"]
+            .as_array()
+            .expect("failureClasses should be an array")
+            .iter()
+            .any(|row| {
+                row.as_str() == Some("harness_feature_ledger.completed_missing_verification_ref")
+            })
+    );
+}
+
+#[test]
+fn harness_feature_ledger_complete_and_next_json_smoke() {
+    let tmp = TempDirGuard::new("harness-feature-complete");
+    let ledger_path = tmp.path().join("feature-ledger.json");
+
+    let out_write_pending = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.beta"),
+        OsString::from("--status"),
+        OsString::from("pending"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_pending);
+
+    let out_write_progress = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.alpha"),
+        OsString::from("--status"),
+        OsString::from("in_progress"),
+        OsString::from("--session-ref"),
+        OsString::from(".premath/harness_session.json"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_write_progress);
+
+    let out_next_open = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("next"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_next_open);
+    let next_open = parse_json_stdout(&out_next_open);
+    assert_eq!(next_open["action"], "harness-feature.next");
+    assert_eq!(next_open["exists"], true);
+    assert_eq!(next_open["nextFeatureId"], "feature.alpha");
+    assert_eq!(next_open["closureComplete"], false);
+
+    let out_complete_alpha = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.alpha"),
+        OsString::from("--status"),
+        OsString::from("completed"),
+        OsString::from("--verification-ref"),
+        OsString::from("artifacts/ciwitness/alpha.json"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_complete_alpha);
+
+    let out_complete_beta = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("write"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--feature-id"),
+        OsString::from("feature.beta"),
+        OsString::from("--status"),
+        OsString::from("completed"),
+        OsString::from("--verification-ref"),
+        OsString::from("artifacts/ciwitness/beta.json"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_complete_beta);
+
+    let out_check_closed = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("check"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--require-closure"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_check_closed);
+    let check_closed = parse_json_stdout(&out_check_closed);
+    assert_eq!(check_closed["result"], "accepted");
+    assert_eq!(check_closed["summary"]["closureComplete"], true);
+    assert_eq!(check_closed["summary"]["completedCount"], 2);
+    assert_eq!(check_closed["nextFeatureId"], Value::Null);
+
+    let out_next_closed = run_premath([
+        OsString::from("harness-feature"),
+        OsString::from("next"),
+        OsString::from("--path"),
+        ledger_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_next_closed);
+    let next_closed = parse_json_stdout(&out_next_closed);
+    assert_eq!(next_closed["nextFeatureId"], Value::Null);
+    assert_eq!(next_closed["closureComplete"], true);
+    assert_eq!(next_closed["featureCount"], 2);
+}
+
+#[test]
+fn harness_trajectory_append_and_query_json_smoke() {
+    let tmp = TempDirGuard::new("harness-trajectory");
+    let path = tmp.path().join("harness-trajectory.jsonl");
+
+    let out_append_1 = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("append"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--step-id"),
+        OsString::from("step-1"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-1"),
+        OsString::from("--action"),
+        OsString::from("run.check"),
+        OsString::from("--result-class"),
+        OsString::from("transient_failure"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w1.json"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w1.json"),
+        OsString::from("--finished-at"),
+        OsString::from("2026-02-22T00:01:00Z"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_append_1);
+    let append_1 = parse_json_stdout(&out_append_1);
+    assert_eq!(append_1["action"], "harness-trajectory.append");
+    assert_eq!(append_1["row"]["stepKind"], "premath.harness.step.v1");
+    assert_eq!(
+        append_1["row"]["witnessRefs"],
+        serde_json::json!(["artifacts/ciwitness/w1.json"])
+    );
+
+    let out_append_2 = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("append"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--step-id"),
+        OsString::from("step-2"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-2"),
+        OsString::from("--action"),
+        OsString::from("run.check"),
+        OsString::from("--result-class"),
+        OsString::from("policy_reject"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w2.json"),
+        OsString::from("--finished-at"),
+        OsString::from("2026-02-22T00:02:00Z"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_append_2);
+
+    let out_append_3 = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("append"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--step-id"),
+        OsString::from("step-3"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-3"),
+        OsString::from("--action"),
+        OsString::from("apply.patch"),
+        OsString::from("--result-class"),
+        OsString::from("accepted"),
+        OsString::from("--witness-ref"),
+        OsString::from("artifacts/ciwitness/w3.json"),
+        OsString::from("--finished-at"),
+        OsString::from("2026-02-22T00:03:00Z"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_append_3);
+
+    let out_latest = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("query"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("latest"),
+        OsString::from("--limit"),
+        OsString::from("2"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_latest);
+    let latest = parse_json_stdout(&out_latest);
+    assert_eq!(latest["action"], "harness-trajectory.query");
+    assert_eq!(
+        latest["projectionKind"],
+        "premath.harness.trajectory.projection.v1"
+    );
+    assert_eq!(latest["mode"], "latest");
+    assert_eq!(latest["count"], 2);
+    assert_eq!(latest["totalCount"], 3);
+    assert_eq!(latest["failedCount"], 2);
+    assert_eq!(latest["retryNeededCount"], 1);
+    assert_eq!(latest["items"][0]["stepId"], "step-3");
+    assert_eq!(latest["items"][1]["stepId"], "step-2");
+
+    let out_failed = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("query"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("failed"),
+        OsString::from("--limit"),
+        OsString::from("10"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_failed);
+    let failed = parse_json_stdout(&out_failed);
+    assert_eq!(failed["mode"], "failed");
+    assert_eq!(failed["count"], 2);
+    assert_eq!(failed["items"][0]["stepId"], "step-2");
+    assert_eq!(failed["items"][1]["stepId"], "step-1");
+
+    let out_retry = run_premath([
+        OsString::from("harness-trajectory"),
+        OsString::from("query"),
+        OsString::from("--path"),
+        path.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("retry-needed"),
+        OsString::from("--limit"),
+        OsString::from("10"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_retry);
+    let retry = parse_json_stdout(&out_retry);
+    assert_eq!(retry["mode"], "retry_needed");
+    assert_eq!(retry["count"], 1);
+    assert_eq!(retry["items"][0]["stepId"], "step-1");
 }

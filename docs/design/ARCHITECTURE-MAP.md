@@ -20,6 +20,7 @@ Scope: design-level, non-normative
 - `specs/premath/raw/TUSK-CORE.md`
 - `specs/premath/raw/SQUEAK-CORE.md`
 - `specs/premath/raw/SQUEAK-SITE.md`
+- harness overlay (design): `docs/design/TUSK-HARNESS-CONTRACT.md`
 
 `CI/Control` (one layer, two roles):
 - `specs/premath/raw/PREMATH-CI.md`
@@ -40,6 +41,7 @@ Role split inside CI/Control:
 - `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
 - `tools/conformance/check_doctrine_site.py`
+- `tools/conformance/check_doctrine_mcp_parity.py`
 - `tools/conformance/run_doctrine_inf_vectors.py`
 - `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
 - `hk.pkl`, `.mise.toml`
@@ -59,7 +61,8 @@ DOCTRINE-INF
         -> tools/ci/run_required_checks.py
         -> tools/ci/verify_required_witness.py
         -> tools/ci/run_gate.sh
-  -> tools/conformance/check_doctrine_site.py / run_doctrine_inf_vectors.py
+  -> tools/conformance/check_doctrine_site.py /
+     check_doctrine_mcp_parity.py / run_doctrine_inf_vectors.py
   -> hk/mise tasks (.mise baseline + ci-required-attested)
   -> CIWitness artifacts
   -> conformance + doctrine-site checks
@@ -122,6 +125,9 @@ Loop intent:
 Baseline gate (`mise run baseline`) enforces:
 - setup/lint/build/test/toy suites,
 - conformance + traceability + coherence-check + docs-coherence + doctrine closure,
+- doctrine closure includes doctrine-site roundtrip/reachability plus MCP
+  doctrine-operation parity (`check_doctrine_site.py`,
+  `check_doctrine_mcp_parity.py`),
 - CI/control-plane wiring, pipeline, observation, instruction, and drift-budget checks,
 - executable fixture-suite closure (`mise run conformance-run`).
 
@@ -155,19 +161,31 @@ Instruction doctrine is executable via:
 
 ## 7. Unification Execution Order (Current)
 
-Current sequencing is tracked in `.premath/issues.jsonl` with one active epic:
+Current sequencing is tracked in `.premath/issues.jsonl` with active unification
+work resolved dynamically via `premath issue ready`.
 
-- `bd-116` — Control-plane lifecycle coherence: one contract, one checker truth.
-- `bd-117` — schemaLifecycle checker enforcement in gate-chain parity.
-- `bd-118` — architecture map refresh + coherence pass.
-- `bd-119` — schemaLifecycle epoch-discipline enforcement in CI.
+Canonical ordering for active work is architecture-first:
+
+1. lane/site/adjoint architecture slice,
+2. spec-index + doctrine-site glue slice,
+3. control-plane typed-contract/checker parity slice,
+4. implementation slice,
+5. conformance/closure slice.
+
+Operational companion:
+- `docs/design/MULTITHREAD-LANE-SITE-ADJOINTS.md`
+- `docs/design/DEVELOPMENT-META-LOOP.md`
 
 Operational rule:
-- keep this section as a pointer to the issue graph, not a static duplicate task
-  backlog.
+- treat this section as a pointer only; use `premath issue ready` /
+  `premath issue list` for authoritative ordering.
+- for a compact status snapshot of `Ev`/coherence/issue posture, see
+  `docs/design/EV-COHERENCE-OVERVIEW.md`.
 
 Execution notes:
 - keep semantic authority in kernel/gate paths; do not move admissibility into
   checker/profile/CI wrappers.
 - keep cross-lane pullback/base-change claims routed through typed
   span/square witnesses.
+- keep capability composition explicit (`change_morphisms`,
+  `adjoints_sites`, `squeak_site`) with no implicit authority escalation.

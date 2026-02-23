@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "lease_contention_active"
+  ],
+  "assertions": [
+    "composed external profile preserves kernel verdict for paired scenario",
+    "composed external profile preserves Gate failure classes for paired scenario"
+  ]
+}

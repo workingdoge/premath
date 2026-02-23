@@ -22,7 +22,7 @@ pub fn run(surface: String, bind: String) {
     println!("    GET /latest");
     println!("    GET /needs-attention");
     println!("    GET /instruction?id=<instruction_id>");
-    println!("    GET /projection?digest=<projection_digest>");
+    println!("    GET /projection?digest=<projection_digest>[&match=typed|compatibility_alias]");
 
     if let Err(e) = serve_observation_api(config) {
         eprintln!("error: observation API failed: {e}");

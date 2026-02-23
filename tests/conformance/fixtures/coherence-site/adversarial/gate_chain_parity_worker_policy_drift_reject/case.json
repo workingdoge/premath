@@ -1,0 +1,95 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "obligationId": "gate_chain_parity",
+  "artifacts": {
+    "controlPlaneContract": {
+      "schema": 1,
+      "contractKind": "premath.control_plane.contract.v1",
+      "evidenceLanes": {
+        "semanticDoctrine": "semantic_doctrine",
+        "strictChecker": "strict_checker",
+        "witnessCommutation": "witness_commutation",
+        "runtimeTransport": "runtime_transport"
+      },
+      "laneArtifactKinds": {
+        "semantic_doctrine": [
+          "kernel_obligation",
+          "gate_failure_class",
+          "adjoint_site_obligation"
+        ],
+        "strict_checker": [
+          "coherence_obligation",
+          "cwf_strict_equality"
+        ],
+        "witness_commutation": [
+          "span_ref",
+          "square_witness"
+        ],
+        "runtime_transport": [
+          "squeak_transport_witness",
+          "squeak_site_witness"
+        ]
+      },
+      "laneOwnership": {
+        "checkerCoreOnlyObligations": [
+          "cwf_substitution_identity",
+          "cwf_substitution_composition",
+          "cwf_comprehension_beta",
+          "cwf_comprehension_eta"
+        ],
+        "requiredCrossLaneWitnessRoute": {
+          "pullbackBaseChange": "span_square_commutation"
+        }
+      },
+      "laneFailureClasses": [
+        "lane_unknown",
+        "lane_kind_unbound",
+        "lane_ownership_violation",
+        "lane_route_missing"
+      ],
+      "requiredGateProjection": {
+        "projectionPolicy": "ci-topos-v0",
+        "checkOrder": [
+          "baseline"
+        ]
+      },
+      "requiredWitness": {
+        "witnessKind": "ci.required.v1",
+        "decisionKind": "ci.required.decision.v1"
+      },
+      "instructionWitness": {
+        "witnessKind": "ci.instruction.v1",
+        "policyKind": "ci.instruction.policy.v1",
+        "policyDigestPrefix": "pol1_"
+      },
+      "workerLaneAuthority": {
+        "mutationPolicy": {
+          "defaultMode": "instruction-linked",
+          "allowedModes": [
+            "instruction-linked",
+            "human-override"
+          ],
+          "compatibilityOverrides": [
+            {
+              "mode": "human-override",
+              "supportUntilEpoch": "2026-01",
+              "requiresReason": false
+            }
+          ]
+        },
+        "mutationRoutes": {
+          "issueClaim": "capabilities.change_morphisms.issue_claim",
+          "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
+          "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
+          "issueDiscover": "capabilities.change_morphisms.issue_discover"
+        },
+        "failureClasses": {
+          "policyDrift": "worker_lane_policy_drift",
+          "mutationModeDrift": "worker_lane_mutation_mode_drift",
+          "routeUnbound": "worker_lane_route_unbound"
+        }
+      }
+    }
+  }
+}

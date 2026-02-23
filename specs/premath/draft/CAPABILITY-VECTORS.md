@@ -248,12 +248,17 @@ Required vectors when claimed:
 - golden: boundary authority lineage remains coherent across kernel obligation
   registry mapping, proposal discharge classes, coherence checker scope
   obligations, and CI semantic witness failure classes.
+- golden: cross-layer obstruction rows roundtrip deterministically between
+  source failure classes and typed constructors (`semantic`, `structural`,
+  `lifecycle`, `commutation`) with stable issue-discovery tags.
 - adversarial: mismatched verdict class or required/executed check sets for the
   same instruction envelope reject deterministically.
 - adversarial: required-gate witness digest/source/projection mismatches reject
   deterministically.
 - adversarial: obligation-registry mapping mismatches reject deterministically.
 - adversarial: stale generated doctrine-site digest material rejects
+  deterministically.
+- adversarial: obstruction constructor/class roundtrip mismatches reject
   deterministically.
 - invariance: local/external execution profiles preserve kernel verdict and Gate
   failure classes for paired instruction, required-gate, and boundary-authority

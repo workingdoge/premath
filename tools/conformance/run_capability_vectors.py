@@ -55,6 +55,61 @@ ADJOINTS_SITES_REQUIRED_OBLIGATIONS = {
     "refinement_invariance",
 }
 REQUIRED_CROSS_LANE_ROUTE = "span_square_commutation"
+OBSTRUCTION_CLASS_TO_CONSTRUCTOR: Dict[str, Tuple[str, str, str]] = {
+    "stability_failure": ("semantic", "stability", "stability_failure"),
+    "locality_failure": ("semantic", "locality", "locality_failure"),
+    "descent_failure": ("semantic", "descent", "descent_failure"),
+    "glue_non_contractible": ("semantic", "contractibility", "glue_non_contractible"),
+    "adjoint_triple_coherence_failure": (
+        "semantic",
+        "adjoint_triple",
+        "adjoint_triple_coherence_failure",
+    ),
+    "coherence.cwf_substitution_identity.violation": (
+        "structural",
+        "cwf_substitution_identity",
+        "coherence.cwf_substitution_identity.violation",
+    ),
+    "coherence.cwf_substitution_composition.violation": (
+        "structural",
+        "cwf_substitution_composition",
+        "coherence.cwf_substitution_composition.violation",
+    ),
+    "coherence.span_square_commutation.violation": (
+        "commutation",
+        "span_square_commutation",
+        "coherence.span_square_commutation.violation",
+    ),
+    "decision_witness_sha_mismatch": (
+        "lifecycle",
+        "decision_attestation",
+        "decision_witness_sha_mismatch",
+    ),
+    "decision_delta_sha_mismatch": (
+        "lifecycle",
+        "decision_delta_attestation",
+        "decision_delta_sha_mismatch",
+    ),
+    "unification.evidence_factorization.missing": (
+        "lifecycle",
+        "evidence_factorization_missing",
+        "unification.evidence_factorization.missing",
+    ),
+    "unification.evidence_factorization.ambiguous": (
+        "lifecycle",
+        "evidence_factorization_ambiguous",
+        "unification.evidence_factorization.ambiguous",
+    ),
+    "unification.evidence_factorization.unbound": (
+        "lifecycle",
+        "evidence_factorization_unbound",
+        "unification.evidence_factorization.unbound",
+    ),
+}
+OBSTRUCTION_CONSTRUCTOR_TO_CANONICAL: Dict[Tuple[str, str], str] = {
+    (family, tag): canonical
+    for family, tag, canonical in OBSTRUCTION_CLASS_TO_CONSTRUCTOR.values()
+}
 
 
 @dataclass(frozen=True)
@@ -79,6 +134,18 @@ def canonical_json(value: Any) -> str:
 
 def stable_hash(value: Any) -> str:
     return hashlib.sha256(canonical_json(value).encode("utf-8")).hexdigest()
+
+
+def compute_typed_core_projection_digest(
+    authority_payload_digest: str,
+    normalizer_id: str,
+    policy_digest: str,
+) -> str:
+    h = hashlib.sha256()
+    for part in (authority_payload_digest, normalizer_id, policy_digest):
+        h.update(part.encode("utf-8"))
+        h.update(b"\x00")
+    return "ev1_" + h.hexdigest()
 
 
 def normalize_semantics(value: Any) -> Any:
@@ -1206,8 +1273,23 @@ def evaluate_adjoints_sites_cross_lane_contract(
     artifacts: Dict[str, Any],
     label_prefix: str = "artifacts",
 ) -> Optional[VectorOutcome]:
-    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
-    if CAPABILITY_ADJOINTS_SITES not in claimed or CAPABILITY_SQUEAK_SITE not in claimed:
+    return evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(CAPABILITY_ADJOINTS_SITES, CAPABILITY_SQUEAK_SITE),
+        label_prefix=label_prefix,
+    )
+
+
+def evaluate_cross_lane_span_square_contract(
+    artifacts: Dict[str, Any],
+    *,
+    required_capabilities: Sequence[str],
+    label_prefix: str = "artifacts",
+) -> Optional[VectorOutcome]:
+    claimed = set(
+        ensure_string_list(artifacts.get("claimedCapabilities", []), f"{label_prefix}.claimedCapabilities")
+    )
+    if not set(required_capabilities).issubset(claimed):
         return VectorOutcome("rejected", "rejected", ["cross_lane_capability_missing"])
 
     route_obj = artifacts.get("crossLaneRoute")
@@ -1572,6 +1654,39 @@ def evaluate_ci_boundary_authority_lineage(case: Dict[str, Any]) -> VectorOutcom
     ci_witness_raw = artifacts.get("ciWitness")
     if not isinstance(ci_witness_raw, dict):
         raise ValueError("artifacts.ciWitness must be an object")
+    ci_typed_core_projection_digest = ensure_string(
+        ci_witness_raw.get("typedCoreProjectionDigest"),
+        "artifacts.ciWitness.typedCoreProjectionDigest",
+    )
+    ci_authority_payload_digest = ensure_string(
+        ci_witness_raw.get("authorityPayloadDigest"),
+        "artifacts.ciWitness.authorityPayloadDigest",
+    )
+    ci_normalizer_id = ensure_string(
+        ci_witness_raw.get("normalizerId"),
+        "artifacts.ciWitness.normalizerId",
+    )
+    ci_policy_digest = ensure_string(
+        ci_witness_raw.get("policyDigest"),
+        "artifacts.ciWitness.policyDigest",
+    )
+    expected_ci_typed_core_projection_digest = compute_typed_core_projection_digest(
+        ci_authority_payload_digest,
+        ci_normalizer_id,
+        ci_policy_digest,
+    )
+    if ci_typed_core_projection_digest != expected_ci_typed_core_projection_digest:
+        failures.append("boundary_authority_lineage_mismatch")
+    if ci_typed_core_projection_digest == ci_authority_payload_digest:
+        failures.append("boundary_authority_lineage_mismatch")
+    ci_projection_digest = ci_witness_raw.get("projectionDigest")
+    if ci_projection_digest is not None:
+        ci_projection_digest_value = ensure_string(
+            ci_projection_digest,
+            "artifacts.ciWitness.projectionDigest",
+        )
+        if ci_projection_digest_value != ci_authority_payload_digest:
+            failures.append("boundary_authority_lineage_mismatch")
     ci_semantic_failure_classes = canonical_check_set(
         ci_witness_raw.get("semanticFailureClasses", []),
         "artifacts.ciWitness.semanticFailureClasses",
@@ -1659,6 +1774,110 @@ def evaluate_ci_boundary_authority_lineage(case: Dict[str, Any]) -> VectorOutcom
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_ci_obstruction_roundtrip(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_CI_WITNESSES not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    input_data = artifacts.get("input")
+    if input_data is not None and not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object when present")
+    kernel_verdict = "accepted"
+    gate_failure_classes: List[str] = []
+    if isinstance(input_data, dict):
+        kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+        if kernel_verdict not in {"accepted", "rejected"}:
+            raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+        gate_failure_classes = canonical_check_set(
+            input_data.get("gateFailureClasses", []),
+            "artifacts.input.gateFailureClasses",
+        )
+
+    roundtrip = artifacts.get("obstructionRoundtrip")
+    if not isinstance(roundtrip, dict):
+        raise ValueError("artifacts.obstructionRoundtrip must be an object")
+    rows = roundtrip.get("rows")
+    if not isinstance(rows, list) or not rows:
+        raise ValueError("artifacts.obstructionRoundtrip.rows must be a non-empty list")
+
+    failures: List[str] = []
+    observed_families: List[str] = []
+    observed_issue_tags: List[str] = []
+    for idx, row in enumerate(rows):
+        if not isinstance(row, dict):
+            raise ValueError(f"artifacts.obstructionRoundtrip.rows[{idx}] must be an object")
+        source_class = ensure_string(
+            row.get("sourceClass"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].sourceClass",
+        )
+        expected_constructor_raw = row.get("expectedConstructor")
+        if not isinstance(expected_constructor_raw, dict):
+            raise ValueError(
+                f"artifacts.obstructionRoundtrip.rows[{idx}].expectedConstructor must be an object"
+            )
+        expected_family = ensure_string(
+            expected_constructor_raw.get("family"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].expectedConstructor.family",
+        )
+        expected_tag = ensure_string(
+            expected_constructor_raw.get("tag"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].expectedConstructor.tag",
+        )
+        expected_canonical = ensure_string(
+            row.get("expectedCanonicalClass"),
+            f"artifacts.obstructionRoundtrip.rows[{idx}].expectedCanonicalClass",
+        )
+
+        mapped = OBSTRUCTION_CLASS_TO_CONSTRUCTOR.get(source_class)
+        if mapped is None:
+            failures.append("obstruction_roundtrip_unknown_class")
+            continue
+        mapped_family, mapped_tag, mapped_canonical = mapped
+        observed_families.append(mapped_family)
+        observed_issue_tags.append(f"obs.{mapped_family}.{mapped_tag}")
+
+        if (
+            expected_family != mapped_family
+            or expected_tag != mapped_tag
+            or expected_canonical != mapped_canonical
+        ):
+            failures.append("obstruction_roundtrip_mismatch")
+            continue
+
+        roundtrip_canonical = OBSTRUCTION_CONSTRUCTOR_TO_CANONICAL.get((expected_family, expected_tag))
+        if roundtrip_canonical != expected_canonical:
+            failures.append("obstruction_roundtrip_mismatch")
+
+    required_families = canonical_check_set(
+        roundtrip.get("requiredFamilies", []),
+        "artifacts.obstructionRoundtrip.requiredFamilies",
+    )
+    if required_families:
+        missing_families = sorted(set(required_families) - set(observed_families))
+        if missing_families:
+            failures.append("obstruction_roundtrip_mismatch")
+
+    issue_projection = roundtrip.get("issueProjection")
+    if issue_projection is not None:
+        if not isinstance(issue_projection, dict):
+            raise ValueError("artifacts.obstructionRoundtrip.issueProjection must be an object")
+        expected_tags = canonical_check_set(
+            issue_projection.get("expectedTags", []),
+            "artifacts.obstructionRoundtrip.issueProjection.expectedTags",
+        )
+        if expected_tags != canonical_check_set(observed_issue_tags, "observedIssueTags"):
+            failures.append("obstruction_roundtrip_mismatch")
+
+    failure_classes = sorted(set(failures))
+    if failure_classes:
+        return VectorOutcome("rejected", "rejected", failure_classes)
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/instruction_witness_deterministic",
@@ -1697,11 +1916,18 @@ def evaluate_ci_witness_vector(vector_id: str, case: Dict[str, Any]) -> VectorOu
         return evaluate_ci_required_witness_delta_snapshot(case)
     if vector_id in {
         "golden/boundary_authority_lineage_accept",
+        "golden/obstruction_algebra_roundtrip_accept",
         "adversarial/boundary_authority_registry_mismatch_reject",
         "adversarial/boundary_authority_stale_generated_reject",
+        "adversarial/obstruction_algebra_roundtrip_mismatch_reject",
         "invariance/same_boundary_authority_local",
         "invariance/same_boundary_authority_external",
     }:
+        if vector_id in {
+            "golden/obstruction_algebra_roundtrip_accept",
+            "adversarial/obstruction_algebra_roundtrip_mismatch_reject",
+        }:
+            return evaluate_ci_obstruction_roundtrip(case)
         return evaluate_ci_boundary_authority_lineage(case)
     if vector_id in {
         "invariance/same_required_witness_local",
@@ -2101,6 +2327,103 @@ def evaluate_change_projection_issue_lease_release(case: Dict[str, Any]) -> Vect
             return VectorOutcome("rejected", "rejected", ["issue_lease_release_transition_mismatch"])
 
     return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_composed_issue_claim(case: Dict[str, Any]) -> VectorOutcome:
+    base_outcome = evaluate_change_projection_issue_claim(case)
+    if base_outcome.result != "accepted":
+        return base_outcome
+
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    contract_outcome = evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(
+            CAPABILITY_CHANGE_MORPHISMS,
+            CAPABILITY_ADJOINTS_SITES,
+            CAPABILITY_SQUEAK_SITE,
+        ),
+    )
+    if contract_outcome is not None:
+        return contract_outcome
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_composed_issue_lease_renew(case: Dict[str, Any]) -> VectorOutcome:
+    base_outcome = evaluate_change_projection_issue_lease_renew(case)
+    if base_outcome.result != "accepted":
+        return base_outcome
+
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    contract_outcome = evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(
+            CAPABILITY_CHANGE_MORPHISMS,
+            CAPABILITY_ADJOINTS_SITES,
+            CAPABILITY_SQUEAK_SITE,
+        ),
+    )
+    if contract_outcome is not None:
+        return contract_outcome
+    return VectorOutcome("accepted", "accepted", [])
+
+
+def evaluate_change_projection_composed_invariance(
+    case: Dict[str, Any],
+    mutation_evaluator: Callable[[Dict[str, Any]], VectorOutcome],
+) -> VectorOutcome:
+    profile = ensure_string(case.get("profile"), "profile")
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = canonical_check_set(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+
+    contract_outcome = evaluate_cross_lane_span_square_contract(
+        artifacts,
+        required_capabilities=(
+            CAPABILITY_CHANGE_MORPHISMS,
+            CAPABILITY_ADJOINTS_SITES,
+            CAPABILITY_SQUEAK_SITE,
+        ),
+    )
+    if contract_outcome is not None:
+        return contract_outcome
+
+    location_descriptor = artifacts.get("locationDescriptor")
+    if not isinstance(location_descriptor, dict):
+        raise ValueError("artifacts.locationDescriptor must be an object")
+    runtime_profile = ensure_string(location_descriptor.get("runtimeProfile"), "artifacts.locationDescriptor.runtimeProfile")
+    if profile != runtime_profile:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_profile_mismatch"])
+
+    mutation_outcome = mutation_evaluator(case)
+    mutation_failure_classes = sorted(set(mutation_outcome.gate_failure_classes))
+    if mutation_outcome.kernel_verdict != kernel_verdict:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_kernel_verdict_mismatch"])
+    if mutation_failure_classes != gate_failure_classes:
+        return VectorOutcome("rejected", "rejected", ["cross_lane_gate_failure_class_mismatch"])
+
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
+def evaluate_change_projection_composed_issue_claim_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    return evaluate_change_projection_composed_invariance(case, evaluate_change_projection_issue_claim)
+
+
+def evaluate_change_projection_composed_issue_lease_renew_invariance(case: Dict[str, Any]) -> VectorOutcome:
+    return evaluate_change_projection_composed_invariance(case, evaluate_change_projection_issue_lease_renew)
 
 
 def _extract_issue_ids(value: Any, label: str) -> List[str]:
@@ -2535,10 +2858,14 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "golden/issue_claim_reclaims_stale_lease":
         return evaluate_change_projection_issue_claim(case)
+    if vector_id == "golden/composed_issue_claim_sigpi_squeak_span_accept":
+        return evaluate_change_projection_composed_issue_claim(case)
     if vector_id == "golden/issue_discover_preserves_existing_and_links_discovered_from":
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "golden/issue_lease_renew_preserves_active_claim":
         return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id == "golden/composed_issue_lease_renew_sigpi_squeak_span_accept":
+        return evaluate_change_projection_composed_issue_lease_renew(case)
     if vector_id == "golden/issue_lease_release_reopens_issue":
         return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "golden/issue_ready_blocked_partition_coherent":
@@ -2554,6 +2881,31 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         "invariance/same_provider_wrapper_github_env",
     }:
         return evaluate_change_projection_provider_wrapper_invariance(case)
+    if vector_id in {
+        "invariance/same_composed_issue_claim_sigpi_squeak_span_local",
+        "invariance/same_composed_issue_claim_sigpi_squeak_span_external",
+    }:
+        return evaluate_change_projection_composed_issue_claim_invariance(case)
+    if vector_id in {
+        "invariance/same_composed_issue_lease_renew_sigpi_squeak_span_local",
+        "invariance/same_composed_issue_lease_renew_sigpi_squeak_span_external",
+    }:
+        return evaluate_change_projection_composed_issue_lease_renew_invariance(case)
+    if vector_id in {
+        "invariance/same_issue_claim_contention_local",
+        "invariance/same_issue_claim_contention_external",
+    }:
+        return evaluate_change_projection_issue_claim(case)
+    if vector_id in {
+        "invariance/same_issue_lease_renew_stale_local",
+        "invariance/same_issue_lease_renew_stale_external",
+    }:
+        return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id in {
+        "invariance/same_issue_lease_release_owner_mismatch_local",
+        "invariance/same_issue_lease_release_owner_mismatch_external",
+    }:
+        return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "adversarial/change_morphisms_requires_claim":
         return evaluate_change_projection_requires_claim(case)
     if vector_id == "adversarial/issue_ready_blocked_partition_mismatch_reject":
@@ -2564,12 +2916,18 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_discover(case)
     if vector_id == "adversarial/issue_claim_rejects_active_lease_contention":
         return evaluate_change_projection_issue_claim(case)
+    if vector_id == "adversarial/composed_issue_claim_cross_lane_capability_missing_reject":
+        return evaluate_change_projection_composed_issue_claim(case)
+    if vector_id == "adversarial/composed_issue_claim_span_route_missing_reject":
+        return evaluate_change_projection_composed_issue_claim(case)
     if vector_id == "adversarial/issue_claim_invalid_expiry_reject":
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "adversarial/issue_claim_invalid_ttl_reject":
         return evaluate_change_projection_issue_claim(case)
     if vector_id == "adversarial/issue_lease_renew_stale_reject":
         return evaluate_change_projection_issue_lease_renew(case)
+    if vector_id == "adversarial/composed_issue_lease_renew_transport_ref_mismatch_reject":
+        return evaluate_change_projection_composed_issue_lease_renew(case)
     if vector_id == "adversarial/issue_lease_release_owner_mismatch_reject":
         return evaluate_change_projection_issue_lease_release(case)
     if vector_id == "adversarial/issue_lease_release_id_mismatch_reject":

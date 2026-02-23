@@ -172,7 +172,8 @@ This enforces the current invariant gate:
 - coherence-contract obligation discharge validation,
 - docs-to-executable coherence validation,
 - drift-budget sentinel validation across docs/contracts/checkers/cache-closure,
-- doctrine-to-operation site coherence validation,
+- doctrine-to-operation site coherence validation (including MCP
+  doctrine-operation parity),
 - executable capability conformance vectors
   (`capabilities.normal_forms`, `capabilities.kcir_witnesses`,
   `capabilities.commitment_checkpoints`, `capabilities.squeak_site`,
@@ -213,6 +214,7 @@ mise run ci-required-verified
 mise run ci-required-attested
 mise run ci-pipeline-required
 mise run coherence-check
+mise run doctrine-check
 mise run ci-check
 mise run ci-instruction-check
 mise run ci-instruction-smoke
@@ -289,7 +291,9 @@ Observation surface (frontend/query projection):
   (`latest`, `needs_attention`, `instruction`, `projection`).
 - `mise run ci-observation-serve` starts a tiny UX HTTP read API over the same
   semantics (`GET /latest`, `GET /needs-attention`,
-  `GET /instruction?id=<instruction_id>`, `GET /projection?digest=<projection_digest>`).
+  `GET /instruction?id=<instruction_id>`,
+  `GET /projection?digest=<projection_digest>[&match=typed|compatibility_alias]`).
+  Projection lookup defaults to typed authority matching.
 - `mise run ci-observation-check` enforces that observation output is a pure
   projection of CI witness artifacts (no semantic drift).
 - `docs/observation/index.html` is a lightweight human-facing dashboard view
@@ -432,11 +436,17 @@ surface.
     (`capabilities.change_morphisms` + per-action claim or
     `capabilities.change_morphisms.all`).
   - data-plane tools: `init_tool`, `issue_ready`, `issue_list`,
-    `issue_backend_status`, `issue_blocked`, `issue_add`, `issue_claim`,
+    `issue_check`, `issue_backend_status`, `issue_blocked`, `issue_add`, `issue_claim`,
     `issue_lease_renew`, `issue_lease_release`, `issue_lease_projection`,
     `issue_discover`, `issue_update`, `dep_add`, `dep_remove`, `dep_replace`,
+    `dep_diagnostics`,
     `observe_latest`, `observe_needs_attention`, `observe_instruction`,
     `observe_projection`.
+  - operator flow (dependency integrity):
+    - pre-dispatch check: call `dep_diagnostics` with `graphScope=active` and
+      schedule work only when `integrity.hasCycle=false`.
+    - forensic check: call `dep_diagnostics` with `graphScope=full` to inspect
+      historical closed-cycle noise separately from active scheduling.
   - doctrine-gated tools: `instruction_check`, `instruction_run`
     (runs `tools/ci/pipeline_instruction.py` and emits CI witness artifacts).
 - `premath issue add "Title" --issues .premath/issues.jsonl --json`
@@ -449,6 +459,8 @@ surface.
   - reports backend integration state (canonical JSONL refs/errors, surreal query projection provenance/freshness, and JJ availability/head metadata).
 - `premath issue list --issues .premath/issues.jsonl --json`
   - lists issues with optional status/assignee filters.
+- `premath issue check --issues .premath/issues.jsonl --json`
+  - runs deterministic issue-memory contract checks (`epic` typing, active acceptance/verification sections, note-size warnings).
 - `premath issue ready --issues .premath/issues.jsonl --json`
   - returns open issues with no unresolved blocking dependencies.
 - `premath issue blocked --issues .premath/issues.jsonl --json`
@@ -461,8 +473,8 @@ surface.
   - removes one typed dependency edge.
 - `premath dep replace <issue-id> <depends-on-id> --from-type blocks --to-type related --issues .premath/issues.jsonl --json`
   - replaces one dependency edge type without manual JSONL edits.
-- `premath dep diagnostics --issues .premath/issues.jsonl --json`
-  - reports dependency graph integrity diagnostics (`hasCycle`, `cyclePath`).
+- `premath dep diagnostics --issues .premath/issues.jsonl --graph-scope active|full --json`
+  - reports scoped dependency graph integrity diagnostics (`graphScope`, `hasCycle`, `cyclePath`), defaulting to `active`.
 
 ### MCP Client Config Snippets
 

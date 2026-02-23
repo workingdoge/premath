@@ -178,8 +178,170 @@
       "requiresDeclaration": false
     },
     {
+      "id": "op/conformance.doctrine_mcp_parity",
+      "path": "tools/conformance/check_doctrine_mcp_parity.py",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "op/conformance.stub",
       "path": "tools/conformance/check_stub_invariance.py",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.session_bootstrap",
+      "path": "crates/premath-cli/src/commands/harness_session.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.session_read",
+      "path": "crates/premath-cli/src/commands/harness_session.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.session_write",
+      "path": "crates/premath-cli/src/commands/harness_session.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.dep_add",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.dep_diagnostics",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.dep_remove",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.dep_replace",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.init_tool",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.instruction_check",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.instruction_run",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_add",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_backend_status",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_blocked",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_check",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_claim",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_discover",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_lease_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_lease_release",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_lease_renew",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_list",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_ready",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.issue_update",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.observe_instruction",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.observe_latest",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.observe_needs_attention",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/mcp.observe_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -300,7 +462,34 @@
         "op/conformance.capability",
         "op/conformance.doctrine",
         "op/conformance.doctrine_inf",
+        "op/conformance.doctrine_mcp_parity",
         "op/conformance.stub",
+        "op/harness.session_bootstrap",
+        "op/harness.session_read",
+        "op/harness.session_write",
+        "op/mcp.dep_add",
+        "op/mcp.dep_diagnostics",
+        "op/mcp.dep_remove",
+        "op/mcp.dep_replace",
+        "op/mcp.init_tool",
+        "op/mcp.instruction_check",
+        "op/mcp.instruction_run",
+        "op/mcp.issue_add",
+        "op/mcp.issue_backend_status",
+        "op/mcp.issue_blocked",
+        "op/mcp.issue_check",
+        "op/mcp.issue_claim",
+        "op/mcp.issue_discover",
+        "op/mcp.issue_lease_projection",
+        "op/mcp.issue_lease_release",
+        "op/mcp.issue_lease_renew",
+        "op/mcp.issue_list",
+        "op/mcp.issue_ready",
+        "op/mcp.issue_update",
+        "op/mcp.observe_instruction",
+        "op/mcp.observe_latest",
+        "op/mcp.observe_needs_attention",
+        "op/mcp.observe_projection",
         "raw/CI-TOPOS"
       ]
     },
@@ -367,6 +556,45 @@
       ]
     },
     {
+      "id": "e.ci.op.dep_add",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.dep_add",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.dep_diagnostics",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.dep_diagnostics",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.dep_remove",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.dep_remove",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.dep_replace",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.dep_replace",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
       "id": "e.ci.op.doctrine",
       "from": "raw/PREMATH-CI",
       "to": "op/conformance.doctrine",
@@ -379,6 +607,223 @@
       "id": "e.ci.op.doctrine_inf",
       "from": "raw/PREMATH-CI",
       "to": "op/conformance.doctrine_inf",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.doctrine_mcp_parity",
+      "from": "raw/PREMATH-CI",
+      "to": "op/conformance.doctrine_mcp_parity",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_session_bootstrap",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.session_bootstrap",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_session_read",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.session_read",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_session_write",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.session_write",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.init_tool",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.init_tool",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.instruction_check",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.instruction_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.instruction_run",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.instruction_run",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_add",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_add",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_backend_status",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_backend_status",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_blocked",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_blocked",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_check",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_claim",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_claim",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_discover",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_discover",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_lease_projection",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_lease_projection",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_lease_release",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_lease_release",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_lease_renew",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_lease_renew",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_list",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_list",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_ready",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_ready",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_update",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.issue_update",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.observe_instruction",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.observe_instruction",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.observe_latest",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.observe_latest",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.observe_needs_attention",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.observe_needs_attention",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.observe_projection",
+      "from": "raw/PREMATH-CI",
+      "to": "op/mcp.observe_projection",
       "morphisms": [
         "dm.identity",
         "dm.presentation.projection"

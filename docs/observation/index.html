@@ -274,8 +274,16 @@
         <div class="value" id="mIssuePartition">-</div>
       </article>
       <article class="metric">
+        <div class="label">Dependency Cycles (A/F)</div>
+        <div class="value" id="mDepCycles">-</div>
+      </article>
+      <article class="metric">
         <div class="label">Stale/Contended Claims</div>
         <div class="value" id="mLeaseHealth">-</div>
+      </article>
+      <article class="metric">
+        <div class="label">Worker WIP</div>
+        <div class="value" id="mWorkerWip">-</div>
       </article>
     </section>
 
@@ -445,6 +453,14 @@
           partitionCoherent ? "ok" : "bad"
         );
 
+        const activeCycle = Boolean(coherence.dependencyIntegrity?.active?.hasCycle);
+        const fullCycle = Boolean(coherence.dependencyIntegrity?.full?.hasCycle);
+        setMetric(
+          "mDepCycles",
+          `${activeCycle ? "yes" : "no"}/${fullCycle ? "yes" : "no"}`,
+          activeCycle ? "bad" : (fullCycle ? "warn" : "ok")
+        );
+
         const staleCount = Number(coherence.leaseHealth?.staleCount || 0);
         const contendedCount = Number(coherence.leaseHealth?.contendedCount || 0);
         const leaseProblem = staleCount > 0 || contendedCount > 0;
@@ -452,6 +468,16 @@
           "mLeaseHealth",
           `${staleCount}/${contendedCount}`,
           leaseProblem ? "bad" : "ok"
+        );
+
+        const workerThroughput = coherence.workerLaneThroughput || {};
+        const workerCount = Number(workerThroughput.workerCount || 0);
+        const inProgressCount = Number(workerThroughput.inProgressCount || 0);
+        const unassignedInProgressCount = Number(workerThroughput.unassignedInProgressCount || 0);
+        setMetric(
+          "mWorkerWip",
+          `${workerCount}/${inProgressCount}/${unassignedInProgressCount}`,
+          unassignedInProgressCount > 0 ? "warn" : "ok"
         );
 
         if (needs.latestProjectionDigest) {

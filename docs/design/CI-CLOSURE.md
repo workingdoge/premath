@@ -28,6 +28,11 @@ Operational source of truth:
 - `tools/ci/pipeline_required.py`
 - `tools/ci/pipeline_instruction.py`
 
+Both provider-neutral wrappers enforce deterministic retry classification from
+`policies/control/harness-retry-policy-v1.json` before escalation.
+Terminal escalation actions can bind into issue-memory mutations when active
+issue context env is present (`PREMATH_ACTIVE_ISSUE_ID` / `PREMATH_ISSUE_ID`).
+
 Current full baseline gate (`mise run baseline`) includes:
 
 1. setup + language hygiene (`py-setup`, `rust-setup`, `fmt`, `lint`)
@@ -38,7 +43,8 @@ Current full baseline gate (`mise run baseline`) includes:
    - `coherence-check`
    - `docs-coherence-check`
    - `ci-drift-budget-check`
-   - `doctrine-check` (site coherence + doctrine-inf vectors)
+   - `doctrine-check` (site coherence + MCP doctrine-operation parity +
+     doctrine-inf vectors)
    - `conformance-run` (cached fixture suite runner)
 4. CI/control-plane closure
    - `ci-command-surface-check`

@@ -28,6 +28,7 @@ class ObservationSurfaceTests(unittest.TestCase):
                 {
                     "projectionPolicy": "ci-topos-v0",
                     "projectionDigest": "proj1_alpha",
+                    "typedCoreProjectionDigest": "ev1_alpha",
                     "deltaSource": "explicit",
                     "changedPaths": ["crates/premath-kernel/src/lib.rs"],
                 },
@@ -38,6 +39,7 @@ class ObservationSurfaceTests(unittest.TestCase):
                     "witnessKind": "ci.required.v1",
                     "projectionPolicy": "ci-topos-v0",
                     "projectionDigest": "proj1_alpha",
+                    "typedCoreProjectionDigest": "ev1_alpha",
                     "verdictClass": "accepted",
                     "requiredChecks": ["build", "test"],
                     "executedChecks": ["build", "test"],
@@ -49,6 +51,7 @@ class ObservationSurfaceTests(unittest.TestCase):
                 {
                     "decisionKind": "ci.required.decision.v1",
                     "projectionDigest": "proj1_alpha",
+                    "typedCoreProjectionDigest": "ev1_alpha",
                     "decision": "accept",
                     "reasonClass": "verified_accept",
                 },
@@ -70,7 +73,7 @@ class ObservationSurfaceTests(unittest.TestCase):
             summary = surface["summary"]
             self.assertEqual(summary["state"], "accepted")
             self.assertFalse(summary["needsAttention"])
-            self.assertEqual(summary["latestProjectionDigest"], "proj1_alpha")
+            self.assertEqual(summary["latestProjectionDigest"], "ev1_alpha")
             self.assertEqual(summary["requiredCheckCount"], 2)
             self.assertEqual(summary["changedPathCount"], 1)
             self.assertIn("coherence", summary)
@@ -124,6 +127,7 @@ class ObservationSurfaceTests(unittest.TestCase):
                     "witnessKind": "ci.required.v1",
                     "projectionPolicy": "ci-topos-v0",
                     "projectionDigest": "proj1_gamma",
+                    "typedCoreProjectionDigest": "ev1_gamma",
                     "verdictClass": "accepted",
                     "requiredChecks": ["build"],
                     "executedChecks": ["build"],
@@ -162,9 +166,35 @@ class ObservationSurfaceTests(unittest.TestCase):
             by_projection = observation_surface.query_surface(
                 surface,
                 mode="projection",
-                projection_digest="proj1_gamma",
+                projection_digest="ev1_gamma",
             )
             self.assertEqual(by_projection["required"]["projectionDigest"], "proj1_gamma")
+            self.assertEqual(by_projection["projectionMatch"], "typed")
+
+            by_projection_compat = observation_surface.query_surface(
+                surface,
+                mode="projection",
+                projection_digest="proj1_gamma",
+                projection_match="compatibility_alias",
+            )
+            self.assertEqual(
+                by_projection_compat["required"]["projectionDigest"], "proj1_gamma"
+            )
+            self.assertEqual(by_projection_compat["projectionMatch"], "compatibility_alias")
+
+            with self.assertRaises(ValueError):
+                observation_surface.query_surface(
+                    surface,
+                    mode="projection",
+                    projection_digest="proj1_gamma",
+                )
+            with self.assertRaises(ValueError):
+                observation_surface.query_surface(
+                    surface,
+                    mode="projection",
+                    projection_digest="ev1_gamma",
+                    projection_match="unknown",
+                )
 
             with self.assertRaises(ValueError):
                 observation_surface.query_surface(surface, mode="instruction")
@@ -287,6 +317,16 @@ class ObservationSurfaceTests(unittest.TestCase):
             self.assertEqual(coherence["instructionTyping"]["unknownCount"], 1)
             self.assertEqual(coherence["proposalRejectClasses"]["classCounts"]["proposal_unbound_policy"], 1)
             self.assertEqual(coherence["leaseHealth"]["staleCount"], 1)
+            self.assertFalse(coherence["dependencyIntegrity"]["active"]["hasCycle"])
+            self.assertFalse(coherence["dependencyIntegrity"]["full"]["hasCycle"])
+            throughput = coherence["workerLaneThroughput"]
+            self.assertEqual(throughput["inProgressCount"], 1)
+            self.assertEqual(throughput["unassignedInProgressCount"], 0)
+            self.assertEqual(throughput["workerCount"], 1)
+            self.assertEqual(throughput["activeLeaseCount"], 0)
+            self.assertEqual(throughput["staleLeaseCount"], 1)
+            self.assertEqual(throughput["perWorkerInProgress"][0]["worker"], "agent.alpha")
+            self.assertEqual(throughput["perWorkerInProgress"][0]["inProgressCount"], 1)
 
 
 if __name__ == "__main__":

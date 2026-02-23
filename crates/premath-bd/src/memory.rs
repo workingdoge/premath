@@ -7,10 +7,34 @@
 
 use crate::dependency::DepType;
 use crate::dependency::Dependency;
-use crate::issue::Issue;
+use crate::issue::{Issue, parse_issue_type};
+use crate::issue_graph::{IssueGraphCheckReport, check_issue_graph};
 use crate::jsonl::{JsonlError, read_issues_from_path, write_issues_to_path};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
+
+const STATUS_OPEN: &str = "open";
+const STATUS_IN_PROGRESS: &str = "in_progress";
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum DependencyGraphScope {
+    Active,
+    Full,
+}
+
+impl DependencyGraphScope {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Full => "full",
+        }
+    }
+}
+
+fn is_active_issue_status(status: &str) -> bool {
+    let normalized = status.trim().to_ascii_lowercase();
+    normalized == STATUS_OPEN || normalized == STATUS_IN_PROGRESS
+}
 
 /// Errors raised while loading or querying the memory store.
 #[derive(Debug, thiserror::Error)]
@@ -20,6 +44,12 @@ pub enum MemoryStoreError {
 
     #[error("issue not found: {0}")]
     IssueNotFound(String),
+
+    #[error("invalid issue_type for {issue_id}: {issue_type}")]
+    InvalidIssueType {
+        issue_id: String,
+        issue_type: String,
+    },
 
     #[error("dependency already exists: {issue_id} -> {depends_on_id} ({dep_type})")]
     DependencyAlreadyExists {
@@ -56,13 +86,32 @@ pub struct MemoryStore {
 }
 
 impl MemoryStore {
+    fn issue_in_scope(&self, issue: &Issue, scope: DependencyGraphScope) -> bool {
+        match scope {
+            DependencyGraphScope::Full => true,
+            DependencyGraphScope::Active => is_active_issue_status(&issue.status),
+        }
+    }
+
+    fn issue_id_in_scope(&self, issue_id: &str, scope: DependencyGraphScope) -> bool {
+        self.issue(issue_id)
+            .is_some_and(|issue| self.issue_in_scope(issue, scope))
+    }
+
     /// Build a store from fully-materialized issues.
     ///
     /// Duplicate IDs are resolved with deterministic last-write-wins semantics,
     /// matching append/overlay behavior in JSONL sync workflows.
     pub fn from_issues(issues: Vec<Issue>) -> Result<Self, MemoryStoreError> {
         let mut index = BTreeMap::new();
-        for issue in issues {
+        for mut issue in issues {
+            let issue_type = parse_issue_type(&issue.issue_type).ok_or_else(|| {
+                MemoryStoreError::InvalidIssueType {
+                    issue_id: issue.id.clone(),
+                    issue_type: issue.issue_type.clone(),
+                }
+            })?;
+            issue.issue_type = issue_type;
             let id = issue.id.clone();
             index.insert(id, issue);
         }
@@ -254,6 +303,20 @@ impl MemoryStore {
 
     /// Return one deterministic dependency path `start -> ... -> target` if reachable.
     pub fn find_dependency_path(&self, start: &str, target: &str) -> Option<Vec<String>> {
+        self.find_dependency_path_in_scope(start, target, DependencyGraphScope::Full)
+    }
+
+    /// Return one deterministic dependency path `start -> ... -> target` if reachable
+    /// within the requested graph scope.
+    pub fn find_dependency_path_in_scope(
+        &self,
+        start: &str,
+        target: &str,
+        scope: DependencyGraphScope,
+    ) -> Option<Vec<String>> {
+        if !self.issue_id_in_scope(start, scope) || !self.issue_id_in_scope(target, scope) {
+            return None;
+        }
         if self.issue(start).is_none() || self.issue(target).is_none() {
             return None;
         }
@@ -274,6 +337,7 @@ impl MemoryStore {
             let mut next_ids: Vec<String> = issue
                 .dependencies
                 .iter()
+                .filter(|dep| self.issue_id_in_scope(&dep.depends_on_id, scope))
                 .map(|dep| dep.depends_on_id.clone())
                 .collect();
             next_ids.sort();
@@ -298,7 +362,18 @@ impl MemoryStore {
 
     /// Return one deterministic cycle path if any cycle exists.
     pub fn find_any_dependency_cycle(&self) -> Option<Vec<String>> {
+        self.find_any_dependency_cycle_in_scope(DependencyGraphScope::Full)
+    }
+
+    /// Return one deterministic cycle path if any cycle exists in the selected graph scope.
+    pub fn find_any_dependency_cycle_in_scope(
+        &self,
+        scope: DependencyGraphScope,
+    ) -> Option<Vec<String>> {
         for issue in self.issues() {
+            if !self.issue_in_scope(issue, scope) {
+                continue;
+            }
             let mut deps = issue.dependencies.clone();
             deps.sort_by(|left, right| {
                 (
@@ -313,7 +388,12 @@ impl MemoryStore {
                     ))
             });
             for dep in deps {
-                if let Some(path) = self.find_dependency_path(&dep.depends_on_id, &issue.id) {
+                if !self.issue_id_in_scope(&dep.depends_on_id, scope) {
+                    continue;
+                }
+                if let Some(path) =
+                    self.find_dependency_path_in_scope(&dep.depends_on_id, &issue.id, scope)
+                {
                     let mut cycle = vec![issue.id.clone()];
                     cycle.extend(path);
                     return Some(cycle);
@@ -371,6 +451,11 @@ impl MemoryStore {
         }
 
         ready
+    }
+
+    /// Run deterministic issue-graph contract checks against this store.
+    pub fn check_issue_graph(&self, note_warn_threshold: usize) -> IssueGraphCheckReport {
+        check_issue_graph(self, note_warn_threshold)
     }
 }
 
@@ -662,6 +747,43 @@ mod tests {
                 "bd-c".to_string(),
                 "bd-a".to_string()
             ]
+        );
+    }
+
+    #[test]
+    fn scoped_cycle_diagnostics_ignore_closed_cycles_for_active_scope() {
+        let dep_ab = Dependency {
+            issue_id: "bd-a".to_string(),
+            depends_on_id: "bd-b".to_string(),
+            dep_type: crate::dependency::DepType::Blocks,
+            created_by: String::new(),
+        };
+        let dep_ba = Dependency {
+            issue_id: "bd-b".to_string(),
+            depends_on_id: "bd-a".to_string(),
+            dep_type: crate::dependency::DepType::Blocks,
+            created_by: String::new(),
+        };
+        let store = MemoryStore::from_issues(vec![
+            issue("bd-a", "closed", vec![dep_ab]),
+            issue("bd-b", "closed", vec![dep_ba]),
+            issue("bd-c", "open", vec![]),
+        ])
+        .expect("store should build");
+
+        assert!(
+            store
+                .find_any_dependency_cycle_in_scope(DependencyGraphScope::Active)
+                .is_none(),
+            "closed-only cycle should be ignored in active scope"
+        );
+        assert_eq!(
+            store.find_any_dependency_cycle_in_scope(DependencyGraphScope::Full),
+            Some(vec![
+                "bd-a".to_string(),
+                "bd-b".to_string(),
+                "bd-a".to_string()
+            ])
         );
     }
 }
