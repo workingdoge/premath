@@ -47,6 +47,7 @@ run = "cargo run --package premath-cli -- coherence-check --contract specs/prema
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
+  "python3 tools/conformance/check_doctrine_mcp_parity.py",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
 
@@ -150,6 +151,7 @@ run = [
   "python3 tools/conformance/test_docs_coherence.py",
   "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
+  "python3 tools/conformance/test_doctrine_mcp_parity.py",
 ]
 
 [tasks.ci-observation-build]

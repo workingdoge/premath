@@ -41,6 +41,7 @@ Role split inside CI/Control:
 - `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
 - `tools/conformance/check_doctrine_site.py`
+- `tools/conformance/check_doctrine_mcp_parity.py`
 - `tools/conformance/run_doctrine_inf_vectors.py`
 - `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
 - `hk.pkl`, `.mise.toml`
@@ -60,7 +61,8 @@ DOCTRINE-INF
         -> tools/ci/run_required_checks.py
         -> tools/ci/verify_required_witness.py
         -> tools/ci/run_gate.sh
-  -> tools/conformance/check_doctrine_site.py / run_doctrine_inf_vectors.py
+  -> tools/conformance/check_doctrine_site.py /
+     check_doctrine_mcp_parity.py / run_doctrine_inf_vectors.py
   -> hk/mise tasks (.mise baseline + ci-required-attested)
   -> CIWitness artifacts
   -> conformance + doctrine-site checks
@@ -123,6 +125,9 @@ Loop intent:
 Baseline gate (`mise run baseline`) enforces:
 - setup/lint/build/test/toy suites,
 - conformance + traceability + coherence-check + docs-coherence + doctrine closure,
+- doctrine closure includes doctrine-site roundtrip/reachability plus MCP
+  doctrine-operation parity (`check_doctrine_site.py`,
+  `check_doctrine_mcp_parity.py`),
 - CI/control-plane wiring, pipeline, observation, instruction, and drift-budget checks,
 - executable fixture-suite closure (`mise run conformance-run`).
 

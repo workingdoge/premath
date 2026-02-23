@@ -147,10 +147,23 @@ Worker-operation doctrine-site routing note:
 - Mutation/session operation surfaces for
   `capabilities.change_morphisms` are mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
-  (`op/mcp.issue_claim`, `op/mcp.issue_lease_renew`,
-  `op/mcp.issue_lease_release`, `op/mcp.issue_discover`,
+  (`op/mcp.issue_add`, `op/mcp.issue_update`, `op/mcp.issue_claim`,
+  `op/mcp.issue_lease_renew`, `op/mcp.issue_lease_release`,
+  `op/mcp.issue_discover`, `op/mcp.dep_add`, `op/mcp.dep_remove`,
+  `op/mcp.dep_replace`,
   `op/harness.session_read`, `op/harness.session_write`,
   `op/harness.session_bootstrap`).
+- Read-only dependency integrity projection route is also mapped in
+  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
+  (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
+  `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
+  `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
+- Instruction/observation/init MCP surfaces are also mapped in
+  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
+  (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
+  `op/mcp.observe_latest`, `op/mcp.observe_needs_attention`,
+  `op/mcp.observe_instruction`, `op/mcp.observe_projection`,
+  `op/mcp.init_tool`).
 
 ### 5.5 Informative and optional
 

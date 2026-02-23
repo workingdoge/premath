@@ -13,6 +13,12 @@ Normative authority remains in:
 
 This document is operational guidance for execution order only.
 
+Status note:
+
+- Stage 3 issue IDs listed below are historical execution references.
+- Authoritative active work ordering is always `.premath/issues.jsonl` queried
+  via `premath issue ready` / `premath issue list`.
+
 ## 1) Stage3 Task Order
 
 Execute in this order to avoid drift:

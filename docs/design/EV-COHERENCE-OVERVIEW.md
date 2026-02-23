@@ -49,9 +49,9 @@ Coherence role:
 
 Issue-memory posture:
 
-- algebraic closure epic `bd-121` is closed (tasks `bd-122`..`bd-127` closed),
-- issue-note compaction `bd-129` is closed; note-size warnings reduced to zero,
-- current open issue: `bd-67` (reviewer-pool governance follow-up).
+- historical closure work (algebraic closure + note compaction) is complete,
+- active sequencing is dynamic and sourced from `.premath/issues.jsonl`,
+- docs do not carry authoritative "current issue" pointers.
 
 ## 4. Operational Invariants
 
@@ -81,9 +81,10 @@ Issue graph status:
 Near-term work is governance/operations unless a new implementation epic is
 opened for `§10.6` Stage 1 (typed-core dual projection).
 
-Current planning issue for this lane:
+Live roadmap source (authoritative):
 
-- `bd-140` (`[Ev] Stage 1 typed-core dual projection execution checklist`)
+- `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json`
+- `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json`
 
 If Stage 1 begins, keep scope minimal:
 

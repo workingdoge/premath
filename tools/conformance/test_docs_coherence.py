@@ -421,6 +421,7 @@ run = "echo ok"
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
+  "python3 tools/conformance/check_doctrine_mcp_parity.py",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
 """

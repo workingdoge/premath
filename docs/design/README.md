@@ -79,3 +79,12 @@ Design docs do not replace normative specs.
   - `specs/premath/raw/SQUEAK-CORE.md`
   - `specs/premath/raw/SQUEAK-SITE.md`
   - `specs/premath/raw/CI-TOPOS.md`
+
+## Live Roadmap Source
+
+Design docs may reference historical issue IDs, but active execution order is
+always read from issue memory:
+
+- `.premath/issues.jsonl`
+- `premath issue ready`
+- `premath issue list`

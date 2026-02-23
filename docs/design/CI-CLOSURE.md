@@ -43,7 +43,8 @@ Current full baseline gate (`mise run baseline`) includes:
    - `coherence-check`
    - `docs-coherence-check`
    - `ci-drift-budget-check`
-   - `doctrine-check` (site coherence + doctrine-inf vectors)
+   - `doctrine-check` (site coherence + MCP doctrine-operation parity +
+     doctrine-inf vectors)
    - `conformance-run` (cached fixture suite runner)
 4. CI/control-plane closure
    - `ci-command-surface-check`

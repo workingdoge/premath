@@ -172,7 +172,8 @@ This enforces the current invariant gate:
 - coherence-contract obligation discharge validation,
 - docs-to-executable coherence validation,
 - drift-budget sentinel validation across docs/contracts/checkers/cache-closure,
-- doctrine-to-operation site coherence validation,
+- doctrine-to-operation site coherence validation (including MCP
+  doctrine-operation parity),
 - executable capability conformance vectors
   (`capabilities.normal_forms`, `capabilities.kcir_witnesses`,
   `capabilities.commitment_checkpoints`, `capabilities.squeak_site`,
@@ -213,6 +214,7 @@ mise run ci-required-verified
 mise run ci-required-attested
 mise run ci-pipeline-required
 mise run coherence-check
+mise run doctrine-check
 mise run ci-check
 mise run ci-instruction-check
 mise run ci-instruction-smoke
@@ -440,6 +442,11 @@ surface.
     `dep_diagnostics`,
     `observe_latest`, `observe_needs_attention`, `observe_instruction`,
     `observe_projection`.
+  - operator flow (dependency integrity):
+    - pre-dispatch check: call `dep_diagnostics` with `graphScope=active` and
+      schedule work only when `integrity.hasCycle=false`.
+    - forensic check: call `dep_diagnostics` with `graphScope=full` to inspect
+      historical closed-cycle noise separately from active scheduling.
   - doctrine-gated tools: `instruction_check`, `instruction_run`
     (runs `tools/ci/pipeline_instruction.py` and emits CI witness artifacts).
 - `premath issue add "Title" --issues .premath/issues.jsonl --json`

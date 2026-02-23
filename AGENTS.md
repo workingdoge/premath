@@ -64,7 +64,7 @@
 - `mise run harness-coordinator-loop -- --worktree <path> [--worktree <path> ...] --rounds <n> --mutation-mode human-override --override-reason '<reason>'` — run deterministic coordinator round-robin dispatch over `N` worktrees under explicit auditable override.
 - `mise run harness-kpi-report` — emit canonical multithread throughput KPI benchmark from trajectory projections with deterministic threshold decision (`pass|watch|rollback|insufficient_data`).
 - `mise run conformance-run` — run executable fixture suites (Interop Core + Gate + Witness-ID + cross-model kernel profile + Tusk runtime contract vectors + capability vectors) through the cached suite runner.
-- `mise run doctrine-check` — validate doctrine declarations/site reachability plus doctrine-inf semantic boundary vectors (`specs/premath/draft/DOCTRINE-SITE.json`, `tests/conformance/fixtures/doctrine-inf/`).
+- `mise run doctrine-check` — validate doctrine declarations/site reachability, MCP doctrine-operation parity, and doctrine-inf semantic boundary vectors (`specs/premath/draft/DOCTRINE-SITE.json`, `tests/conformance/fixtures/doctrine-inf/`).
 - `mise run traceability-check` — validate promoted draft spec coverage matrix integrity (`specs/premath/draft/SPEC-TRACEABILITY.md`).
 - `mise run coherence-check` — evaluate typed coherence obligations from `specs/premath/draft/COHERENCE-CONTRACT.json` and emit deterministic checker witness output.
 - `mise run docs-coherence-check` — validate deterministic docs-to-executable coherence invariants (capability lists, baseline/projection check surfaces, and SPEC-INDEX capability-scoped normativity clauses).

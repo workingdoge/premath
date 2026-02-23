@@ -50,9 +50,35 @@ mise run harness-coordinator-loop -- \
 Determinism contract:
 
 - worktrees are processed in sorted path order,
+- dependency integrity is checked with `dep_diagnostics(graph_scope=active)`
+  before each scheduling pass,
 - each worker takes at most one issue per dispatch by default,
 - each round re-checks `issue_ready` before dispatch,
 - no secondary issue-memory authority is introduced.
+
+Operator flow example (dependency integrity preflight):
+
+```sh
+cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --graph-scope active --json
+```
+
+MCP tool call shape:
+
+```json
+{
+  "tool": "dep_diagnostics",
+  "arguments": {
+    "issuesPath": ".premath/issues.jsonl",
+    "graphScope": "active"
+  }
+}
+```
+
+For forensic review of historical closure cycles:
+
+```sh
+cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --graph-scope full --json
+```
 
 ## 4. Worker Loop Contract
 
@@ -88,6 +114,7 @@ Recovery sequence:
 
 1. inspect work frontier:
    - `issue_ready`
+   - `dep_diagnostics(graph_scope=active)`
    - `issue.blocked` / `issue_lease_projection` (MCP)
 2. if lease owner is known and cooperative:
    - `issue_lease_release(id, assignee?, lease_id?)`

@@ -38,6 +38,7 @@ Required effects:
 - resolve canonical memory roots (`.premath/issues.jsonl`,
   `.premath/harness_session.json`, `artifacts/ciwitness/*`,
   `artifacts/observation/latest.json`),
+- run dependency-integrity preflight (`dep_diagnostics` with `active` scope),
 - load previous session handoff summary (if present),
 - compute next actionable target from issue graph + policy bindings,
 - run baseline startup verification for current working scope.
@@ -105,7 +106,7 @@ Trajectory records are an operational lane, not semantic authority.
 
 | Harness clause | Current surface | Status |
 |---|---|---|
-| `boot` memory roots | `premath mcp-serve`, `.premath/issues.jsonl`, `artifacts/observation/latest.json` | partial |
+| `boot` memory roots | `premath mcp-serve`, `.premath/issues.jsonl`, `artifacts/observation/latest.json`, `dep_diagnostics(active)` | partial |
 | `boot` deterministic next feature | `harness-feature` ledger (`next`/`check`) + `harness-session bootstrap` projection | present |
 | `step` mutation authority | `instruction-linked` mutation policy in MCP + instruction witness checks | present |
 | `step` deterministic verification | `ci-required-attested` (`run_required_checks` + verify/decide) | present |

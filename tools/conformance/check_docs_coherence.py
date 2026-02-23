@@ -33,9 +33,23 @@ ROADMAP_AUTHORITY_MARKERS: Tuple[str, ...] = (
     "`.premath/issues.jsonl`",
     "`specs/process/decision-log.md`",
 )
+README_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "doctrine-to-operation site coherence validation (including MCP",
+    "mise run doctrine-check",
+)
+ARCHITECTURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "`tools/conformance/check_doctrine_mcp_parity.py`",
+    "doctrine-operation parity (`check_doctrine_site.py`,",
+    "`check_doctrine_mcp_parity.py`),",
+)
 EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
     "python3 tools/conformance/check_doctrine_site.py",
+    "python3 tools/conformance/check_doctrine_mcp_parity.py",
     "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
+)
+CI_CLOSURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "`doctrine-check` (site coherence + MCP doctrine-operation parity +",
+    "doctrine-inf vectors)",
 )
 UNIFICATION_EVIDENCE_MARKERS: Tuple[str, ...] = (
     "### 10.2 Universal factoring rule",
@@ -638,6 +652,7 @@ def main() -> int:
     readme = root / "README.md"
     conformance_readme = root / "tools" / "conformance" / "README.md"
     ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
+    architecture_map = root / "docs" / "design" / "ARCHITECTURE-MAP.md"
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
     unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
     span_square_checking = root / "specs" / "premath" / "draft" / "SPAN-SQUARE-CHECKING.md"
@@ -661,7 +676,9 @@ def main() -> int:
             errors.append(f"capability manifests include non-executable capabilities: {extra}")
 
     readme_caps = set(BACKTICK_CAP_RE.findall(load_text(readme)))
+    readme_text = load_text(readme)
     conformance_readme_caps = set(BACKTICK_CAP_RE.findall(load_text(conformance_readme)))
+    architecture_text = load_text(architecture_map)
 
     spec_index_text = load_text(spec_index)
     unification_text = load_text(unification_doctrine)
@@ -679,6 +696,14 @@ def main() -> int:
             "README capability list mismatch with executable capabilities: "
             f"expected=[{sorted_csv(executable_capabilities)}], got=[{sorted_csv(readme_caps)}]"
         )
+    missing_readme_doctrine_markers = find_missing_markers(readme_text, README_DOCTRINE_MARKERS)
+    for marker in missing_readme_doctrine_markers:
+        errors.append(f"README doctrine-check marker missing: {marker}")
+    missing_architecture_doctrine_markers = find_missing_markers(
+        architecture_text, ARCHITECTURE_DOCTRINE_MARKERS
+    )
+    for marker in missing_architecture_doctrine_markers:
+        errors.append(f"ARCHITECTURE-MAP doctrine marker missing: {marker}")
     if conformance_readme_caps != executable_capability_set:
         errors.append(
             "tools/conformance/README capability list mismatch with executable capabilities: "
@@ -805,6 +830,11 @@ def main() -> int:
             "CI-CLOSURE projected check ID list mismatch with CONTROL-PLANE-CONTRACT checkOrder: "
             f"expected=[{sorted_csv(projection_checks)}], got=[{sorted_csv(ci_projection_checks)}]"
         )
+    missing_ci_doctrine_markers = find_missing_markers(
+        ci_closure_text, CI_CLOSURE_DOCTRINE_MARKERS
+    )
+    for marker in missing_ci_doctrine_markers:
+        errors.append(f"CI-CLOSURE doctrine-check semantics missing marker: {marker}")
 
     doctrine_check_commands = parse_mise_task_commands(mise_text, "doctrine-check")
     if doctrine_check_commands != list(EXPECTED_DOCTRINE_CHECK_COMMANDS):

@@ -61,12 +61,13 @@ Worker mutation authority remains instruction-linked by default.
 
 ### 4.3 Worker loop (single-issue discipline)
 
-1. `issue_ready` (select target via dependency/priority order)
-2. claim/lease target
-3. execute bounded change
-4. run required verification commands
-5. if new work discovered: `issue_discover` + dependency edge
-6. write concise notes + refs, then close/release
+1. `dep_diagnostics(graph_scope=active)` preflight (fail closed on cycles)
+2. `issue_ready` (select target via dependency/priority order)
+3. claim/lease target
+4. execute bounded change
+5. run required verification commands
+6. if new work discovered: `issue_discover` + dependency edge
+7. write concise notes + refs, then close/release
 
 Never run multi-issue implicit sessions.
 
@@ -74,6 +75,11 @@ Canonical script surface:
 
 - `python3 tools/harness/multithread_loop.py worker`
 - `python3 tools/harness/multithread_loop.py coordinator`
+
+Diagnostic convention:
+
+- use `active` scope to gate scheduling (`ready` integrity),
+- use `full` scope for historical/forensic cycle review.
 
 ## 5. Lane Discipline
 
