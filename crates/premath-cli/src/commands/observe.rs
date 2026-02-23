@@ -180,6 +180,14 @@ fn print_coherence_summary(coherence: &Value) {
             yes_no(partition_coherent)
         );
     }
+    let active_cycle =
+        json_bool(coherence, "/dependencyIntegrity/active/hasCycle").unwrap_or(false);
+    let full_cycle = json_bool(coherence, "/dependencyIntegrity/full/hasCycle").unwrap_or(false);
+    println!(
+        "  dependency cycles (active/full): {}/{}",
+        yes_no(active_cycle),
+        yes_no(full_cycle)
+    );
     let stale = json_i64(coherence, "/leaseHealth/staleCount").unwrap_or(0);
     let contended = json_i64(coherence, "/leaseHealth/contendedCount").unwrap_or(0);
     if stale > 0 || contended > 0 {

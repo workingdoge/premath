@@ -317,6 +317,8 @@ class ObservationSurfaceTests(unittest.TestCase):
             self.assertEqual(coherence["instructionTyping"]["unknownCount"], 1)
             self.assertEqual(coherence["proposalRejectClasses"]["classCounts"]["proposal_unbound_policy"], 1)
             self.assertEqual(coherence["leaseHealth"]["staleCount"], 1)
+            self.assertFalse(coherence["dependencyIntegrity"]["active"]["hasCycle"])
+            self.assertFalse(coherence["dependencyIntegrity"]["full"]["hasCycle"])
             throughput = coherence["workerLaneThroughput"]
             self.assertEqual(throughput["inProgressCount"], 1)
             self.assertEqual(throughput["unassignedInProgressCount"], 0)

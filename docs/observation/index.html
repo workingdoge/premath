@@ -274,6 +274,10 @@
         <div class="value" id="mIssuePartition">-</div>
       </article>
       <article class="metric">
+        <div class="label">Dependency Cycles (A/F)</div>
+        <div class="value" id="mDepCycles">-</div>
+      </article>
+      <article class="metric">
         <div class="label">Stale/Contended Claims</div>
         <div class="value" id="mLeaseHealth">-</div>
       </article>
@@ -447,6 +451,14 @@
           "mIssuePartition",
           partitionCoherent ? "coherent" : "incoherent",
           partitionCoherent ? "ok" : "bad"
+        );
+
+        const activeCycle = Boolean(coherence.dependencyIntegrity?.active?.hasCycle);
+        const fullCycle = Boolean(coherence.dependencyIntegrity?.full?.hasCycle);
+        setMetric(
+          "mDepCycles",
+          `${activeCycle ? "yes" : "no"}/${fullCycle ? "yes" : "no"}`,
+          activeCycle ? "bad" : (fullCycle ? "warn" : "ok")
         );
 
         const staleCount = Number(coherence.leaseHealth?.staleCount || 0);

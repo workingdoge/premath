@@ -24,6 +24,7 @@ The dashboard shows both base state and coherence projections, including:
 - unknown instruction-classification rate,
 - proposal reject-class counts,
 - ready-vs-blocked partition integrity,
+- dependency-cycle integrity (`active`/`full` scope),
 - stale/contended lease claims,
 - worker-lane throughput projection (`workers/in-progress/unassigned`).
 

@@ -1,7 +1,7 @@
 use chrono::{DateTime, SecondsFormat, Utc};
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
-use std::collections::{BTreeMap, BTreeSet};
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::fs;
 use std::path::{Path, PathBuf};
 use thiserror::Error;
@@ -15,6 +15,7 @@ pub const REQUIRED_EVENT_KIND: &str = "ci.required.v1.summary";
 pub const REQUIRED_DECISION_EVENT_KIND: &str = "ci.required.decision.v1.summary";
 pub const INSTRUCTION_EVENT_KIND: &str = "ci.instruction.v1.summary";
 const BLOCKING_DEP_TYPES: &[&str] = &["blocks", "parent-child", "conditional-blocks", "waits-for"];
+const ACTIVE_ISSUE_STATUSES: &[&str] = &["open", "in_progress"];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -228,6 +229,139 @@ fn is_blocking_dep(dep: &serde_json::Map<String, Value>) -> bool {
 
 fn issue_depends_on_id(dep: &serde_json::Map<String, Value>) -> Option<String> {
     string_opt(dep.get("depends_on_id")).or_else(|| string_opt(dep.get("dependsOnId")))
+}
+
+#[derive(Clone, Copy)]
+enum DependencyCycleScope {
+    Active,
+    Full,
+}
+
+impl DependencyCycleScope {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Active => "active",
+            Self::Full => "full",
+        }
+    }
+}
+
+fn issue_status_label(row: &serde_json::Map<String, Value>) -> String {
+    string_opt(row.get("status"))
+        .unwrap_or_default()
+        .trim()
+        .to_ascii_lowercase()
+}
+
+fn issue_in_scope(row: &serde_json::Map<String, Value>, scope: DependencyCycleScope) -> bool {
+    match scope {
+        DependencyCycleScope::Full => true,
+        DependencyCycleScope::Active => {
+            ACTIVE_ISSUE_STATUSES.contains(&issue_status_label(row).as_str())
+        }
+    }
+}
+
+fn dependency_adjacency(
+    issue_rows: &[serde_json::Map<String, Value>],
+    scope: DependencyCycleScope,
+) -> BTreeMap<String, Vec<String>> {
+    let mut allowed_ids = BTreeSet::new();
+    for row in issue_rows {
+        if !issue_in_scope(row, scope) {
+            continue;
+        }
+        if let Some(issue_id) = string_opt(row.get("id")) {
+            allowed_ids.insert(issue_id);
+        }
+    }
+
+    let mut adjacency = BTreeMap::new();
+    for row in issue_rows {
+        if !issue_in_scope(row, scope) {
+            continue;
+        }
+        let Some(issue_id) = string_opt(row.get("id")) else {
+            continue;
+        };
+
+        let mut deps = Vec::new();
+        if let Some(Value::Array(rows)) = row.get("dependencies") {
+            for dep in rows {
+                let Value::Object(dep_row) = dep else {
+                    continue;
+                };
+                let Some(dep_id) = issue_depends_on_id(dep_row) else {
+                    continue;
+                };
+                if !allowed_ids.contains(&dep_id) {
+                    continue;
+                }
+                deps.push(dep_id);
+            }
+        }
+        deps.sort();
+        deps.dedup();
+        adjacency.insert(issue_id, deps);
+    }
+    adjacency
+}
+
+fn find_dependency_path_in_adjacency(
+    adjacency: &BTreeMap<String, Vec<String>>,
+    start: &str,
+    target: &str,
+) -> Option<Vec<String>> {
+    if !adjacency.contains_key(start) || !adjacency.contains_key(target) {
+        return None;
+    }
+    if start == target {
+        return Some(vec![start.to_string()]);
+    }
+
+    let mut queue: VecDeque<Vec<String>> = VecDeque::new();
+    let mut visited: BTreeSet<String> = BTreeSet::new();
+    queue.push_back(vec![start.to_string()]);
+    visited.insert(start.to_string());
+
+    while let Some(path) = queue.pop_front() {
+        let current = path.last()?;
+        let Some(next_ids) = adjacency.get(current) else {
+            continue;
+        };
+
+        for next in next_ids {
+            if next == target {
+                let mut found = path.clone();
+                found.push(next.clone());
+                return Some(found);
+            }
+            if visited.insert(next.clone()) {
+                let mut next_path = path.clone();
+                next_path.push(next.clone());
+                queue.push_back(next_path);
+            }
+        }
+    }
+
+    None
+}
+
+fn find_dependency_cycle_in_scope(
+    issue_rows: &[serde_json::Map<String, Value>],
+    scope: DependencyCycleScope,
+) -> Option<Vec<String>> {
+    let adjacency = dependency_adjacency(issue_rows, scope);
+    for (issue_id, dep_ids) in &adjacency {
+        for dep_id in dep_ids {
+            if let Some(path) = find_dependency_path_in_adjacency(&adjacency, dep_id, issue_id) {
+                let mut cycle = vec![issue_id.clone()];
+                cycle.extend(path);
+                return Some(cycle);
+            }
+        }
+    }
+    None
 }
 
 fn lease_expires_at(lease: &serde_json::Map<String, Value>) -> Option<DateTime<Utc>> {
@@ -757,6 +891,31 @@ fn coherence_lease_health(
     })
 }
 
+fn coherence_dependency_integrity(issue_rows: &[serde_json::Map<String, Value>]) -> Value {
+    let active_issue_count = issue_rows
+        .iter()
+        .filter(|row| issue_in_scope(row, DependencyCycleScope::Active))
+        .count() as u64;
+    let full_issue_count = issue_rows.len() as u64;
+    let active_cycle = find_dependency_cycle_in_scope(issue_rows, DependencyCycleScope::Active);
+    let full_cycle = find_dependency_cycle_in_scope(issue_rows, DependencyCycleScope::Full);
+
+    json!({
+        "active": {
+            "graphScope": DependencyCycleScope::Active.as_str(),
+            "issueCount": active_issue_count,
+            "hasCycle": active_cycle.is_some(),
+            "cyclePath": active_cycle
+        },
+        "full": {
+            "graphScope": DependencyCycleScope::Full.as_str(),
+            "issueCount": full_issue_count,
+            "hasCycle": full_cycle.is_some(),
+            "cyclePath": full_cycle
+        }
+    })
+}
+
 fn coherence_worker_lane_throughput(
     issue_rows: &[serde_json::Map<String, Value>],
     reference_time: Option<DateTime<Utc>>,
@@ -835,6 +994,7 @@ fn coherence_summary(
     let instruction_typing = coherence_instruction_typing(instructions);
     let proposal_reject_classes = coherence_proposal_reject_classes(instructions);
     let issue_partition = coherence_issue_partition(issue_rows);
+    let dependency_integrity = coherence_dependency_integrity(issue_rows);
     let reference_time = derive_reference_time(instructions, issue_rows);
     let lease_health = coherence_lease_health(issue_rows, reference_time);
     let worker_lane_throughput = coherence_worker_lane_throughput(issue_rows, reference_time);
@@ -870,6 +1030,14 @@ fn coherence_summary(
     {
         attention_reasons.push("issue_partition_incoherent".to_string());
     }
+    if dependency_integrity
+        .get("active")
+        .and_then(|row| row.get("hasCycle"))
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
+        attention_reasons.push("dependency_cycle_active".to_string());
+    }
     if lease_health
         .get("staleCount")
         .and_then(Value::as_u64)
@@ -892,6 +1060,7 @@ fn coherence_summary(
         "instructionTyping": instruction_typing,
         "proposalRejectClasses": proposal_reject_classes,
         "issuePartition": issue_partition,
+        "dependencyIntegrity": dependency_integrity,
         "leaseHealth": lease_health,
         "workerLaneThroughput": worker_lane_throughput,
         "needsAttention": !attention_reasons.is_empty(),
@@ -1435,6 +1604,31 @@ mod tests {
         let throughput = coherence
             .get("workerLaneThroughput")
             .expect("worker lane throughput should exist");
+        let dep_integrity = coherence
+            .get("dependencyIntegrity")
+            .expect("dependency integrity projection should exist");
+        assert_eq!(
+            dep_integrity
+                .get("active")
+                .and_then(|row| row.get("graphScope"))
+                .and_then(Value::as_str)
+                .unwrap_or_default(),
+            "active"
+        );
+        assert!(
+            !dep_integrity
+                .get("active")
+                .and_then(|row| row.get("hasCycle"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true)
+        );
+        assert!(
+            !dep_integrity
+                .get("full")
+                .and_then(|row| row.get("hasCycle"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true)
+        );
         assert_eq!(
             throughput
                 .get("inProgressCount")
@@ -1588,6 +1782,174 @@ mod tests {
         assert_eq!(per_worker[0]["inProgressCount"], 1);
         assert_eq!(per_worker[1]["worker"], "worker.beta");
         assert_eq!(per_worker[1]["inProgressCount"], 1);
+
+        let _ = fs::remove_dir_all(&repo_root);
+    }
+
+    #[test]
+    fn build_surface_dependency_integrity_scopes_are_deterministic() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after unix epoch")
+            .as_nanos();
+        let repo_root = std::env::temp_dir().join(format!(
+            "premath-surreal-observation-dep-integrity-{unique}-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&repo_root).expect("temp root should create");
+        let ciwitness = repo_root.join("artifacts/ciwitness");
+        let issues = repo_root.join(".premath/issues.jsonl");
+
+        write_json(
+            &ciwitness.join("latest-required.json"),
+            json!({
+                "witnessKind": REQUIRED_WITNESS_KIND,
+                "projectionPolicy": "ci-topos-v0",
+                "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
+                "verdictClass": "accepted",
+                "requiredChecks": ["baseline"],
+                "executedChecks": ["baseline"],
+                "failureClasses": []
+            }),
+        );
+
+        let mut closed_a = base_issue("bd-closed-a");
+        closed_a["status"] = json!("closed");
+        closed_a["dependencies"] = json!([
+            {
+                "issue_id": "bd-closed-a",
+                "depends_on_id": "bd-closed-b",
+                "type": "blocks"
+            }
+        ]);
+
+        let mut closed_b = base_issue("bd-closed-b");
+        closed_b["status"] = json!("closed");
+        closed_b["dependencies"] = json!([
+            {
+                "issue_id": "bd-closed-b",
+                "depends_on_id": "bd-closed-a",
+                "type": "blocks"
+            }
+        ]);
+
+        let mut open_root = base_issue("bd-open-root");
+        open_root["status"] = json!("open");
+        open_root["dependencies"] = json!([]);
+
+        write_issue_jsonl(&issues, &[closed_a, closed_b, open_root]);
+
+        let surface =
+            build_surface(&repo_root, &ciwitness, Some(&issues)).expect("surface should build");
+        assert!(!surface.summary.needs_attention);
+        let coherence = surface
+            .summary
+            .coherence
+            .as_ref()
+            .expect("coherence summary should exist");
+        let dep_integrity = coherence
+            .get("dependencyIntegrity")
+            .expect("dependency integrity projection should exist");
+        assert!(
+            !dep_integrity
+                .get("active")
+                .and_then(|row| row.get("hasCycle"))
+                .and_then(Value::as_bool)
+                .unwrap_or(true)
+        );
+        assert!(
+            dep_integrity
+                .get("full")
+                .and_then(|row| row.get("hasCycle"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+        );
+        let full_cycle = dep_integrity
+            .get("full")
+            .and_then(|row| row.get("cyclePath"))
+            .and_then(Value::as_array)
+            .expect("full scope cycle path should exist");
+        assert_eq!(full_cycle[0], "bd-closed-a");
+        assert_eq!(full_cycle[1], "bd-closed-b");
+        assert_eq!(full_cycle[2], "bd-closed-a");
+
+        let _ = fs::remove_dir_all(&repo_root);
+    }
+
+    #[test]
+    fn build_surface_active_dependency_cycle_triggers_attention() {
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("clock should be after unix epoch")
+            .as_nanos();
+        let repo_root = std::env::temp_dir().join(format!(
+            "premath-surreal-observation-dep-attention-{unique}-{}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&repo_root).expect("temp root should create");
+        let ciwitness = repo_root.join("artifacts/ciwitness");
+        let issues = repo_root.join(".premath/issues.jsonl");
+
+        write_json(
+            &ciwitness.join("latest-required.json"),
+            json!({
+                "witnessKind": REQUIRED_WITNESS_KIND,
+                "projectionPolicy": "ci-topos-v0",
+                "projectionDigest": "proj1_alpha",
+                "typedCoreProjectionDigest": "ev1_alpha",
+                "verdictClass": "accepted",
+                "requiredChecks": ["baseline"],
+                "executedChecks": ["baseline"],
+                "failureClasses": []
+            }),
+        );
+
+        let mut active_a = base_issue("bd-active-a");
+        active_a["status"] = json!("open");
+        active_a["dependencies"] = json!([
+            {
+                "issue_id": "bd-active-a",
+                "depends_on_id": "bd-active-b",
+                "type": "blocks"
+            }
+        ]);
+
+        let mut active_b = base_issue("bd-active-b");
+        active_b["status"] = json!("open");
+        active_b["dependencies"] = json!([
+            {
+                "issue_id": "bd-active-b",
+                "depends_on_id": "bd-active-a",
+                "type": "blocks"
+            }
+        ]);
+
+        write_issue_jsonl(&issues, &[active_a, active_b]);
+
+        let surface =
+            build_surface(&repo_root, &ciwitness, Some(&issues)).expect("surface should build");
+        assert!(surface.summary.needs_attention);
+        let coherence = surface
+            .summary
+            .coherence
+            .as_ref()
+            .expect("coherence summary should exist");
+        assert!(
+            coherence
+                .get("attentionReasons")
+                .and_then(Value::as_array)
+                .map(|rows| rows.iter().any(|row| row == "dependency_cycle_active"))
+                .unwrap_or(false)
+        );
+        assert!(
+            coherence
+                .get("dependencyIntegrity")
+                .and_then(|row| row.get("active"))
+                .and_then(|row| row.get("hasCycle"))
+                .and_then(Value::as_bool)
+                .unwrap_or(false)
+        );
 
         let _ = fs::remove_dir_all(&repo_root);
     }
