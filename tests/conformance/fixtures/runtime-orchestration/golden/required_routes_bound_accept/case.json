@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "suiteId": "runtime-orchestration",
+  "vectorId": "golden/required_routes_bound_accept",
+  "controlPlaneContract": {
+    "runtimeRouteBindings": {
+      "requiredOperationRoutes": {
+        "runGate": {
+          "operationId": "op/ci.run_gate",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ]
+        },
+        "runGateTerraform": {
+          "operationId": "op/ci.run_gate_terraform",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ]
+        }
+      }
+    }
+  },
+  "doctrineOpRegistry": {
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "path": "tools/ci/run_gate.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      },
+      {
+        "id": "op/ci.run_gate_terraform",
+        "path": "tools/ci/run_gate_terraform.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      }
+    ]
+  },
+  "harnessRuntimeText": "## 1.2 Harness-Squeak composition boundary (required)\nHarness computes deterministic work context and witness lineage refs.\nSqueak performs transport/runtime-placement mapping and emits transport-class witness outcomes.\nDestination Tusk/Gate performs destination-local admissibility checks and emits Gate-class outcomes.\nHarness records the resulting references in session/trajectory projections."
+}

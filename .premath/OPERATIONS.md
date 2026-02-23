@@ -27,7 +27,7 @@ This file captures repeatable operational conventions and rollout evidence.
 
 For `Ev` Stage 3 execution order, gate cadence, and issue hygiene workflow, use:
 
-- `docs/design/EV-STAGE3-EXECUTION-RUNBOOK.md`
+- `docs/design/EV-COHERENCE-OVERVIEW.md` (§8, Stage 3 Execution Runbook)
 
 ## Development Meta Loop (Default)
 
@@ -50,6 +50,54 @@ Default close-out checks:
 - `mise run traceability-check`
 - `mise run coherence-check`
 - `python3 tools/ci/check_issue_graph.py`
+
+## Active WIP Topology Ownership Map (bd-280 snapshot)
+
+Snapshot date: 2026-02-23 (UTC)
+Authority for active scope: `.premath/issues.jsonl` (`bd-279` chain)
+
+### Design and operations lane
+
+| Cluster | Paths | Owning issue scope |
+| --- | --- | --- |
+| Issue/ops memory | `.premath/issues.jsonl`, `.premath/OPERATIONS.md`, `.premath/KCIR-SELF-HOSTING-WORKSPACE.md` | `bd-280`, `bd-286` |
+| Architecture/design docs | `docs/design/ARCHITECTURE-MAP.md`, `docs/design/DEVELOPMENT-META-LOOP.md`, `docs/design/EV-COHERENCE-OVERVIEW.md`, `docs/design/TUSK-HARNESS-CONTRACT.md`, `docs/design/SQUEAK-DESIGN.md`, `docs/design/RALPH-PLAYBOOK-PREMATH.md`, `docs/design/README.md` | `bd-280`, `bd-285` |
+| Root docs and task entrypoint | `README.md`, `COMMITMENT.md`, `RELEASE_NOTES.md`, `.mise.toml` | `bd-285`, `bd-286` |
+
+### Doctrine and decision lane
+
+| Cluster | Paths | Owning issue scope |
+| --- | --- | --- |
+| Draft doctrine/spec surfaces | `specs/premath/draft/*` (`SPEC-INDEX`, `CONFORMANCE`, `DOCTRINE-*`, `HARNESS-*`, `CAPABILITY-*`, `CONTROL-PLANE-CONTRACT`, `COHERENCE-CONTRACT`) | `bd-281` |
+| Raw companion surfaces | `specs/premath/raw/TUSK-CORE.md`, `specs/premath/raw/SQUEAK-CORE.md` | `bd-281` |
+| Process doctrine references | `specs/process/HARNESS-SPEC-PROMOTION-MAP.md`, `specs/process/TOPOLOGY-BUDGET.json`, `specs/process/decision-log.md` | `bd-281`, `bd-285` |
+
+### Control/checker lane
+
+| Cluster | Paths | Owning issue scope |
+| --- | --- | --- |
+| CI wrapper and control-plane parity | `tools/ci/pipeline_required.py`, `tools/ci/pipeline_instruction.py`, `tools/ci/control_plane_contract.py`, `tools/ci/governance_gate.py`, `tools/ci/kcir_mapping_gate.py`, `tools/ci/check_drift_budget.py`, `tools/ci/README.md` | `bd-282` |
+| Control-plane tests | `tools/ci/test_*` (pipeline/control-plane/kcir/retry/drift/issue graph suites) | `bd-282` |
+
+### Runtime implementation lane
+
+| Cluster | Paths | Owning issue scope |
+| --- | --- | --- |
+| BD/CLI/coherence/tusk crate work | `crates/premath-bd/*`, `crates/premath-cli/*`, `crates/premath-coherence/*`, `crates/premath-tusk/*` | `bd-283` |
+| Control policy artifact bound to runtime wrappers | `policies/control/harness-retry-policy-v1.json` | `bd-282`, `bd-283` |
+
+### Conformance lane
+
+| Cluster | Paths | Owning issue scope |
+| --- | --- | --- |
+| Doctrine/harness/runtime vector fixtures | `tests/conformance/fixtures/doctrine-inf/*`, `tests/conformance/fixtures/harness-typestate/*`, `tests/conformance/fixtures/runtime-orchestration/*` | `bd-284` |
+| Conformance check/vector runners | `tools/conformance/run_*`, `tools/conformance/check_*`, `tools/conformance/generate_doctrine_site.py`, `tools/conformance/README.md`, `tools/conformance/test_*` | `bd-284` |
+
+Ownership closure assertion (snapshot):
+
+- every dirty cluster from `git status --porcelain` is mapped above to an active
+  issue scope in `bd-279` chain,
+- no unowned dirty cluster remains outside tracked issue scope.
 
 ## Session Continuity
 

@@ -1,3 +1,4 @@
+use premath_bd::issue_lock_path;
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::ffi::{OsStr, OsString};
@@ -486,6 +487,95 @@ fn write_observation_surface(path: &Path) {
         serde_json::to_vec_pretty(&payload).expect("surface should serialize"),
     )
     .expect("surface should be written");
+}
+
+fn write_harness_join_check_input(path: &Path, governance_mismatch: bool) {
+    let mut payload = serde_json::json!({
+        "evidence": {
+            "callSpec": {
+                "callId": "call-1",
+                "modelRef": "gpt-5",
+                "actionMode": "code",
+                "executionPattern": "parallel",
+                "normalizerId": "nf.v1",
+                "mutationPolicyDigest": "mut.pol.v1",
+                "governancePolicyDigest": "gov.pol.v1",
+                "toolRenderProtocolDigest": "render.pol.v1",
+                "reminderQueuePolicyDigest": "queue.pol.v1",
+                "stateViewPolicyDigest": "state.pol.v1",
+                "decompositionPolicyDigest": "decomp.pol.v1"
+            },
+            "toolRequests": [
+                {
+                    "toolCallId": "tc-1",
+                    "toolName": "fs.read"
+                }
+            ],
+            "toolResults": [
+                {
+                    "toolCallId": "tc-1",
+                    "status": "ok",
+                    "resultDigest": "sha256:result-a"
+                }
+            ],
+            "toolUse": [
+                {
+                    "toolCallId": "tc-1",
+                    "disposition": "consumed",
+                    "resultDigest": "sha256:result-a"
+                }
+            ],
+            "toolRender": [
+                {
+                    "toolCallId": "tc-1",
+                    "operatorPayloadDigest": "sha256:operator-a",
+                    "reminderRenderDigest": "sha256:reminder-a",
+                    "injectionPoint": "tool_response",
+                    "policyDigest": "render.pol.v1"
+                }
+            ],
+            "reminderQueue": [
+                {
+                    "queueId": "queue/default",
+                    "reducedDigest": "sha256:queue-a",
+                    "policyDigest": "queue.pol.v1"
+                }
+            ],
+            "stateViews": [
+                {
+                    "viewId": "state/latest",
+                    "viewDigest": "sha256:view-a",
+                    "policyDigest": "state.pol.v1",
+                    "sourceRefs": ["handoff://return/main"]
+                }
+            ],
+            "protocolState": {
+                "stopReason": "tool_use",
+                "continuationAllowed": true
+            },
+            "sessionRefs": ["session://call-1"],
+            "trajectoryRefs": ["trajectory://step/1"]
+        }
+    });
+
+    if governance_mismatch {
+        payload["governanceProfile"] = serde_json::json!({
+            "claimId": "profile.doctrine_inf_governance.v0",
+            "claimed": true,
+            "policyProvenance": {
+                "pinned": true,
+                "packageRef": "policy/governance/v1",
+                "expectedDigest": "sha256:policy-a",
+                "boundDigest": "sha256:policy-b"
+            }
+        });
+    }
+
+    fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload).expect("join-check payload should serialize"),
+    )
+    .expect("join-check payload should be written");
 }
 
 #[test]
@@ -2682,4 +2772,277 @@ fn harness_trajectory_append_and_query_json_smoke() {
     assert_eq!(retry["mode"], "retry_needed");
     assert_eq!(retry["count"], 1);
     assert_eq!(retry["items"][0]["stepId"], "step-1");
+}
+
+#[test]
+fn harness_join_check_json_smoke() {
+    let tmp = TempDirGuard::new("harness-join-check");
+    let input_ok = tmp.path().join("join-check-ok.json");
+    write_harness_join_check_input(&input_ok, false);
+
+    let out_ok = run_premath([
+        OsString::from("harness-join-check"),
+        OsString::from("--input"),
+        input_ok.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_ok);
+    let payload_ok = parse_json_stdout(&out_ok);
+    assert_eq!(payload_ok["action"], "harness-join-check");
+    assert_eq!(payload_ok["result"], "accepted");
+    assert_eq!(payload_ok["joinClosed"], true);
+    assert_eq!(payload_ok["failureClasses"], serde_json::json!([]));
+    assert_eq!(
+        payload_ok["witness"]["witnessKind"],
+        "premath.harness.join_check.v1"
+    );
+
+    let input_mismatch = tmp.path().join("join-check-governance-mismatch.json");
+    write_harness_join_check_input(&input_mismatch, true);
+    let out_mismatch = run_premath([
+        OsString::from("harness-join-check"),
+        OsString::from("--input"),
+        input_mismatch.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_mismatch);
+    let payload_mismatch = parse_json_stdout(&out_mismatch);
+    assert_eq!(payload_mismatch["result"], "rejected");
+    assert_eq!(
+        payload_mismatch["failureClasses"],
+        serde_json::json!(["governance.policy_package_mismatch"])
+    );
+}
+
+#[test]
+fn issue_add_concurrent_writers_preserve_jsonl_integrity() {
+    let tmp = TempDirGuard::new("issue-add-contention");
+    let issues = tmp.path().join("issues.jsonl");
+
+    let workers = 8usize;
+    let start = Arc::new(Barrier::new(workers + 1));
+    let mut handles = Vec::new();
+    for idx in 0..workers {
+        let barrier = Arc::clone(&start);
+        let issues_path = issues.clone();
+        handles.push(thread::spawn(move || {
+            let issue_id = format!("bd-{idx}");
+            barrier.wait();
+            run_premath([
+                OsString::from("issue"),
+                OsString::from("add"),
+                OsString::from(format!("Issue {idx}")),
+                OsString::from("--id"),
+                OsString::from(issue_id),
+                OsString::from("--issues"),
+                issues_path.as_os_str().to_os_string(),
+                OsString::from("--json"),
+            ])
+        }));
+    }
+
+    start.wait();
+
+    for handle in handles {
+        let out = handle.join().expect("worker should join");
+        assert_success(&out);
+    }
+
+    let raw = fs::read(&issues).expect("issues jsonl should exist");
+    assert!(
+        !raw.contains(&0),
+        "issues jsonl should not contain NUL bytes"
+    );
+
+    let out_list = run_premath([
+        OsString::from("issue"),
+        OsString::from("list"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_list);
+    let payload = parse_json_stdout(&out_list);
+    assert_eq!(payload["count"], workers);
+}
+
+#[test]
+fn issue_add_fails_closed_when_lock_busy() {
+    let tmp = TempDirGuard::new("issue-add-lock-busy");
+    let issues = tmp.path().join("issues.jsonl");
+
+    let out_add = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Root issue"),
+        OsString::from("--id"),
+        OsString::from("bd-root"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_add);
+
+    let lock_path = issue_lock_path(&issues);
+    fs::write(&lock_path, "busy\n").expect("lock file should be created");
+
+    let out_locked_add = run_premath([
+        OsString::from("issue"),
+        OsString::from("add"),
+        OsString::from("Child issue"),
+        OsString::from("--id"),
+        OsString::from("bd-child"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_locked_add.status.success(),
+        "expected add to fail while lock is held"
+    );
+    let stderr = String::from_utf8_lossy(&out_locked_add.stderr);
+    assert!(
+        stderr.contains("issue-memory lock busy"),
+        "expected deterministic lock-busy failure, stderr:\n{stderr}"
+    );
+
+    let out_list = run_premath([
+        OsString::from("issue"),
+        OsString::from("list"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_list);
+    let payload = parse_json_stdout(&out_list);
+    assert_eq!(payload["count"], 1);
+    assert_eq!(payload["items"][0]["id"], "bd-root");
+
+    let _ = fs::remove_file(lock_path);
+}
+
+#[test]
+fn issue_update_rejects_corrupt_substrate() {
+    let tmp = TempDirGuard::new("issue-update-corrupt");
+    let issues = tmp.path().join("issues.jsonl");
+    fs::write(
+        &issues,
+        b"{\"id\":\"bd-1\",\"title\":\"Issue 1\",\"status\":\"open\"}\n\0tail",
+    )
+    .expect("fixture should write");
+
+    let out = run_premath([
+        OsString::from("issue"),
+        OsString::from("update"),
+        OsString::from("bd-1"),
+        OsString::from("--title"),
+        OsString::from("Updated title"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out.status.success(),
+        "expected update to fail on corrupt substrate"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("corrupted substrate"),
+        "expected corruption sentinel failure, stderr:\n{stderr}"
+    );
+
+    let bytes = fs::read(&issues).expect("corrupt fixture should remain untouched");
+    assert!(bytes.contains(&0));
+}
+
+#[test]
+fn dep_add_fails_closed_when_lock_busy() {
+    let tmp = TempDirGuard::new("dep-add-lock-busy");
+    let issues = tmp.path().join("issues.jsonl");
+
+    for (id, title) in [("bd-root", "Root issue"), ("bd-child", "Child issue")] {
+        let out = run_premath([
+            OsString::from("issue"),
+            OsString::from("add"),
+            OsString::from(title),
+            OsString::from("--id"),
+            OsString::from(id),
+            OsString::from("--issues"),
+            issues.as_os_str().to_os_string(),
+            OsString::from("--json"),
+        ]);
+        assert_success(&out);
+    }
+
+    let lock_path = issue_lock_path(&issues);
+    fs::write(&lock_path, "busy\n").expect("lock file should be created");
+
+    let out_dep = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_dep.status.success(),
+        "expected dep add to fail on lock"
+    );
+    let stderr = String::from_utf8_lossy(&out_dep.stderr);
+    assert!(
+        stderr.contains("issue-memory lock busy"),
+        "expected lock-busy stderr, got:\n{stderr}"
+    );
+
+    let out_project = run_premath([
+        OsString::from("dep"),
+        OsString::from("project"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&out_project);
+    let payload = parse_json_stdout(&out_project);
+    assert_eq!(payload["count"], 0);
+
+    let _ = fs::remove_file(lock_path);
+}
+
+#[test]
+fn dep_add_rejects_corrupt_substrate() {
+    let tmp = TempDirGuard::new("dep-add-corrupt");
+    let issues = tmp.path().join("issues.jsonl");
+    fs::write(
+        &issues,
+        b"{\"id\":\"bd-root\",\"title\":\"Root\",\"status\":\"open\"}\n{\"id\":\"bd-child\",\"title\":\"Child\",\"status\":\"open\"}\n\0tail",
+    )
+    .expect("fixture should write");
+
+    let out_dep = run_premath([
+        OsString::from("dep"),
+        OsString::from("add"),
+        OsString::from("bd-child"),
+        OsString::from("bd-root"),
+        OsString::from("--type"),
+        OsString::from("blocks"),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !out_dep.status.success(),
+        "expected dep add to fail on corrupt substrate"
+    );
+    let stderr = String::from_utf8_lossy(&out_dep.stderr);
+    assert!(
+        stderr.contains("corrupted substrate"),
+        "expected corruption sentinel failure, stderr:\n{stderr}"
+    );
+
+    let bytes = fs::read(&issues).expect("corrupt fixture should remain untouched");
+    assert!(bytes.contains(&0));
 }

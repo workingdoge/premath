@@ -97,6 +97,144 @@ def _base_payload() -> dict:
                 },
             },
         },
+        "controlPlaneBundleProfile": {
+            "profileId": "cp.bundle.v0",
+            "contextFamily": {
+                "id": "C_cp",
+                "contextKinds": [
+                    "repo_head",
+                    "workspace_delta",
+                    "instruction_envelope",
+                    "policy_snapshot",
+                    "witness_projection",
+                ],
+                "morphismKinds": [
+                    "ctx.identity",
+                    "ctx.rebase",
+                    "ctx.patch",
+                    "ctx.policy_rollover",
+                ],
+            },
+            "artifactFamily": {
+                "id": "E_cp",
+                "artifactRefs": {
+                    "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
+                    "coherenceContract": "specs/premath/draft/COHERENCE-CONTRACT.json",
+                    "capabilityRegistry": "specs/premath/draft/CAPABILITY-REGISTRY.json",
+                    "doctrineSiteInput": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+                    "doctrineOpRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
+                },
+            },
+            "reindexingCoherence": {
+                "requiredObligations": [
+                    "identity_preserved",
+                    "composition_preserved",
+                    "policy_digest_stable",
+                    "route_bindings_total",
+                ],
+                "commutationWitness": "span_square_commutation",
+            },
+            "coverGlue": {
+                "workerCoverKind": "worktree_partition_cover",
+                "mergeCompatibilityWitness": "span_square_commutation",
+                "requiredMergeArtifacts": [
+                    "ci.required.v1",
+                    "ci.instruction.v1",
+                    "coherence_witness",
+                ],
+            },
+            "authoritySplit": {
+                "semanticAuthority": [
+                    "PREMATH-KERNEL",
+                    "GATE",
+                    "BIDIR-DESCENT",
+                ],
+                "controlPlaneRole": "projection_and_parity_only",
+                "forbiddenControlPlaneRoles": [
+                    "semantic_obligation_discharge",
+                    "admissibility_override",
+                ],
+            },
+        },
+        "controlPlaneKcirMappings": {
+            "profileId": "cp.kcir.mapping.v0",
+            "mappingTable": {
+                "instructionEnvelope": {
+                    "sourceKind": "ci.instruction.envelope.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "ci.instruction.v1",
+                    "identityFields": [
+                        "instructionDigest",
+                        "normalizerId",
+                        "policyDigest",
+                    ],
+                },
+                "proposalPayload": {
+                    "sourceKind": "ci.proposal.payload.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "ci.proposal.check.v1",
+                    "identityFields": [
+                        "proposalDigest",
+                        "proposalKcirRef",
+                        "policyDigest",
+                    ],
+                },
+                "coherenceObligations": {
+                    "sourceKind": "coherence.obligation.set.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "coherence.obligation.witness.v1",
+                    "identityFields": [
+                        "obligationDigest",
+                        "normalizerId",
+                        "policyDigest",
+                    ],
+                },
+                "coherenceCheckPayload": {
+                    "sourceKind": "coherence.check.payload.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "coherence.check.witness.v1",
+                    "identityFields": [
+                        "projectionDigest",
+                        "normalizerId",
+                        "policyDigest",
+                    ],
+                },
+                "doctrineRouteBinding": {
+                    "sourceKind": "doctrine.route.binding.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "doctrine.route.witness.v1",
+                    "identityFields": [
+                        "operationId",
+                        "siteDigest",
+                        "policyDigest",
+                    ],
+                },
+                "requiredDecisionInput": {
+                    "sourceKind": "ci.required.decision.input.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "ci.required.decision.v1",
+                    "identityFields": [
+                        "requiredDigest",
+                        "decisionDigest",
+                        "policyDigest",
+                    ],
+                },
+            },
+            "identityDigestLineage": {
+                "digestAlgorithm": "sha256",
+                "refProfilePath": "policies/ref/sha256_detached_v1.json",
+                "normalizerField": "normalizerId",
+                "policyDigestField": "policyDigest",
+            },
+            "compatibilityPolicy": {
+                "legacyNonKcirEncodings": {
+                    "mode": "projection_only",
+                    "authorityMode": "forbidden",
+                    "supportUntilEpoch": "2026-06",
+                    "failureClass": "kcir_mapping_legacy_encoding_authority_violation",
+                }
+            },
+        },
         "requiredGateProjection": {
             "projectionPolicy": "ci-topos-v0",
             "checkIds": {
@@ -231,6 +369,71 @@ def _base_payload() -> dict:
                 "routeUnbound": "worker_lane_route_unbound",
             },
         },
+        "runtimeRouteBindings": {
+            "requiredOperationRoutes": {
+                "runGate": {
+                    "operationId": "op/ci.run_gate",
+                    "requiredMorphisms": [
+                        "dm.identity",
+                        "dm.profile.execution",
+                        "dm.transport.location",
+                        "dm.transport.world",
+                    ],
+                },
+                "runGateTerraform": {
+                    "operationId": "op/ci.run_gate_terraform",
+                    "requiredMorphisms": [
+                        "dm.identity",
+                        "dm.profile.execution",
+                        "dm.transport.location",
+                        "dm.transport.world",
+                    ],
+                },
+            },
+            "failureClasses": {
+                "missingRoute": "runtime_route_missing",
+                "morphismDrift": "runtime_route_morphism_drift",
+                "contractUnbound": "runtime_route_contract_unbound",
+            },
+        },
+        "commandSurface": {
+            "requiredDecision": {
+                "canonicalEntrypoint": [
+                    "mise",
+                    "run",
+                    "ci-required-attested",
+                ],
+                "compatibilityAliases": [
+                    [
+                        "mise",
+                        "run",
+                        "ci-check",
+                    ]
+                ],
+            },
+            "instructionEnvelopeCheck": {
+                "canonicalEntrypoint": [
+                    "python3",
+                    "tools/ci/check_instruction_envelope.py",
+                ],
+                "compatibilityAliases": [],
+            },
+            "instructionDecision": {
+                "canonicalEntrypoint": [
+                    "python3",
+                    "tools/ci/run_instruction.py",
+                ],
+                "compatibilityAliases": [
+                    [
+                        "sh",
+                        "tools/ci/run_instruction.sh",
+                    ]
+                ],
+            },
+            "failureClasses": {
+                "unbound": "control_plane_command_surface_unbound",
+            },
+        },
         "harnessRetry": {
             "policyKind": "ci.harness.retry.policy.v1",
             "policyPath": "policies/control/harness-retry-policy-v1.json",
@@ -359,6 +562,46 @@ class ControlPlaneContractTests(unittest.TestCase):
             loaded["workerLaneAuthority"]["failureClasses"]["routeUnbound"],
             "worker_lane_route_unbound",
         )
+        self.assertEqual(
+            loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runGate"][
+                "operationId"
+            ],
+            "op/ci.run_gate",
+        )
+        self.assertEqual(
+            loaded["commandSurface"]["requiredDecision"]["canonicalEntrypoint"],
+            ["mise", "run", "ci-required-attested"],
+        )
+        self.assertEqual(
+            loaded["commandSurface"]["instructionDecision"]["compatibilityAliases"],
+            [["sh", "tools/ci/run_instruction.sh"]],
+        )
+        self.assertEqual(
+            loaded["controlPlaneBundleProfile"]["profileId"],
+            "cp.bundle.v0",
+        )
+        self.assertEqual(
+            loaded["controlPlaneBundleProfile"]["contextFamily"]["id"],
+            "C_cp",
+        )
+        self.assertEqual(
+            loaded["controlPlaneBundleProfile"]["artifactFamily"]["id"],
+            "E_cp",
+        )
+        self.assertEqual(
+            loaded["controlPlaneKcirMappings"]["profileId"],
+            "cp.kcir.mapping.v0",
+        )
+        self.assertEqual(
+            loaded["controlPlaneKcirMappings"]["compatibilityPolicy"][
+                "legacyNonKcirEncodings"
+            ]["mode"],
+            "projection_only",
+        )
+        self.assertIn(
+            "runtime_route_morphism_drift",
+            loaded["runtimeRouteBindings"]["failureClasses"]["morphismDrift"],
+        )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
         payload = _with_lane_registry(_base_payload())
@@ -382,6 +625,60 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload = _base_payload()
         payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = "issue_discover"
         with self.assertRaisesRegex(ValueError, "canonical route"):
+            self._load(payload)
+
+    def test_load_rejects_runtime_route_morphism_drift(self) -> None:
+        payload = _base_payload()
+        payload["runtimeRouteBindings"]["requiredOperationRoutes"]["runGate"][
+            "requiredMorphisms"
+        ] = []
+        with self.assertRaisesRegex(ValueError, "non-empty list"):
+            self._load(payload)
+
+    def test_load_rejects_command_surface_canonical_entrypoint_drift(self) -> None:
+        payload = _base_payload()
+        payload["commandSurface"]["requiredDecision"]["canonicalEntrypoint"] = [
+            "mise",
+            "run",
+            "ci-check",
+        ]
+        with self.assertRaisesRegex(ValueError, "canonicalEntrypoint"):
+            self._load(payload)
+
+    def test_load_rejects_command_surface_alias_set_drift(self) -> None:
+        payload = _base_payload()
+        payload["commandSurface"]["instructionDecision"]["compatibilityAliases"] = [
+            ["python3", "tools/ci/run_instruction.py"]
+        ]
+        with self.assertRaisesRegex(ValueError, "must not include canonicalEntrypoint"):
+            self._load(payload)
+
+    def test_load_rejects_control_plane_bundle_context_family_id_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["controlPlaneBundleProfile"]["contextFamily"]["id"] = "C_runtime"
+        with self.assertRaisesRegex(ValueError, "contextFamily.id"):
+            self._load(payload)
+
+    def test_load_rejects_control_plane_bundle_control_plane_role_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["controlPlaneBundleProfile"]["authoritySplit"]["controlPlaneRole"] = (
+            "semantic_authority"
+        )
+        with self.assertRaisesRegex(ValueError, "controlPlaneRole"):
+            self._load(payload)
+
+    def test_load_rejects_control_plane_kcir_mapping_missing_row(self) -> None:
+        payload = _base_payload()
+        payload["controlPlaneKcirMappings"]["mappingTable"] = {}
+        with self.assertRaisesRegex(ValueError, "must be non-empty"):
+            self._load(payload)
+
+    def test_load_rejects_control_plane_kcir_legacy_policy_window_mismatch(self) -> None:
+        payload = _base_payload()
+        payload["controlPlaneKcirMappings"]["compatibilityPolicy"][
+            "legacyNonKcirEncodings"
+        ]["supportUntilEpoch"] = "2026-07"
+        with self.assertRaisesRegex(ValueError, "rolloverEpoch"):
             self._load(payload)
 
     def test_load_rejects_worker_lane_expired_override(self) -> None:

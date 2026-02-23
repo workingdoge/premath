@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence, Set, Tuple
 
 
+SITE_INPUT_KIND = "premath.doctrine_operation_site.input.v1"
 SITE_SOURCE_KIND = "premath.doctrine_operation_site.source.v1"
 OP_REGISTRY_KIND = "premath.doctrine_operation_registry.v1"
 
@@ -146,6 +147,119 @@ def _parse_edge(edge_raw: object, label: str) -> Dict[str, Any]:
     }
 
 
+def _parse_operation(operation_raw: object, label: str) -> Dict[str, Any]:
+    if not isinstance(operation_raw, dict):
+        raise ValueError(f"{label}: object required")
+    return {
+        "id": ensure_string(operation_raw.get("id"), f"{label}.id"),
+        "edgeId": ensure_string(operation_raw.get("edgeId"), f"{label}.edgeId"),
+        "path": ensure_string(operation_raw.get("path"), f"{label}.path"),
+        "kind": ensure_string(operation_raw.get("kind"), f"{label}.kind"),
+        "morphisms": ensure_string_list(operation_raw.get("morphisms"), f"{label}.morphisms"),
+    }
+
+
+def canonicalize_operation_registry(registry_map: Dict[str, Any]) -> Dict[str, Any]:
+    canonical: Dict[str, Any] = {
+        "schema": 1,
+        "registryKind": ensure_string(registry_map.get("registryKind"), "registryKind"),
+        "parentNodeId": ensure_string(registry_map.get("parentNodeId"), "parentNodeId"),
+        "coverId": ensure_string(registry_map.get("coverId"), "coverId"),
+    }
+    if canonical["registryKind"] != OP_REGISTRY_KIND:
+        raise ValueError(f"registryKind must be {OP_REGISTRY_KIND!r}")
+
+    base_cover_parts = ensure_string_list(
+        registry_map.get("baseCoverParts"), "baseCoverParts"
+    )
+    canonical["baseCoverParts"] = sorted(set(base_cover_parts))
+
+    operations_raw = registry_map.get("operations")
+    if not isinstance(operations_raw, list) or not operations_raw:
+        raise ValueError("operations: non-empty list required")
+    operations: List[Dict[str, Any]] = []
+    op_ids: Set[str] = set()
+    edge_ids: Set[str] = set()
+    for idx, row in enumerate(operations_raw):
+        operation = _parse_operation(row, f"operations[{idx}]")
+        op_id = operation["id"]
+        edge_id = operation["edgeId"]
+        if op_id in op_ids:
+            raise ValueError(f"duplicate operation id: {op_id}")
+        if edge_id in edge_ids:
+            raise ValueError(f"duplicate operation edgeId: {edge_id}")
+        op_ids.add(op_id)
+        edge_ids.add(edge_id)
+        operation["morphisms"] = sorted(set(operation["morphisms"]))
+        operations.append(operation)
+    canonical["operations"] = sorted(operations, key=lambda row: row["id"])
+    return canonical
+
+
+def _load_source_and_registry(
+    *,
+    repo_root: Path,
+    site_input_path: Path,
+    operation_registry_path: Path | None = None,
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    raw_input = load_json_object(site_input_path)
+
+    if raw_input.get("schema") != 1:
+        raise ValueError(f"{site_input_path}: schema must be 1")
+
+    source: Dict[str, Any]
+    registry: Dict[str, Any]
+
+    input_kind = raw_input.get("inputKind")
+    if input_kind == SITE_INPUT_KIND:
+        source_raw = raw_input.get("site")
+        if not isinstance(source_raw, dict):
+            raise ValueError(f"{site_input_path}: site object required")
+        source = dict(source_raw)
+        source_kind = source.get("sourceKind")
+        if source_kind is not None and source_kind != SITE_SOURCE_KIND:
+            raise ValueError(
+                f"{site_input_path}: site.sourceKind must be {SITE_SOURCE_KIND!r}"
+            )
+        source["sourceKind"] = SITE_SOURCE_KIND
+        source["schema"] = 1
+        if operation_registry_path is not None:
+            registry = load_json_object(operation_registry_path.resolve())
+        else:
+            registry_raw = raw_input.get("operationRegistry")
+            if not isinstance(registry_raw, dict):
+                raise ValueError(f"{site_input_path}: operationRegistry object required")
+            registry = dict(registry_raw)
+    else:
+        # Legacy fallback: source map + external operation registry.
+        source = dict(raw_input)
+        if source.get("sourceKind") != SITE_SOURCE_KIND:
+            raise ValueError(
+                f"{site_input_path}: inputKind must be {SITE_INPUT_KIND!r} "
+                f"or sourceKind must be {SITE_SOURCE_KIND!r}"
+            )
+        registry_rel = (
+            str(operation_registry_path)
+            if operation_registry_path is not None
+            else ensure_string(source.get("operationRegistryPath"), "operationRegistryPath")
+        )
+        registry_path = (
+            operation_registry_path.resolve()
+            if operation_registry_path is not None
+            else (repo_root / registry_rel).resolve()
+        )
+        registry = load_json_object(registry_path)
+
+    if source.get("schema") != 1:
+        raise ValueError(f"{site_input_path}: source schema must be 1")
+    if source.get("sourceKind") != SITE_SOURCE_KIND:
+        raise ValueError(f"{site_input_path}: sourceKind must be {SITE_SOURCE_KIND!r}")
+
+    registry["schema"] = 1
+    registry = canonicalize_operation_registry(registry)
+    return source, registry
+
+
 def canonicalize_site_map(site_map: Dict[str, Any]) -> Dict[str, Any]:
     canonical: Dict[str, Any] = {
         "siteId": ensure_string(site_map.get("siteId"), "siteId"),
@@ -231,62 +345,72 @@ def site_map_digest(site_map: Dict[str, Any]) -> str:
     return hashlib.sha256(canonical).hexdigest()
 
 
+def generate_operation_registry(
+    *,
+    repo_root: Path,
+    site_input_path: Path,
+    operation_registry_path: Path | None = None,
+) -> Dict[str, Any]:
+    _source, registry = _load_source_and_registry(
+        repo_root=repo_root,
+        site_input_path=site_input_path,
+        operation_registry_path=operation_registry_path,
+    )
+    return canonicalize_operation_registry(registry)
+
+
+def canonical_operation_registry_json(registry_map: Dict[str, Any], *, pretty: bool) -> str:
+    canonical = canonicalize_operation_registry(registry_map)
+    if pretty:
+        return json.dumps(canonical, indent=2, sort_keys=False) + "\n"
+    return json.dumps(canonical, separators=(",", ":"), sort_keys=True)
+
+
+def operation_registry_digest(registry_map: Dict[str, Any]) -> str:
+    canonical = canonical_operation_registry_json(registry_map, pretty=False).encode("utf-8")
+    return hashlib.sha256(canonical).hexdigest()
+
+
 def generate_site_map(
     *,
     repo_root: Path,
-    source_map_path: Path,
+    site_input_path: Path,
     operation_registry_path: Path | None = None,
 ) -> Dict[str, Any]:
-    source = load_json_object(source_map_path)
-    if source.get("schema") != 1:
-        raise ValueError(f"{source_map_path}: schema must be 1")
-    if source.get("sourceKind") != SITE_SOURCE_KIND:
-        raise ValueError(f"{source_map_path}: sourceKind must be {SITE_SOURCE_KIND!r}")
-
-    registry_rel = (
-        str(operation_registry_path)
-        if operation_registry_path is not None
-        else ensure_string(source.get("operationRegistryPath"), "operationRegistryPath")
+    source, registry = _load_source_and_registry(
+        repo_root=repo_root,
+        site_input_path=site_input_path,
+        operation_registry_path=operation_registry_path,
     )
-    registry_path = (
-        operation_registry_path.resolve()
-        if operation_registry_path is not None
-        else (repo_root / registry_rel).resolve()
-    )
-    registry = load_json_object(registry_path)
-    if registry.get("schema") != 1:
-        raise ValueError(f"{registry_path}: schema must be 1")
-    if registry.get("registryKind") != OP_REGISTRY_KIND:
-        raise ValueError(f"{registry_path}: registryKind must be {OP_REGISTRY_KIND!r}")
 
     nodes_raw = source.get("nodes")
     if not isinstance(nodes_raw, list) or not nodes_raw:
-        raise ValueError(f"{source_map_path}: nodes must be a non-empty list")
+        raise ValueError(f"{site_input_path}: nodes must be a non-empty list")
     covers_raw = source.get("covers")
     if not isinstance(covers_raw, list) or not covers_raw:
-        raise ValueError(f"{source_map_path}: covers must be a non-empty list")
+        raise ValueError(f"{site_input_path}: covers must be a non-empty list")
     edges_raw = source.get("edges")
     if not isinstance(edges_raw, list) or not edges_raw:
-        raise ValueError(f"{source_map_path}: edges must be a non-empty list")
+        raise ValueError(f"{site_input_path}: edges must be a non-empty list")
 
     operations_raw = registry.get("operations")
     if not isinstance(operations_raw, list) or not operations_raw:
-        raise ValueError(f"{registry_path}: operations must be a non-empty list")
+        raise ValueError(f"{site_input_path}: operationRegistry.operations must be a non-empty list")
 
     doctrine_spec_path = ensure_string(source.get("doctrineSpecPath"), "doctrineSpecPath")
 
     nodes: List[Dict[str, Any]] = []
     node_ids: Set[str] = set()
     for idx, row in enumerate(nodes_raw):
-        node = _parse_node(row, f"{source_map_path}:nodes[{idx}]")
+        node = _parse_node(row, f"{site_input_path}:nodes[{idx}]")
         node_id = node["id"]
         if node_id in node_ids:
-            raise ValueError(f"{source_map_path}: duplicate node id {node_id!r}")
+            raise ValueError(f"{site_input_path}: duplicate node id {node_id!r}")
         node_ids.add(node_id)
 
         node_path = (repo_root / node["path"]).resolve()
         if not node_path.exists():
-            raise ValueError(f"{source_map_path}: node {node_id!r} path missing: {node['path']}")
+            raise ValueError(f"{site_input_path}: node {node_id!r} path missing: {node['path']}")
 
         if node["requiresDeclaration"]:
             preserved, not_preserved = parse_declaration(node_path)
@@ -301,29 +425,27 @@ def generate_site_map(
     parent_node_id = ensure_string(registry.get("parentNodeId"), "parentNodeId")
     if parent_node_id not in node_ids:
         raise ValueError(
-            f"{registry_path}: parentNodeId {parent_node_id!r} must exist in source nodes"
+            f"{site_input_path}: operationRegistry.parentNodeId {parent_node_id!r} "
+            "must exist in source nodes"
         )
 
     for idx, row in enumerate(operations_raw):
-        if not isinstance(row, dict):
-            raise ValueError(f"{registry_path}: operations[{idx}] must be an object")
-        op_id = ensure_string(row.get("id"), f"{registry_path}:operations[{idx}].id")
+        operation = _parse_operation(row, f"{site_input_path}:operationRegistry.operations[{idx}]")
+        op_id = operation["id"]
         if op_id in node_ids:
-            raise ValueError(f"{registry_path}: duplicate operation/node id {op_id!r}")
+            raise ValueError(f"{site_input_path}: duplicate operation/node id {op_id!r}")
         node_ids.add(op_id)
         generated_operation_ids.append(op_id)
 
-        op_path = ensure_string(row.get("path"), f"{registry_path}:operations[{idx}].path")
-        op_kind = ensure_string(row.get("kind"), f"{registry_path}:operations[{idx}].kind")
-        edge_id = ensure_string(row.get("edgeId"), f"{registry_path}:operations[{idx}].edgeId")
-        morphisms = ensure_string_list(
-            row.get("morphisms"), f"{registry_path}:operations[{idx}].morphisms"
-        )
+        op_path = operation["path"]
+        op_kind = operation["kind"]
+        edge_id = operation["edgeId"]
+        morphisms = operation["morphisms"]
 
         path_on_disk = (repo_root / op_path).resolve()
         if not path_on_disk.exists():
             raise ValueError(
-                f"{registry_path}: operation {op_id!r} path missing: {op_path}"
+                f"{site_input_path}: operation {op_id!r} path missing: {op_path}"
             )
 
         nodes.append(
@@ -345,7 +467,7 @@ def generate_site_map(
 
     covers: List[Dict[str, Any]] = []
     for idx, row in enumerate(covers_raw):
-        covers.append(_parse_cover(row, f"{source_map_path}:covers[{idx}]"))
+        covers.append(_parse_cover(row, f"{site_input_path}:covers[{idx}]"))
 
     generated_cover_id = ensure_string(registry.get("coverId"), "coverId")
     base_cover_parts = ensure_string_list(registry.get("baseCoverParts"), "baseCoverParts")
@@ -359,7 +481,7 @@ def generate_site_map(
 
     edges: List[Dict[str, Any]] = []
     for idx, row in enumerate(edges_raw):
-        edges.append(_parse_edge(row, f"{source_map_path}:edges[{idx}]"))
+        edges.append(_parse_edge(row, f"{site_input_path}:edges[{idx}]"))
     edges.extend(generated_operation_edges)
 
     generated = {
@@ -580,3 +702,14 @@ def equality_diff(expected: Dict[str, Any], actual: Dict[str, Any]) -> List[str]
         f"  - actualDigest={site_map_digest(actual_canonical)}",
     ]
 
+
+def operation_registry_equality_diff(expected: Dict[str, Any], actual: Dict[str, Any]) -> List[str]:
+    expected_canonical = canonicalize_operation_registry(expected)
+    actual_canonical = canonicalize_operation_registry(actual)
+    if expected_canonical == actual_canonical:
+        return []
+    return [
+        "roundtrip mismatch: tracked doctrine operation registry differs from generated output",
+        f"  - expectedDigest={operation_registry_digest(expected_canonical)}",
+        f"  - actualDigest={operation_registry_digest(actual_canonical)}",
+    ]

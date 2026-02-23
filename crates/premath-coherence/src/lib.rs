@@ -232,6 +232,8 @@ pub struct CoherenceObligationSpec {
 pub struct CoherenceSurfaces {
     pub capability_registry_path: String,
     pub capability_registry_kind: String,
+    #[serde(default = "default_conformance_path")]
+    pub conformance_path: String,
     pub capability_manifest_root: String,
     pub readme_path: String,
     pub conformance_readme_path: String,
@@ -262,11 +264,17 @@ pub struct CoherenceSurfaces {
     pub site_fixture_root_path: String,
 }
 
+fn default_conformance_path() -> String {
+    "specs/premath/draft/CONFORMANCE.md".to_string()
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CapabilityRegistry {
     schema: u32,
     registry_kind: String,
+    #[serde(default)]
+    profile_overlay_claims: Vec<String>,
     executable_capabilities: Vec<String>,
 }
 
@@ -1015,6 +1023,27 @@ fn check_scope_noncontradiction(
         }
     }
 
+    let capability_registry = load_capability_registry(repo_root, contract)?;
+    let conformance_path = resolve_path(repo_root, contract.surfaces.conformance_path.as_str());
+    let conformance_text = read_text(&conformance_path)?;
+    let conformance_overlay_section = extract_heading_section(&conformance_text, "2.4")?;
+    let conformance_profile_claims =
+        parse_backticked_profile_overlay_claims(&conformance_overlay_section)?;
+    let registry_profile_claims: BTreeSet<String> = capability_registry
+        .profile_overlay_claims
+        .iter()
+        .cloned()
+        .collect();
+    if capability_registry.profile_overlay_claims.len() != registry_profile_claims.len() {
+        failures.push(
+            "coherence.scope_noncontradiction.profile_overlay_registry_duplicate".to_string(),
+        );
+    }
+    if registry_profile_claims != conformance_profile_claims {
+        failures
+            .push("coherence.scope_noncontradiction.profile_overlay_claim_mismatch".to_string());
+    }
+
     let bidir_spec_path = resolve_path(repo_root, contract.surfaces.bidir_spec_path.as_str());
     let bidir_spec_text = read_text(&bidir_spec_path)?;
     let bidir_spec_section = extract_section_between(
@@ -1073,6 +1102,8 @@ fn check_scope_noncontradiction(
         details: json!({
             "conditionalCapabilityDocs": contract.conditional_capability_docs,
             "specIndexCapabilityDocMap": spec_index_doc_map,
+            "registryProfileOverlayClaims": registry_profile_claims,
+            "conformanceProfileOverlayClaims": conformance_profile_claims,
             "requiredBidirObligations": contract.required_bidir_obligations,
             "bidirSpecObligations": bidir_spec_obligations,
             "bidirCheckerObligations": bidir_checker_obligations,
@@ -1083,10 +1114,10 @@ fn check_scope_noncontradiction(
     })
 }
 
-fn check_capability_parity(
+fn load_capability_registry(
     repo_root: &Path,
     contract: &CoherenceContract,
-) -> Result<ObligationCheck, CoherenceError> {
+) -> Result<CapabilityRegistry, CoherenceError> {
     let capability_registry_path = resolve_path(
         repo_root,
         contract.surfaces.capability_registry_path.as_str(),
@@ -1112,6 +1143,18 @@ fn check_capability_parity(
             capability_registry.registry_kind
         )));
     }
+    Ok(capability_registry)
+}
+
+fn check_capability_parity(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<ObligationCheck, CoherenceError> {
+    let capability_registry_path = resolve_path(
+        repo_root,
+        contract.surfaces.capability_registry_path.as_str(),
+    );
+    let capability_registry = load_capability_registry(repo_root, contract)?;
     if capability_registry.executable_capabilities.is_empty() {
         return Err(CoherenceError::Contract(format!(
             "capability registry must include at least one capability: {}",
@@ -5156,6 +5199,14 @@ fn parse_backticked_capabilities(text: &str) -> Result<BTreeSet<String>, Coheren
         .collect())
 }
 
+fn parse_backticked_profile_overlay_claims(text: &str) -> Result<BTreeSet<String>, CoherenceError> {
+    let re = compile_regex(r"`(profile\.[a-z0-9_.]+)`")?;
+    Ok(re
+        .captures_iter(text)
+        .filter_map(|caps| caps.get(1).map(|m| m.as_str().to_string()))
+        .collect())
+}
+
 fn parse_backticked_tasks(text: &str) -> Result<BTreeSet<String>, CoherenceError> {
     let re = compile_regex(r"`([a-z][a-z0-9-]*)`")?;
     Ok(re
@@ -6023,6 +6074,7 @@ Current deterministic projected check IDs include:
             surfaces: CoherenceSurfaces {
                 capability_registry_path: String::new(),
                 capability_registry_kind: String::new(),
+                conformance_path: String::new(),
                 capability_manifest_root: String::new(),
                 readme_path: String::new(),
                 conformance_readme_path: String::new(),

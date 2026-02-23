@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "doctrine-inf",
+  "vectorId": "adversarial/governance_profile_self_evolution_retry_missing_reject",
+  "description": "Claimed governance profile rejects when self-evolution max-attempts bound is missing.",
+  "artifacts": {
+    "doctrineRegistry": [
+      "dm.identity",
+      "dm.policy.rebind",
+      "dm.profile.execution",
+      "dm.profile.evidence",
+      "dm.presentation.projection",
+      "dm.commitment.attest"
+    ],
+    "destinationDeclares": {
+      "preserved": [
+        "dm.identity",
+        "dm.policy.rebind",
+        "dm.profile.execution",
+        "dm.profile.evidence",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ],
+      "notPreserved": []
+    },
+    "edgeMorphisms": [
+      "dm.identity",
+      "dm.commitment.attest"
+    ]
+  },
+  "governanceProfile": {
+    "claimId": "profile.doctrine_inf_governance.v0",
+    "claimed": true,
+    "policyProvenance": {
+      "pinned": true,
+      "packageRef": "policy/governance/v1",
+      "expectedDigest": "sha256:policy-governance-v1",
+      "boundDigest": "sha256:policy-governance-v1"
+    },
+    "guardrailStages": [
+      "pre_flight",
+      "input",
+      "output"
+    ],
+    "evalGate": {
+      "passed": true
+    },
+    "evalEvidence": {
+      "datasetLineageRef": "dataset/lineage/v3",
+      "graderConfigLineageRef": "grader/config/v2",
+      "metricThresholdsRef": "metrics/thresholds/v5"
+    },
+    "observabilityMode": "dashboard",
+    "riskTier": {
+      "tier": "moderate",
+      "controlProfileBound": true
+    },
+    "selfEvolution": {
+      "terminalEscalation": "escalate-to-human-review",
+      "rollbackRef": "rollback/policy/v1"
+    }
+  }
+}

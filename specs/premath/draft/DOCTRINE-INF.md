@@ -138,3 +138,112 @@ Implementations SHOULD:
 - keep doctrine morphism IDs stable,
 - version declaration changes with explicit decision-log entries,
 - fail closed when a required preservation claim is missing.
+
+## 9. Governance flywheel preservation profile (v0)
+
+This section defines doctrine-level constraints for operational governance loops
+that change policy/prompt/model behavior over time.
+
+Purpose:
+
+- keep policy-as-code governance composable with semantic authority boundaries,
+- make promotion/retraining decisions auditable and reversible,
+- prevent ungoverned self-optimization paths from bypassing checker authority.
+
+Applicability (conditional normative):
+
+- this profile is normative only for surfaces that explicitly claim
+  `profile.doctrine_inf_governance.v0`,
+- surfaces that do not claim this profile MAY omit §9 obligations and MUST NOT
+  advertise governance-profile conformance.
+
+### 9.1 Policy provenance binding
+
+For surfaces claiming `profile.doctrine_inf_governance.v0`, any
+governance-sensitive run or mutation that depends on policy material MUST bind
+explicit policy provenance in runtime call/witness evidence.
+
+Minimum required provenance fields:
+
+- `policyProvenance.pinned` (boolean),
+- `policyProvenance.packageRef` (non-empty policy package/version reference),
+- `policyProvenance.expectedDigest` (declared pinned digest),
+- `policyProvenance.boundDigest` (runtime-bound digest).
+
+Fail-closed rules:
+
+- if `pinned=false` or required provenance fields are missing, fail closed with
+  `governance.policy_package_unpinned`,
+- if `expectedDigest != boundDigest`, fail closed with
+  `governance.policy_package_mismatch`.
+
+### 9.2 Staged guardrail preservation
+
+Guardrail stages MUST be modeled explicitly as ordered doctrine-relevant
+decisions:
+
+1. `pre_flight`
+2. `input`
+3. `output`
+
+Missing or out-of-order required stages MUST fail closed.
+
+Risk-tier policy (`low|moderate|high`) and observability mode
+(`dashboard|internal_processor|disabled`) MUST be explicit for governance
+surfaces that claim this profile.
+
+### 9.3 Evaluation flywheel evidence
+
+Promotion decisions for policy/prompt/model changes MUST carry measurable
+evidence from an evaluation loop (analyze -> measure -> improve), including:
+
+- dataset lineage/provenance,
+- grader/evaluator configuration lineage,
+- decision metrics and thresholds used for acceptance/rejection.
+
+If required governance thresholds are unmet, promotion MUST fail closed or
+escalate through declared runtime policy.
+
+### 9.4 Controlled self-evolution bounds
+
+Automated prompt/retraining loops MUST declare:
+
+- bounded retry policy (max attempts / terminal condition),
+- terminal escalation behavior when retries are exhausted,
+- deterministic rollback/revert path with lineage attribution.
+
+Default doctrine posture: high-risk governance tiers SHOULD require explicit
+human checkpoint/approval before promotion.
+
+When a claiming surface's active governance policy declares high-risk human
+checkpoint as required, implementations MUST enforce that requirement and fail
+closed when approval evidence is missing.
+
+### 9.5 Doctrine morphism attribution for governance paths
+
+Governance implementations claiming this profile SHOULD declare preservation for
+the relevant doctrine morphisms:
+
+- `dm.policy.rebind` (policy/prompt/model rebinding under explicit run boundary),
+- `dm.commitment.attest` (decision/eval/promotion evidence attestation),
+- `dm.presentation.projection` (dashboard/reporting layers that MUST NOT gain
+  semantic authority).
+
+Claims that cannot establish preservation MUST be rejected or downgraded.
+
+### 9.6 Fail-closed expectation (minimum)
+
+Conforming governance-profile implementations SHOULD expose deterministic
+fail-closed classes for at least:
+
+- `governance.policy_package_unpinned`,
+- `governance.policy_package_mismatch`,
+- `governance.guardrail_stage_missing`,
+- `governance.guardrail_stage_order_invalid`,
+- `governance.eval_gate_unmet`,
+- `governance.eval_lineage_missing`,
+- `governance.self_evolution_retry_missing`,
+- `governance.self_evolution_escalation_missing`,
+- `governance.self_evolution_rollback_missing`,
+- `governance.trace_mode_violation`,
+- `governance.risk_tier_profile_missing`.

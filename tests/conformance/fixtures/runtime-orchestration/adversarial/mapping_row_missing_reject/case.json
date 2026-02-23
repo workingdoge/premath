@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "suiteId": "runtime-orchestration",
+  "vectorId": "adversarial/mapping_row_missing_reject",
+  "controlPlaneContract": {
+    "runtimeRouteBindings": {
+      "requiredOperationRoutes": {
+        "runGate": {
+          "operationId": "op/ci.run_gate",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ]
+        }
+      }
+    },
+    "controlPlaneKcirMappings": {
+      "mappingTable": {
+        "instructionEnvelope": {
+          "sourceKind": "ci.instruction.envelope.v1",
+          "targetDomain": "kcir.node",
+          "targetKind": "ci.instruction.v1",
+          "identityFields": [
+            "instructionDigest",
+            "normalizerId",
+            "policyDigest"
+          ]
+        },
+        "proposalPayload": {
+          "sourceKind": "ci.instruction.proposal.v1",
+          "targetDomain": "kcir.node",
+          "targetKind": "ci.proposal.payload.v1",
+          "identityFields": [
+            "proposalDigest",
+            "proposalKcirRef",
+            "policyDigest"
+          ]
+        },
+        "coherenceCheckPayload": {
+          "sourceKind": "premath.coherence.v1",
+          "targetDomain": "kcir.node",
+          "targetKind": "premath.coherence.projection.v1",
+          "identityFields": [
+            "contractDigest",
+            "normalizerId",
+            "policyDigest"
+          ]
+        },
+        "requiredDecisionInput": {
+          "sourceKind": "ci.required.decision.input.v1",
+          "targetDomain": "kcir.node",
+          "targetKind": "ci.required.decision.v1",
+          "identityFields": [
+            "requiredDigest",
+            "decisionDigest",
+            "policyDigest"
+          ]
+        },
+        "coherenceObligations": {
+          "sourceKind": "premath.coherence.obligations.v1",
+          "targetDomain": "kcir.node",
+          "targetKind": "premath.coherence.obligation_set.v1",
+          "identityFields": [
+            "obligationDigest",
+            "normalizerId",
+            "policyDigest"
+          ]
+        }
+      }
+    }
+  },
+  "doctrineOpRegistry": {
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "path": "tools/ci/run_gate.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      }
+    ]
+  },
+  "harnessRuntimeText": "## 1.2 Harness-Squeak composition boundary (required)\nHarness computes deterministic work context and witness lineage refs.\nSqueak performs transport/runtime-placement mapping and emits transport-class witness outcomes.\nDestination Tusk/Gate performs destination-local admissibility checks and emits Gate-class outcomes.\nHarness records the resulting references in session/trajectory projections."
+}

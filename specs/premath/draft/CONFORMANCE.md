@@ -92,6 +92,27 @@ The capability registry and vector guidance are defined in:
 
 - `draft/CAPABILITY-VECTORS`
 
+### 2.4 Optional profile-overlay claims
+
+Implementations MAY additionally claim doctrine profile overlays when supported.
+
+Profile overlays are distinct from executable capability claims:
+
+- capability claims express executable feature surfaces,
+- profile-overlay claims express additional normative doctrine constraints that
+  apply when explicitly asserted.
+
+For governance doctrine profile conformance, implementations MAY claim:
+
+- `profile.doctrine_inf_governance.v0`
+
+Active repository-level profile-overlay claims MUST be declared in
+`draft/CAPABILITY-REGISTRY.json` under `profileOverlayClaims`.
+
+When this profile claim is asserted, §9 requirements in `draft/DOCTRINE-INF`
+are normative for the claiming surface and MUST be validated through doctrine
+conformance vectors.
+
 ## 3. Required behavior (Interop)
 
 ### 3.1 Interop Core
@@ -137,6 +158,12 @@ If capability `capabilities.change_morphisms` is claimed, implementation MUST:
     and stale/contended lease projection classification,
 12. enforce paired invariance requirements (including kernel verdict/Gate class
     invariance claims) across local/external projection profiles.
+
+Claim-scope note:
+
+- `draft/HARNESS-TYPESTATE` closure/mutation-gate requirements are currently
+  bundled under `capabilities.change_morphisms` (no separate typestate
+  capability claim in `draft/CAPABILITY-REGISTRY.json` at this time).
 
 Executable vectors for this claim MUST include same-owner active claim
 preservation checks where existing lease ids are retained across deterministic

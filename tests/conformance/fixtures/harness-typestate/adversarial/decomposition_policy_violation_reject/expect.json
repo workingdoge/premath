@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedJoinClosed": false,
+  "expectedFailureClasses": [
+    "coordination.decomposition_policy_violation"
+  ]
+}

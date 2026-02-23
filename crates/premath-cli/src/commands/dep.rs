@@ -1,5 +1,8 @@
 use crate::cli::{DepCommands, DepGraphScopeArg, DepTypeArg, DepViewArg};
-use premath_bd::{DepType, Dependency, DependencyGraphScope, DependencyView, MemoryStore};
+use premath_bd::{
+    AtomicStoreMutationError, DepType, Dependency, DependencyGraphScope, DependencyView,
+    MemoryStore, mutate_store_jsonl,
+};
 use serde_json::json;
 use std::path::PathBuf;
 
@@ -71,16 +74,23 @@ fn run_add(
     json_output: bool,
 ) {
     let path = PathBuf::from(issues);
-    let mut store = load_store_required(&path);
-
-    store
-        .add_dependency(&issue_id, &depends_on_id, dep_type.clone(), created_by)
-        .unwrap_or_else(|e| {
-            eprintln!("error: failed to add dependency: {e}");
-            std::process::exit(1);
-        });
-
-    save_store_or_exit(&store, &path);
+    if !path.exists() {
+        eprintln!("error: issues file not found: {}", path.display());
+        std::process::exit(1);
+    }
+    mutate_store_jsonl::<(), String, _>(&path, |store| {
+        store
+            .add_dependency(&issue_id, &depends_on_id, dep_type.clone(), created_by)
+            .map_err(|e| format!("failed to add dependency: {e}"))?;
+        Ok(((), true))
+    })
+    .unwrap_or_else(|e| {
+        match e {
+            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
+            other => eprintln!("error: {other}"),
+        }
+        std::process::exit(1);
+    });
 
     if json_output {
         let payload = json!({
@@ -115,14 +125,23 @@ fn run_remove(
     json_output: bool,
 ) {
     let path = PathBuf::from(issues);
-    let mut store = load_store_required(&path);
-    store
-        .remove_dependency(&issue_id, &depends_on_id, dep_type.clone())
-        .unwrap_or_else(|e| {
-            eprintln!("error: failed to remove dependency: {e}");
-            std::process::exit(1);
-        });
-    save_store_or_exit(&store, &path);
+    if !path.exists() {
+        eprintln!("error: issues file not found: {}", path.display());
+        std::process::exit(1);
+    }
+    mutate_store_jsonl::<(), String, _>(&path, |store| {
+        store
+            .remove_dependency(&issue_id, &depends_on_id, dep_type.clone())
+            .map_err(|e| format!("failed to remove dependency: {e}"))?;
+        Ok(((), true))
+    })
+    .unwrap_or_else(|e| {
+        match e {
+            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
+            other => eprintln!("error: {other}"),
+        }
+        std::process::exit(1);
+    });
 
     if json_output {
         let payload = json!({
@@ -159,20 +178,29 @@ fn run_replace(
     json_output: bool,
 ) {
     let path = PathBuf::from(issues);
-    let mut store = load_store_required(&path);
-    store
-        .replace_dependency(
-            &issue_id,
-            &depends_on_id,
-            from_dep_type.clone(),
-            to_dep_type.clone(),
-            created_by.clone(),
-        )
-        .unwrap_or_else(|e| {
-            eprintln!("error: failed to replace dependency: {e}");
-            std::process::exit(1);
-        });
-    save_store_or_exit(&store, &path);
+    if !path.exists() {
+        eprintln!("error: issues file not found: {}", path.display());
+        std::process::exit(1);
+    }
+    mutate_store_jsonl::<(), String, _>(&path, |store| {
+        store
+            .replace_dependency(
+                &issue_id,
+                &depends_on_id,
+                from_dep_type.clone(),
+                to_dep_type.clone(),
+                created_by.clone(),
+            )
+            .map_err(|e| format!("failed to replace dependency: {e}"))?;
+        Ok(((), true))
+    })
+    .unwrap_or_else(|e| {
+        match e {
+            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
+            other => eprintln!("error: {other}"),
+        }
+        std::process::exit(1);
+    });
 
     if json_output {
         let payload = json!({
@@ -356,11 +384,4 @@ fn load_store_required(path: &PathBuf) -> MemoryStore {
         eprintln!("error: failed to load {}: {e}", path.display());
         std::process::exit(1);
     })
-}
-
-fn save_store_or_exit(store: &MemoryStore, path: &PathBuf) {
-    store.save_jsonl(path).unwrap_or_else(|e| {
-        eprintln!("error: failed to save {}: {e}", path.display());
-        std::process::exit(1);
-    });
 }

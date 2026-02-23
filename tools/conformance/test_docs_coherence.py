@@ -20,12 +20,30 @@ class DocsCoherenceParserTests(unittest.TestCase):
                 "capabilities.alpha",
                 "capabilities.beta",
             ],
+            "profileOverlayClaims": [
+                "profile.alpha.v0",
+            ],
+            "capabilityDocBindings": [
+                {
+                    "docRef": "draft/ALPHA",
+                    "capabilityId": "capabilities.alpha",
+                },
+                {
+                    "docRef": "draft/BETA",
+                    "capabilityId": "capabilities.beta",
+                },
+            ],
         }
         with tempfile.TemporaryDirectory(prefix="docs-coherence-cap-registry-") as tmp:
             path = Path(tmp) / "CAPABILITY-REGISTRY.json"
             path.write_text(json.dumps(payload), encoding="utf-8")
             values = check_docs_coherence.parse_capability_registry(path)
-            self.assertEqual(values, ["capabilities.alpha", "capabilities.beta"])
+            self.assertEqual(values.executable_capabilities, ["capabilities.alpha", "capabilities.beta"])
+            self.assertEqual(values.profile_overlay_claims, ["profile.alpha.v0"])
+            self.assertEqual(
+                values.capability_doc_map,
+                {"draft/ALPHA": "capabilities.alpha", "draft/BETA": "capabilities.beta"},
+            )
 
     def test_extract_section_between(self) -> None:
         text = "prefix START body END suffix"
@@ -49,6 +67,79 @@ run = "echo ok"
         self.assertEqual(commands, ["mise run fmt", "mise run test"])
         task_ids = check_docs_coherence.parse_baseline_task_ids_from_commands(commands)
         self.assertEqual(task_ids, ["fmt", "test"])
+
+    def test_parse_workspace_members(self) -> None:
+        cargo_toml = """
+[workspace]
+members = [
+  "crates/premath-alpha",
+  "crates/premath-beta",
+]
+"""
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-workspace-members-") as tmp:
+            root = Path(tmp)
+            (root / "Cargo.toml").write_text(cargo_toml, encoding="utf-8")
+            members = check_docs_coherence.parse_workspace_members(root / "Cargo.toml", root)
+            self.assertEqual(members, ["crates/premath-alpha", "crates/premath-beta"])
+
+    def test_parse_readme_workspace_crates(self) -> None:
+        readme = """
+## Workspace layering
+
+- `crates/premath-alpha`:
+- `crates/premath-beta`:
+
+## Baseline gate
+"""
+        crates = check_docs_coherence.parse_readme_workspace_crates(readme)
+        self.assertEqual(crates, ["crates/premath-alpha", "crates/premath-beta"])
+
+    def test_parse_issue_statuses(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-issue-status-") as tmp:
+            issues = Path(tmp) / "issues.jsonl"
+            issues.write_text(
+                "\n".join(
+                    [
+                        json.dumps({"id": "bd-1", "status": "open"}),
+                        json.dumps({"id": "bd-2", "status": "closed"}),
+                    ]
+                ),
+                encoding="utf-8",
+            )
+            statuses = check_docs_coherence.parse_issue_statuses(issues)
+            self.assertEqual(statuses, {"bd-1": "open", "bd-2": "closed"})
+
+    def test_find_stale_tracked_issue_references(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-stale-issue-refs-") as tmp:
+            root = Path(tmp)
+            docs = root / "docs"
+            specs_process = root / "specs" / "process"
+            docs.mkdir(parents=True)
+            specs_process.mkdir(parents=True)
+            tracked = docs / "example.md"
+            tracked.write_text(
+                "- `raw/SQUEAK-SITE` — tracked by issue `bd-2`.",
+                encoding="utf-8",
+            )
+            missing = docs / "missing.md"
+            missing.write_text(
+                "- `raw/TUSK-CORE` — tracked by issue `bd-999`.",
+                encoding="utf-8",
+            )
+            decision_log = specs_process / "decision-log.md"
+            decision_log.write_text(
+                "- historical note: tracked by issue `bd-2`.",
+                encoding="utf-8",
+            )
+            refs = check_docs_coherence.find_stale_tracked_issue_references(
+                roots=[docs, root / "specs"],
+                issue_statuses={"bd-2": "closed", "bd-3": "open"},
+                excluded_paths=[decision_log],
+            )
+            self.assertEqual(len(refs), 2)
+            by_issue = {(ref.path.name, ref.issue_id, ref.issue_status) for ref in refs}
+            self.assertIn(("example.md", "bd-2", "closed"), by_issue)
+            self.assertIn(("missing.md", "bd-999", None), by_issue)
 
     def test_parse_control_plane_projection_checks(self) -> None:
         payload = {
@@ -421,6 +512,7 @@ run = "echo ok"
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
+  "python3 tools/conformance/check_runtime_orchestration.py",
   "python3 tools/conformance/check_doctrine_mcp_parity.py",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
@@ -445,6 +537,18 @@ run = [
                 section,
                 "raw/PREMATH-CI",
                 "capabilities.ci_witnesses",
+            )
+        )
+        section_without_only = """
+- `draft/HARNESS-TYPESTATE` — promoted harness typestate closure/mutation gate
+  contract for tool-calling turns (normative when
+  `capabilities.change_morphisms` is claimed).
+"""
+        self.assertTrue(
+            check_docs_coherence.verify_conditional_normative_entry(
+                section_without_only,
+                "draft/HARNESS-TYPESTATE",
+                "capabilities.change_morphisms",
             )
         )
 

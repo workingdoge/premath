@@ -77,6 +77,63 @@ _WORKER_FAILURE_CLASSES = (
     "worker_lane_mutation_mode_drift",
     "worker_lane_route_unbound",
 )
+_REQUIRED_RUNTIME_ROUTE_FAILURE_CLASS_KEYS = (
+    "missingRoute",
+    "morphismDrift",
+    "contractUnbound",
+)
+_REQUIRED_COMMAND_SURFACE_IDS = (
+    "requiredDecision",
+    "instructionEnvelopeCheck",
+    "instructionDecision",
+)
+_REQUIRED_COMMAND_SURFACE_FAILURE_CLASS_KEYS = ("unbound",)
+_CONTROL_PLANE_BUNDLE_PROFILE_ID = "cp.bundle.v0"
+_CONTROL_PLANE_BUNDLE_CONTEXT_FAMILY_ID = "C_cp"
+_CONTROL_PLANE_BUNDLE_CONTEXT_KINDS = (
+    "repo_head",
+    "workspace_delta",
+    "instruction_envelope",
+    "policy_snapshot",
+    "witness_projection",
+)
+_CONTROL_PLANE_BUNDLE_MORPHISM_KINDS = (
+    "ctx.identity",
+    "ctx.rebase",
+    "ctx.patch",
+    "ctx.policy_rollover",
+)
+_CONTROL_PLANE_BUNDLE_ARTIFACT_FAMILY_ID = "E_cp"
+_CONTROL_PLANE_BUNDLE_ARTIFACT_REFS = {
+    "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
+    "coherenceContract": "specs/premath/draft/COHERENCE-CONTRACT.json",
+    "capabilityRegistry": "specs/premath/draft/CAPABILITY-REGISTRY.json",
+    "doctrineSiteInput": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+    "doctrineOpRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
+}
+_CONTROL_PLANE_BUNDLE_REINDEXING_OBLIGATIONS = (
+    "identity_preserved",
+    "composition_preserved",
+    "policy_digest_stable",
+    "route_bindings_total",
+)
+_CONTROL_PLANE_BUNDLE_COMMUTATION_WITNESS = "span_square_commutation"
+_CONTROL_PLANE_BUNDLE_WORKER_COVER_KIND = "worktree_partition_cover"
+_CONTROL_PLANE_BUNDLE_REQUIRED_MERGE_ARTIFACTS = (
+    "ci.required.v1",
+    "ci.instruction.v1",
+    "coherence_witness",
+)
+_CONTROL_PLANE_BUNDLE_SEMANTIC_AUTHORITY = (
+    "PREMATH-KERNEL",
+    "GATE",
+    "BIDIR-DESCENT",
+)
+_CONTROL_PLANE_BUNDLE_CONTROL_PLANE_ROLE = "projection_and_parity_only"
+_CONTROL_PLANE_BUNDLE_FORBIDDEN_ROLES = (
+    "semantic_obligation_discharge",
+    "admissibility_override",
+)
 
 
 def _require_non_empty_string(value: Any, label: str) -> str:
@@ -106,6 +163,41 @@ def _require_optional_string_list(value: Any, label: str) -> Tuple[str, ...]:
     if value is None:
         return tuple()
     return _require_string_list(value, label)
+
+
+def _require_command_tokens(value: Any, label: str) -> Tuple[str, ...]:
+    if not isinstance(value, list) or not value:
+        raise ValueError(f"{label} must be a non-empty list")
+    out: list[str] = []
+    for idx, item in enumerate(value):
+        out.append(_require_non_empty_string(item, f"{label}[{idx}]"))
+    return tuple(out)
+
+
+def _require_command_aliases(value: Any, label: str) -> Tuple[Tuple[str, ...], ...]:
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+    out: list[Tuple[str, ...]] = []
+    seen: set[Tuple[str, ...]] = set()
+    for idx, row in enumerate(value):
+        tokens = _require_command_tokens(row, f"{label}[{idx}]")
+        if tokens in seen:
+            raise ValueError(f"{label} must not contain duplicate aliases")
+        seen.add(tokens)
+        out.append(tokens)
+    return tuple(out)
+
+
+def _require_exact_members(
+    value: Tuple[str, ...],
+    expected: Tuple[str, ...],
+    label: str,
+) -> Tuple[str, ...]:
+    if set(value) != set(expected):
+        raise ValueError(
+            f"{label} must contain exactly: {', '.join(expected)}"
+        )
+    return value
 
 
 def _require_epoch(value: Any, label: str) -> str:
@@ -963,6 +1055,482 @@ def _validate_worker_lane_authority_contract(
     }
 
 
+def _validate_runtime_route_bindings(payload: Any) -> Dict[str, Any]:
+    runtime_routes = _require_object(payload, "runtimeRouteBindings")
+    required_routes = _require_object(
+        runtime_routes.get("requiredOperationRoutes"),
+        "runtimeRouteBindings.requiredOperationRoutes",
+    )
+    if not required_routes:
+        raise ValueError(
+            "runtimeRouteBindings.requiredOperationRoutes must be a non-empty object"
+        )
+    parsed_routes: Dict[str, Dict[str, Any]] = {}
+    for key in sorted(required_routes):
+        key_norm = _require_non_empty_string(
+            key, "runtimeRouteBindings.requiredOperationRoutes.<routeId>"
+        )
+        route_obj = _require_object(
+            required_routes.get(key),
+            f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}",
+        )
+        operation_id = _require_non_empty_string(
+            route_obj.get("operationId"),
+            f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}.operationId",
+        )
+        required_morphisms = tuple(
+            sorted(
+                _require_string_list(
+                    route_obj.get("requiredMorphisms"),
+                    f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}.requiredMorphisms",
+                )
+            )
+        )
+        parsed_routes[key_norm] = {
+            "operationId": operation_id,
+            "requiredMorphisms": required_morphisms,
+        }
+
+    failure_classes = _require_object(
+        runtime_routes.get("failureClasses"),
+        "runtimeRouteBindings.failureClasses",
+    )
+    missing_failure_class_keys = sorted(
+        set(_REQUIRED_RUNTIME_ROUTE_FAILURE_CLASS_KEYS) - set(failure_classes)
+    )
+    if missing_failure_class_keys:
+        raise ValueError(
+            "runtimeRouteBindings.failureClasses missing required keys: "
+            + ", ".join(missing_failure_class_keys)
+        )
+    unknown_failure_class_keys = sorted(
+        set(failure_classes) - set(_REQUIRED_RUNTIME_ROUTE_FAILURE_CLASS_KEYS)
+    )
+    if unknown_failure_class_keys:
+        raise ValueError(
+            "runtimeRouteBindings.failureClasses includes unknown keys: "
+            + ", ".join(unknown_failure_class_keys)
+        )
+    parsed_failure_classes = {
+        key: _require_non_empty_string(
+            failure_classes.get(key),
+            f"runtimeRouteBindings.failureClasses.{key}",
+        )
+        for key in _REQUIRED_RUNTIME_ROUTE_FAILURE_CLASS_KEYS
+    }
+
+    return {
+        "requiredOperationRoutes": parsed_routes,
+        "failureClasses": parsed_failure_classes,
+    }
+
+
+def _validate_command_surface(payload: Any) -> Dict[str, Any]:
+    command_surface = _require_object(payload, "commandSurface")
+    missing_surface_ids = sorted(
+        set(_REQUIRED_COMMAND_SURFACE_IDS) - set(command_surface)
+    )
+    if missing_surface_ids:
+        raise ValueError(
+            "commandSurface missing required surfaces: "
+            + ", ".join(missing_surface_ids)
+        )
+    unknown_keys = sorted(
+        set(command_surface) - (set(_REQUIRED_COMMAND_SURFACE_IDS) | {"failureClasses"})
+    )
+    if unknown_keys:
+        raise ValueError(
+            "commandSurface includes unknown keys: "
+            + ", ".join(unknown_keys)
+        )
+
+    parsed_surface: Dict[str, Any] = {}
+    for surface_id in _REQUIRED_COMMAND_SURFACE_IDS:
+        row = _require_object(
+            command_surface.get(surface_id),
+            f"commandSurface.{surface_id}",
+        )
+        canonical_entrypoint = _require_command_tokens(
+            row.get("canonicalEntrypoint"),
+            f"commandSurface.{surface_id}.canonicalEntrypoint",
+        )
+        compatibility_aliases = _require_command_aliases(
+            row.get("compatibilityAliases"),
+            f"commandSurface.{surface_id}.compatibilityAliases",
+        )
+        if canonical_entrypoint in set(compatibility_aliases):
+            raise ValueError(
+                "commandSurface."
+                f"{surface_id}.compatibilityAliases must not include canonicalEntrypoint"
+            )
+        parsed_surface[surface_id] = {
+            "canonicalEntrypoint": list(canonical_entrypoint),
+            "compatibilityAliases": [
+                list(alias)
+                for alias in sorted(compatibility_aliases)
+            ],
+        }
+
+    failure_classes = _require_object(
+        command_surface.get("failureClasses"),
+        "commandSurface.failureClasses",
+    )
+    missing_failure_class_keys = sorted(
+        set(_REQUIRED_COMMAND_SURFACE_FAILURE_CLASS_KEYS) - set(failure_classes)
+    )
+    if missing_failure_class_keys:
+        raise ValueError(
+            "commandSurface.failureClasses missing required keys: "
+            + ", ".join(missing_failure_class_keys)
+        )
+    unknown_failure_class_keys = sorted(
+        set(failure_classes) - set(_REQUIRED_COMMAND_SURFACE_FAILURE_CLASS_KEYS)
+    )
+    if unknown_failure_class_keys:
+        raise ValueError(
+            "commandSurface.failureClasses includes unknown keys: "
+            + ", ".join(unknown_failure_class_keys)
+        )
+    unbound = _require_non_empty_string(
+        failure_classes.get("unbound"),
+        "commandSurface.failureClasses.unbound",
+    )
+    parsed_surface["failureClasses"] = {"unbound": unbound}
+    return parsed_surface
+
+
+def _validate_control_plane_bundle_profile(payload: Any) -> Dict[str, Any]:
+    profile = _require_object(payload, "controlPlaneBundleProfile")
+    profile_id = _require_non_empty_string(
+        profile.get("profileId"),
+        "controlPlaneBundleProfile.profileId",
+    )
+    if profile_id != _CONTROL_PLANE_BUNDLE_PROFILE_ID:
+        raise ValueError(
+            "controlPlaneBundleProfile.profileId must equal "
+            f"{_CONTROL_PLANE_BUNDLE_PROFILE_ID!r}"
+        )
+
+    context_family = _require_object(
+        profile.get("contextFamily"),
+        "controlPlaneBundleProfile.contextFamily",
+    )
+    context_family_id = _require_non_empty_string(
+        context_family.get("id"),
+        "controlPlaneBundleProfile.contextFamily.id",
+    )
+    if context_family_id != _CONTROL_PLANE_BUNDLE_CONTEXT_FAMILY_ID:
+        raise ValueError(
+            "controlPlaneBundleProfile.contextFamily.id must equal "
+            f"{_CONTROL_PLANE_BUNDLE_CONTEXT_FAMILY_ID!r}"
+        )
+    context_kinds = _require_exact_members(
+        _require_string_list(
+            context_family.get("contextKinds"),
+            "controlPlaneBundleProfile.contextFamily.contextKinds",
+        ),
+        _CONTROL_PLANE_BUNDLE_CONTEXT_KINDS,
+        "controlPlaneBundleProfile.contextFamily.contextKinds",
+    )
+    morphism_kinds = _require_exact_members(
+        _require_string_list(
+            context_family.get("morphismKinds"),
+            "controlPlaneBundleProfile.contextFamily.morphismKinds",
+        ),
+        _CONTROL_PLANE_BUNDLE_MORPHISM_KINDS,
+        "controlPlaneBundleProfile.contextFamily.morphismKinds",
+    )
+
+    artifact_family = _require_object(
+        profile.get("artifactFamily"),
+        "controlPlaneBundleProfile.artifactFamily",
+    )
+    artifact_family_id = _require_non_empty_string(
+        artifact_family.get("id"),
+        "controlPlaneBundleProfile.artifactFamily.id",
+    )
+    if artifact_family_id != _CONTROL_PLANE_BUNDLE_ARTIFACT_FAMILY_ID:
+        raise ValueError(
+            "controlPlaneBundleProfile.artifactFamily.id must equal "
+            f"{_CONTROL_PLANE_BUNDLE_ARTIFACT_FAMILY_ID!r}"
+        )
+    artifact_refs_obj = _require_object(
+        artifact_family.get("artifactRefs"),
+        "controlPlaneBundleProfile.artifactFamily.artifactRefs",
+    )
+    unknown_artifact_refs = sorted(
+        set(artifact_refs_obj) - set(_CONTROL_PLANE_BUNDLE_ARTIFACT_REFS)
+    )
+    if unknown_artifact_refs:
+        raise ValueError(
+            "controlPlaneBundleProfile.artifactFamily.artifactRefs includes unknown keys: "
+            + ", ".join(unknown_artifact_refs)
+        )
+    missing_artifact_refs = sorted(
+        set(_CONTROL_PLANE_BUNDLE_ARTIFACT_REFS) - set(artifact_refs_obj)
+    )
+    if missing_artifact_refs:
+        raise ValueError(
+            "controlPlaneBundleProfile.artifactFamily.artifactRefs missing required keys: "
+            + ", ".join(missing_artifact_refs)
+        )
+    artifact_refs: Dict[str, str] = {}
+    for key, expected_path in _CONTROL_PLANE_BUNDLE_ARTIFACT_REFS.items():
+        parsed_path = _require_non_empty_string(
+            artifact_refs_obj.get(key),
+            f"controlPlaneBundleProfile.artifactFamily.artifactRefs.{key}",
+        )
+        if parsed_path != expected_path:
+            raise ValueError(
+                "controlPlaneBundleProfile.artifactFamily.artifactRefs."
+                f"{key} must equal {expected_path!r}"
+            )
+        artifact_refs[key] = parsed_path
+
+    reindexing = _require_object(
+        profile.get("reindexingCoherence"),
+        "controlPlaneBundleProfile.reindexingCoherence",
+    )
+    reindexing_obligations = _require_exact_members(
+        _require_string_list(
+            reindexing.get("requiredObligations"),
+            "controlPlaneBundleProfile.reindexingCoherence.requiredObligations",
+        ),
+        _CONTROL_PLANE_BUNDLE_REINDEXING_OBLIGATIONS,
+        "controlPlaneBundleProfile.reindexingCoherence.requiredObligations",
+    )
+    commutation_witness = _require_non_empty_string(
+        reindexing.get("commutationWitness"),
+        "controlPlaneBundleProfile.reindexingCoherence.commutationWitness",
+    )
+    if commutation_witness != _CONTROL_PLANE_BUNDLE_COMMUTATION_WITNESS:
+        raise ValueError(
+            "controlPlaneBundleProfile.reindexingCoherence.commutationWitness must equal "
+            f"{_CONTROL_PLANE_BUNDLE_COMMUTATION_WITNESS!r}"
+        )
+
+    cover_glue = _require_object(
+        profile.get("coverGlue"),
+        "controlPlaneBundleProfile.coverGlue",
+    )
+    worker_cover_kind = _require_non_empty_string(
+        cover_glue.get("workerCoverKind"),
+        "controlPlaneBundleProfile.coverGlue.workerCoverKind",
+    )
+    if worker_cover_kind != _CONTROL_PLANE_BUNDLE_WORKER_COVER_KIND:
+        raise ValueError(
+            "controlPlaneBundleProfile.coverGlue.workerCoverKind must equal "
+            f"{_CONTROL_PLANE_BUNDLE_WORKER_COVER_KIND!r}"
+        )
+    merge_compatibility_witness = _require_non_empty_string(
+        cover_glue.get("mergeCompatibilityWitness"),
+        "controlPlaneBundleProfile.coverGlue.mergeCompatibilityWitness",
+    )
+    if merge_compatibility_witness != _CONTROL_PLANE_BUNDLE_COMMUTATION_WITNESS:
+        raise ValueError(
+            "controlPlaneBundleProfile.coverGlue.mergeCompatibilityWitness must equal "
+            f"{_CONTROL_PLANE_BUNDLE_COMMUTATION_WITNESS!r}"
+        )
+    required_merge_artifacts = _require_exact_members(
+        _require_string_list(
+            cover_glue.get("requiredMergeArtifacts"),
+            "controlPlaneBundleProfile.coverGlue.requiredMergeArtifacts",
+        ),
+        _CONTROL_PLANE_BUNDLE_REQUIRED_MERGE_ARTIFACTS,
+        "controlPlaneBundleProfile.coverGlue.requiredMergeArtifacts",
+    )
+
+    authority_split = _require_object(
+        profile.get("authoritySplit"),
+        "controlPlaneBundleProfile.authoritySplit",
+    )
+    semantic_authority = _require_exact_members(
+        _require_string_list(
+            authority_split.get("semanticAuthority"),
+            "controlPlaneBundleProfile.authoritySplit.semanticAuthority",
+        ),
+        _CONTROL_PLANE_BUNDLE_SEMANTIC_AUTHORITY,
+        "controlPlaneBundleProfile.authoritySplit.semanticAuthority",
+    )
+    control_plane_role = _require_non_empty_string(
+        authority_split.get("controlPlaneRole"),
+        "controlPlaneBundleProfile.authoritySplit.controlPlaneRole",
+    )
+    if control_plane_role != _CONTROL_PLANE_BUNDLE_CONTROL_PLANE_ROLE:
+        raise ValueError(
+            "controlPlaneBundleProfile.authoritySplit.controlPlaneRole must equal "
+            f"{_CONTROL_PLANE_BUNDLE_CONTROL_PLANE_ROLE!r}"
+        )
+    forbidden_roles = _require_exact_members(
+        _require_string_list(
+            authority_split.get("forbiddenControlPlaneRoles"),
+            "controlPlaneBundleProfile.authoritySplit.forbiddenControlPlaneRoles",
+        ),
+        _CONTROL_PLANE_BUNDLE_FORBIDDEN_ROLES,
+        "controlPlaneBundleProfile.authoritySplit.forbiddenControlPlaneRoles",
+    )
+
+    return {
+        "profileId": profile_id,
+        "contextFamily": {
+            "id": context_family_id,
+            "contextKinds": context_kinds,
+            "morphismKinds": morphism_kinds,
+        },
+        "artifactFamily": {
+            "id": artifact_family_id,
+            "artifactRefs": artifact_refs,
+        },
+        "reindexingCoherence": {
+            "requiredObligations": reindexing_obligations,
+            "commutationWitness": commutation_witness,
+        },
+        "coverGlue": {
+            "workerCoverKind": worker_cover_kind,
+            "mergeCompatibilityWitness": merge_compatibility_witness,
+            "requiredMergeArtifacts": required_merge_artifacts,
+        },
+        "authoritySplit": {
+            "semanticAuthority": semantic_authority,
+            "controlPlaneRole": control_plane_role,
+            "forbiddenControlPlaneRoles": forbidden_roles,
+        },
+    }
+
+
+def _validate_control_plane_kcir_mappings(
+    payload: Any,
+    *,
+    active_epoch: str,
+    schema_epoch_discipline: Dict[str, Any],
+) -> Dict[str, Any]:
+    mappings = _require_object(payload, "controlPlaneKcirMappings")
+    profile_id = _require_non_empty_string(
+        mappings.get("profileId"),
+        "controlPlaneKcirMappings.profileId",
+    )
+
+    mapping_table_raw = _require_object(
+        mappings.get("mappingTable"),
+        "controlPlaneKcirMappings.mappingTable",
+    )
+    if not mapping_table_raw:
+        raise ValueError("controlPlaneKcirMappings.mappingTable must be non-empty")
+
+    parsed_mapping_table: Dict[str, Dict[str, Any]] = {}
+    for row_id in sorted(mapping_table_raw):
+        row_id_norm = _require_non_empty_string(
+            row_id, "controlPlaneKcirMappings.mappingTable.<rowId>"
+        )
+        row = _require_object(
+            mapping_table_raw.get(row_id),
+            f"controlPlaneKcirMappings.mappingTable.{row_id_norm}",
+        )
+        source_kind = _require_non_empty_string(
+            row.get("sourceKind"),
+            f"controlPlaneKcirMappings.mappingTable.{row_id_norm}.sourceKind",
+        )
+        target_domain = _require_non_empty_string(
+            row.get("targetDomain"),
+            f"controlPlaneKcirMappings.mappingTable.{row_id_norm}.targetDomain",
+        )
+        target_kind = _require_non_empty_string(
+            row.get("targetKind"),
+            f"controlPlaneKcirMappings.mappingTable.{row_id_norm}.targetKind",
+        )
+        identity_fields = _require_string_list(
+            row.get("identityFields"),
+            f"controlPlaneKcirMappings.mappingTable.{row_id_norm}.identityFields",
+        )
+        if len(set(identity_fields)) != len(identity_fields):
+            raise ValueError(
+                f"controlPlaneKcirMappings.mappingTable.{row_id_norm}.identityFields must not contain duplicates"
+            )
+        parsed_mapping_table[row_id_norm] = {
+            "sourceKind": source_kind,
+            "targetDomain": target_domain,
+            "targetKind": target_kind,
+            "identityFields": identity_fields,
+        }
+
+    lineage = _require_object(
+        mappings.get("identityDigestLineage"),
+        "controlPlaneKcirMappings.identityDigestLineage",
+    )
+    digest_algorithm = _require_non_empty_string(
+        lineage.get("digestAlgorithm"),
+        "controlPlaneKcirMappings.identityDigestLineage.digestAlgorithm",
+    )
+    ref_profile_path = _require_non_empty_string(
+        lineage.get("refProfilePath"),
+        "controlPlaneKcirMappings.identityDigestLineage.refProfilePath",
+    )
+    normalizer_field = _require_non_empty_string(
+        lineage.get("normalizerField"),
+        "controlPlaneKcirMappings.identityDigestLineage.normalizerField",
+    )
+    policy_digest_field = _require_non_empty_string(
+        lineage.get("policyDigestField"),
+        "controlPlaneKcirMappings.identityDigestLineage.policyDigestField",
+    )
+
+    compatibility_policy = _require_object(
+        mappings.get("compatibilityPolicy"),
+        "controlPlaneKcirMappings.compatibilityPolicy",
+    )
+    legacy_policy = _require_object(
+        compatibility_policy.get("legacyNonKcirEncodings"),
+        "controlPlaneKcirMappings.compatibilityPolicy.legacyNonKcirEncodings",
+    )
+    legacy_mode = _require_non_empty_string(
+        legacy_policy.get("mode"),
+        "controlPlaneKcirMappings.compatibilityPolicy.legacyNonKcirEncodings.mode",
+    )
+    authority_mode = _require_non_empty_string(
+        legacy_policy.get("authorityMode"),
+        "controlPlaneKcirMappings.compatibilityPolicy.legacyNonKcirEncodings.authorityMode",
+    )
+    support_until_epoch = _require_epoch(
+        legacy_policy.get("supportUntilEpoch"),
+        "controlPlaneKcirMappings.compatibilityPolicy.legacyNonKcirEncodings.supportUntilEpoch",
+    )
+    if active_epoch > support_until_epoch:
+        raise ValueError(
+            "controlPlaneKcirMappings.compatibilityPolicy.legacyNonKcirEncodings "
+            f"expired at supportUntilEpoch={support_until_epoch!r} (activeEpoch={active_epoch!r})"
+        )
+    rollover_epoch = schema_epoch_discipline.get("rolloverEpoch")
+    if isinstance(rollover_epoch, str) and rollover_epoch:
+        if support_until_epoch != rollover_epoch:
+            raise ValueError(
+                "controlPlaneKcirMappings.compatibilityPolicy.legacyNonKcirEncodings."
+                "supportUntilEpoch must match schemaLifecycle.epochDiscipline.rolloverEpoch"
+            )
+    failure_class = _require_non_empty_string(
+        legacy_policy.get("failureClass"),
+        "controlPlaneKcirMappings.compatibilityPolicy.legacyNonKcirEncodings.failureClass",
+    )
+
+    return {
+        "profileId": profile_id,
+        "mappingTable": parsed_mapping_table,
+        "identityDigestLineage": {
+            "digestAlgorithm": digest_algorithm,
+            "refProfilePath": ref_profile_path,
+            "normalizerField": normalizer_field,
+            "policyDigestField": policy_digest_field,
+        },
+        "compatibilityPolicy": {
+            "legacyNonKcirEncodings": {
+                "mode": legacy_mode,
+                "authorityMode": authority_mode,
+                "supportUntilEpoch": support_until_epoch,
+                "failureClass": failure_class,
+            }
+        },
+    }
+
+
 def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dict[str, Any]:
     try:
         payload = json.loads(path.read_text(encoding="utf-8"))
@@ -1021,6 +1589,14 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         raise ValueError(
             f"control-plane contract kind must resolve to {CONTROL_PLANE_CONTRACT_KIND!r}"
         )
+    control_plane_bundle_profile = _validate_control_plane_bundle_profile(
+        root.get("controlPlaneBundleProfile")
+    )
+    control_plane_kcir_mappings = _validate_control_plane_kcir_mappings(
+        root.get("controlPlaneKcirMappings"),
+        active_epoch=active_epoch,
+        schema_epoch_discipline=schema_epoch_discipline,
+    )
 
     evidence_lanes: Dict[str, str] = {}
     evidence_lanes_raw = root.get("evidenceLanes")
@@ -1085,6 +1661,10 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         root.get("workerLaneAuthority"),
         active_epoch=active_epoch,
     )
+    runtime_route_bindings = _validate_runtime_route_bindings(
+        root.get("runtimeRouteBindings")
+    )
+    command_surface = _validate_command_surface(root.get("commandSurface"))
 
     harness_retry_obj = _require_object(
         root.get("harnessRetry"),
@@ -1238,6 +1818,8 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
             "kindFamilies": kind_families,
             "epochDiscipline": schema_epoch_discipline,
         },
+        "controlPlaneBundleProfile": control_plane_bundle_profile,
+        "controlPlaneKcirMappings": control_plane_kcir_mappings,
         "evidenceLanes": evidence_lanes,
         "laneArtifactKinds": lane_artifact_kinds,
         "laneOwnership": {
@@ -1246,6 +1828,8 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         },
         "laneFailureClasses": lane_failure_classes,
         "workerLaneAuthority": worker_lane_authority,
+        "runtimeRouteBindings": runtime_route_bindings,
+        "commandSurface": command_surface,
         "harnessRetry": {
             "policyKind": harness_retry_policy_kind,
             "policyPath": harness_retry_policy_path,
@@ -1390,6 +1974,87 @@ WORKER_LANE_FAILURE_CLASSES: Tuple[str, ...] = tuple(
     .get("failureClasses", {})
     .get(key, "")
     for key in ("policyDrift", "mutationModeDrift", "routeUnbound")
+)
+RUNTIME_ROUTE_BINDINGS: Dict[str, Dict[str, Any]] = {
+    route_id: {
+        "operationId": str(route.get("operationId", "")),
+        "requiredMorphisms": tuple(route.get("requiredMorphisms", ())),
+    }
+    for route_id, route in _CONTRACT.get("runtimeRouteBindings", {})
+    .get("requiredOperationRoutes", {})
+    .items()
+    if isinstance(route, dict)
+}
+RUNTIME_ROUTE_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("runtimeRouteBindings", {})
+    .get("failureClasses", {})
+    .get(key, "")
+    for key in ("missingRoute", "morphismDrift", "contractUnbound")
+)
+CONTROL_PLANE_COMMAND_SURFACE: Dict[str, Any] = dict(
+    _CONTRACT.get("commandSurface", {})
+)
+REQUIRED_DECISION_CANONICAL_ENTRYPOINT: Tuple[str, ...] = tuple(
+    CONTROL_PLANE_COMMAND_SURFACE.get("requiredDecision", {}).get(
+        "canonicalEntrypoint", ()
+    )
+)
+REQUIRED_DECISION_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
+    tuple(alias)
+    for alias in CONTROL_PLANE_COMMAND_SURFACE.get("requiredDecision", {}).get(
+        "compatibilityAliases", ()
+    )
+)
+INSTRUCTION_ENVELOPE_CHECK_CANONICAL_ENTRYPOINT: Tuple[str, ...] = tuple(
+    CONTROL_PLANE_COMMAND_SURFACE.get("instructionEnvelopeCheck", {}).get(
+        "canonicalEntrypoint", ()
+    )
+)
+INSTRUCTION_ENVELOPE_CHECK_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
+    tuple(alias)
+    for alias in CONTROL_PLANE_COMMAND_SURFACE.get(
+        "instructionEnvelopeCheck", {}
+    ).get("compatibilityAliases", ())
+)
+INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT: Tuple[str, ...] = tuple(
+    CONTROL_PLANE_COMMAND_SURFACE.get("instructionDecision", {}).get(
+        "canonicalEntrypoint", ()
+    )
+)
+INSTRUCTION_DECISION_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
+    tuple(alias)
+    for alias in CONTROL_PLANE_COMMAND_SURFACE.get("instructionDecision", {}).get(
+        "compatibilityAliases", ()
+    )
+)
+CONTROL_PLANE_COMMAND_SURFACE_FAILURE_CLASS_UNBOUND: str = (
+    CONTROL_PLANE_COMMAND_SURFACE.get("failureClasses", {}).get("unbound", "")
+)
+CONTROL_PLANE_BUNDLE_PROFILE: Dict[str, Any] = dict(
+    _CONTRACT.get("controlPlaneBundleProfile", {})
+)
+CONTROL_PLANE_BUNDLE_PROFILE_ID: str = CONTROL_PLANE_BUNDLE_PROFILE.get(
+    "profileId", ""
+)
+CONTROL_PLANE_BUNDLE_CONTEXT_FAMILY_ID: str = (
+    CONTROL_PLANE_BUNDLE_PROFILE.get("contextFamily", {}).get("id", "")
+)
+CONTROL_PLANE_BUNDLE_ARTIFACT_FAMILY_ID: str = (
+    CONTROL_PLANE_BUNDLE_PROFILE.get("artifactFamily", {}).get("id", "")
+)
+CONTROL_PLANE_KCIR_MAPPINGS: Dict[str, Any] = dict(
+    _CONTRACT.get("controlPlaneKcirMappings", {})
+)
+CONTROL_PLANE_KCIR_MAPPING_PROFILE_ID: str = CONTROL_PLANE_KCIR_MAPPINGS.get(
+    "profileId", ""
+)
+CONTROL_PLANE_KCIR_MAPPING_TABLE: Dict[str, Dict[str, Any]] = dict(
+    CONTROL_PLANE_KCIR_MAPPINGS.get("mappingTable", {})
+)
+CONTROL_PLANE_KCIR_LEGACY_POLICY: Dict[str, Any] = dict(
+    CONTROL_PLANE_KCIR_MAPPINGS.get("compatibilityPolicy", {}).get(
+        "legacyNonKcirEncodings", {}
+    )
 )
 
 HARNESS_RETRY_POLICY_KIND: str = _CONTRACT.get("harnessRetry", {}).get(

@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "suiteId": "harness-typestate",
+  "vectors": [
+    "golden/join_closed_accept",
+    "golden/governance_profile_unclaimed_accept",
+    "golden/governance_profile_claimed_accept",
+    "adversarial/protocol_stop_reason_unhandled_reject",
+    "adversarial/join_use_missing_reject",
+    "adversarial/handoff_required_artifact_missing_reject",
+    "adversarial/parallel_transport_order_invalid_reject",
+    "adversarial/truncation_policy_violation_reject",
+    "adversarial/untyped_tool_error_envelope_reject",
+    "adversarial/context_queue_policy_violation_reject",
+    "adversarial/context_injection_point_missing_reject",
+    "adversarial/decomposition_policy_violation_reject",
+    "adversarial/handoff_return_path_missing_reject",
+    "adversarial/join_result_missing_reject",
+    "adversarial/join_result_orphan_reject",
+    "adversarial/join_use_without_result_reject",
+    "adversarial/handoff_target_not_allowed_reject",
+    "adversarial/governance_claim_id_invalid_reject",
+    "adversarial/governance_policy_package_unpinned_reject",
+    "adversarial/governance_policy_package_mismatch_reject"
+  ]
+}

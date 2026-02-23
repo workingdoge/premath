@@ -81,14 +81,25 @@ private/local-only surfaces (for example `.claude/`, `.serena/`,
 `.premath/cache/`) and required ignore entries
 (`mise run ci-hygiene-check`).
 
-`tools/ci/check_issue_graph.py` is a thin wrapper over
-`premath issue check` and therefore uses core issue-memory semantics from
-`premath-bd` for machine-actionable planning surfaces:
+`tools/ci/check_issue_graph.py` delegates core contract validation to
+`premath issue check` and then applies deterministic compactness drift checks.
+It uses core issue-memory semantics from `premath-bd` for machine-actionable
+planning surfaces:
 
 - `[EPIC]` title rows must use `issue_type=epic`,
 - active issues (`open`/`in_progress`) must carry an `Acceptance:` section,
 - active issues must include at least one verification command surface,
-- oversized `notes` payloads are reported as warnings to limit JSONL churn.
+- oversized `notes` payloads are reported as warnings to limit JSONL churn,
+- active `blocks` edges that target `closed` issues fail as compactness drift,
+- transitive-redundant active `blocks` edges fail as compactness drift.
+
+For deterministic compactness remediation, use
+`tools/ci/compact_issue_graph.py`:
+
+- `--mode check` reports compactness drift and exits non-zero on findings,
+- `--mode apply` removes redundant `blocks` edges through canonical
+  `premath dep remove` command paths and verifies ready/blocked semantics plus
+  active-scope cycle integrity are preserved.
 
 `tools/ci/check_branch_policy.py` validates effective GitHub `main` branch
 rules against tracked process policy (`specs/process/GITHUB-BRANCH-POLICY.json`)
@@ -136,8 +147,10 @@ behavior (`mise run ci-observation-test`).
 observation output must match a fresh `premath observe-build` projection from
 current CI witness and issue-memory artifacts (`mise run ci-observation-check`).
 `tools/ci/check_drift_budget.py` enforces fail-closed drift-budget sentinels
-across docs/contracts/checkers/cache-closure surfaces and emits deterministic
-`driftClasses` summary output (`mise run ci-drift-budget-check`).
+across docs/contracts/checkers/cache-closure surfaces, includes deterministic
+topology-budget metrics from `specs/process/TOPOLOGY-BUDGET.json`, and emits
+deterministic `driftClasses` + `warningClasses` summary output
+(`mise run ci-drift-budget-check`).
 
 `premath observe-serve` (from `premath-cli`) exposes the same observation query
 contract as a tiny HTTP read API for frontend clients:
@@ -233,6 +246,19 @@ See `tools/ci/executors/README.md` for runner responsibilities.
 
 Canonical CI decision surface is `mise run ci-required-attested`.
 Provider-neutral workflow entrypoint is `python3 tools/ci/pipeline_required.py`.
+Instruction decision surface is `python3 tools/ci/run_instruction.py`.
+
+Command-surface contract authority is
+`specs/premath/draft/CONTROL-PLANE-CONTRACT.json` under `commandSurface`:
+
+- `requiredDecision.canonicalEntrypoint`: `mise run ci-required-attested`
+- `requiredDecision.compatibilityAliases`: `mise run ci-check`
+- `instructionEnvelopeCheck.canonicalEntrypoint`:
+  `python3 tools/ci/check_instruction_envelope.py`
+- `instructionDecision.canonicalEntrypoint`:
+  `python3 tools/ci/run_instruction.py`
+- `instructionDecision.compatibilityAliases`:
+  `sh tools/ci/run_instruction.sh`
 
 Provider-specific check naming/binding guidance lives in
 `docs/design/CI-PROVIDER-BINDINGS.md`.

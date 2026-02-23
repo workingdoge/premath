@@ -18,8 +18,9 @@ Minimal authority path (read first):
 Additive control-plane overlays (only when needed):
 
 - `DOCTRINE-SITE.md` — doctrine-to-operation site map contract
-  (`DOCTRINE-SITE-SOURCE.json` + `DOCTRINE-OP-REGISTRY.json` ->
-  `DOCTRINE-SITE.json`).
+  (`DOCTRINE-SITE-INPUT.json` -> generated `DOCTRINE-SITE.json` +
+  generated `DOCTRINE-OP-REGISTRY.json`), including explicit runtime
+  orchestration route bindings (`op/conformance.runtime_orchestration`).
 - `LLM-INSTRUCTION-DOCTRINE.md` — instruction typing/binding doctrine for
   LLM-driven control loops.
 - `LLM-PROPOSAL-CHECKING.md` — proposal ingestion contract binding LLM outputs
@@ -29,16 +30,28 @@ Additive control-plane overlays (only when needed):
 - `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
   `premath coherence-check`.
 - `HARNESS-RUNTIME.md` — promoted harness runtime contract for
-  `boot/step/stop`, session/feature/trajectory projections, and deterministic
-  multithread loop behavior.
+  `boot/step/stop` plus the shared harness surface map used by typestate and
+  retry/escalation contracts.
+- `HARNESS-TYPESTATE.md` — promoted typestate closure/mutation gate contract
+  for tool-calling turns and fail-closed mutation admissibility (shared harness
+  partitioning/routes in `HARNESS-RUNTIME.md` §1.1).
 - `HARNESS-RETRY-ESCALATION.md` — promoted classify/retry/escalation policy
-  contract for harness CI wrappers.
+  contract for harness CI wrappers (shared harness partitioning/routes in
+  `HARNESS-RUNTIME.md` §1.1).
 - `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
   by CI projection and coherence parity checks (including schema lifecycle
-  alias-window policy for contract/witness/projection kinds and governance-mode
-  metadata).
-- `CAPABILITY-REGISTRY.json` — shared typed executable-capability registry
-  consumed by conformance/docs/coherence parity checks.
+  alias-window policy for contract/witness/projection kinds, governance-mode
+  metadata, runtime-route parity bindings under `runtimeRouteBindings`, and
+  explicit control-plane bundle profile fields under
+  `controlPlaneBundleProfile` (`C_cp`/`E_cp`, reindex/cover-glue obligations,
+  and authority split boundaries), plus canonical KCIR control-plane mapping
+  fields under `controlPlaneKcirMappings` (instruction/proposal/coherence/
+  doctrine-route/required-decision mappings, digest-lineage bindings, and
+  non-KCIR compatibility deprecation policy).
+- `CAPABILITY-REGISTRY.json` — shared typed executable-capability +
+  profile-overlay-claim registry, including capability-to-normative-doc claim
+  bindings (`capabilityDocBindings`) consumed by conformance/docs/coherence
+  parity checks.
 - `UNIFICATION-DOCTRINE.md` — minimum-encoding/maximum-expressiveness
   architecture doctrine for canonical boundaries.
 - `SPAN-SQUARE-CHECKING.md` — typed span/square witness contract for

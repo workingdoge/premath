@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "protocol.stop_reason_unhandled"
+  ],
+  "expectedJoinClosed": false
+}

@@ -47,6 +47,7 @@ run = "cargo run --package premath-cli -- coherence-check --contract specs/prema
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
+  "python3 tools/conformance/check_runtime_orchestration.py",
   "python3 tools/conformance/check_doctrine_mcp_parity.py",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
@@ -110,6 +111,12 @@ run = [
   "python3 tools/ci/check_issue_graph.py",
 ]
 
+[tasks.ci-issue-compact-check]
+run = "python3 tools/ci/compact_issue_graph.py --mode check"
+
+[tasks.ci-issue-compact-apply]
+run = "python3 tools/ci/compact_issue_graph.py --mode apply"
+
 [tasks.ci-branch-policy-check]
 run = "python3 tools/ci/check_branch_policy.py --rules-json tests/ci/fixtures/branch-policy/effective-main-rules-golden.json"
 
@@ -140,6 +147,7 @@ run = [
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_proposal.py",
+  "python3 tools/ci/test_kcir_mapping_gate.py",
   "python3 tools/ci/test_control_plane_contract.py",
   "python3 tools/ci/test_drift_budget.py",
   "python3 tools/ci/test_instruction_check_client.py",
@@ -153,6 +161,7 @@ run = [
   "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
   "python3 tools/conformance/test_doctrine_mcp_parity.py",
+  "python3 tools/conformance/test_runtime_orchestration.py",
 ]
 
 [tasks.ci-observation-build]

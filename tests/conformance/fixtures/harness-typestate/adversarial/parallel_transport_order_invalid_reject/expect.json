@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "protocol.parallel_transport_order_invalid"
+  ],
+  "expectedJoinClosed": false
+}

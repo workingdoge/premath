@@ -79,4 +79,4 @@ Feature row:
 ## 7. Related Docs
 
 - `docs/design/TUSK-HARNESS-CONTRACT.md`
-- `docs/design/TUSK-HARNESS-SESSION.md`
+- `docs/design/TUSK-HARNESS-CONTRACT.md` (§11, Harness Session Artifact)

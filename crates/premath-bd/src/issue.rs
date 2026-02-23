@@ -187,11 +187,14 @@ impl Issue {
     /// Apply status transition side effects and update timestamps.
     ///
     /// Closed status sets `closed_at` if missing. Non-closed statuses clear it.
+    /// Any non-`in_progress` status clears active lease metadata.
     pub fn set_status(&mut self, status: impl Into<String>) {
         self.status = status.into();
         self.updated_at = Utc::now();
-        if self.status == "closed" {
+        if !self.status.trim().eq_ignore_ascii_case("in_progress") {
             self.lease = None;
+        }
+        if self.status == "closed" {
             if self.closed_at.is_none() {
                 self.closed_at = Some(Utc::now());
             }
@@ -310,5 +313,51 @@ impl Issue {
                 Some(self.assignee.clone())
             },
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::Duration;
+
+    fn fixture_with_active_lease() -> Issue {
+        let now = Utc::now();
+        let mut issue = Issue::new("bd-lease", "Lease fixture");
+        issue.status = "in_progress".to_string();
+        issue.assignee = "worker-a".to_string();
+        issue.lease = Some(IssueLease {
+            lease_id: "lease1_bd-lease_worker-a".to_string(),
+            owner: "worker-a".to_string(),
+            acquired_at: now,
+            expires_at: now + Duration::minutes(30),
+            renewed_at: None,
+        });
+        issue
+    }
+
+    #[test]
+    fn set_status_clears_lease_for_open() {
+        let mut issue = fixture_with_active_lease();
+        issue.set_status("open");
+        assert!(issue.lease.is_none());
+        assert_eq!(issue.status, "open");
+        assert!(issue.closed_at.is_none());
+    }
+
+    #[test]
+    fn set_status_clears_lease_for_blocked() {
+        let mut issue = fixture_with_active_lease();
+        issue.set_status("blocked");
+        assert!(issue.lease.is_none());
+        assert_eq!(issue.status, "blocked");
+    }
+
+    #[test]
+    fn set_status_preserves_lease_for_in_progress() {
+        let mut issue = fixture_with_active_lease();
+        let expected = issue.lease.clone();
+        issue.set_status("in_progress");
+        assert_eq!(issue.lease, expected);
     }
 }

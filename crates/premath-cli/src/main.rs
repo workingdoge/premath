@@ -333,6 +333,10 @@ fn main() {
             } => commands::harness_trajectory::run_query(path, mode, limit, json),
         },
 
+        Commands::HarnessJoinCheck { input, json } => {
+            commands::harness_join_check::run(input, json)
+        }
+
         Commands::Dep { command } => commands::dep::run(command),
     }
 }

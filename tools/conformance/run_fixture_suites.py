@@ -171,6 +171,7 @@ SUITES: Tuple[Suite, ...] = (
             ROOT / "tools" / "conformance" / "run_fixture_suites.py",
             ROOT / "tools" / "conformance" / "run_doctrine_inf_vectors.py",
             ROOT / "tests" / "conformance" / "fixtures" / "doctrine-inf",
+            ROOT / "specs" / "premath" / "draft" / "CAPABILITY-REGISTRY.json",
         ),
     ),
     Suite(
@@ -201,6 +202,33 @@ SUITES: Tuple[Suite, ...] = (
             ROOT / "tests" / "conformance" / "fixtures" / "tusk-core",
             ROOT / "crates" / "premath-tusk" / "src",
             ROOT / "crates" / "premath-cli" / "src" / "commands" / "tusk_eval.rs",
+        ),
+    ),
+    Suite(
+        suite_id="harness-typestate",
+        domain="conformance.harness-typestate",
+        command=("python3", "tools/conformance/run_harness_typestate_vectors.py"),
+        input_paths=(
+            ROOT / "tools" / "conformance" / "run_fixture_suites.py",
+            ROOT / "tools" / "conformance" / "run_harness_typestate_vectors.py",
+            ROOT / "tests" / "conformance" / "fixtures" / "harness-typestate",
+            ROOT / "crates" / "premath-tusk" / "src" / "typestate.rs",
+            ROOT / "crates" / "premath-cli" / "src" / "commands" / "harness_join_check.rs",
+            ROOT / "crates" / "premath-cli" / "src" / "commands" / "mcp_serve.rs",
+        ),
+    ),
+    Suite(
+        suite_id="runtime-orchestration",
+        domain="conformance.runtime-orchestration",
+        command=("python3", "tools/conformance/run_runtime_orchestration_vectors.py"),
+        input_paths=(
+            ROOT / "tools" / "conformance" / "run_fixture_suites.py",
+            ROOT / "tools" / "conformance" / "run_runtime_orchestration_vectors.py",
+            ROOT / "tools" / "conformance" / "check_runtime_orchestration.py",
+            ROOT / "tests" / "conformance" / "fixtures" / "runtime-orchestration",
+            ROOT / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json",
+            ROOT / "specs" / "premath" / "draft" / "DOCTRINE-OP-REGISTRY.json",
+            ROOT / "specs" / "premath" / "draft" / "HARNESS-RUNTIME.md",
         ),
     ),
     Suite(

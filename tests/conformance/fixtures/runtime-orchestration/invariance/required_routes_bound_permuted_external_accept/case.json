@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "suiteId": "runtime-orchestration",
+  "vectorId": "invariance/required_routes_bound_permuted_external_accept",
+  "semanticScenarioId": "required_routes_bound_permuted",
+  "profile": "external",
+  "controlPlaneContract": {
+    "runtimeRouteBindings": {
+      "requiredOperationRoutes": {
+        "runGate": {
+          "operationId": "op/ci.run_gate",
+          "requiredMorphisms": [
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.identity",
+            "dm.transport.world"
+          ]
+        },
+        "runGateTerraform": {
+          "operationId": "op/ci.run_gate_terraform",
+          "requiredMorphisms": [
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.identity",
+            "dm.transport.world"
+          ]
+        }
+      }
+    }
+  },
+  "doctrineOpRegistry": {
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "path": "tools/ci/run_gate.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.transport.world",
+          "dm.transport.location",
+          "dm.profile.execution"
+        ]
+      },
+      {
+        "id": "op/ci.run_gate_terraform",
+        "path": "tools/ci/run_gate_terraform.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.transport.world",
+          "dm.transport.location",
+          "dm.profile.execution"
+        ]
+      }
+    ]
+  },
+  "harnessRuntimeText": "## 1.2 Harness-Squeak composition boundary (required)\nHarness computes deterministic work context and witness lineage refs.\nSqueak performs transport/runtime-placement mapping and emits transport-class witness outcomes.\nDestination Tusk/Gate performs destination-local admissibility checks and emits Gate-class outcomes.\nHarness records the resulting references in session/trajectory projections."
+}

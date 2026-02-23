@@ -152,6 +152,9 @@ Meaning:
   (`Delta -> requiredChecks`) with stable projection digest material.
 - Provider-wrapper environments (local and mapped external env) preserve the
   same projection/references for the same semantic delta.
+- Tool-calling harness typestate closure/mutation-gate enforcement
+  (`draft/HARNESS-TYPESTATE`) is currently exercised within this same capability
+  claim surface.
 - This capability expresses operational change-morphism discipline for gate
   selection; it does not alter kernel admissibility semantics.
 

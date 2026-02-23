@@ -83,6 +83,144 @@
       }
     }
   },
+  "controlPlaneBundleProfile": {
+    "profileId": "cp.bundle.v0",
+    "contextFamily": {
+      "id": "C_cp",
+      "contextKinds": [
+        "repo_head",
+        "workspace_delta",
+        "instruction_envelope",
+        "policy_snapshot",
+        "witness_projection"
+      ],
+      "morphismKinds": [
+        "ctx.identity",
+        "ctx.rebase",
+        "ctx.patch",
+        "ctx.policy_rollover"
+      ]
+    },
+    "artifactFamily": {
+      "id": "E_cp",
+      "artifactRefs": {
+        "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
+        "coherenceContract": "specs/premath/draft/COHERENCE-CONTRACT.json",
+        "capabilityRegistry": "specs/premath/draft/CAPABILITY-REGISTRY.json",
+        "doctrineSiteInput": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+        "doctrineOpRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json"
+      }
+    },
+    "reindexingCoherence": {
+      "requiredObligations": [
+        "identity_preserved",
+        "composition_preserved",
+        "policy_digest_stable",
+        "route_bindings_total"
+      ],
+      "commutationWitness": "span_square_commutation"
+    },
+    "coverGlue": {
+      "workerCoverKind": "worktree_partition_cover",
+      "mergeCompatibilityWitness": "span_square_commutation",
+      "requiredMergeArtifacts": [
+        "ci.required.v1",
+        "ci.instruction.v1",
+        "coherence_witness"
+      ]
+    },
+    "authoritySplit": {
+      "semanticAuthority": [
+        "PREMATH-KERNEL",
+        "GATE",
+        "BIDIR-DESCENT"
+      ],
+      "controlPlaneRole": "projection_and_parity_only",
+      "forbiddenControlPlaneRoles": [
+        "semantic_obligation_discharge",
+        "admissibility_override"
+      ]
+    }
+  },
+  "controlPlaneKcirMappings": {
+    "profileId": "cp.kcir.mapping.v0",
+    "mappingTable": {
+      "instructionEnvelope": {
+        "sourceKind": "ci.instruction.envelope.v1",
+        "targetDomain": "kcir.node",
+        "targetKind": "ci.instruction.v1",
+        "identityFields": [
+          "instructionDigest",
+          "normalizerId",
+          "policyDigest"
+        ]
+      },
+      "proposalPayload": {
+        "sourceKind": "ci.proposal.payload.v1",
+        "targetDomain": "kcir.node",
+        "targetKind": "ci.proposal.check.v1",
+        "identityFields": [
+          "proposalDigest",
+          "proposalKcirRef",
+          "policyDigest"
+        ]
+      },
+      "coherenceObligations": {
+        "sourceKind": "coherence.obligation.set.v1",
+        "targetDomain": "kcir.node",
+        "targetKind": "coherence.obligation.witness.v1",
+        "identityFields": [
+          "obligationDigest",
+          "normalizerId",
+          "policyDigest"
+        ]
+      },
+      "coherenceCheckPayload": {
+        "sourceKind": "coherence.check.payload.v1",
+        "targetDomain": "kcir.node",
+        "targetKind": "coherence.check.witness.v1",
+        "identityFields": [
+          "projectionDigest",
+          "normalizerId",
+          "policyDigest"
+        ]
+      },
+      "doctrineRouteBinding": {
+        "sourceKind": "doctrine.route.binding.v1",
+        "targetDomain": "kcir.node",
+        "targetKind": "doctrine.route.witness.v1",
+        "identityFields": [
+          "operationId",
+          "siteDigest",
+          "policyDigest"
+        ]
+      },
+      "requiredDecisionInput": {
+        "sourceKind": "ci.required.decision.input.v1",
+        "targetDomain": "kcir.node",
+        "targetKind": "ci.required.decision.v1",
+        "identityFields": [
+          "requiredDigest",
+          "decisionDigest",
+          "policyDigest"
+        ]
+      }
+    },
+    "identityDigestLineage": {
+      "digestAlgorithm": "sha256",
+      "refProfilePath": "policies/ref/sha256_detached_v1.json",
+      "normalizerField": "normalizerId",
+      "policyDigestField": "policyDigest"
+    },
+    "compatibilityPolicy": {
+      "legacyNonKcirEncodings": {
+        "mode": "projection_only",
+        "authorityMode": "forbidden",
+        "supportUntilEpoch": "2026-06",
+        "failureClass": "kcir_mapping_legacy_encoding_authority_violation"
+      }
+    }
+  },
   "evidenceLanes": {
     "semanticDoctrine": "semantic_doctrine",
     "strictChecker": "strict_checker",
@@ -150,6 +288,71 @@
       "policyDrift": "worker_lane_policy_drift",
       "mutationModeDrift": "worker_lane_mutation_mode_drift",
       "routeUnbound": "worker_lane_route_unbound"
+    }
+  },
+  "runtimeRouteBindings": {
+    "requiredOperationRoutes": {
+      "runGate": {
+        "operationId": "op/ci.run_gate",
+        "requiredMorphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      },
+      "runGateTerraform": {
+        "operationId": "op/ci.run_gate_terraform",
+        "requiredMorphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      }
+    },
+    "failureClasses": {
+      "missingRoute": "runtime_route_missing",
+      "morphismDrift": "runtime_route_morphism_drift",
+      "contractUnbound": "runtime_route_contract_unbound"
+    }
+  },
+  "commandSurface": {
+    "requiredDecision": {
+      "canonicalEntrypoint": [
+        "mise",
+        "run",
+        "ci-required-attested"
+      ],
+      "compatibilityAliases": [
+        [
+          "mise",
+          "run",
+          "ci-check"
+        ]
+      ]
+    },
+    "instructionEnvelopeCheck": {
+      "canonicalEntrypoint": [
+        "python3",
+        "tools/ci/check_instruction_envelope.py"
+      ],
+      "compatibilityAliases": []
+    },
+    "instructionDecision": {
+      "canonicalEntrypoint": [
+        "python3",
+        "tools/ci/run_instruction.py"
+      ],
+      "compatibilityAliases": [
+        [
+          "sh",
+          "tools/ci/run_instruction.sh"
+        ]
+      ]
+    },
+    "failureClasses": {
+      "unbound": "control_plane_command_surface_unbound"
     }
   },
   "harnessRetry": {

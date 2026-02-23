@@ -117,6 +117,220 @@ class DriftBudgetChecksTests(unittest.TestCase):
         self.assertTrue(failed)
         self.assertIn("required cross-lane witness route", " ".join(details["reasons"]))
 
+    def test_runtime_route_binding_drift_accepts_when_registry_bound(self) -> None:
+        loaded_contract = {
+            "runtimeRouteBindings": {
+                "requiredOperationRoutes": {
+                    "runGate": {
+                        "operationId": "op/ci.run_gate",
+                        "requiredMorphisms": [
+                            "dm.identity",
+                            "dm.profile.execution",
+                            "dm.transport.location",
+                            "dm.transport.world",
+                        ],
+                    },
+                    "runGateTerraform": {
+                        "operationId": "op/ci.run_gate_terraform",
+                        "requiredMorphisms": [
+                            "dm.identity",
+                            "dm.profile.execution",
+                            "dm.transport.location",
+                            "dm.transport.world",
+                        ],
+                    },
+                },
+                "failureClasses": {
+                    "missingRoute": "runtime_route_missing",
+                    "morphismDrift": "runtime_route_morphism_drift",
+                    "contractUnbound": "runtime_route_contract_unbound",
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            RUNTIME_ROUTE_BINDINGS=loaded_contract["runtimeRouteBindings"][
+                "requiredOperationRoutes"
+            ],
+            RUNTIME_ROUTE_FAILURE_CLASSES=(
+                "runtime_route_missing",
+                "runtime_route_morphism_drift",
+                "runtime_route_contract_unbound",
+            ),
+        )
+        doctrine_operations = {
+            "op/ci.run_gate": {
+                "path": "tools/ci/run_gate.sh",
+                "morphisms": [
+                    "dm.identity",
+                    "dm.profile.execution",
+                    "dm.transport.location",
+                    "dm.transport.world",
+                ],
+            },
+            "op/ci.run_gate_terraform": {
+                "path": "tools/ci/run_gate_terraform.sh",
+                "morphisms": [
+                    "dm.identity",
+                    "dm.profile.execution",
+                    "dm.transport.location",
+                    "dm.transport.world",
+                ],
+            },
+        }
+        failed, details = check_drift_budget.check_runtime_route_bindings(
+            loaded_contract, control_plane_module, doctrine_operations
+        )
+        self.assertFalse(failed)
+        self.assertEqual(details["missingOperationRoutes"], [])
+        self.assertEqual(details["missingRequiredMorphisms"], [])
+
+    def test_control_plane_kcir_mapping_drift_accepts_when_loader_matches(self) -> None:
+        loaded_contract = {
+            "controlPlaneKcirMappings": {
+                "profileId": "cp.kcir.mapping.v0",
+                "mappingTable": {
+                    "instructionEnvelope": {
+                        "sourceKind": "ci.instruction.envelope.v1",
+                        "targetDomain": "kcir.node",
+                        "targetKind": "ci.instruction.v1",
+                        "identityFields": [
+                            "instructionDigest",
+                            "normalizerId",
+                            "policyDigest",
+                        ],
+                    },
+                    "requiredDecisionInput": {
+                        "sourceKind": "ci.required.decision.input.v1",
+                        "targetDomain": "kcir.node",
+                        "targetKind": "ci.required.decision.v1",
+                        "identityFields": [
+                            "requiredDigest",
+                            "decisionDigest",
+                            "policyDigest",
+                        ],
+                    },
+                },
+                "compatibilityPolicy": {
+                    "legacyNonKcirEncodings": {
+                        "mode": "projection_only",
+                        "authorityMode": "forbidden",
+                        "supportUntilEpoch": "2026-06",
+                        "failureClass": "kcir_mapping_legacy_encoding_authority_violation",
+                    }
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            CONTROL_PLANE_KCIR_MAPPING_PROFILE_ID="cp.kcir.mapping.v0",
+            CONTROL_PLANE_KCIR_MAPPING_TABLE=loaded_contract["controlPlaneKcirMappings"][
+                "mappingTable"
+            ],
+            CONTROL_PLANE_KCIR_LEGACY_POLICY=loaded_contract["controlPlaneKcirMappings"][
+                "compatibilityPolicy"
+            ]["legacyNonKcirEncodings"],
+        )
+        failed, details = check_drift_budget.check_control_plane_kcir_mappings(
+            loaded_contract, control_plane_module
+        )
+        self.assertFalse(failed)
+        self.assertEqual(details["missingRowsInLoader"], [])
+        self.assertEqual(details["rowDrifts"], [])
+        self.assertEqual(details["legacyPolicyDriftFields"], [])
+
+    def test_control_plane_kcir_mapping_drift_rejects_row_and_legacy_policy_drift(
+        self,
+    ) -> None:
+        loaded_contract = {
+            "controlPlaneKcirMappings": {
+                "profileId": "cp.kcir.mapping.v0",
+                "mappingTable": {
+                    "instructionEnvelope": {
+                        "sourceKind": "ci.instruction.envelope.v1",
+                        "targetDomain": "kcir.node",
+                        "targetKind": "ci.instruction.v1",
+                        "identityFields": [
+                            "instructionDigest",
+                            "normalizerId",
+                            "policyDigest",
+                        ],
+                    }
+                },
+                "compatibilityPolicy": {
+                    "legacyNonKcirEncodings": {
+                        "mode": "projection_only",
+                        "authorityMode": "forbidden",
+                        "supportUntilEpoch": "2026-06",
+                        "failureClass": "kcir_mapping_legacy_encoding_authority_violation",
+                    }
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            CONTROL_PLANE_KCIR_MAPPING_PROFILE_ID="cp.kcir.mapping.v0",
+            CONTROL_PLANE_KCIR_MAPPING_TABLE={
+                "instructionEnvelope": {
+                    "sourceKind": "ci.instruction.envelope.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "ci.instruction.v1",
+                    "identityFields": [
+                        "instructionDigest",
+                        "policyDigest",
+                    ],
+                }
+            },
+            CONTROL_PLANE_KCIR_LEGACY_POLICY={
+                "mode": "projection_only",
+                "authorityMode": "forbidden",
+                "supportUntilEpoch": "2026-07",
+                "failureClass": "kcir_mapping_legacy_encoding_authority_violation",
+            },
+        )
+        failed, details = check_drift_budget.check_control_plane_kcir_mappings(
+            loaded_contract, control_plane_module
+        )
+        self.assertTrue(failed)
+        self.assertEqual(details["rowDrifts"][0]["rowId"], "instructionEnvelope")
+        self.assertIn("identityFields", details["rowDrifts"][0]["driftFields"])
+        self.assertIn("supportUntilEpoch", details["legacyPolicyDriftFields"])
+
+    def test_runtime_route_binding_drift_rejects_missing_registry_route(self) -> None:
+        loaded_contract = {
+            "runtimeRouteBindings": {
+                "requiredOperationRoutes": {
+                    "runGate": {
+                        "operationId": "op/ci.run_gate",
+                        "requiredMorphisms": [
+                            "dm.identity",
+                            "dm.profile.execution",
+                            "dm.transport.location",
+                            "dm.transport.world",
+                        ],
+                    }
+                },
+                "failureClasses": {
+                    "missingRoute": "runtime_route_missing",
+                    "morphismDrift": "runtime_route_morphism_drift",
+                    "contractUnbound": "runtime_route_contract_unbound",
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            RUNTIME_ROUTE_BINDINGS=loaded_contract["runtimeRouteBindings"][
+                "requiredOperationRoutes"
+            ],
+            RUNTIME_ROUTE_FAILURE_CLASSES=(
+                "runtime_route_missing",
+                "runtime_route_morphism_drift",
+                "runtime_route_contract_unbound",
+            ),
+        )
+        doctrine_operations: dict = {}
+        failed, details = check_drift_budget.check_runtime_route_bindings(
+            loaded_contract, control_plane_module, doctrine_operations
+        )
+        self.assertTrue(failed)
+        self.assertIn("DOCTRINE-OP-REGISTRY", " ".join(details["reasons"]))
+
     def test_required_obligation_drift_detects_contract_checker_mismatch(self) -> None:
         coherence_contract = {
             "obligations": [{"id": "scope_noncontradiction"}, {"id": "gate_chain_parity"}],
@@ -170,6 +384,135 @@ class DriftBudgetChecksTests(unittest.TestCase):
                 "specs/premath/draft/COHERENCE-CONTRACT.json",
                 details["missingPaths"],
             )
+
+    def _write_topology_fixture_repo(self, root: Path, *, design_docs: int = 1) -> None:
+        draft_dir = root / "specs" / "premath" / "draft"
+        draft_dir.mkdir(parents=True, exist_ok=True)
+        (draft_dir / "README.md").write_text("# draft\n", encoding="utf-8")
+        (draft_dir / "A.md").write_text(
+            "---\nstatus: draft\n---\n\n# A\n",
+            encoding="utf-8",
+        )
+        (draft_dir / "DOCTRINE-SITE.json").write_text(
+            '{"edges":[{"id":"e1"}]}\n',
+            encoding="utf-8",
+        )
+        (draft_dir / "DOCTRINE-OP-REGISTRY.json").write_text(
+            '{"operations":[]}\n',
+            encoding="utf-8",
+        )
+        (draft_dir / "DOCTRINE-SITE-INPUT.json").write_text(
+            '{"schema":1}\n',
+            encoding="utf-8",
+        )
+        (draft_dir / "SPEC-TRACEABILITY.md").write_text(
+            "\n".join(
+                [
+                    "## 3. Traceability Matrix",
+                    "",
+                    "| Draft spec | Executable check surface | Status | Gap target |",
+                    "| --- | --- | --- | --- |",
+                    "| `A.md` | `test` | covered | - |",
+                    "",
+                ]
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+        design_dir = root / "docs" / "design"
+        design_dir.mkdir(parents=True, exist_ok=True)
+        (design_dir / "README.md").write_text("# design\n", encoding="utf-8")
+        for idx in range(design_docs):
+            (design_dir / f"DOC-{idx}.md").write_text("# doc\n", encoding="utf-8")
+
+    def test_topology_budget_warns_without_failing(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-topology-budget-warn-") as tmp:
+            root = Path(tmp)
+            self._write_topology_fixture_repo(root, design_docs=2)
+            process_dir = root / "specs" / "process"
+            process_dir.mkdir(parents=True, exist_ok=True)
+            budget_path = process_dir / "TOPOLOGY-BUDGET.json"
+            budget_path.write_text(
+                """
+{
+  "schema": 1,
+  "budgetKind": "premath.topology_budget.v1",
+  "metrics": {
+    "draftSpecNodes": {"failAbove": 5},
+    "specTraceabilityRows": {"failAbove": 5},
+    "designDocNodes": {"warnAbove": 1, "failAbove": 3},
+    "doctrineSiteEdgeCount": {"failAbove": 10},
+    "doctrineSiteAuthorityInputCount": {"warnAbove": 1, "failAbove": 1, "warnBelow": 1, "failBelow": 1},
+    "doctrineSiteGeneratedViewCount": {"warnAbove": 2, "failAbove": 2, "warnBelow": 2, "failBelow": 2},
+    "deprecatedDesignFragmentCount": {"failAbove": 0}
+  },
+  "deprecatedDesignFragments": ["docs/design/LEGACY.md"],
+  "doctrineSiteAuthorityInputs": [
+    "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+    "specs/premath/draft/DOCTRINE-SITE-SOURCE.json"
+  ],
+  "doctrineSiteGeneratedViews": [
+    "specs/premath/draft/DOCTRINE-SITE.json",
+    "specs/premath/draft/DOCTRINE-OP-REGISTRY.json"
+  ]
+}
+""".strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            failed, warned, details = check_drift_budget.check_topology_budget(
+                root, budget_path
+            )
+            self.assertFalse(failed)
+            self.assertTrue(warned)
+            self.assertIn("designDocNodes", " ".join(details["warnings"]))
+
+    def test_topology_budget_fails_when_deprecated_fragment_exists(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-topology-budget-fail-") as tmp:
+            root = Path(tmp)
+            self._write_topology_fixture_repo(root, design_docs=1)
+            legacy_path = root / "docs" / "design" / "LEGACY-FRAGMENT.md"
+            legacy_path.write_text("# legacy\n", encoding="utf-8")
+            process_dir = root / "specs" / "process"
+            process_dir.mkdir(parents=True, exist_ok=True)
+            budget_path = process_dir / "TOPOLOGY-BUDGET.json"
+            budget_path.write_text(
+                """
+{
+  "schema": 1,
+  "budgetKind": "premath.topology_budget.v1",
+  "metrics": {
+    "draftSpecNodes": {"failAbove": 5},
+    "specTraceabilityRows": {"failAbove": 5},
+    "designDocNodes": {"failAbove": 5},
+    "doctrineSiteEdgeCount": {"failAbove": 10},
+    "doctrineSiteAuthorityInputCount": {"warnAbove": 1, "failAbove": 1, "warnBelow": 1, "failBelow": 1},
+    "doctrineSiteGeneratedViewCount": {"warnAbove": 2, "failAbove": 2, "warnBelow": 2, "failBelow": 2},
+    "deprecatedDesignFragmentCount": {"warnAbove": 0, "failAbove": 0}
+  },
+  "deprecatedDesignFragments": ["docs/design/LEGACY-FRAGMENT.md"],
+  "doctrineSiteAuthorityInputs": [
+    "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+    "specs/premath/draft/DOCTRINE-SITE-SOURCE.json"
+  ],
+  "doctrineSiteGeneratedViews": [
+    "specs/premath/draft/DOCTRINE-SITE.json",
+    "specs/premath/draft/DOCTRINE-OP-REGISTRY.json"
+  ]
+}
+""".strip()
+                + "\n",
+                encoding="utf-8",
+            )
+
+            failed, warned, details = check_drift_budget.check_topology_budget(
+                root, budget_path
+            )
+            self.assertTrue(failed)
+            self.assertFalse(warned)
+            self.assertIn("deprecatedDesignFragmentCount", " ".join(details["reasons"]))
 
 
 if __name__ == "__main__":

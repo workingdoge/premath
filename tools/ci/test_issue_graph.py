@@ -40,6 +40,38 @@ def run_wrapper(issues_path: Path, note_warn_threshold: int = 2000) -> subproces
     )
 
 
+def run_compact_helper(
+    issues_path: Path, mode: str = "check", json_output: bool = False
+) -> subprocess.CompletedProcess[str]:
+    script = repo_root() / "tools" / "ci" / "compact_issue_graph.py"
+    command = [
+        "python3",
+        str(script),
+        "--repo-root",
+        str(repo_root()),
+        "--issues",
+        str(issues_path),
+        "--mode",
+        mode,
+    ]
+    if json_output:
+        command.append("--json")
+    return subprocess.run(
+        command,
+        cwd=repo_root(),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
+def active_issue_description() -> str:
+    return (
+        "Acceptance:\n- complete work\n\nVerification commands:\n"
+        "- `python3 tools/ci/check_issue_graph.py`\n"
+    )
+
+
 class IssueGraphWrapperTests(unittest.TestCase):
     def test_epic_title_requires_epic_issue_type(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:
@@ -71,10 +103,7 @@ class IssueGraphWrapperTests(unittest.TestCase):
                         "title": "Active issue",
                         "issue_type": "task",
                         "status": "open",
-                        "description": (
-                            "Acceptance:\n- complete work\n\nVerification commands:\n"
-                            "- `python3 tools/ci/check_issue_graph.py`\n"
-                        ),
+                        "description": active_issue_description(),
                     }
                 ],
             )
@@ -100,6 +129,221 @@ class IssueGraphWrapperTests(unittest.TestCase):
             completed = run_wrapper(issues, note_warn_threshold=10)
             self.assertEqual(completed.returncode, 0)
             self.assertIn("issue_graph.notes.large", completed.stdout)
+
+    def test_compactness_fails_on_active_to_closed_blocks_edge(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:
+            issues = Path(tmp) / "issues.jsonl"
+            write_jsonl(
+                issues,
+                [
+                    {
+                        "id": "bd-a",
+                        "title": "Issue A",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                        "dependencies": [
+                            {
+                                "issue_id": "bd-a",
+                                "depends_on_id": "bd-b",
+                                "type": "blocks",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "bd-b",
+                        "title": "Issue B",
+                        "issue_type": "task",
+                        "status": "closed",
+                    },
+                ],
+            )
+            completed = run_wrapper(issues)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "issue_graph.compactness.closed_block_edge", completed.stdout
+            )
+
+    def test_compactness_fails_on_transitive_redundant_blocks_edge(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:
+            issues = Path(tmp) / "issues.jsonl"
+            write_jsonl(
+                issues,
+                [
+                    {
+                        "id": "bd-a",
+                        "title": "Issue A",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                        "dependencies": [
+                            {
+                                "issue_id": "bd-a",
+                                "depends_on_id": "bd-b",
+                                "type": "blocks",
+                            },
+                            {
+                                "issue_id": "bd-a",
+                                "depends_on_id": "bd-c",
+                                "type": "blocks",
+                            },
+                        ],
+                    },
+                    {
+                        "id": "bd-b",
+                        "title": "Issue B",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                        "dependencies": [
+                            {
+                                "issue_id": "bd-b",
+                                "depends_on_id": "bd-c",
+                                "type": "blocks",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "bd-c",
+                        "title": "Issue C",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                    },
+                ],
+            )
+            completed = run_wrapper(issues)
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "issue_graph.compactness.transitive_block_edge", completed.stdout
+            )
+            self.assertIn("bd-a -> bd-c", completed.stdout)
+
+    def test_compactness_accepts_non_redundant_blocks_chain(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:
+            issues = Path(tmp) / "issues.jsonl"
+            write_jsonl(
+                issues,
+                [
+                    {
+                        "id": "bd-a",
+                        "title": "Issue A",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                        "dependencies": [
+                            {
+                                "issue_id": "bd-a",
+                                "depends_on_id": "bd-b",
+                                "type": "blocks",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "bd-b",
+                        "title": "Issue B",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                        "dependencies": [
+                            {
+                                "issue_id": "bd-b",
+                                "depends_on_id": "bd-c",
+                                "type": "blocks",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "bd-c",
+                        "title": "Issue C",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                    },
+                ],
+            )
+            completed = run_wrapper(issues)
+            self.assertEqual(completed.returncode, 0)
+            self.assertNotIn("compactness drift", completed.stdout)
+
+    def test_compact_helper_check_reports_findings(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-issue-graph-compact-test-") as tmp:
+            issues = Path(tmp) / "issues.jsonl"
+            write_jsonl(
+                issues,
+                [
+                    {
+                        "id": "bd-a",
+                        "title": "Issue A",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                        "dependencies": [
+                            {
+                                "issue_id": "bd-a",
+                                "depends_on_id": "bd-b",
+                                "type": "blocks",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "bd-b",
+                        "title": "Issue B",
+                        "issue_type": "task",
+                        "status": "closed",
+                    },
+                ],
+            )
+            completed = run_compact_helper(issues, mode="check")
+            self.assertNotEqual(completed.returncode, 0)
+            self.assertIn(
+                "issue_graph.compactness.closed_block_edge", completed.stdout
+            )
+
+    def test_compact_helper_apply_removes_redundant_edges(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-issue-graph-compact-test-") as tmp:
+            issues = Path(tmp) / "issues.jsonl"
+            write_jsonl(
+                issues,
+                [
+                    {
+                        "id": "bd-a",
+                        "title": "Issue A",
+                        "issue_type": "task",
+                        "status": "open",
+                        "description": active_issue_description(),
+                        "dependencies": [
+                            {
+                                "issue_id": "bd-a",
+                                "depends_on_id": "bd-b",
+                                "type": "blocks",
+                            }
+                        ],
+                    },
+                    {
+                        "id": "bd-b",
+                        "title": "Issue B",
+                        "issue_type": "task",
+                        "status": "closed",
+                    },
+                ],
+            )
+
+            apply_completed = run_compact_helper(issues, mode="apply", json_output=True)
+            self.assertEqual(apply_completed.returncode, 0, apply_completed.stderr)
+            payload = json.loads(apply_completed.stdout)
+            self.assertEqual(payload["removedCount"], 1)
+            self.assertEqual(
+                payload["removedEdges"][0],
+                {"issueId": "bd-a", "dependsOnId": "bd-b"},
+            )
+
+            check_completed = run_wrapper(issues)
+            self.assertEqual(check_completed.returncode, 0, check_completed.stdout)
+
+            rows = [json.loads(line) for line in issues.read_text().splitlines() if line.strip()]
+            issue_a = next(row for row in rows if row["id"] == "bd-a")
+            self.assertEqual(issue_a.get("dependencies", []), [])
 
 
 if __name__ == "__main__":

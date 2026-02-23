@@ -9,6 +9,7 @@ import json
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Sequence, Tuple
 
@@ -17,13 +18,23 @@ SCHEMA = 1
 CHECK_KIND = "ci.drift_budget.v1"
 
 DRIFT_CLASS_SPEC_INDEX = "spec_index_capability_map_drift"
+DRIFT_CLASS_PROFILE_OVERLAYS = "profile_overlay_claim_drift"
 DRIFT_CLASS_LANE_BINDINGS = "control_plane_lane_binding_drift"
+DRIFT_CLASS_KCIR_MAPPINGS = "control_plane_kcir_mapping_drift"
+DRIFT_CLASS_RUNTIME_ROUTE_BINDINGS = "runtime_route_binding_drift"
 DRIFT_CLASS_REQUIRED_OBLIGATIONS = "coherence_required_obligation_drift"
 DRIFT_CLASS_SIGPI_NOTATION = "sigpi_notation_drift"
 DRIFT_CLASS_CACHE_CLOSURE = "coherence_cache_input_closure_drift"
+DRIFT_CLASS_TOPOLOGY_BUDGET = "topology_budget_drift"
+WARN_CLASS_TOPOLOGY_BUDGET = "topology_budget_watch"
+
+TOPOLOGY_BUDGET_SCHEMA = 1
+TOPOLOGY_BUDGET_KIND = "premath.topology_budget.v1"
 
 _DOC_MAP_RE = re.compile(r"- `([^`]+)`\s+\(for `([^`]+)`\)")
+_PROFILE_CLAIM_RE = re.compile(r"`(profile\.[a-z0-9_.]+)`")
 _SIGPI_ALIAS_RE = re.compile(r"\bSig/Pi\b", re.IGNORECASE)
+CODE_REF_RE = re.compile(r"`([^`]+)`")
 
 SIGPI_NORMATIVE_DOCS: Tuple[str, ...] = (
     "specs/premath/draft/SPEC-INDEX.md",
@@ -61,6 +72,15 @@ def parse_args(default_root: Path) -> argparse.Namespace:
         action="store_true",
         help="Emit deterministic JSON payload.",
     )
+    parser.add_argument(
+        "--topology-budget",
+        type=Path,
+        default=None,
+        help=(
+            "Optional topology-budget contract path. "
+            "Default: specs/process/TOPOLOGY-BUDGET.json under repo root."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -95,7 +115,13 @@ def parse_spec_index_capability_doc_map(spec_index_path: Path) -> Dict[str, str]
     return out
 
 
-def parse_capability_registry(registry_path: Path) -> List[str]:
+@dataclass(frozen=True)
+class CapabilityRegistryContract:
+    executable_capabilities: List[str]
+    profile_overlay_claims: List[str]
+
+
+def parse_capability_registry(registry_path: Path) -> CapabilityRegistryContract:
     payload = load_json(registry_path)
     capabilities = payload.get("executableCapabilities")
     if not isinstance(capabilities, list) or not capabilities:
@@ -105,7 +131,28 @@ def parse_capability_registry(registry_path: Path) -> List[str]:
         if not isinstance(value, str) or not value.strip():
             raise ValueError(f"{registry_path}: executableCapabilities[{idx}] must be non-empty")
         out.append(value.strip())
-    return out
+    if len(set(out)) != len(out):
+        raise ValueError(f"{registry_path}: executableCapabilities must not contain duplicates")
+    overlay_claims_raw = payload.get("profileOverlayClaims", [])
+    if not isinstance(overlay_claims_raw, list):
+        raise ValueError(f"{registry_path}: profileOverlayClaims must be a list")
+    overlay_claims: List[str] = []
+    for idx, value in enumerate(overlay_claims_raw):
+        if not isinstance(value, str) or not value.strip():
+            raise ValueError(f"{registry_path}: profileOverlayClaims[{idx}] must be non-empty")
+        overlay_claims.append(value.strip())
+    if len(set(overlay_claims)) != len(overlay_claims):
+        raise ValueError(f"{registry_path}: profileOverlayClaims must not contain duplicates")
+    return CapabilityRegistryContract(
+        executable_capabilities=out,
+        profile_overlay_claims=overlay_claims,
+    )
+
+
+def parse_conformance_profile_overlay_claims(conformance_path: Path) -> List[str]:
+    text = conformance_path.read_text(encoding="utf-8")
+    section_24 = extract_heading_section(text, "2.4")
+    return sorted(set(_PROFILE_CLAIM_RE.findall(section_24)))
 
 
 def parse_conditional_capability_docs(coherence_contract: Dict[str, Any]) -> Dict[str, str]:
@@ -236,6 +283,92 @@ def normalize_lane_artifact_kinds(values: Any) -> Dict[str, List[str]]:
     return out
 
 
+def _normalize_kcir_mapping_row(row: Any) -> Dict[str, Any]:
+    if not isinstance(row, dict):
+        return {
+            "sourceKind": "",
+            "targetDomain": "",
+            "targetKind": "",
+            "identityFields": tuple(),
+        }
+    identity_fields = row.get("identityFields", ())
+    if not isinstance(identity_fields, (list, tuple)):
+        identity_fields = ()
+    normalized_identity_fields: List[str] = []
+    for value in identity_fields:
+        if isinstance(value, str) and value.strip():
+            normalized_identity_fields.append(value.strip())
+    return {
+        "sourceKind": str(row.get("sourceKind", "")).strip(),
+        "targetDomain": str(row.get("targetDomain", "")).strip(),
+        "targetKind": str(row.get("targetKind", "")).strip(),
+        "identityFields": tuple(normalized_identity_fields),
+    }
+
+
+def normalize_kcir_mapping_table(values: Any) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(values, dict):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for row_id, row in values.items():
+        if not isinstance(row_id, str) or not row_id.strip():
+            continue
+        out[row_id.strip()] = _normalize_kcir_mapping_row(row)
+    return out
+
+
+def normalize_kcir_legacy_policy(values: Any) -> Dict[str, str]:
+    if not isinstance(values, dict):
+        return {}
+    return {
+        "mode": str(values.get("mode", "")).strip(),
+        "authorityMode": str(values.get("authorityMode", "")).strip(),
+        "supportUntilEpoch": str(values.get("supportUntilEpoch", "")).strip(),
+        "failureClass": str(values.get("failureClass", "")).strip(),
+    }
+
+
+def parse_doctrine_operation_registry(registry_path: Path) -> Dict[str, Dict[str, Any]]:
+    payload = load_json(registry_path)
+    operations = payload.get("operations")
+    if not isinstance(operations, list) or not operations:
+        raise ValueError(f"{registry_path}: operations must be a non-empty list")
+    out: Dict[str, Dict[str, Any]] = {}
+    for idx, row in enumerate(operations):
+        if not isinstance(row, dict):
+            raise ValueError(f"{registry_path}: operations[{idx}] must be an object")
+        operation_id = row.get("id")
+        if not isinstance(operation_id, str) or not operation_id.strip():
+            raise ValueError(f"{registry_path}: operations[{idx}].id must be non-empty")
+        operation_id = operation_id.strip()
+        if operation_id in out:
+            raise ValueError(f"{registry_path}: duplicate operation id {operation_id!r}")
+        out[operation_id] = {
+            "path": str(row.get("path", "")).strip(),
+            "morphisms": as_sorted_strings(row.get("morphisms", ())),
+        }
+    return out
+
+
+def normalize_runtime_route_bindings(values: Any) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(values, dict):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for route_id, raw in values.items():
+        if not isinstance(route_id, str) or not route_id.strip():
+            continue
+        if not isinstance(raw, dict):
+            continue
+        operation_id = raw.get("operationId")
+        if not isinstance(operation_id, str) or not operation_id.strip():
+            continue
+        out[route_id.strip()] = {
+            "operationId": operation_id.strip(),
+            "requiredMorphisms": as_sorted_strings(raw.get("requiredMorphisms", ())),
+        }
+    return out
+
+
 def check_spec_index_capability_map(
     spec_map: Dict[str, str],
     executable_capabilities: Sequence[str],
@@ -268,6 +401,27 @@ def check_spec_index_capability_map(
         "unknownCapabilities": unknown_caps,
         "missingConditionalDocs": sorted(missing_conditional_docs),
         "conditionalMismatches": conditional_mismatches,
+    }
+    return bool(reasons), details
+
+
+def check_profile_overlay_claims(
+    registry_overlay_claims: Sequence[str],
+    conformance_overlay_claims: Sequence[str],
+) -> Tuple[bool, Dict[str, Any]]:
+    reasons: List[str] = []
+    registry_set = set(registry_overlay_claims)
+    conformance_set = set(conformance_overlay_claims)
+    missing_in_conformance = sorted(registry_set - conformance_set)
+    missing_in_registry = sorted(conformance_set - registry_set)
+    if missing_in_conformance or missing_in_registry:
+        reasons.append("CONFORMANCE §2.4 profile-overlay claims diverge from CAPABILITY-REGISTRY")
+    details = {
+        "reasons": reasons,
+        "registryProfileOverlayClaims": sorted(registry_set),
+        "conformanceProfileOverlayClaims": sorted(conformance_set),
+        "missingInConformance": missing_in_conformance,
+        "missingInRegistry": missing_in_registry,
     }
     return bool(reasons), details
 
@@ -846,6 +1000,187 @@ def check_control_plane_lane_bindings(
     return bool(reasons), details
 
 
+def check_runtime_route_bindings(
+    loaded_control_plane_contract: Dict[str, Any],
+    control_plane_module: Any,
+    doctrine_operations: Dict[str, Dict[str, Any]],
+) -> Tuple[bool, Dict[str, Any]]:
+    reasons: List[str] = []
+
+    contract_runtime_routes = normalize_runtime_route_bindings(
+        loaded_control_plane_contract.get("runtimeRouteBindings", {}).get(
+            "requiredOperationRoutes", {}
+        )
+    )
+    if not contract_runtime_routes:
+        reasons.append(
+            "CONTROL-PLANE-CONTRACT missing runtimeRouteBindings.requiredOperationRoutes"
+        )
+
+    contract_runtime_failure_classes = as_sorted_strings(
+        loaded_control_plane_contract.get("runtimeRouteBindings", {})
+        .get("failureClasses", {})
+        .values()
+    )
+    if not contract_runtime_failure_classes:
+        reasons.append("CONTROL-PLANE-CONTRACT missing runtimeRouteBindings.failureClasses")
+
+    loader_runtime_routes = normalize_runtime_route_bindings(
+        getattr(control_plane_module, "RUNTIME_ROUTE_BINDINGS", {})
+    )
+    loader_runtime_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "RUNTIME_ROUTE_FAILURE_CLASSES", ())
+    )
+    if loader_runtime_routes != contract_runtime_routes:
+        reasons.append(
+            "control_plane_contract.py RUNTIME_ROUTE_BINDINGS drift from contract payload"
+        )
+    if loader_runtime_failure_classes != contract_runtime_failure_classes:
+        reasons.append(
+            "control_plane_contract.py RUNTIME_ROUTE_FAILURE_CLASSES drift from contract payload"
+        )
+
+    missing_operation_routes: List[Dict[str, str]] = []
+    missing_morphisms: List[Dict[str, Any]] = []
+    observed_registry_routes: Dict[str, Dict[str, Any]] = {}
+    for route_id, route in contract_runtime_routes.items():
+        operation_id = route["operationId"]
+        required_morphisms = as_sorted_strings(route.get("requiredMorphisms", ()))
+        operation_row = doctrine_operations.get(operation_id)
+        if operation_row is None:
+            missing_operation_routes.append(
+                {
+                    "routeId": route_id,
+                    "operationId": operation_id,
+                }
+            )
+            continue
+        actual_morphisms = as_sorted_strings(operation_row.get("morphisms", ()))
+        observed_registry_routes[route_id] = {
+            "operationId": operation_id,
+            "path": operation_row.get("path", ""),
+            "actualMorphisms": actual_morphisms,
+        }
+        route_missing_morphisms = sorted(set(required_morphisms) - set(actual_morphisms))
+        if route_missing_morphisms:
+            missing_morphisms.append(
+                {
+                    "routeId": route_id,
+                    "operationId": operation_id,
+                    "missingMorphisms": route_missing_morphisms,
+                    "requiredMorphisms": required_morphisms,
+                    "actualMorphisms": actual_morphisms,
+                }
+            )
+
+    if missing_operation_routes or missing_morphisms:
+        reasons.append(
+            "DOCTRINE-OP-REGISTRY missing required runtime-route bindings or morphisms"
+        )
+
+    details = {
+        "reasons": reasons,
+        "contractRuntimeRouteBindings": contract_runtime_routes,
+        "contractRuntimeRouteFailureClasses": contract_runtime_failure_classes,
+        "loaderRuntimeRouteBindings": loader_runtime_routes,
+        "loaderRuntimeRouteFailureClasses": loader_runtime_failure_classes,
+        "observedDoctrineRegistryRoutes": observed_registry_routes,
+        "missingOperationRoutes": missing_operation_routes,
+        "missingRequiredMorphisms": missing_morphisms,
+    }
+    return bool(reasons), details
+
+
+def check_control_plane_kcir_mappings(
+    loaded_control_plane_contract: Dict[str, Any],
+    control_plane_module: Any,
+) -> Tuple[bool, Dict[str, Any]]:
+    reasons: List[str] = []
+    contract_mappings = loaded_control_plane_contract.get("controlPlaneKcirMappings", {})
+    if not isinstance(contract_mappings, dict):
+        contract_mappings = {}
+        reasons.append("CONTROL-PLANE-CONTRACT missing controlPlaneKcirMappings")
+
+    contract_profile_id = str(contract_mappings.get("profileId", "")).strip()
+    contract_mapping_table = normalize_kcir_mapping_table(
+        contract_mappings.get("mappingTable", {})
+    )
+    contract_legacy_policy = normalize_kcir_legacy_policy(
+        contract_mappings.get("compatibilityPolicy", {}).get(
+            "legacyNonKcirEncodings", {}
+        )
+        if isinstance(contract_mappings.get("compatibilityPolicy", {}), dict)
+        else {}
+    )
+
+    loader_profile_id = str(
+        getattr(control_plane_module, "CONTROL_PLANE_KCIR_MAPPING_PROFILE_ID", "")
+    ).strip()
+    loader_mapping_table = normalize_kcir_mapping_table(
+        getattr(control_plane_module, "CONTROL_PLANE_KCIR_MAPPING_TABLE", {})
+    )
+    loader_legacy_policy = normalize_kcir_legacy_policy(
+        getattr(control_plane_module, "CONTROL_PLANE_KCIR_LEGACY_POLICY", {})
+    )
+
+    if loader_profile_id != contract_profile_id:
+        reasons.append(
+            "control_plane_contract.py CONTROL_PLANE_KCIR_MAPPING_PROFILE_ID drift from contract payload"
+        )
+
+    missing_rows_in_loader = sorted(set(contract_mapping_table) - set(loader_mapping_table))
+    missing_rows_in_contract = sorted(
+        set(loader_mapping_table) - set(contract_mapping_table)
+    )
+    row_drifts: List[Dict[str, Any]] = []
+    for row_id in sorted(set(contract_mapping_table) & set(loader_mapping_table)):
+        contract_row = contract_mapping_table[row_id]
+        loader_row = loader_mapping_table[row_id]
+        drift_fields: List[str] = []
+        for field in ("sourceKind", "targetDomain", "targetKind", "identityFields"):
+            if contract_row.get(field) != loader_row.get(field):
+                drift_fields.append(field)
+        if drift_fields:
+            row_drifts.append(
+                {
+                    "rowId": row_id,
+                    "driftFields": drift_fields,
+                    "contract": contract_row,
+                    "loader": loader_row,
+                }
+            )
+
+    if missing_rows_in_loader or missing_rows_in_contract or row_drifts:
+        reasons.append(
+            "control_plane_contract.py CONTROL_PLANE_KCIR_MAPPING_TABLE drift from contract payload"
+        )
+
+    legacy_policy_drift_fields = [
+        field
+        for field in ("mode", "authorityMode", "supportUntilEpoch", "failureClass")
+        if contract_legacy_policy.get(field, "") != loader_legacy_policy.get(field, "")
+    ]
+    if legacy_policy_drift_fields:
+        reasons.append(
+            "control_plane_contract.py CONTROL_PLANE_KCIR_LEGACY_POLICY drift from contract payload"
+        )
+
+    details = {
+        "reasons": reasons,
+        "contractProfileId": contract_profile_id,
+        "loaderProfileId": loader_profile_id,
+        "contractMappingTable": contract_mapping_table,
+        "loaderMappingTable": loader_mapping_table,
+        "missingRowsInLoader": missing_rows_in_loader,
+        "missingRowsInContract": missing_rows_in_contract,
+        "rowDrifts": row_drifts,
+        "contractLegacyPolicy": contract_legacy_policy,
+        "loaderLegacyPolicy": loader_legacy_policy,
+        "legacyPolicyDriftFields": legacy_policy_drift_fields,
+    }
+    return bool(reasons), details
+
+
 def check_coherence_required_obligations(
     coherence_contract: Dict[str, Any],
     scope_noncontradiction_details: Dict[str, Any],
@@ -950,6 +1285,254 @@ def check_cache_input_closure(
     return bool(reasons), details
 
 
+def _extract_frontmatter_status(path: Path) -> str | None:
+    text = path.read_text(encoding="utf-8")
+    if not text.startswith("---\n"):
+        return None
+    try:
+        _, rest = text.split("---\n", 1)
+        frontmatter, _ = rest.split("---\n", 1)
+    except ValueError:
+        return None
+    for raw in frontmatter.splitlines():
+        line = raw.strip()
+        if line.startswith("status:"):
+            _, value = line.split(":", 1)
+            return value.strip()
+    return None
+
+
+def count_promoted_draft_specs(draft_dir: Path) -> int:
+    count = 0
+    for path in sorted(draft_dir.iterdir()):
+        if path.is_dir():
+            continue
+        if path.name == "README.md":
+            continue
+        if path.suffix == ".md" and _extract_frontmatter_status(path) == "draft":
+            count += 1
+        elif path.suffix == ".json":
+            count += 1
+    return count
+
+
+def count_traceability_rows(matrix_path: Path) -> int:
+    lines = matrix_path.read_text(encoding="utf-8").splitlines()
+    in_matrix = False
+    count = 0
+    for line in lines:
+        if line.startswith("## 3. Traceability Matrix"):
+            in_matrix = True
+            continue
+        if in_matrix and line.startswith("## "):
+            break
+        if not in_matrix:
+            continue
+        stripped = line.strip()
+        if not stripped.startswith("|"):
+            continue
+        if stripped.startswith("| Draft spec"):
+            continue
+        if re.match(r"^\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|$", stripped):
+            continue
+        parts = [cell.strip() for cell in stripped.strip("|").split("|")]
+        if len(parts) != 4:
+            continue
+        if not CODE_REF_RE.search(parts[0]):
+            continue
+        count += 1
+    return count
+
+
+def parse_optional_string_list(value: Any, label: str) -> List[str]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise ValueError(f"{label} must be a list")
+    out: List[str] = []
+    for idx, row in enumerate(value):
+        if not isinstance(row, str) or not row.strip():
+            raise ValueError(f"{label}[{idx}] must be a non-empty string")
+        out.append(row.strip())
+    if len(set(out)) != len(out):
+        raise ValueError(f"{label} must not contain duplicates")
+    return out
+
+
+def parse_topology_threshold(raw: Any, label: str) -> Dict[str, int | None]:
+    if not isinstance(raw, dict):
+        raise ValueError(f"{label} must be an object")
+    out: Dict[str, int | None] = {
+        "warnAbove": None,
+        "failAbove": None,
+        "warnBelow": None,
+        "failBelow": None,
+    }
+    for key in list(out.keys()):
+        value = raw.get(key)
+        if value is None:
+            continue
+        if not isinstance(value, int):
+            raise ValueError(f"{label}.{key} must be an integer")
+        out[key] = value
+    if out["warnAbove"] is not None and out["failAbove"] is not None:
+        if out["warnAbove"] > out["failAbove"]:
+            raise ValueError(f"{label}: warnAbove must be <= failAbove")
+    if out["warnBelow"] is not None and out["failBelow"] is not None:
+        if out["warnBelow"] < out["failBelow"]:
+            raise ValueError(f"{label}: warnBelow must be >= failBelow")
+    if all(value is None for value in out.values()):
+        raise ValueError(f"{label} must declare at least one threshold bound")
+    return out
+
+
+def load_topology_budget_contract(path: Path) -> Dict[str, Any]:
+    payload = load_json(path)
+    if payload.get("schema") != TOPOLOGY_BUDGET_SCHEMA:
+        raise ValueError(f"{path}: schema must be {TOPOLOGY_BUDGET_SCHEMA}")
+    if payload.get("budgetKind") != TOPOLOGY_BUDGET_KIND:
+        raise ValueError(f"{path}: budgetKind must be {TOPOLOGY_BUDGET_KIND!r}")
+
+    metrics_raw = payload.get("metrics")
+    if not isinstance(metrics_raw, dict) or not metrics_raw:
+        raise ValueError(f"{path}: metrics must be a non-empty object")
+
+    metrics: Dict[str, Dict[str, int | None]] = {}
+    for metric_id, threshold_raw in metrics_raw.items():
+        if not isinstance(metric_id, str) or not metric_id.strip():
+            raise ValueError(f"{path}: metric IDs must be non-empty strings")
+        key = metric_id.strip()
+        if key in metrics:
+            raise ValueError(f"{path}: duplicate metric ID {key!r}")
+        metrics[key] = parse_topology_threshold(threshold_raw, f"{path}:metrics.{key}")
+
+    return {
+        "metrics": metrics,
+        "deprecatedDesignFragments": parse_optional_string_list(
+            payload.get("deprecatedDesignFragments"), "deprecatedDesignFragments"
+        ),
+        "doctrineSiteAuthorityInputs": parse_optional_string_list(
+            payload.get("doctrineSiteAuthorityInputs"), "doctrineSiteAuthorityInputs"
+        ),
+        "doctrineSiteGeneratedViews": parse_optional_string_list(
+            payload.get("doctrineSiteGeneratedViews"), "doctrineSiteGeneratedViews"
+        ),
+    }
+
+
+def evaluate_topology_threshold(
+    value: int, threshold: Dict[str, int | None]
+) -> Tuple[str, List[str]]:
+    messages: List[str] = []
+    fail_above = threshold.get("failAbove")
+    fail_below = threshold.get("failBelow")
+    warn_above = threshold.get("warnAbove")
+    warn_below = threshold.get("warnBelow")
+
+    if fail_above is not None and value > fail_above:
+        messages.append(f"value {value} exceeds failAbove {fail_above}")
+    if fail_below is not None and value < fail_below:
+        messages.append(f"value {value} is below failBelow {fail_below}")
+    if messages:
+        return "fail", messages
+
+    if warn_above is not None and value > warn_above:
+        messages.append(f"value {value} exceeds warnAbove {warn_above}")
+    if warn_below is not None and value < warn_below:
+        messages.append(f"value {value} is below warnBelow {warn_below}")
+    if messages:
+        return "warn", messages
+    return "ok", []
+
+
+def collect_topology_metrics(repo_root: Path, contract: Dict[str, Any]) -> Dict[str, int]:
+    draft_dir = repo_root / "specs" / "premath" / "draft"
+    design_dir = repo_root / "docs" / "design"
+    traceability_path = draft_dir / "SPEC-TRACEABILITY.md"
+    doctrine_site_path = draft_dir / "DOCTRINE-SITE.json"
+    doctrine_site = load_json(doctrine_site_path)
+    doctrine_edges = doctrine_site.get("edges")
+    if not isinstance(doctrine_edges, list):
+        raise ValueError(f"{doctrine_site_path}: edges must be a list")
+
+    authority_inputs = contract.get("doctrineSiteAuthorityInputs", [])
+    generated_views = contract.get("doctrineSiteGeneratedViews", [])
+    deprecated = contract.get("deprecatedDesignFragments", [])
+    if not isinstance(authority_inputs, list):
+        authority_inputs = []
+    if not isinstance(generated_views, list):
+        generated_views = []
+    if not isinstance(deprecated, list):
+        deprecated = []
+
+    return {
+        "draftSpecNodes": count_promoted_draft_specs(draft_dir),
+        "specTraceabilityRows": count_traceability_rows(traceability_path),
+        "designDocNodes": len(
+            [
+                path
+                for path in design_dir.glob("*.md")
+                if path.name != "README.md"
+            ]
+        ),
+        "doctrineSiteEdgeCount": len(doctrine_edges),
+        "doctrineSiteAuthorityInputCount": len(
+            [rel for rel in authority_inputs if (repo_root / rel).exists()]
+        ),
+        "doctrineSiteGeneratedViewCount": len(
+            [rel for rel in generated_views if (repo_root / rel).exists()]
+        ),
+        "deprecatedDesignFragmentCount": len(
+            [rel for rel in deprecated if (repo_root / rel).exists()]
+        ),
+    }
+
+
+def check_topology_budget(
+    repo_root: Path,
+    topology_budget_path: Path,
+) -> Tuple[bool, bool, Dict[str, Any]]:
+    reasons: List[str] = []
+    warnings: List[str] = []
+
+    contract = load_topology_budget_contract(topology_budget_path)
+    thresholds = contract["metrics"]
+    metrics = collect_topology_metrics(repo_root, contract)
+
+    details_metrics: Dict[str, Any] = {}
+    unknown_threshold_metrics = sorted(set(thresholds.keys()) - set(metrics.keys()))
+    for metric_id in unknown_threshold_metrics:
+        reasons.append(f"topology metric {metric_id!r} has no evaluator")
+
+    unbudgeted_metrics = sorted(set(metrics.keys()) - set(thresholds.keys()))
+
+    for metric_id in sorted(set(metrics.keys()) & set(thresholds.keys())):
+        value = metrics[metric_id]
+        threshold = thresholds[metric_id]
+        status, messages = evaluate_topology_threshold(value, threshold)
+        details_metrics[metric_id] = {
+            "value": value,
+            "status": status,
+            "threshold": threshold,
+            "messages": messages,
+        }
+        if status == "fail":
+            for message in messages:
+                reasons.append(f"{metric_id}: {message}")
+        elif status == "warn":
+            for message in messages:
+                warnings.append(f"{metric_id}: {message}")
+
+    details = {
+        "reasons": reasons,
+        "warnings": warnings,
+        "budgetPath": str(topology_budget_path),
+        "metrics": details_metrics,
+        "unbudgetedMetrics": unbudgeted_metrics,
+    }
+    return bool(reasons), bool(warnings), details
+
+
 def build_drift_budget_payload(
     repo_root: Path,
     coherence_witness: Dict[str, Any],
@@ -957,62 +1540,144 @@ def build_drift_budget_payload(
     control_plane_contract: Dict[str, Any],
     control_plane_module: Any,
     fixture_suites_module: Any,
+    topology_budget_path: Path,
 ) -> Dict[str, Any]:
     capability_registry_path = (
         repo_root / "specs" / "premath" / "draft" / "CAPABILITY-REGISTRY.json"
     )
+    doctrine_op_registry_path = (
+        repo_root / "specs" / "premath" / "draft" / "DOCTRINE-OP-REGISTRY.json"
+    )
     spec_index_path = repo_root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
+    conformance_path = repo_root / "specs" / "premath" / "draft" / "CONFORMANCE.md"
 
     spec_map = parse_spec_index_capability_doc_map(spec_index_path)
-    executable_capabilities = parse_capability_registry(capability_registry_path)
+    registry_contract = parse_capability_registry(capability_registry_path)
+    doctrine_operations = parse_doctrine_operation_registry(doctrine_op_registry_path)
+    executable_capabilities = registry_contract.executable_capabilities
+    registry_overlay_claims = registry_contract.profile_overlay_claims
+    conformance_overlay_claims = parse_conformance_profile_overlay_claims(conformance_path)
     conditional_docs = parse_conditional_capability_docs(coherence_contract)
 
     scope_details = obligation_details(coherence_witness, "scope_noncontradiction")
     gate_chain_details = obligation_details(coherence_witness, "gate_chain_parity")
 
-    checks: List[Tuple[str, bool, Dict[str, Any]]] = []
+    checks: List[Tuple[str, bool, bool, Dict[str, Any]]] = []
+    profile_failed, profile_details = check_profile_overlay_claims(
+        registry_overlay_claims, conformance_overlay_claims
+    )
+    checks.append(
+        (
+            DRIFT_CLASS_PROFILE_OVERLAYS,
+            profile_failed,
+            False,
+            profile_details,
+        )
+    )
+    spec_failed, spec_details = check_spec_index_capability_map(
+        spec_map, executable_capabilities, conditional_docs
+    )
     checks.append(
         (
             DRIFT_CLASS_SPEC_INDEX,
-            *check_spec_index_capability_map(spec_map, executable_capabilities, conditional_docs),
+            spec_failed,
+            False,
+            spec_details,
         )
+    )
+    lane_failed, lane_details = check_control_plane_lane_bindings(
+        control_plane_contract, control_plane_module, gate_chain_details
     )
     checks.append(
         (
             DRIFT_CLASS_LANE_BINDINGS,
-            *check_control_plane_lane_bindings(
-                control_plane_contract, control_plane_module, gate_chain_details
-            ),
+            lane_failed,
+            False,
+            lane_details,
         )
+    )
+    kcir_mapping_failed, kcir_mapping_details = check_control_plane_kcir_mappings(
+        control_plane_contract,
+        control_plane_module,
+    )
+    checks.append(
+        (
+            DRIFT_CLASS_KCIR_MAPPINGS,
+            kcir_mapping_failed,
+            False,
+            kcir_mapping_details,
+        )
+    )
+    runtime_route_failed, runtime_route_details = check_runtime_route_bindings(
+        control_plane_contract,
+        control_plane_module,
+        doctrine_operations,
+    )
+    checks.append(
+        (
+            DRIFT_CLASS_RUNTIME_ROUTE_BINDINGS,
+            runtime_route_failed,
+            False,
+            runtime_route_details,
+        )
+    )
+    required_failed, required_details = check_coherence_required_obligations(
+        coherence_contract, scope_details
     )
     checks.append(
         (
             DRIFT_CLASS_REQUIRED_OBLIGATIONS,
-            *check_coherence_required_obligations(coherence_contract, scope_details),
+            required_failed,
+            False,
+            required_details,
         )
     )
-    checks.append((DRIFT_CLASS_SIGPI_NOTATION, *check_sigpi_notation(repo_root)))
+    sigpi_failed, sigpi_details = check_sigpi_notation(repo_root)
+    checks.append((DRIFT_CLASS_SIGPI_NOTATION, sigpi_failed, False, sigpi_details))
+    closure_failed, closure_details = check_cache_input_closure(
+        repo_root, fixture_suites_module
+    )
     checks.append(
         (
             DRIFT_CLASS_CACHE_CLOSURE,
-            *check_cache_input_closure(repo_root, fixture_suites_module),
+            closure_failed,
+            False,
+            closure_details,
+        )
+    )
+    topology_failed, topology_warned, topology_details = check_topology_budget(
+        repo_root, topology_budget_path
+    )
+    checks.append(
+        (
+            DRIFT_CLASS_TOPOLOGY_BUDGET,
+            topology_failed,
+            topology_warned,
+            topology_details,
         )
     )
 
-    drift_classes = sorted([class_id for class_id, failed, _ in checks if failed])
-    details = {
-        class_id: detail
-        for class_id, _, detail in checks
-    }
+    drift_classes = sorted([class_id for class_id, failed, _, _ in checks if failed])
+    warning_classes = sorted(
+        [
+            WARN_CLASS_TOPOLOGY_BUDGET if class_id == DRIFT_CLASS_TOPOLOGY_BUDGET else class_id
+            for class_id, failed, warned, _ in checks
+            if (not failed and warned)
+        ]
+    )
+    details = {class_id: detail for class_id, _, _, detail in checks}
     payload = {
         "schema": SCHEMA,
         "checkKind": CHECK_KIND,
         "result": "rejected" if drift_classes else "accepted",
         "driftClasses": drift_classes,
+        "warningClasses": warning_classes,
         "summary": {
             "checkCount": len(checks),
             "driftCount": len(drift_classes),
             "driftDetected": bool(drift_classes),
+            "warningCount": len(warning_classes),
+            "warningDetected": bool(warning_classes),
         },
         "details": details,
     }
@@ -1027,6 +1692,11 @@ def main() -> int:
     coherence_contract_path = root / "specs" / "premath" / "draft" / "COHERENCE-CONTRACT.json"
     control_plane_contract_path = (
         root / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json"
+    )
+    topology_budget_path = (
+        args.topology_budget.resolve()
+        if args.topology_budget is not None
+        else root / "specs" / "process" / "TOPOLOGY-BUDGET.json"
     )
     control_plane_module_path = root / "tools" / "ci" / "control_plane_contract.py"
     fixture_suites_module_path = root / "tools" / "conformance" / "run_fixture_suites.py"
@@ -1054,6 +1724,7 @@ def main() -> int:
             control_plane_contract,
             control_plane_module,
             fixture_suites_module,
+            topology_budget_path,
         )
     except Exception as exc:  # pragma: no cover - fail-closed CLI guard
         print(f"[drift-budget-check] FAIL ({exc})")
@@ -1063,10 +1734,17 @@ def main() -> int:
         print(json.dumps(payload, indent=2, sort_keys=True))
     else:
         if payload["result"] == "accepted":
-            print(
-                "[drift-budget-check] OK "
-                f"(checks={payload['summary']['checkCount']}, drift=0)"
-            )
+            if payload["summary"]["warningCount"] > 0:
+                print(
+                    "[drift-budget-check] WARN "
+                    f"(checks={payload['summary']['checkCount']}, drift=0, "
+                    f"warnings={payload['warningClasses']})"
+                )
+            else:
+                print(
+                    "[drift-budget-check] OK "
+                    f"(checks={payload['summary']['checkCount']}, drift=0)"
+                )
         else:
             print(
                 "[drift-budget-check] FAIL "

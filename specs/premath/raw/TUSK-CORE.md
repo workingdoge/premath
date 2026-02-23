@@ -57,6 +57,10 @@ Tusk implementations MUST preserve this split:
 
 Adapters MUST NOT self-certify admissibility.
 
+When execution is entered via Squeak transport handoff (`raw/SQUEAK-CORE`),
+destination Tusk MUST still run destination-local admissibility checks under
+destination bindings before emitting Gate-class outcomes.
+
 ## 3. Context and reference model
 
 Implementations MUST use explicit reference fields:

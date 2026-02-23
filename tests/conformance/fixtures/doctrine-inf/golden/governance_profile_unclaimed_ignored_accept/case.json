@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "doctrine-inf",
+  "vectorId": "golden/governance_profile_unclaimed_ignored_accept",
+  "description": "Governance controls are ignored when the governance profile claim is not asserted.",
+  "artifacts": {
+    "doctrineRegistry": [
+      "dm.identity",
+      "dm.policy.rebind",
+      "dm.profile.execution",
+      "dm.profile.evidence",
+      "dm.presentation.projection",
+      "dm.commitment.attest"
+    ],
+    "destinationDeclares": {
+      "preserved": [
+        "dm.identity",
+        "dm.policy.rebind",
+        "dm.profile.execution",
+        "dm.profile.evidence",
+        "dm.presentation.projection",
+        "dm.commitment.attest"
+      ],
+      "notPreserved": []
+    },
+    "edgeMorphisms": [
+      "dm.identity",
+      "dm.commitment.attest"
+    ]
+  },
+  "governanceProfile": {
+    "claimId": "profile.doctrine_inf_governance.v0",
+    "claimed": false
+  }
+}

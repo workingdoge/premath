@@ -154,18 +154,8 @@ fn run_add(
     issues: String,
     json_output: bool,
 ) {
-    let (mut store, path) = load_store_or_empty_or_exit(&issues);
-    let issue_id = id.unwrap_or_else(|| next_issue_id(&store));
-
-    if store.issue(&issue_id).is_some() {
-        eprintln!("error: issue already exists: {issue_id}");
-        std::process::exit(1);
-    }
-
-    let mut issue = Issue::new(issue_id.clone(), title);
-    issue.description = description;
-    issue.priority = priority;
-    issue.issue_type = parse_issue_type(&issue_type).unwrap_or_else(|| {
+    let path = PathBuf::from(issues);
+    let resolved_issue_type = parse_issue_type(&issue_type).unwrap_or_else(|| {
         eprintln!(
             "error: invalid issue_type `{}` (expected one of: {})",
             issue_type,
@@ -173,13 +163,30 @@ fn run_add(
         );
         std::process::exit(1);
     });
-    issue.assignee = assignee;
-    issue.owner = owner;
-    issue.set_status(status);
-    let persisted = issue.clone();
+    let persisted = mutate_store_jsonl(&path, |store| {
+        let issue_id = id.clone().unwrap_or_else(|| next_issue_id(store));
 
-    store.upsert_issue(issue);
-    save_store_or_exit(&store, &path);
+        if store.issue(&issue_id).is_some() {
+            return Err(format!("issue already exists: {issue_id}"));
+        }
+
+        let mut issue = Issue::new(issue_id, title);
+        issue.description = description;
+        issue.priority = priority;
+        issue.issue_type = resolved_issue_type;
+        issue.assignee = assignee;
+        issue.owner = owner;
+        issue.set_status(status);
+        store.upsert_issue(issue.clone());
+        Ok((issue, true))
+    })
+    .unwrap_or_else(|e| {
+        match e {
+            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
+            other => eprintln!("error: {other}"),
+        }
+        std::process::exit(1);
+    });
 
     if json_output {
         let payload = json!({
@@ -515,12 +522,15 @@ fn run_update(
     issues: String,
     json_output: bool,
 ) {
-    let (mut store, path) = load_store_existing_or_exit(&issues);
-    let updated = {
-        let issue = store.issue_mut(&id).unwrap_or_else(|| {
-            eprintln!("error: issue not found: {id}");
-            std::process::exit(1);
-        });
+    let path = PathBuf::from(issues);
+    if !path.exists() {
+        eprintln!("error: issues file not found: {}", path.display());
+        std::process::exit(1);
+    }
+    let updated = mutate_store_jsonl(&path, |store| {
+        let issue = store
+            .issue_mut(&id)
+            .ok_or_else(|| format!("issue not found: {id}"))?;
 
         let mut changed = false;
         let mut status_changed = false;
@@ -556,18 +566,22 @@ fn run_update(
         }
 
         if !changed {
-            eprintln!("error: no update fields provided");
-            std::process::exit(1);
+            return Err("no update fields provided".to_string());
         }
 
         if !status_changed {
             issue.touch_updated_at();
         }
 
-        issue.clone()
-    };
-
-    save_store_or_exit(&store, &path);
+        Ok((issue.clone(), true))
+    })
+    .unwrap_or_else(|e| {
+        match e {
+            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
+            other => eprintln!("error: {other}"),
+        }
+        std::process::exit(1);
+    });
 
     if json_output {
         let payload = json!({
@@ -846,22 +860,12 @@ fn run_discover(
     issues: String,
     json_output: bool,
 ) {
-    let (mut store, path) = load_store_existing_or_exit(&issues);
-    if store.issue(&parent_issue_id).is_none() {
-        eprintln!("error: parent issue not found: {parent_issue_id}");
+    let path = PathBuf::from(issues);
+    if !path.exists() {
+        eprintln!("error: issues file not found: {}", path.display());
         std::process::exit(1);
     }
-
-    let issue_id = id.unwrap_or_else(|| next_issue_id(&store));
-    if store.issue(&issue_id).is_some() {
-        eprintln!("error: issue already exists: {issue_id}");
-        std::process::exit(1);
-    }
-
-    let mut issue = Issue::new(issue_id.clone(), title);
-    issue.description = description;
-    issue.priority = priority;
-    issue.issue_type = parse_issue_type(&issue_type).unwrap_or_else(|| {
+    let resolved_issue_type = parse_issue_type(&issue_type).unwrap_or_else(|| {
         eprintln!(
             "error: invalid issue_type `{}` (expected one of: {})",
             issue_type,
@@ -869,32 +873,54 @@ fn run_discover(
         );
         std::process::exit(1);
     });
-    issue.assignee = assignee;
-    issue.owner = owner;
-    issue.set_status("open".to_string());
+    let persisted = mutate_store_jsonl(&path, |store| {
+        if store.issue(&parent_issue_id).is_none() {
+            return Err(format!("parent issue not found: {parent_issue_id}"));
+        }
 
-    store.upsert_issue(issue);
-    store
-        .add_dependency(
-            &issue_id,
-            &parent_issue_id,
-            DepType::DiscoveredFrom,
-            String::new(),
-        )
-        .unwrap_or_else(|e| {
-            eprintln!("error: failed to add discovered-from dependency: {e}");
-            std::process::exit(1);
-        });
+        let issue_id = id.clone().unwrap_or_else(|| next_issue_id(store));
+        if store.issue(&issue_id).is_some() {
+            return Err(format!("issue already exists: {issue_id}"));
+        }
 
-    let persisted = store.issue(&issue_id).expect("discovered issue must exist");
-    save_store_or_exit(&store, &path);
+        let mut issue = Issue::new(issue_id.clone(), title);
+        issue.description = description;
+        issue.priority = priority;
+        issue.issue_type = resolved_issue_type;
+        issue.assignee = assignee;
+        issue.owner = owner;
+        issue.set_status("open".to_string());
+
+        store.upsert_issue(issue);
+        store
+            .add_dependency(
+                &issue_id,
+                &parent_issue_id,
+                DepType::DiscoveredFrom,
+                String::new(),
+            )
+            .map_err(|e| format!("failed to add discovered-from dependency: {e}"))?;
+        let persisted = store
+            .issue(&issue_id)
+            .cloned()
+            .ok_or_else(|| format!("discovered issue missing after mutation: {issue_id}"))?;
+
+        Ok((persisted, true))
+    })
+    .unwrap_or_else(|e| {
+        match e {
+            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
+            other => eprintln!("error: {other}"),
+        }
+        std::process::exit(1);
+    });
 
     if json_output {
         let payload = json!({
             "action": "issue.discover",
             "issuesPath": path.display().to_string(),
             "issue": {
-                "id": persisted.id,
+                "id": persisted.id.clone(),
                 "title": persisted.title,
                 "status": persisted.status,
                 "priority": persisted.priority,
@@ -903,7 +929,7 @@ fn run_discover(
                 "owner": persisted.owner
             },
             "dependency": {
-                "issueId": issue_id,
+                "issueId": persisted.id.clone(),
                 "dependsOnId": parent_issue_id,
                 "type": "discovered-from"
             }
@@ -915,8 +941,8 @@ fn run_discover(
     } else {
         println!(
             "premath issue discover\n  Added: {} [open]\n  Linked: {} -> {} (discovered-from)\n  Path: {}",
-            persisted.id,
-            persisted.id,
+            persisted.id.as_str(),
+            persisted.id.as_str(),
             parent_issue_id,
             path.display()
         );
@@ -1195,18 +1221,6 @@ fn load_store_existing_or_exit(issues: &str) -> (MemoryStore, PathBuf) {
         std::process::exit(1);
     });
     (store, path)
-}
-
-fn load_store_or_empty_or_exit(issues: &str) -> (MemoryStore, PathBuf) {
-    let path = PathBuf::from(issues);
-    if path.exists() {
-        let store = MemoryStore::load_jsonl(&path).unwrap_or_else(|e| {
-            eprintln!("error: failed to load {}: {e}", path.display());
-            std::process::exit(1);
-        });
-        return (store, path);
-    }
-    (MemoryStore::default(), path)
 }
 
 fn save_store_or_exit(store: &MemoryStore, path: &Path) {

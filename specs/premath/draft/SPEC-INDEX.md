@@ -99,7 +99,9 @@ verifiers, obligation checkers), not by whether it contains these exact boxes in
 
 ### 5.1 Always normative (Kernel claim)
 
-- `draft/DOCTRINE-INF` — doctrine/infinity-layer preservation contract.
+- `draft/DOCTRINE-INF` — doctrine/infinity-layer preservation contract;
+  governance-flywheel preservation profile (§9) is conditional normative only
+  when `profile.doctrine_inf_governance.v0` is claimed.
 - `draft/PREMATH-KERNEL` — semantic kernel (contexts/covers + contractible descent).
 
 ### 5.2 Normative for Interop Core (only if claimed)
@@ -139,6 +141,7 @@ Capability-specific normative specs include:
 - `draft/LLM-PROPOSAL-CHECKING` (for `capabilities.instruction_typing`)
 - `profile/ADJOINTS-AND-SITES` (for `capabilities.adjoints_sites`)
 - `draft/CHANGE-MORPHISMS` (for `capabilities.change_morphisms`)
+- `draft/HARNESS-TYPESTATE` (for `capabilities.change_morphisms`)
 
 Normative requirements apply only when the corresponding capability is claimed.
 
@@ -159,14 +162,22 @@ Worker-operation doctrine-site routing note:
   `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
   `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
 - Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
-  `draft/HARNESS-RETRY-ESCALATION`) MUST reuse the same routed operation IDs
-  above and MUST NOT introduce parallel mutation/session authority paths.
+  `draft/HARNESS-TYPESTATE`, `draft/HARNESS-RETRY-ESCALATION`) MUST reuse the
+  same routed operation IDs above and MUST NOT introduce parallel
+  mutation/session authority paths.
 - Instruction/observation/init MCP surfaces are also mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
   (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
   `op/mcp.observe_latest`, `op/mcp.observe_needs_attention`,
   `op/mcp.observe_instruction`, `op/mcp.observe_projection`,
   `op/mcp.init_tool`).
+- Doctrine-conformance routing also includes explicit runtime orchestration
+  parity (`op/conformance.runtime_orchestration`), binding
+  `runtimeRouteBindings` contract routes to
+  `draft/DOCTRINE-OP-REGISTRY.json` operation nodes, enforcing routed
+  operation path boundaries (`tools/ci/*`) and optional
+  `controlPlaneKcirMappings` row-shape checks (when mapping rows are present),
+  with invariance vectors for profile-permuted route scenarios.
 - For multithread worker orchestration, routed operation paths MUST be treated
   as operational cover/refinement execution surfaces only (no semantic
   authority transfer). Any acceptance/rejection consumed by runtime/control
@@ -179,9 +190,9 @@ The entries below are informative/default reading surfaces unless they are
 explicitly claimed under §5.4 or §5.6.
 
 - `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
-  (`draft/DOCTRINE-SITE-SOURCE.json` + `draft/DOCTRINE-OP-REGISTRY.json` ->
-  `draft/DOCTRINE-SITE.json`, including worker mutation and harness-session
-  operation routes).
+  (`draft/DOCTRINE-SITE-INPUT.json` -> generated
+  `draft/DOCTRINE-SITE.json` + generated `draft/DOCTRINE-OP-REGISTRY.json`,
+  including worker mutation and harness-session operation routes).
 - `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
   explicit gap targets.
 - `draft/PREMATH-COHERENCE` — typed coherence-contract checker/witness model
@@ -189,23 +200,41 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
 - `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
-  `boot/step/stop`, session/feature/trajectory artifacts, and deterministic
-  worker/coordinator loop behavior over existing routed operations.
+  `boot/step/stop` and the shared harness surface map
+  (`draft/HARNESS-RUNTIME` §1.1) used by typestate and retry/escalation
+  contracts.
+- `draft/HARNESS-TYPESTATE` — promoted harness typestate closure/mutation gate
+  contract for tool-calling turns (normative when
+  `capabilities.change_morphisms` is claimed; shared harness partitioning/routes
+  are declared in `draft/HARNESS-RUNTIME` §1.1).
 - `draft/HARNESS-RETRY-ESCALATION` — promoted classify/retry/escalation control
   contract for CI harness wrappers bound to canonical policy digest and routed
-  escalation operations.
+  escalation operations (shared harness partitioning/routes in
+  `draft/HARNESS-RUNTIME` §1.1).
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
-  bindings + worker mutation authority policy/routes + Stage 2/Stage 3
-  typed-authority metadata) consumed by
+  bindings + worker mutation authority policy/routes + runtime route bindings
+  (`runtimeRouteBindings`) + Stage 2/Stage 3 typed-authority metadata +
+  control-plane bundle profile (`controlPlaneBundleProfile`) declaring
+  `C_cp` (repository-state context family), `E_cp` (control-plane artifact
+  family), reindexing/coherence and cover/glue obligations, plus explicit
+  semantic-authority split (`PREMATH-KERNEL`/`GATE`/`BIDIR-DESCENT` remain
+  authority; control-plane is projection/parity only), and canonical KCIR
+  control-plane mapping table (`controlPlaneKcirMappings`) for instruction /
+  proposal / coherence / doctrine-route / required-decision surfaces, including
+  deterministic digest-lineage fields and legacy non-KCIR compatibility
+  deprecation policy)
+  consumed by
   CI/coherence adapter
   surfaces; lifecycle semantics follow `draft/UNIFICATION-DOCTRINE` §5.1
   including governance-mode metadata
   (`rollover|freeze`) and process contract in
   `../../process/SCHEMA-LIFECYCLE-GOVERNANCE.md`.
-- `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability
-  registry consumed by conformance/docs/coherence parity surfaces.
+- `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability +
+  profile-overlay-claim registry, including capability-to-normative-doc claim
+  bindings (`capabilityDocBindings`) consumed by conformance/docs/coherence
+  parity surfaces.
 - `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
   instruction flows (normative only when `capabilities.instruction_typing` is
   claimed).
@@ -252,12 +281,12 @@ Raw capability-spec lifecycle policy:
   2) deterministic witness/failure-class mapping through checker/run surfaces;
   3) issue-backed migration plan + decision-log entry for lifecycle change.
 
-Current tracked promotion queue:
+Current raw-retain posture:
 
-- `raw/SQUEAK-SITE` — tracked by issue `bd-44` (raw-retain path recorded in
-  Decision 0040; promote only when criteria are met).
-- `raw/TUSK-CORE` — tracked by issue `bd-45` (raw-retain path recorded in
-  Decision 0041; promote only when criteria are met).
+- `raw/SQUEAK-SITE` — retained raw per Decision 0040; promote only when
+  criteria are met.
+- `raw/TUSK-CORE` — retained raw per Decision 0041; promote only when criteria
+  are met.
 
 ### 5.6 Normative for profile overlays (only if claimed)
 
@@ -352,8 +381,8 @@ If you are implementing change discipline:
 If you are implementing higher-order CI/CD:
 1) `draft/DOCTRINE-INF`
 2) `draft/DOCTRINE-SITE`
-   (`draft/DOCTRINE-SITE-SOURCE.json` + `draft/DOCTRINE-OP-REGISTRY.json` ->
-   `draft/DOCTRINE-SITE.json`)
+   (`draft/DOCTRINE-SITE-INPUT.json` -> generated `draft/DOCTRINE-SITE.json`
+   + generated `draft/DOCTRINE-OP-REGISTRY.json`)
 3) `draft/LLM-INSTRUCTION-DOCTRINE`
 4) `draft/LLM-PROPOSAL-CHECKING`
 5) `raw/PREMATH-CI`
