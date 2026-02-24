@@ -229,7 +229,19 @@ class PipelineInstructionTests(unittest.TestCase):
         repo_root = Path(__file__).resolve().parents[2]
         instruction = repo_root / "instructions" / "sample.json"
         validate = subprocess.CompletedProcess(
-            args=["python3", "tools/ci/check_instruction_envelope.py", str(instruction)],
+            args=[
+                "cargo",
+                "run",
+                "--package",
+                "premath-cli",
+                "--",
+                "instruction-check",
+                "--instruction",
+                str(instruction),
+                "--repo-root",
+                str(repo_root),
+                "--json",
+            ],
             returncode=1,
             stdout="",
             stderr=f"{instruction}: proposal_binding_mismatch: mismatch\n",
@@ -344,6 +356,7 @@ class PipelineInstructionTests(unittest.TestCase):
                                 "coherenceObligations",
                                 "coherenceCheckPayload",
                                 "doctrineRouteBinding",
+                                "fiberLifecycleAction",
                                 "requiredDecisionInput",
                             ),
                             checked_rows=(
@@ -458,6 +471,7 @@ class PipelineInstructionTests(unittest.TestCase):
                                 "coherenceObligations",
                                 "coherenceCheckPayload",
                                 "doctrineRouteBinding",
+                                "fiberLifecycleAction",
                                 "requiredDecisionInput",
                             ),
                             checked_rows=(

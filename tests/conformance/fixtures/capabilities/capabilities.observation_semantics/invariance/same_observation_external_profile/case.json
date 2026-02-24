@@ -1,0 +1,35 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.observation_semantics",
+  "vectorId": "invariance/same_observation_external_profile",
+  "description": "Observation surface is invariant across external profile permutations.",
+  "semanticScenarioId": "observation_invariance_01",
+  "profile": "external",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.observation_semantics"],
+    "witnessState": {
+      "sources": [
+        {
+          "sourceId": "ci.baseline",
+          "runId": "run_001",
+          "state": "accepted",
+          "evidenceTier": "required"
+        },
+        {
+          "sourceId": "ci.conformance",
+          "runId": "run_001",
+          "state": "accepted",
+          "evidenceTier": "required"
+        }
+      ]
+    },
+    "issueMemory": {
+      "issues": []
+    }
+  },
+  "expected": {
+    "result": "accepted",
+    "surfaceDeterministic": true
+  }
+}

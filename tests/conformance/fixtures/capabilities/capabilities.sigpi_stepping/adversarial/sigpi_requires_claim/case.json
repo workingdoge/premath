@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.sigpi_stepping",
+  "vectorId": "adversarial/sigpi_requires_claim",
+  "description": "SigPi stepping vectors require capabilities.sigpi_stepping to be claimed.",
+  "semanticScenarioId": "sigpi_requires_claim_01",
+  "artifacts": {
+    "claimedCapabilities": [],
+    "concernFibres": null
+  },
+  "expected": {
+    "result": "rejected",
+    "rejectionClasses": ["capability_not_claimed"]
+  }
+}

@@ -10,8 +10,8 @@ rollover and freeze states are explicit, auditable, and reproducible.
 
 Normative bindings:
 
-- `specs/premath/draft/UNIFICATION-DOCTRINE.md` §5.1
-- `specs/premath/draft/CONTROL-PLANE-CONTRACT.json` (`schemaLifecycle`)
+- `specs/premath/profile/UNIFICATION-GOVERNANCE.md` §5.1
+- `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json` (`schemaLifecycle`)
 - `specs/process/decision-log.md`
 
 ## 2. Governance Shape
@@ -74,7 +74,7 @@ For every governance transition (`rollover <-> freeze`) or cadence change:
 
 ## 5. Reproducible Operator Flow
 
-1. edit `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`,
+1. edit `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json`,
 2. run:
    - `mise run ci-drift-budget-check`
    - `mise run coherence-check`

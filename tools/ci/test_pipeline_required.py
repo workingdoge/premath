@@ -325,6 +325,7 @@ class PipelineRequiredTests(unittest.TestCase):
                                     "coherenceObligations",
                                     "coherenceCheckPayload",
                                     "doctrineRouteBinding",
+                                    "fiberLifecycleAction",
                                     "requiredDecisionInput",
                                 ),
                                 checked_rows=(
@@ -447,6 +448,7 @@ class PipelineRequiredTests(unittest.TestCase):
                                 "coherenceObligations",
                                 "coherenceCheckPayload",
                                 "doctrineRouteBinding",
+                                "fiberLifecycleAction",
                                 "requiredDecisionInput",
                             ),
                             checked_rows=(

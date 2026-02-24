@@ -1,0 +1,275 @@
+---
+slug: profile
+shortname: UNIFICATION-GOVERNANCE
+title: workingdoge.com/premath/UNIFICATION-GOVERNANCE
+name: Minimum Encoding, Maximum Expressiveness Governance Overlay
+status: draft
+category: Standards Track
+tags:
+  - premath
+  - profile
+  - governance
+  - unification
+editor: arj <arj@workingdoge.com>
+contributors: []
+---
+
+## License
+
+This specification is dedicated to the public domain under **CC0 1.0** (see
+`../../../LICENSE`).
+
+## Change Process
+
+This document is governed by the process in `../../process/coss.md`.
+
+## Language
+
+The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**,
+**SHOULD**, **SHOULD NOT**, **RECOMMENDED**, **MAY**, and **OPTIONAL** in this
+specification are to be interpreted as described in RFC 2119 (and RFC 8174 for
+capitalization).
+
+## 1. Scope
+
+This profile overlay defines the governance policy for Premath evolution:
+
+- minimum canonical encoding at authority boundaries,
+- maximum expressiveness via typed projections, overlays, and capability claims.
+
+It applies to instruction/proposal/checking, issue memory, conformance surfaces,
+and interop artifacts.
+
+This overlay is normative when claimed as a profile overlay.
+
+## 2. Core Principle
+
+For any semantic boundary `B`, implementations MUST prefer:
+
+1. one canonical representation at `B`,
+2. many deterministic views derived from that representation.
+
+Premath systems SHOULD add expressiveness by adding projections and obligation
+routes, not by forking canonical encodings.
+
+## 3. Canonical Boundary Rules
+
+### 3.1 Single authority encoding
+
+Each authority boundary MUST define one canonical payload shape and one
+deterministic identity function.
+
+Examples:
+
+- instruction proposals: canonical proposal payload + deterministic
+  `proposalDigest`/`proposalKcirRef`,
+- issue memory: `issue.event.v1` append-only substrate + deterministic replay.
+
+### 3.2 Derived view discipline
+
+Derived views MUST be deterministic projections of canonical payloads.
+
+Derived views MAY optimize for workflow semantics (execution, GTD, groupoid,
+profile overlays), but MUST NOT introduce independent semantic authority.
+
+### 3.3 Binding discipline
+
+Any normalized/evidence-producing route MUST carry deterministic binding
+material:
+
+- `normalizerId`,
+- `policyDigest`,
+- canonical refs where applicable (for example `kcir1_*`, `cmp1_*`, `ev1_*`,
+  `iss1_*`).
+
+## 4. Expressiveness Without Forks
+
+Expressiveness SHOULD be introduced by:
+
+- capability-scoped overlays,
+- obligation compilation/discharge hints,
+- additional deterministic projections,
+- richer witness annotations.
+
+Expressiveness MUST NOT be introduced by:
+
+- parallel canonical schemas for the same authority boundary,
+- implicit authority in planner/proposal outputs,
+- unverifiable side-channel state.
+
+## 5. Migration Rules
+
+When replacing or tightening a boundary representation:
+
+1. implementations SHOULD provide deterministic projection/replay between old
+   and new surfaces,
+2. compatibility aliases MAY exist temporarily,
+3. canonical authority MUST move to one boundary before compatibility aliases
+   are removed.
+
+Compatibility fields (for example digest aliases) MUST stay bound to the same
+canonical payload while they coexist.
+
+### 5.1 Schema lifecycle policy (contract/witness/projection kinds)
+
+Control-plane implementations MUST publish one deterministic lifecycle table for
+schema/versioned kind families (for example `*.contract.v*`, witness kinds, and
+projection kinds).
+
+For each kind family:
+
+1. exactly one canonical kind MUST be declared,
+2. compatibility aliases MAY be declared with an explicit `supportUntilEpoch`,
+3. each alias MUST declare a canonical replacement kind,
+4. checkers MUST resolve accepted aliases to canonical kind before downstream
+   comparison,
+5. compatibility aliases participating in one lifecycle table MUST share one
+   deterministic rollover epoch,
+6. rollover runway (`supportUntilEpoch - activeEpoch`) MUST be positive and
+   bounded (CI implementation profile: max 12 months),
+7. lifecycle tables MUST declare governance mode metadata under
+   `schemaLifecycle.governance` with at least:
+   - `mode` (`rollover` or `freeze`),
+   - `decisionRef`,
+   - `owner`,
+8. when `mode=rollover`, `rolloverCadenceMonths` MUST be explicit and
+   compatibility aliases MUST remain within that cadence,
+9. when `mode=freeze`, compatibility aliases MUST be absent and `freezeReason`
+   MUST be explicit,
+10. governance transitions (`rollover <-> freeze`) MUST be decision-logged and
+    linked by `decisionRef`.
+
+When a breaking shape change is introduced:
+
+- migration MUST emit witness evidence that the old payload was replayed or
+  projected into the canonical replacement,
+- the compatibility window MUST be explicit in the lifecycle table.
+
+After `supportUntilEpoch`, checkers MUST reject the alias deterministically
+(fail closed) and report the canonical replacement kind.
+
+Process-level governance shape and operator flow are defined in:
+
+- `specs/process/SCHEMA-LIFECYCLE-GOVERNANCE.md`.
+
+## 6. Conformance Expectations
+
+Implementations following this governance overlay SHOULD:
+
+- expose deterministic witness lineage from canonical payload to final verdict,
+- fail closed on unknown/unbound classifications at authority boundaries,
+- run doctrine/traceability/coherence checks in merge-gated command surfaces.
+
+## 7. Relationship to Other Specs
+
+This governance overlay constrains how existing specs compose:
+
+- `draft/SPEC-INDEX` (normative scope and claims),
+- `draft/PREMATH-COHERENCE` (cross-surface parity obligations),
+- `draft/SPAN-SQUARE-CHECKING` (typed span/square witness layer for
+  pipeline/base-change commutation),
+- `draft/CHANGE-INF` (deterministic change projections),
+- `draft/KCIR-CORE`, `draft/NF`, `draft/NORMALIZER` (interop identity surfaces).
+
+## 8. KCIR Boundary Profile (v0)
+
+This profile pins one KCIR-compatible identity path for proposal-bearing
+instruction/checking boundaries.
+
+### 8.1 Canonical proposal KCIR projection
+
+Implementations exposing `proposalKcirRef` MUST derive it from:
+
+```text
+KCIRProposalProjection {
+  kind: "kcir.proposal.v1",
+  canonicalProposal: <Section 2 canonical proposal payload from LLM-PROPOSAL-CHECKING>
+}
+```
+
+`proposalKcirRef` is:
+
+```text
+"kcir1_" + SHA256(JCS(KCIRProposalProjection))
+```
+
+### 8.2 Boundary map
+
+| Boundary | Canonical payload | Canonical identity |
+| --- | --- | --- |
+| instruction envelope proposal field | `LLMProposal` canonical payload | `proposalKcirRef` (preferred) + `proposalDigest` (compatibility alias) |
+| proposal ingest witness | canonical proposal + obligation/discharge projection | `proposalKcirRef` in witness lineage |
+| coherence parity and migration witnesses | deterministic parity tuple containing proposal identity keys when present | `proposalKcirRef` |
+| capability/conformance vectors | deterministic replay payload over the same canonical proposal | `proposalKcirRef` and deterministic reject on mismatch |
+
+Derived profiles MAY add projection metadata, but MUST NOT fork this canonical
+proposal KCIR projection.
+
+### 8.3 Duplicate encoding deprecation rule
+
+When multiple code paths validate proposal identity:
+
+1. one shared validator module MUST own canonicalization and declared-ref
+   validation,
+2. other paths MUST call that module and MUST NOT re-encode independent
+   validation semantics,
+3. compatibility identities (`proposalDigest`) MAY remain while migration is in
+   progress, but MUST stay bound to the same canonical proposal payload as
+   `proposalKcirRef`.
+
+## 9. Lane Separation Contract (v0)
+
+To preserve minimum encoding with maximum expressiveness, implementations MUST
+keep the following lane split explicit and non-overlapping:
+
+| Lane | Primary role | Canonical references | Non-authority constraints |
+| --- | --- | --- | --- |
+| Semantic doctrine lane | semantic meaning and obligation authority | `draft/PREMATH-KERNEL`, `draft/BIDIR-DESCENT`, `draft/GATE`, `profile/ADJOINTS-AND-SITES` | MAY compile to obligations; MUST NOT be bypassed by planner/projection outputs |
+| Strict checker lane | strict operational equalities (`≡`) for deterministic checking | `draft/PREMATH-COHERENCE`, `draft/COHERENCE-CONTRACT.json` | validates control-plane consistency only; MUST NOT redefine kernel admissibility |
+| Witness commutation lane | typed pipeline/base-change commutation artifacts | `draft/SPAN-SQUARE-CHECKING` | checker-facing evidence only; MUST NOT self-authorize acceptance |
+| Runtime transport lane | runtime location/world transport surfaces | `raw/SQUEAK-CORE`, `raw/SQUEAK-SITE` | transport/site checks are capability-scoped; MUST remain bound to canonical witness lineage |
+
+Note: the formal categorical structure underlying lane separation (concern fibre
+index) is defined in `draft/SIGPI-INF` §2.
+
+### 9.1 SigPi (adjoint) lane rule
+
+When `capabilities.adjoints_sites` is claimed, the SigPi adjoint triple
+(`\Sigma_f -| f* -| \Pi_f`, shorthand `sig\Pi`) and
+Beck-Chevalley obligations remain in the semantic doctrine lane and MUST
+discharge under deterministic bindings (`normalizerId`, `policyDigest`) without
+introducing a parallel authority encoding.
+
+### 9.2 Squeak lane rule
+
+When `capabilities.squeak_site` is claimed, Squeak transport/site witnesses MAY
+extend expressiveness, but MUST project into the same canonical authority chain
+as other evidence surfaces (no side-channel acceptance path).
+
+### 9.3 Composition rule
+
+When SigPi adjoint obligations, span/square commutation obligations, and Squeak
+transport obligations are composed in one implementation profile:
+
+1. composition MUST occur via obligation and witness routing, not by creating a
+   second semantic authority schema,
+2. composed checks MUST remain deterministic and fail closed on unknown/unbound
+   lane or capability material,
+3. cross-lane pullback/base-change claims MUST project through typed
+   span/square witnesses (`draft/SPAN-SQUARE-CHECKING`), including deterministic
+   composition-law witnesses (identity/associativity/h-v/interchange) when
+   composed routing is claimed,
+4. derived projections MAY vary by workflow, but MUST remain replayable to one
+   canonical authority artifact.
+
+### 9.4 CwF/SigPi bridge rule
+
+When strict CwF equalities are bridged into SigPi semantic obligations:
+
+1. bridge morphisms MUST compile into existing obligation vocabularies
+   (`cwf_*`, `stability`, `locality`, `descent_*`, `adjoint_triple`,
+   `beck_chevalley_*`) instead of creating new authority vocabularies,
+2. strict (`≡`) and semantic (`~=`) equality notions MUST remain lane-local and
+   explicitly labeled in witness lineage,
+3. bridge outputs MAY reduce search cost, but MUST NOT reduce discharge
+   obligations or bypass checker/Gate authority.

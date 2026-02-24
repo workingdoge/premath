@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import json
 import re
+import subprocess
 from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
@@ -14,14 +15,14 @@ CONTROL_PLANE_CONTRACT_PATH = (
     Path(__file__).resolve().parents[2]
     / "specs"
     / "premath"
-    / "draft"
+    / "contracts"
     / "CONTROL-PLANE-CONTRACT.json"
 )
 DOCTRINE_OP_REGISTRY_PATH = (
     Path(__file__).resolve().parents[2]
     / "specs"
     / "premath"
-    / "draft"
+    / "contracts"
     / "DOCTRINE-OP-REGISTRY.json"
 )
 _EPOCH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
@@ -107,6 +108,15 @@ _REQUIRED_PIPELINE_WRAPPER_FAILURE_CLASS_KEYS = (
 _HOST_ACTION_ID_RE = re.compile(r"^[a-z][a-z0-9_.]*$")
 _HOST_ACTION_MCP_TOOL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 _HOST_ACTION_OPERATION_ID_RE = re.compile(r"^op/[a-z0-9_.]+$")
+_PREMATH_CLI_WORLD_DESCENT_CHECK_COMMAND = (
+    "cargo",
+    "run",
+    "--quiet",
+    "--package",
+    "premath-cli",
+    "--",
+    "world-descent-contract-check",
+)
 _HARNESS_SESSION_OPERATION_IDS = {
     "harness.session.read": "op/harness.session_read",
     "harness.session.write": "op/harness.session_write",
@@ -135,11 +145,11 @@ _CONTROL_PLANE_BUNDLE_MORPHISM_KINDS = (
 )
 _CONTROL_PLANE_BUNDLE_ARTIFACT_FAMILY_ID = "E_cp"
 _CONTROL_PLANE_BUNDLE_ARTIFACT_REFS = {
-    "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
-    "coherenceContract": "specs/premath/draft/COHERENCE-CONTRACT.json",
-    "capabilityRegistry": "specs/premath/draft/CAPABILITY-REGISTRY.json",
-    "doctrineSiteInput": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
-    "doctrineOpRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
+    "controlPlaneContract": "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json",
+    "coherenceContract": "specs/premath/contracts/COHERENCE-CONTRACT.json",
+    "capabilityRegistry": "specs/premath/contracts/CAPABILITY-REGISTRY.json",
+    "doctrineSiteInput": "specs/premath/contracts/DOCTRINE-SITE-INPUT.json",
+    "doctrineOpRegistry": "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json",
 }
 _CONTROL_PLANE_BUNDLE_REINDEXING_OBLIGATIONS = (
     "identity_preserved",
@@ -1136,6 +1146,10 @@ def _validate_runtime_route_bindings(
             route_obj.get("operationId"),
             f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}.operationId",
         )
+        route_family_id = _require_non_empty_string(
+            route_obj.get("routeFamilyId"),
+            f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}.routeFamilyId",
+        )
         if operation_id not in doctrine_operation_ids:
             raise ValueError(
                 "runtimeRouteBindings.requiredOperationRoutes."
@@ -1151,6 +1165,7 @@ def _validate_runtime_route_bindings(
         )
         parsed_routes[key_norm] = {
             "operationId": operation_id,
+            "routeFamilyId": route_family_id,
             "requiredMorphisms": required_morphisms,
         }
 
@@ -1186,6 +1201,68 @@ def _validate_runtime_route_bindings(
         "requiredOperationRoutes": parsed_routes,
         "failureClasses": parsed_failure_classes,
     }
+
+
+def _validate_world_descent_contract(path: Path) -> Dict[str, Any]:
+    repo_root = Path(__file__).resolve().parents[2]
+    command = [
+        *_PREMATH_CLI_WORLD_DESCENT_CHECK_COMMAND,
+        "--control-plane-contract",
+        str(path),
+        "--json",
+    ]
+    try:
+        completed = subprocess.run(
+            command,
+            cwd=repo_root,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except OSError as exc:
+        raise ValueError(
+            "failed to execute world-descent contract checker command: "
+            + " ".join(command)
+            + f" ({exc})"
+        ) from exc
+
+    stdout = completed.stdout.strip()
+    if not stdout:
+        stderr = completed.stderr.strip()
+        raise ValueError(
+            "world-descent contract checker produced empty stdout"
+            + (f": {stderr}" if stderr else "")
+        )
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        stderr = completed.stderr.strip()
+        raise ValueError(
+            "world-descent contract checker emitted non-JSON output"
+            + (f": {stderr}" if stderr else "")
+        ) from exc
+
+    issues = payload.get("issues")
+    issue_messages: list[str] = []
+    if isinstance(issues, list):
+        for row in issues:
+            if not isinstance(row, dict):
+                continue
+            issue_path = row.get("path")
+            issue_message = row.get("message")
+            if isinstance(issue_path, str) and isinstance(issue_message, str):
+                issue_messages.append(f"{issue_path}: {issue_message}")
+
+    if completed.returncode != 0:
+        if issue_messages:
+            raise ValueError("; ".join(issue_messages))
+        stderr = completed.stderr.strip()
+        raise ValueError(
+            "world-descent contract checker rejected payload"
+            + (f": {stderr}" if stderr else "")
+        )
+
+    return _require_object(payload.get("worldDescentContract"), "worldDescentContract")
 
 
 def _validate_command_surface(payload: Any) -> Dict[str, Any]:
@@ -2019,6 +2096,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         root.get("workerLaneAuthority"),
         active_epoch=active_epoch,
     )
+    world_descent_contract = _validate_world_descent_contract(path)
     runtime_route_bindings = _validate_runtime_route_bindings(
         root.get("runtimeRouteBindings"),
         doctrine_operation_ids=doctrine_operation_ids,
@@ -2194,6 +2272,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         },
         "laneFailureClasses": lane_failure_classes,
         "workerLaneAuthority": worker_lane_authority,
+        "worldDescentContract": world_descent_contract,
         "runtimeRouteBindings": runtime_route_bindings,
         "commandSurface": command_surface,
         "pipelineWrapperSurface": pipeline_wrapper_surface,
@@ -2343,9 +2422,36 @@ WORKER_LANE_FAILURE_CLASSES: Tuple[str, ...] = tuple(
     .get(key, "")
     for key in ("policyDrift", "mutationModeDrift", "routeUnbound")
 )
+WORLD_DESCENT_CONTRACT: Dict[str, Any] = dict(
+    _CONTRACT.get("worldDescentContract", {})
+)
+WORLD_DESCENT_CONTRACT_ID: str = WORLD_DESCENT_CONTRACT.get("contractId", "")
+WORLD_DESCENT_REQUIRED_ROUTE_FAMILIES: Tuple[str, ...] = tuple(
+    WORLD_DESCENT_CONTRACT.get("requiredRouteFamilies", ())
+)
+WORLD_DESCENT_REQUIRED_ACTION_ROUTE_BINDINGS: Dict[str, Tuple[str, ...]] = {
+    route_family: tuple(host_actions)
+    for route_family, host_actions in WORLD_DESCENT_CONTRACT.get(
+        "requiredActionRouteBindings", {}
+    ).items()
+    if isinstance(host_actions, list)
+}
+WORLD_DESCENT_REQUIRED_STATIC_OPERATION_BINDINGS: Dict[str, Tuple[str, ...]] = {
+    route_family: tuple(operation_ids)
+    for route_family, operation_ids in WORLD_DESCENT_CONTRACT.get(
+        "requiredStaticOperationBindings", {}
+    ).items()
+    if isinstance(operation_ids, list)
+}
+WORLD_DESCENT_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    value
+    for value in WORLD_DESCENT_CONTRACT.get("failureClasses", {}).values()
+    if isinstance(value, str)
+)
 RUNTIME_ROUTE_BINDINGS: Dict[str, Dict[str, Any]] = {
     route_id: {
         "operationId": str(route.get("operationId", "")),
+        "routeFamilyId": str(route.get("routeFamilyId", "")),
         "requiredMorphisms": tuple(route.get("requiredMorphisms", ())),
     }
     for route_id, route in _CONTRACT.get("runtimeRouteBindings", {})

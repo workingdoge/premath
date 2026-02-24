@@ -247,3 +247,43 @@ fail-closed classes for at least:
 - `governance.self_evolution_rollback_missing`,
 - `governance.trace_mode_violation`,
 - `governance.risk_tier_profile_missing`.
+
+## 10. Route and world-descent consolidation boundary (WDC-1)
+
+This section binds doctrine-level transport/route consolidation to the same
+single authority lane used by world/site contracts.
+
+Purpose:
+
+- prevent route-bound transport actions from drifting outside declared
+  world-route bindings,
+- keep doctrine boundary vectors aligned with kernel-backed route admission,
+- avoid wrapper-local route authority.
+
+Canonical contract identifier:
+
+- `doctrine.world_descent.v1`
+
+Contract surfaces for `doctrine.world_descent.v1`:
+
+- doctrine morphism authority: `draft/DOCTRINE-INF`,
+- constructor/route-world authority: `draft/WORLD-REGISTRY`,
+- route-input total binding: `draft/DOCTRINE-SITE` +
+  `draft/DOCTRINE-SITE-INPUT.json`,
+- resolver/KCIR projection boundary: `draft/SITE-RESOLVE`.
+
+Conforming doctrine-boundary evaluations MUST:
+
+- validate transport route closure through kernel world-route semantics
+  (`draft/WORLD-REGISTRY` + `draft/DOCTRINE-SITE` inputs),
+- require declared transport dispatch bindings when route families are marked
+  required by profile or vector contract,
+- fail closed when required route families or operation bindings are missing.
+
+Minimum deterministic fail-closed classes for this boundary:
+
+- `world_route_unbound`,
+- `world_route_morphism_drift`,
+- `world_route_identity_missing`,
+- `world_descent_data_missing`,
+- `kcir_handoff_identity_missing`.

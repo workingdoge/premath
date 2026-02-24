@@ -3,13 +3,83 @@
 Status: draft
 Scope: design-level, non-normative
 
+## 0. Frontend Route (Newcomer View)
+
+One canonical control path:
+
+```text
+frontend adapter -> host action -> transport envelope
+-> site resolver decision (INF -> SITE -> WORLD)
+-> world-route kernel check -> mutation/evidence artifacts
+```
+
+Adapter set:
+- Steel/Scheme (`premath scheme-eval`)
+- Rhai (`premath rhai-eval`)
+- MCP (`premath mcp-serve`)
+- optional BEAM/Rustler (`premath-transport` `dispatch(request_json)`)
+
+Boundary command map:
+- resolver boundary: `premath site-resolve`
+- transport boundary: `premath transport-dispatch`, `premath transport-check`
+- world-route boundary: `premath world-registry-check`, `premath world-gate-check`
+- mutation/evidence boundary: `premath issue ...`, `premath instruction-*`,
+  `premath required-*`
+
+Generated newcomer index:
+
+- `docs/design/generated/DOCTRINE-SITE-INVENTORY.md`
+  (site -> operations -> route families -> world bindings -> command surfaces).
+
+## 0.1 World Descent Authority Contract (WDAC-1)
+
+This is the architecture-level contract for world descent. It is execution
+policy, not a second semantic authority.
+
+Lane ownership:
+
+| Lane | Authority Surface | Ownership |
+| --- | --- | --- |
+| semantic lane | `PREMATH-KERNEL`, `GATE`, `BIDIR-DESCENT` | admissibility law and gate verdicts |
+| constructor lane | `WORLD-REGISTRY`, `SITE-RESOLVE` | route/world/morphism selection and constructor binding |
+| check-role lane | `PREMATH-COHERENCE` | parity/discharge over declared contract surfaces |
+| wrapper lane | `tools/ci/*`, `tools/conformance/*`, frontend adapters | transport, orchestration, replay/parity only |
+
+No-parallel-authority constraints:
+
+1. Wrapper lanes MUST NOT synthesize semantic accept/reject classes for route
+   admissibility.
+2. Wrapper lanes MUST consume core route decisions from `premath site-resolve`
+   and `premath world-registry-check` (or equivalent kernel-backed API).
+3. Missing/ambiguous/unbound constructor or route material MUST fail closed
+   through canonical authority classes; wrappers may only pass through those
+   classes.
+
+Execution-order contract (for non-trivial world-descent epics):
+
+1. architecture contract,
+2. spec/index + doctrine glue,
+3. control-plane parity wiring,
+4. implementation,
+5. conformance vectors,
+6. docs/traceability closure.
+
+Spec chain anchors:
+
+- `specs/premath/draft/SPEC-INDEX.md` §0.4 (world self-hosting boundary map),
+- `specs/premath/draft/WORLD-REGISTRY.md` (constructor + route/world contract),
+- `specs/premath/draft/SITE-RESOLVE.md` (deterministic resolver contract),
+- `specs/premath/raw/PREMATH-COHERENCE.md` (check-role authority),
+- `specs/premath/draft/EVIDENCE-INF.md` §3 (descent operationalization).
+
 ## 1. Layer Stack
 
 `Doctrine` (what must be preserved):
 - `specs/premath/draft/DOCTRINE-INF.md`
 - `specs/premath/draft/DOCTRINE-SITE.md`
-- `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
-- `specs/premath/draft/LLM-PROPOSAL-CHECKING.md`
+- `docs/design/generated/DOCTRINE-SITE-INVENTORY.md` (generated navigation index)
+- `specs/premath/archive/LLM-INSTRUCTION-DOCTRINE.md`
+- `specs/premath/archive/LLM-PROPOSAL-CHECKING.md`
   - governance-flywheel doctrine profile: `DOCTRINE-INF` §9
 
 `Kernel` (semantic authority):
@@ -17,10 +87,62 @@ Scope: design-level, non-normative
 - `specs/premath/draft/GATE.md`
 - `specs/premath/draft/BIDIR-DESCENT.md`
 
+`Worldization` (route/world/morphism binding contract):
+- `specs/premath/draft/WORLD-REGISTRY.md`
+- `specs/premath/raw/WORLD-PROFILES-CONTROL.md`
+- `specs/premath/raw/TORSOR-EXT.md` (overlay interpretation only; non-authority)
+
+### 1.2 K0 world-kernel contract (why this is Premath, not parallel architecture)
+
+Worldization is a concrete Premath instantiation, not a second kernel:
+
+- Premath laws stay in `PREMATH-KERNEL`/`GATE`/`BIDIR-DESCENT`,
+- world profiles map control-plane domains into those laws,
+- route binding checks execute through one kernel-backed world semantics path.
+
+Crate placement target:
+
+| Responsibility | Primary lane |
+| --- | --- |
+| World row/morphism/binding semantics | `crates/premath-kernel` |
+| Checker/CLI consumption of world semantics | `crates/premath-coherence`, `crates/premath-cli` |
+| Transport/orchestration wrappers only | `tools/ci/*`, `tools/conformance/*` |
+
+Boundary rule:
+
+- wrappers may format, route, or aggregate results, but MUST NOT become
+  independent world admissibility authorities.
+
+### 1.3 Canonical world-semantics placement map
+
+| Concern | Canonical lane | Notes |
+| --- | --- | --- |
+| world-route semantics + failure classes | `crates/premath-kernel/src/world_registry.rs` | single semantic authority for route/world/morphism admissibility |
+| executable world check surface | `crates/premath-cli/src/commands/world/registry_check.rs` | `premath world-registry-check` derives required world-route bindings from `CONTROL-PLANE-CONTRACT` |
+| semantic conformance lane | `tools/conformance/run_world_core_vectors.py`, `tests/conformance/fixtures/world-core/` | validates core world semantics and fixture parity against core outputs |
+| adapter/runtime route parity lane | `premath runtime-orchestration-check`, `tools/conformance/run_runtime_orchestration_vectors.py`, `tests/conformance/fixtures/runtime-orchestration/` | semantic authority is `runtime-orchestration-check`; vectors validate parity/invariance without adding wrapper-only semantic lanes |
+
+### 1.4 Constructor-First Coherence Contract
+
+Coherence/control-plane implementation follows one constructor-first rule:
+
+- one constructor-authority lane in core checker/kernel semantics,
+- wrappers (`tools/ci/*`) are orchestration adapters only,
+- fixture runners (`tools/conformance/*` + `tests/conformance/fixtures/*`) are
+  replay/parity surfaces only.
+
+Forbidden:
+
+- wrapper-local semantic verdict logic,
+- fixture-runner semantic reconstruction that diverges from core constructor
+  outputs,
+- alternate route/world admissibility lanes outside kernel-backed surfaces.
+
 `Runtime` (execution inside/between worlds):
 - `specs/premath/raw/TUSK-CORE.md`
 - `specs/premath/raw/SQUEAK-CORE.md`
 - `specs/premath/raw/SQUEAK-SITE.md`
+- `specs/premath/raw/FIBER-CONCURRENCY.md`
 - harness overlay (design): `docs/design/TUSK-HARNESS-CONTRACT.md`
 
 Runtime composition route (required boundary shape):
@@ -29,6 +151,9 @@ Runtime composition route (required boundary shape):
   -> `Harness projection artifacts`.
 - Harness/Squeak remain operational routing surfaces; admissibility remains
   destination checker/Gate-owned.
+- Structured concurrency profile for agent/runtime orchestration is documented
+  in `docs/design/FIBER-CONCURRENCY.md` and currently binds transport lifecycle
+  actions through `route.fiber.lifecycle -> world.fiber.v1`.
 
 ### 1.1 Phase-3 target vs transition contract
 
@@ -74,9 +199,10 @@ Host API v0 families (mapped to current premath surfaces):
 `CI/Control` (one layer, two roles):
 - `specs/premath/raw/PREMATH-CI.md`
 - `specs/premath/raw/CI-TOPOS.md`
-- `specs/premath/draft/PREMATH-COHERENCE.md`
-- `specs/premath/draft/COHERENCE-CONTRACT.json`
-- `specs/premath/draft/UNIFICATION-DOCTRINE.md` (lane split + Unified Evidence Plane §10)
+- `specs/premath/raw/PREMATH-COHERENCE.md`
+- `specs/premath/contracts/COHERENCE-CONTRACT.json`
+- `specs/premath/profile/UNIFICATION-GOVERNANCE.md` (lane split)
+- `specs/premath/draft/EVIDENCE-INF.md` (Unified Evidence Plane §1)
 
 Role split inside CI/Control:
 - check role: `PREMATH-COHERENCE` (`premath coherence-check`)
@@ -89,9 +215,9 @@ Role split inside CI/Control:
 - `tools/ci/verify_required_witness.py`
 - `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
-- `tools/conformance/check_doctrine_site.py`
-- `tools/conformance/check_runtime_orchestration.py`
-- `tools/conformance/check_doctrine_mcp_parity.py`
+- `premath doctrine-site-check`
+- `premath runtime-orchestration-check` (canonical authority)
+- `premath doctrine-mcp-parity-check`
 - `tools/conformance/run_doctrine_inf_vectors.py`
 - `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
 - `hk.pkl`, `.mise.toml`
@@ -111,9 +237,11 @@ DOCTRINE-INF
         -> tools/ci/run_required_checks.py
         -> tools/ci/verify_required_witness.py
         -> tools/ci/run_gate.sh
-  -> tools/conformance/check_doctrine_site.py /
-     check_runtime_orchestration.py / check_doctrine_mcp_parity.py /
-     run_doctrine_inf_vectors.py
+  -> premath doctrine-site-check /
+     runtime-orchestration-check /
+     doctrine-mcp-parity-check / run_doctrine_inf_vectors.py
+  -> tools/conformance/generate_doctrine_site_inventory.py
+     -> docs/design/generated/DOCTRINE-SITE-INVENTORY.md
   -> hk/mise tasks (.mise baseline + ci-required-attested)
   -> CIWitness artifacts
   -> conformance + doctrine-site checks
@@ -123,8 +251,10 @@ Authority rule:
 - semantic admissibility comes from kernel/gate contracts, not from runners or hooks.
 - coherence and CI are control-plane roles, not semantic authority layers.
 - control-plane artifact families should factor through one attested evidence
-  surface (`Ev`) per `UNIFICATION-DOCTRINE` §10.
+  surface (`Ev`) per `EVIDENCE-INF` §1.
 - runners/profiles (`local`, `external`, infra bindings) change execution substrate only.
+- torsor/extension overlays remain proposal/evidence interpretation surfaces and
+  must not become route-bound authority targets.
 
 ## 3. Instruction Runtime Loop
 
@@ -161,7 +291,8 @@ Repository default profile:
 ## 5. Refinement Loop
 
 ```text
-issue_ready -> issue_blocked -> issue_claim -> instruction_run -> witness
+world_registry_check(route.issue_claim_lease -> world.lease.v1)
+  -> issue_ready -> issue_blocked -> issue_claim -> instruction_run -> witness
   -> issue_lease_renew (long task) or issue_lease_release (handoff)
   -> issue_discover (when new work is found) -> issue_ready
 ```
@@ -169,7 +300,9 @@ issue_ready -> issue_blocked -> issue_claim -> instruction_run -> witness
 Loop intent:
 - keep sessions short and restartable,
 - prevent lost/discarded discovered work,
-- keep mutation authority instruction-mediated with auditable witnesses.
+- keep mutation authority instruction-mediated with auditable witnesses,
+- keep BEAM coordinator lease orchestration world-bound through canonical
+  `premath world-registry-check` semantics (no wrapper-local world authority).
 
 ## 6. Conformance Closure
 
@@ -178,8 +311,10 @@ Baseline gate (`mise run baseline`) enforces:
 - conformance + traceability + coherence-check + docs-coherence + doctrine closure,
 - doctrine closure includes doctrine-site roundtrip/reachability plus MCP
   doctrine-operation parity + runtime-route parity
-  (`check_doctrine_site.py`, `check_runtime_orchestration.py`,
-  `check_doctrine_mcp_parity.py`),
+  (`doctrine-site-check`, `runtime-orchestration-check`,
+  `doctrine-mcp-parity-check`),
+- world semantic route/binding closure runs in dedicated `world-core` vectors
+  (`run_world_core_vectors.py`) with fixture parity against core outputs,
 - CI/control-plane wiring, pipeline, observation, instruction, and drift-budget checks,
 - executable fixture-suite closure (`mise run conformance-run`).
 
@@ -246,7 +381,7 @@ Execution notes:
 ## 8. Grothendieck Operationalization (Applied)
 
 Operational reading of current stack (normative anchor:
-`draft/UNIFICATION-DOCTRINE` §12):
+`draft/EVIDENCE-INF` §3):
 
 1. one semantic authority fibration (`p0 : E -> C`) plus one attested
    control-plane evidence family (`Ev : Ctx^op -> V`),
@@ -286,23 +421,23 @@ Direct mappings already present:
   `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md`.
 - "simple inner loop + explicit tool contract" maps to a deterministic
   `step` contract and typed closure gates in
-  `specs/premath/draft/HARNESS-RUNTIME.md` §3.2.
+  `specs/premath/raw/HARNESS-RUNTIME.md` §3.2.
 - "conversation as event stream + views" maps to append-only harness trajectory
   plus deterministic projections (`latest|failed|retry-needed`) in
-  `specs/premath/draft/HARNESS-RUNTIME.md`.
+  `specs/premath/raw/HARNESS-RUNTIME.md`.
 - context management operations (restore/edit/handoff) map to
   `harness-session` bootstrap/continuation plus typed context-scope/state-view
   policies in `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md`.
 - explicit stop and enforcement logic maps to `ToolUse -> JoinClosed ->
   MutationReady` fail-closed mutation gates in
-  `specs/premath/draft/HARNESS-RUNTIME.md`.
+  `specs/premath/raw/HARNESS-RUNTIME.md`.
 - tool failures are modeled as typed runtime evidence (not free-form narration)
   and participate in closure/mutation admissibility checks.
 - lossy multi-agent boundaries map to typed handoff contracts
   (`handoffContractDigest`, required artifacts, allowed targets, return path)
   and lease handoff refs (`lease://handoff/...`) in
   `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md` +
-  `specs/premath/draft/HARNESS-RUNTIME.md`.
+  `specs/premath/raw/HARNESS-RUNTIME.md`.
 - governance flywheel/profile gating maps to `DOCTRINE-INF` §9 +
   `CONFORMANCE` §2.4 + `CAPABILITY-REGISTRY.json` `profileOverlayClaims`, with
   drift/coherence/doctrine checks bound to the same claim surface.

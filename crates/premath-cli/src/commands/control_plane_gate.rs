@@ -133,6 +133,28 @@ fn ordered_unique(values: &[String]) -> Vec<String> {
     out
 }
 
+fn validate_kcir_mapping_cli_input(request: &KcirMappingGateInput) -> Result<MappingScope, String> {
+    let scope = MappingScope::parse(&request.scope).ok_or_else(|| {
+        format!(
+            "scope must be `required` or `instruction` (got {})",
+            request.scope
+        )
+    })?;
+
+    if matches!(scope, MappingScope::Instruction) {
+        let instruction_path = request
+            .instruction_path
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or("");
+        if instruction_path.is_empty() {
+            return Err("instruction scope requires instructionPath".to_string());
+        }
+    }
+
+    Ok(scope)
+}
+
 fn sha256_bytes(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
@@ -169,7 +191,7 @@ fn resolve_path(root: &Path, value: Option<&str>, default_rel: &str) -> PathBuf 
 }
 
 fn load_profile_overlay_claims(repo_root: &Path) -> Option<BTreeSet<String>> {
-    let registry_path = repo_root.join("specs/premath/draft/CAPABILITY-REGISTRY.json");
+    let registry_path = repo_root.join("specs/premath/contracts/CAPABILITY-REGISTRY.json");
     let payload = load_json_object(&registry_path)?;
     let claims_raw = payload.get("profileOverlayClaims")?.as_array()?;
     let mut claims = BTreeSet::new();
@@ -419,6 +441,7 @@ fn expected_declared_rows() -> BTreeSet<String> {
         "coherenceObligations",
         "coherenceCheckPayload",
         "doctrineRouteBinding",
+        "fiberLifecycleAction",
         "requiredDecisionInput",
     ]
     .iter()
@@ -448,7 +471,7 @@ fn required_required_rows() -> Vec<String> {
 }
 
 fn load_mapping_surface(repo_root: &Path) -> Option<MappingSurface> {
-    let contract_path = repo_root.join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+    let contract_path = repo_root.join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
     let contract = load_json_object(&contract_path)?;
     let control_plane_mappings = contract
         .get("controlPlaneKcirMappings")?
@@ -495,9 +518,9 @@ fn load_mapping_surface(repo_root: &Path) -> Option<MappingSurface> {
 }
 
 fn load_mapping_context(repo_root: &Path, surface: &MappingSurface) -> MappingContext {
-    let coherence_path = repo_root.join("specs/premath/draft/COHERENCE-CONTRACT.json");
+    let coherence_path = repo_root.join("specs/premath/contracts/COHERENCE-CONTRACT.json");
     let coherence = load_json_object(&coherence_path);
-    let doctrine_site_path = repo_root.join("specs/premath/draft/DOCTRINE-SITE.json");
+    let doctrine_site_path = repo_root.join("specs/premath/contracts/DOCTRINE-SITE.json");
 
     let mut coherence_normalizer_id = None;
     let mut coherence_policy_digest = None;
@@ -526,12 +549,29 @@ fn load_mapping_context(repo_root: &Path, surface: &MappingSurface) -> MappingCo
     }
 
     let doctrine_site_digest = sha256_file(&doctrine_site_path);
-    let operation_ids = surface
-        .runtime_route_bindings
-        .values()
-        .filter_map(Value::as_object)
-        .filter_map(|value| non_empty_string(value.get("operationId")))
-        .collect::<BTreeSet<_>>();
+    fn collect_operation_ids(value: &Value, operation_ids: &mut BTreeSet<String>) {
+        match value {
+            Value::Object(map) => {
+                if let Some(operation_id) = non_empty_string(map.get("operationId")) {
+                    operation_ids.insert(operation_id);
+                }
+                for nested in map.values() {
+                    collect_operation_ids(nested, operation_ids);
+                }
+            }
+            Value::Array(items) => {
+                for item in items {
+                    collect_operation_ids(item, operation_ids);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut operation_ids = BTreeSet::new();
+    for value in surface.runtime_route_bindings.values() {
+        collect_operation_ids(value, &mut operation_ids);
+    }
     let doctrine_operation_id = if operation_ids.is_empty() {
         None
     } else {
@@ -889,7 +929,7 @@ pub fn run_kcir_mapping(input: String, json_output: bool) {
         );
     });
 
-    let request: KcirMappingGateInput = serde_json::from_slice(&bytes).unwrap_or_else(|err| {
+    let mut request: KcirMappingGateInput = serde_json::from_slice(&bytes).unwrap_or_else(|err| {
         emit_error(
             "kcir_mapping_gate_invalid",
             format!(
@@ -899,29 +939,9 @@ pub fn run_kcir_mapping(input: String, json_output: bool) {
         );
     });
 
-    if MappingScope::parse(&request.scope).is_none() {
-        emit_error(
-            "kcir_mapping_gate_invalid",
-            format!(
-                "scope must be `required` or `instruction` (got {})",
-                request.scope
-            ),
-        );
-    }
-
-    if request.scope == "instruction" {
-        let instruction_path = request
-            .instruction_path
-            .as_deref()
-            .map(str::trim)
-            .unwrap_or("");
-        if instruction_path.is_empty() {
-            emit_error(
-                "kcir_mapping_gate_invalid",
-                "instruction scope requires instructionPath",
-            );
-        }
-    }
+    let scope = validate_kcir_mapping_cli_input(&request)
+        .unwrap_or_else(|message| emit_error("kcir_mapping_gate_invalid", message));
+    request.scope = scope.as_str().to_string();
 
     let output = kcir_mapping_report(&request);
 
@@ -980,10 +1000,10 @@ mod tests {
 
         let source_root = repo_root();
         for rel in [
-            "specs/premath/draft/CAPABILITY-REGISTRY.json",
-            "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
-            "specs/premath/draft/COHERENCE-CONTRACT.json",
-            "specs/premath/draft/DOCTRINE-SITE.json",
+            "specs/premath/contracts/CAPABILITY-REGISTRY.json",
+            "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json",
+            "specs/premath/contracts/COHERENCE-CONTRACT.json",
+            "specs/premath/contracts/DOCTRINE-SITE.json",
         ] {
             let src = source_root.join(rel);
             let dst = root.join(rel);
@@ -1069,14 +1089,14 @@ mod tests {
         .expect("evidence should write");
 
         let mut capability_registry =
-            load_json_object(&root.join("specs/premath/draft/CAPABILITY-REGISTRY.json"))
+            load_json_object(&root.join("specs/premath/contracts/CAPABILITY-REGISTRY.json"))
                 .expect("capability registry should parse");
         capability_registry.insert(
             "profileOverlayClaims".to_string(),
             json!([GOVERNANCE_PROFILE_CLAIM_ID]),
         );
         fs::write(
-            root.join("specs/premath/draft/CAPABILITY-REGISTRY.json"),
+            root.join("specs/premath/contracts/CAPABILITY-REGISTRY.json"),
             format!(
                 "{}\n",
                 serde_json::to_string_pretty(&Value::Object(capability_registry))
@@ -1142,5 +1162,81 @@ mod tests {
                 .contains(&KCIR_MAPPING_LEGACY_AUTHORITY_VIOLATION.to_string())
         );
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn kcir_mapping_required_strict_accepts_nested_runtime_route_operation_ids() {
+        let root = temp_repo("kcir-required-strict-accept");
+        let ciwitness = root.join("artifacts/ciwitness");
+        fs::write(
+            ciwitness.join("latest-required.json"),
+            format!(
+                "{}\n",
+                serde_json::to_string_pretty(&json!({
+                    "projectionDigest": "proj_demo",
+                    "normalizerId": "normalizer.ci.required.v1",
+                    "policyDigest": "ci-topos-v0",
+                    "typedCoreProjectionDigest": "ev1_demo",
+                    "authorityPayloadDigest": "proj_demo"
+                }))
+                .expect("witness should render")
+            ),
+        )
+        .expect("required witness should write");
+        fs::write(
+            ciwitness.join("latest-decision.json"),
+            format!(
+                "{}\n",
+                serde_json::to_string_pretty(&json!({
+                    "decision": "accept",
+                    "reasonClass": "verified_accept",
+                    "policyDigest": "ci-topos-v0",
+                    "typedCoreProjectionDigest": "ev1_demo",
+                    "authorityPayloadDigest": "proj_demo",
+                    "witnessSha256": "witness_demo"
+                }))
+                .expect("decision should render")
+            ),
+        )
+        .expect("required decision should write");
+
+        let report = kcir_mapping_report(&KcirMappingGateInput {
+            repo_root: Some(root.display().to_string()),
+            scope: "required".to_string(),
+            instruction_path: None,
+            instruction_id: None,
+            strict: true,
+        });
+        assert!(!report.checked_rows.is_empty());
+        assert!(report.failure_classes.is_empty());
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn kcir_mapping_cli_validation_accepts_trimmed_instruction_scope() {
+        let request = KcirMappingGateInput {
+            repo_root: None,
+            scope: " instruction ".to_string(),
+            instruction_path: Some(" instructions/2026-02-24-bd-1.json ".to_string()),
+            instruction_id: None,
+            strict: false,
+        };
+        let scope = validate_kcir_mapping_cli_input(&request)
+            .expect("trimmed instruction scope with instruction path should pass");
+        assert!(matches!(scope, MappingScope::Instruction));
+    }
+
+    #[test]
+    fn kcir_mapping_cli_validation_rejects_trimmed_instruction_scope_without_path() {
+        let request = KcirMappingGateInput {
+            repo_root: None,
+            scope: " instruction ".to_string(),
+            instruction_path: None,
+            instruction_id: None,
+            strict: false,
+        };
+        let err = validate_kcir_mapping_cli_input(&request)
+            .expect_err("instruction scope without instructionPath should fail");
+        assert_eq!(err, "instruction scope requires instructionPath");
     }
 }

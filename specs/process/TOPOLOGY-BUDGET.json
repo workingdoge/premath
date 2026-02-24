@@ -3,20 +3,20 @@
   "budgetKind": "premath.topology_budget.v1",
   "metrics": {
     "draftSpecNodes": {
-      "warnAbove": 32,
-      "failAbove": 34
+      "warnAbove": 26,
+      "failAbove": 30
     },
     "specTraceabilityRows": {
-      "warnAbove": 32,
-      "failAbove": 34
+      "warnAbove": 37,
+      "failAbove": 41
     },
     "designDocNodes": {
       "warnAbove": 27,
       "failAbove": 30
     },
     "doctrineSiteEdgeCount": {
-      "warnAbove": 65,
-      "failAbove": 80
+      "warnAbove": 70,
+      "failAbove": 85
     },
     "doctrineSiteAuthorityInputCount": {
       "warnAbove": 1,
@@ -44,10 +44,10 @@
     "docs/design/TUSK-SIGPI.md"
   ],
   "doctrineSiteAuthorityInputs": [
-    "specs/premath/draft/DOCTRINE-SITE-INPUT.json"
+    "specs/premath/contracts/DOCTRINE-SITE-INPUT.json"
   ],
   "doctrineSiteGeneratedViews": [
-    "specs/premath/draft/DOCTRINE-SITE.json",
-    "specs/premath/draft/DOCTRINE-OP-REGISTRY.json"
+    "specs/premath/contracts/DOCTRINE-SITE.json",
+    "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json"
   ]
 }

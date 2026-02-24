@@ -24,6 +24,9 @@ Current overlays:
   kernel context-site base, discharged under `(normalizerId, policyDigest)`,
   with composed SigPi + spans + Squeak routing guidance in Section 10 and
   CwF<->sig\Pi bridge mapping in Section 11.
+- `UNIFICATION-GOVERNANCE.md` — minimum-encoding/maximum-expressiveness
+  governance overlay: canonical boundary rules, lane separation contract, and
+  schema lifecycle policy.
 
 Related:
 

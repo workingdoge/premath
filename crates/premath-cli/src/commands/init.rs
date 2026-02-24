@@ -1,5 +1,6 @@
 use crate::support::yes_no;
 use premath_bd::MemoryStore;
+use serde_json::json;
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -89,11 +90,35 @@ pub fn init_layout(path: impl AsRef<Path>) -> Result<InitOutcome, String> {
     })
 }
 
-pub fn run(path: String) {
+pub fn run(path: String, json_mode: bool) {
     let outcome = init_layout(&path).unwrap_or_else(|e| {
         eprintln!("error: {e}");
         std::process::exit(1);
     });
+
+    if json_mode {
+        let payload = json!({
+            "action": "init",
+            "repoRoot": outcome.repo_root.display().to_string(),
+            "premathDir": outcome.premath_dir.display().to_string(),
+            "issuesPath": outcome.issues_path.display().to_string(),
+            "migratedFromLegacy": outcome
+                .migrated_from_legacy
+                .as_ref()
+                .map(|path| path.display().to_string()),
+            "created": {
+                "repoRoot": outcome.created_repo_root,
+                "premathDir": outcome.created_premath_dir,
+                "issuesFile": outcome.created_issues_file
+            }
+        });
+        let rendered = serde_json::to_string_pretty(&payload).unwrap_or_else(|err| {
+            eprintln!("error: failed to render init payload: {err}");
+            std::process::exit(2);
+        });
+        println!("{rendered}");
+        return;
+    }
 
     println!("premath init {path}");
     println!();

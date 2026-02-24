@@ -1,26 +1,12 @@
-# Premath Raw Specs
+# Raw / Demoted Specs
 
-This directory contains **raw** (experimental/informational) specifications.
+Specifications that are operationally referenced but need reworking under the
+fibre space framing before re-promotion to `draft/`.
 
-Promoted contract specs live in `../draft/` and are the default normative
-surface for active conformance claims.
-
-Use this directory for:
-
-- experiments not yet promoted,
-- optional model notes,
-- exploratory registries and roadmaps.
-
-Current raw tracks include:
-
-- kernel-oriented extensions (`DSL`, `OPCODES`, `HYPERDESCENT`, `UNIVERSE`),
-- operational runtime stack (`TUSK-CORE`, `SQUEAK-CORE`, `SQUEAK-SITE`, `PREMATH-CI`, `CI-TOPOS`),
-- site/semantic geometry notes (`CTX-SITE`, `SHEAF-STACK`, `TORSOR-EXT`),
-- explanatory semantics/presentation notes (`SEMANTICS-INFTOPOS`, `SPLIT-PRESENTATION`).
-
-Recent promotion: `NORMALIZER` moved to `../draft/NORMALIZER.md`.
-
-For lifecycle and promotions, see:
-
-- `../../process/coss.md`
-- `../../process/decision-log.md`
+| Spec | Rework direction |
+|------|-----------------|
+| `CONFORMANCE.md` | Rework as fibre space conformance vectors. |
+| `CAPABILITY-VECTORS.md` | Needs fibre space capability alignment. |
+| `SPEC-TRACEABILITY.md` | Traceability matrix — needs simplification. |
+| `HARNESS-RUNTIME.md` | Boot/step/stop lifecycle — could evolve into fibre space runtime. |
+| `PREMATH-COHERENCE.md` | Coherence is core to category theory — needs fibre space reworking. |

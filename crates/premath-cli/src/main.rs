@@ -2,6 +2,7 @@
 
 mod cli;
 mod commands;
+mod jj;
 mod support;
 
 use clap::Parser;
@@ -20,7 +21,7 @@ fn main() {
             issues,
             repo,
             json,
-        } => commands::check::run(id, level, issues, repo, json),
+        } => commands::check::coherence_check::run(id, level, issues, repo, json),
 
         Commands::Verify {
             id,
@@ -82,7 +83,9 @@ fn main() {
             json,
         ),
 
-        Commands::Init { path } => commands::init::run(path),
+        Commands::Init { path, json } => commands::init::run(path, json),
+
+        Commands::EvaluatorScaffold { path, json } => commands::evaluator_scaffold::run(path, json),
 
         Commands::Observe {
             surface,
@@ -91,7 +94,7 @@ fn main() {
             projection_digest,
             projection_match,
             json,
-        } => commands::observe::run(commands::observe::Args {
+        } => commands::observe::query::run(commands::observe::query::Args {
             surface,
             mode,
             instruction_id,
@@ -107,7 +110,7 @@ fn main() {
             out_json,
             out_jsonl,
             json,
-        } => commands::observe_build::run(commands::observe_build::Args {
+        } => commands::observe::build::run(commands::observe::build::Args {
             repo_root,
             ciwitness_dir,
             issues_path,
@@ -116,7 +119,21 @@ fn main() {
             json,
         }),
 
-        Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
+        Commands::ObserveServe { surface, bind } => commands::observe::serve::run(surface, bind),
+
+        Commands::ObservationSemanticsCheck {
+            repo_root,
+            ciwitness_dir,
+            surface,
+            issues_path,
+            json,
+        } => commands::observation_semantics_check::run(
+            repo_root,
+            ciwitness_dir,
+            surface,
+            issues_path,
+            json,
+        ),
 
         Commands::McpServe {
             issues,
@@ -142,7 +159,7 @@ fn main() {
             contract,
             repo_root,
             json,
-        } => commands::coherence_check::run(contract, repo_root, json),
+        } => commands::check::coherence::run(contract, repo_root, json),
 
         Commands::ProposalCheck { proposal, json } => commands::proposal_check::run(proposal, json),
 
@@ -151,6 +168,12 @@ fn main() {
             repo_root,
             json,
         } => commands::instruction_check::run(instruction, repo_root, json),
+
+        Commands::InstructionBatchCheck {
+            instructions,
+            repo_root,
+            json,
+        } => commands::instruction_batch_check::run(instructions, repo_root, json),
 
         Commands::InstructionWitness {
             instruction,
@@ -169,27 +192,27 @@ fn main() {
         ),
 
         Commands::RequiredWitness { runtime, json } => {
-            commands::required_witness::run(runtime, json)
+            commands::required::witness::run(runtime, json)
         }
 
         Commands::RequiredProjection { input, json } => {
-            commands::required_projection::run(input, json)
+            commands::required::projection::run(input, json)
         }
 
-        Commands::RequiredDelta { input, json } => commands::required_delta::run(input, json),
+        Commands::RequiredDelta { input, json } => commands::required::delta::run(input, json),
 
-        Commands::RequiredGateRef { input, json } => commands::required_gate_ref::run(input, json),
+        Commands::RequiredGateRef { input, json } => commands::required::gate_ref::run(input, json),
 
         Commands::RequiredWitnessVerify { input, json } => {
-            commands::required_witness_verify::run(input, json)
+            commands::required::witness_verify::run(input, json)
         }
 
         Commands::RequiredWitnessDecide { input, json } => {
-            commands::required_witness_decide::run(input, json)
+            commands::required::witness_decide::run(input, json)
         }
 
         Commands::RequiredDecisionVerify { input, json } => {
-            commands::required_decision_verify::run(input, json)
+            commands::required::decision_verify::run(input, json)
         }
 
         Commands::GovernancePromotionCheck { input, json } => {
@@ -200,7 +223,261 @@ fn main() {
             commands::control_plane_gate::run_kcir_mapping(input, json)
         }
 
+        Commands::DoctrineInfCheck { input, json } => {
+            commands::doctrine_inf_check::run(input, json)
+        }
+
+        Commands::DoctrineMcpParityCheck {
+            mcp_source,
+            registry,
+            json,
+        } => commands::doctrine_mcp_parity_check::run(mcp_source, registry, json),
+
+        Commands::DoctrineSiteCheck {
+            packages_root,
+            site_map,
+            input_map,
+            operation_registry,
+            digest_contract,
+            cutover_contract,
+            operation_registry_override,
+            json,
+        } => commands::check::doctrine_site::run(
+            packages_root,
+            site_map,
+            input_map,
+            operation_registry,
+            digest_contract,
+            cutover_contract,
+            operation_registry_override,
+            json,
+        ),
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
+
+        Commands::CommandSurfaceCheck { repo_root, json } => {
+            commands::command_surface_check::run(repo_root, json)
+        }
+
+        Commands::CapabilityStubInvarianceCheck { fixtures, json } => {
+            commands::capability_stub_invariance_check::run(fixtures, json)
+        }
+
+        Commands::SpecTraceabilityCheck {
+            draft_dir,
+            matrix,
+            json,
+        } => commands::spec_traceability_check::run(draft_dir, matrix, json),
+
+        Commands::DocsCoherenceCheck { repo_root, json } => {
+            commands::check::docs_coherence::run(repo_root, json)
+        }
+
+        Commands::DriftBudgetCheck {
+            repo_root,
+            coherence_json,
+            topology_budget,
+            json,
+        } => commands::drift_budget_check::run(repo_root, coherence_json, topology_budget, json),
+
+        Commands::CiWiringCheck {
+            repo_root,
+            workflow,
+            control_plane_contract,
+            json,
+        } => commands::ci_wiring_check::run(repo_root, workflow, control_plane_contract, json),
+
+        Commands::PipelineWiringCheck {
+            repo_root,
+            control_plane_contract,
+            json,
+        } => commands::pipeline_wiring_check::run(repo_root, control_plane_contract, json),
+
+        Commands::RepoHygieneCheck {
+            repo_root,
+            paths,
+            json,
+        } => commands::repo_hygiene_check::run(repo_root, paths, json),
+
+        Commands::BranchPolicyCheck {
+            policy,
+            rules_json,
+            fetch_live,
+            repo,
+            branch,
+            github_api_url,
+            token_env,
+            json,
+        } => commands::branch_policy_check::run(commands::branch_policy_check::Args {
+            policy,
+            rules_json,
+            fetch_live,
+            repo,
+            branch,
+            github_api_url: github_api_url.unwrap_or_else(|| {
+                std::env::var("GITHUB_API_URL")
+                    .unwrap_or_else(|_| "https://api.github.com".to_string())
+            }),
+            token_env,
+            json_output: json,
+        }),
+
+        Commands::IssueGraphCheck {
+            repo_root,
+            issues,
+            note_warn_threshold,
+            json,
+        } => commands::issue_graph::check::run(repo_root, issues, note_warn_threshold, json),
+
+        Commands::IssueGraphCompact {
+            repo_root,
+            issues,
+            mode,
+            json,
+        } => commands::issue_graph::compact::run(repo_root, issues, mode, json),
+
+        Commands::SiteDigest { json, repo_root } => commands::site_digest::run(json, repo_root),
+
+        Commands::SiteBuild {
+            mutations,
+            json,
+            repo_root,
+        } => commands::site_build::run(mutations, json, repo_root),
+
+        Commands::SiteCompose {
+            request1,
+            request2,
+            json,
+        } => commands::site_compose::run(request1, request2, json),
+
+        Commands::SiteChangeChainCheck { json, repo_root } => {
+            commands::site_change_chain_check::run(json, repo_root)
+        }
+
+        Commands::SiteApply {
+            change,
+            dry_run,
+            json,
+        } => commands::site_apply::run(change, dry_run, json),
+
+        Commands::TransportCheck { json } => commands::transport_check::run(json),
+
+        Commands::TransportDispatch {
+            action,
+            payload,
+            json,
+        } => commands::transport_dispatch::run(action, payload, json),
+
+        Commands::SchemeEval {
+            program,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        } => commands::scheme_eval::run(commands::scheme_eval::Args {
+            program,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        }),
+
+        #[cfg(feature = "rhai-frontend")]
+        Commands::RhaiEval {
+            script,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        } => commands::rhai_eval::run(commands::rhai_eval::Args {
+            script,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        }),
+
+        Commands::WorldRegistryCheck {
+            registry,
+            site_input,
+            operations,
+            control_plane_contract,
+            required_route_families,
+            required_route_bindings,
+            json,
+        } => commands::world::registry_check::run(
+            registry,
+            site_input,
+            operations,
+            control_plane_contract,
+            required_route_families,
+            required_route_bindings,
+            json,
+        ),
+
+        Commands::WorldDescentContractCheck {
+            control_plane_contract,
+            json,
+        } => commands::world::descent_contract_check::run(control_plane_contract, json),
+
+        Commands::SiteResolve {
+            request,
+            doctrine_site_input,
+            doctrine_site,
+            doctrine_op_registry,
+            control_plane_contract,
+            capability_registry,
+            json,
+        } => commands::site_resolve::run(
+            request,
+            doctrine_site_input,
+            doctrine_site,
+            doctrine_op_registry,
+            control_plane_contract,
+            capability_registry,
+            json,
+        ),
+
+        Commands::RuntimeOrchestrationCheck {
+            control_plane_contract,
+            doctrine_op_registry,
+            harness_runtime,
+            doctrine_site_input,
+            json,
+        } => commands::runtime_orchestration_check::run(
+            control_plane_contract,
+            doctrine_op_registry,
+            harness_runtime,
+            doctrine_site_input,
+            json,
+        ),
+
+        Commands::WorldGateCheck {
+            operations,
+            check,
+            profile,
+            json,
+        } => commands::world::gate_check::run(operations, check, profile, json),
 
         Commands::Ref { command } => match command {
             RefCommands::Project {
@@ -236,7 +513,7 @@ fn main() {
 
         Commands::HarnessSession { command } => match command {
             HarnessSessionCommands::Read { path, json } => {
-                commands::harness_session::run_read(path, json)
+                commands::harness::session::run_read(path, json)
             }
             HarnessSessionCommands::Write {
                 path,
@@ -250,7 +527,7 @@ fn main() {
                 lineage_refs,
                 issues,
                 json,
-            } => commands::harness_session::run_write(commands::harness_session::WriteArgs {
+            } => commands::harness::session::run_write(commands::harness::session::WriteArgs {
                 path,
                 session_id,
                 state,
@@ -267,12 +544,12 @@ fn main() {
                 path,
                 feature_ledger,
                 json,
-            } => commands::harness_session::run_bootstrap(path, feature_ledger, json),
+            } => commands::harness::session::run_bootstrap(path, feature_ledger, json),
         },
 
         Commands::HarnessFeature { command } => match command {
             HarnessFeatureCommands::Read { path, json } => {
-                commands::harness_feature::run_read(path, json)
+                commands::harness::feature::run_read(path, json)
             }
             HarnessFeatureCommands::Write {
                 path,
@@ -284,7 +561,7 @@ fn main() {
                 instruction_refs,
                 verification_refs,
                 json,
-            } => commands::harness_feature::run_write(commands::harness_feature::WriteArgs {
+            } => commands::harness::feature::run_write(commands::harness::feature::WriteArgs {
                 path,
                 feature_id,
                 status,
@@ -299,9 +576,9 @@ fn main() {
                 path,
                 require_closure,
                 json,
-            } => commands::harness_feature::run_check(path, require_closure, json),
+            } => commands::harness::feature::run_check(path, require_closure, json),
             HarnessFeatureCommands::Next { path, json } => {
-                commands::harness_feature::run_next(path, json)
+                commands::harness::feature::run_next(path, json)
             }
         },
 
@@ -318,8 +595,8 @@ fn main() {
                 started_at,
                 finished_at,
                 json,
-            } => {
-                commands::harness_trajectory::run_append(commands::harness_trajectory::AppendArgs {
+            } => commands::harness::trajectory::run_append(
+                commands::harness::trajectory::AppendArgs {
                     path,
                     step_id,
                     issue_id,
@@ -331,18 +608,18 @@ fn main() {
                     started_at,
                     finished_at,
                     json,
-                })
-            }
+                },
+            ),
             HarnessTrajectoryCommands::Query {
                 path,
                 mode,
                 limit,
                 json,
-            } => commands::harness_trajectory::run_query(path, mode, limit, json),
+            } => commands::harness::trajectory::run_query(path, mode, limit, json),
         },
 
         Commands::HarnessJoinCheck { input, json } => {
-            commands::harness_join_check::run(input, json)
+            commands::harness::join_check::run(input, json)
         }
 
         Commands::Dep { command } => commands::dep::run(command),

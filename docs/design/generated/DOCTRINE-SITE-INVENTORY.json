@@ -1,0 +1,1323 @@
+{
+  "schema": 1,
+  "inventoryKind": "premath.doctrine_site_inventory.v1",
+  "source": {
+    "packagesRoot": "specs/premath/site-packages",
+    "siteInput": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+    "siteMap": "specs/premath/draft/DOCTRINE-SITE.json",
+    "operationRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
+    "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
+    "cutoverContract": "specs/premath/draft/DOCTRINE-SITE-CUTOVER.json",
+    "siteInputDigest": "2bf695b9a95fe3fe967a77e7a4b6d0119662aa3354359a3e36bc82af22975e97",
+    "siteMapDigest": "19d08b84025d07c5142b6aa5c1ba5f62be11b4b7def56ebffa2e28c90456c3cc",
+    "operationRegistryDigest": "dbacda48897ffb2e6e67c9224d9e0118a8143560bbd83a70c8131d455f27f57c"
+  },
+  "site": {
+    "siteId": "premath.doctrine_operation_site.v0",
+    "version": "v0",
+    "doctrineSpecPath": "specs/premath/draft/DOCTRINE-INF.md",
+    "nodeCount": 70,
+    "coverCount": 3,
+    "edgeCount": 67,
+    "operationCount": 63
+  },
+  "cutover": {
+    "cutoverId": "doctrine-site-generated-source-cutover.v1",
+    "currentPhaseId": "generated_only",
+    "phaseMode": "generated_only",
+    "allowLegacySourceKind": false,
+    "allowOperationRegistryOverride": false
+  },
+  "routeFamilies": [
+    {
+      "routeFamilyId": "route.fiber.lifecycle",
+      "worldId": "world.fiber.v1",
+      "morphismRowId": "wm.control.fiber.lifecycle",
+      "requiredMorphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.world"
+      ],
+      "operationIds": [
+        "op/transport.fiber_cancel",
+        "op/transport.fiber_join",
+        "op/transport.fiber_spawn"
+      ]
+    },
+    {
+      "routeFamilyId": "route.gate_execution",
+      "worldId": "world.kernel.semantic.v1",
+      "morphismRowId": "wm.kernel.semantic.runtime_gate",
+      "requiredMorphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.location",
+        "dm.transport.world"
+      ],
+      "operationIds": [
+        "op/ci.run_gate",
+        "op/ci.run_gate_terraform"
+      ]
+    },
+    {
+      "routeFamilyId": "route.instruction_execution",
+      "worldId": "world.instruction.v1",
+      "morphismRowId": "wm.control.instruction.execution",
+      "requiredMorphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "operationIds": [
+        "op/ci.run_instruction",
+        "op/mcp.instruction_run"
+      ]
+    },
+    {
+      "routeFamilyId": "route.issue_claim_lease",
+      "worldId": "world.lease.v1",
+      "morphismRowId": "wm.control.lease.mutation",
+      "requiredMorphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "operationIds": [
+        "op/mcp.issue_claim",
+        "op/mcp.issue_discover",
+        "op/mcp.issue_lease_release",
+        "op/mcp.issue_lease_renew",
+        "op/transport.issue_claim_next"
+      ]
+    },
+    {
+      "routeFamilyId": "route.required_decision_attestation",
+      "worldId": "world.ci_witness.v1",
+      "morphismRowId": "wm.control.ci_witness.attest",
+      "requiredMorphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "operationIds": [
+        "op/ci.decide_required",
+        "op/ci.verify_required_decision",
+        "op/ci.verify_required_witness"
+      ]
+    },
+    {
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "requiredMorphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "operationIds": [
+        "op/harness.feature_check",
+        "op/harness.feature_next",
+        "op/harness.feature_read",
+        "op/harness.session_bootstrap",
+        "op/harness.session_read",
+        "op/harness.trajectory_query",
+        "op/mcp.observe_instruction",
+        "op/mcp.observe_latest",
+        "op/mcp.observe_needs_attention",
+        "op/mcp.observe_projection",
+        "op/mcp.site_current_digest"
+      ]
+    },
+    {
+      "routeFamilyId": "route.site_change",
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "requiredMorphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "operationIds": [
+        "op/mcp.site_apply_change",
+        "op/mcp.site_build_change",
+        "op/mcp.site_compose_changes",
+        "op/site.apply_change",
+        "op/site.build_change",
+        "op/site.compose_changes"
+      ]
+    },
+    {
+      "routeFamilyId": "route.transport.dispatch",
+      "worldId": "world.transport.v1",
+      "morphismRowId": "wm.control.transport.dispatch",
+      "requiredMorphisms": [
+        "dm.identity",
+        "dm.transport.world"
+      ],
+      "operationIds": [
+        "op/transport.world_route_binding"
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "operationId": "op/ci.coherence_check",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/check/coherence.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.coherence_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:coherence.check",
+        "path:crates/premath-cli/src/commands/check/coherence.rs"
+      ]
+    },
+    {
+      "operationId": "op/ci.decide_required",
+      "operationClass": "route_bound",
+      "path": "tools/ci/decide_required.py",
+      "kind": "operation",
+      "edgeId": "e.ci.op.decide_required",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.required_decision_attestation",
+      "worldId": "world.ci_witness.v1",
+      "morphismRowId": "wm.control.ci_witness.attest",
+      "commandSurfaceRefs": [
+        "hostAction:required.witness_decide",
+        "path:tools/ci/decide_required.py"
+      ]
+    },
+    {
+      "operationId": "op/ci.required_delta",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/required/delta.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.required_delta",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:required.delta",
+        "path:crates/premath-cli/src/commands/required/delta.rs"
+      ]
+    },
+    {
+      "operationId": "op/ci.required_gate_ref",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/required/gate_ref.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.required_gate_ref",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:required.gate_ref",
+        "path:crates/premath-cli/src/commands/required/gate_ref.rs"
+      ]
+    },
+    {
+      "operationId": "op/ci.required_projection",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/required/projection.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.required_projection",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:required.projection",
+        "path:crates/premath-cli/src/commands/required/projection.rs"
+      ]
+    },
+    {
+      "operationId": "op/ci.required_witness",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/required/witness.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.required_witness",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:required.witness",
+        "path:crates/premath-cli/src/commands/required/witness.rs"
+      ]
+    },
+    {
+      "operationId": "op/ci.run_gate",
+      "operationClass": "route_bound",
+      "path": "tools/ci/run_gate.sh",
+      "kind": "operation",
+      "edgeId": "e.ci.op.run_gate",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.location",
+        "dm.transport.world"
+      ],
+      "routeFamilyId": "route.gate_execution",
+      "worldId": "world.kernel.semantic.v1",
+      "morphismRowId": "wm.kernel.semantic.runtime_gate",
+      "commandSurfaceRefs": [
+        "path:tools/ci/run_gate.sh",
+        "runtimeRoute:runGate"
+      ]
+    },
+    {
+      "operationId": "op/ci.run_gate_terraform",
+      "operationClass": "route_bound",
+      "path": "tools/ci/run_gate_terraform.sh",
+      "kind": "operation",
+      "edgeId": "e.ci.op.run_gate_terraform",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.location",
+        "dm.transport.world"
+      ],
+      "routeFamilyId": "route.gate_execution",
+      "worldId": "world.kernel.semantic.v1",
+      "morphismRowId": "wm.kernel.semantic.runtime_gate",
+      "commandSurfaceRefs": [
+        "path:tools/ci/run_gate_terraform.sh",
+        "runtimeRoute:runGateTerraform"
+      ]
+    },
+    {
+      "operationId": "op/ci.run_instruction",
+      "operationClass": "route_bound",
+      "path": "tools/ci/run_instruction.sh",
+      "kind": "operation",
+      "edgeId": "e.ci.op.run_instruction",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.instruction_execution",
+      "worldId": "world.instruction.v1",
+      "morphismRowId": "wm.control.instruction.execution",
+      "commandSurfaceRefs": [
+        "path:tools/ci/run_instruction.sh",
+        "runtimeRoute:runInstruction"
+      ]
+    },
+    {
+      "operationId": "op/ci.verify_required_decision",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/required/decision_verify.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.verify_required_decision",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.required_decision_attestation",
+      "worldId": "world.ci_witness.v1",
+      "morphismRowId": "wm.control.ci_witness.attest",
+      "commandSurfaceRefs": [
+        "hostAction:required.decision_verify",
+        "path:crates/premath-cli/src/commands/required/decision_verify.rs"
+      ]
+    },
+    {
+      "operationId": "op/ci.verify_required_witness",
+      "operationClass": "route_bound",
+      "path": "tools/ci/verify_required_witness.py",
+      "kind": "operation",
+      "edgeId": "e.ci.op.verify_required_witness",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.required_decision_attestation",
+      "worldId": "world.ci_witness.v1",
+      "morphismRowId": "wm.control.ci_witness.attest",
+      "commandSurfaceRefs": [
+        "hostAction:required.witness_verify",
+        "path:tools/ci/verify_required_witness.py"
+      ]
+    },
+    {
+      "operationId": "op/conformance.capability",
+      "operationClass": "tooling_only",
+      "path": "tools/conformance/run_capability_vectors.py",
+      "kind": "operation",
+      "edgeId": "e.ci.op.capability",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.profile.evidence"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:tools/conformance/run_capability_vectors.py"
+      ]
+    },
+    {
+      "operationId": "op/conformance.doctrine",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/check/doctrine_site.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.doctrine",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/check/doctrine_site.rs"
+      ]
+    },
+    {
+      "operationId": "op/conformance.doctrine_inf",
+      "operationClass": "tooling_only",
+      "path": "tools/conformance/run_doctrine_inf_vectors.py",
+      "kind": "operation",
+      "edgeId": "e.ci.op.doctrine_inf",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:tools/conformance/run_doctrine_inf_vectors.py"
+      ]
+    },
+    {
+      "operationId": "op/conformance.doctrine_inf_governance",
+      "operationClass": "tooling_only",
+      "path": "tools/conformance/run_doctrine_inf_vectors.py",
+      "kind": "operation",
+      "edgeId": "e.ci.op.doctrine_inf_governance",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.policy.rebind",
+        "dm.presentation.projection",
+        "dm.profile.evidence",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:tools/conformance/run_doctrine_inf_vectors.py"
+      ]
+    },
+    {
+      "operationId": "op/conformance.doctrine_mcp_parity",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/doctrine_mcp_parity_check.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.doctrine_mcp_parity",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/doctrine_mcp_parity_check.rs"
+      ]
+    },
+    {
+      "operationId": "op/conformance.runtime_orchestration",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/runtime_orchestration_check.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.runtime_orchestration",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/runtime_orchestration_check.rs"
+      ]
+    },
+    {
+      "operationId": "op/conformance.stub",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/capability_stub_invariance_check.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.stub",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/capability_stub_invariance_check.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.feature_check",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/harness/feature.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_feature_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:harness.feature.check",
+        "path:crates/premath-cli/src/commands/harness/feature.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.feature_next",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/harness/feature.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_feature_next",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:harness.feature.next",
+        "path:crates/premath-cli/src/commands/harness/feature.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.feature_read",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/harness/feature.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_feature_read",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:harness.feature.read",
+        "path:crates/premath-cli/src/commands/harness/feature.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.feature_write",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/harness/feature.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_feature_write",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:harness.feature.write",
+        "path:crates/premath-cli/src/commands/harness/feature.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.session_bootstrap",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/harness/session.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_session_bootstrap",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:harness.session.bootstrap",
+        "path:crates/premath-cli/src/commands/harness/session.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.session_read",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/harness/session.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_session_read",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:harness.session.read",
+        "path:crates/premath-cli/src/commands/harness/session.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.session_write",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/harness/session.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_session_write",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:harness.session.write",
+        "path:crates/premath-cli/src/commands/harness/session.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.trajectory_append",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/harness/trajectory.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_trajectory_append",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:harness.trajectory.append",
+        "path:crates/premath-cli/src/commands/harness/trajectory.rs"
+      ]
+    },
+    {
+      "operationId": "op/harness.trajectory_query",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/harness/trajectory.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.harness_trajectory_query",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:harness.trajectory.query",
+        "path:crates/premath-cli/src/commands/harness/trajectory.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.dep_add",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.dep_add",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:dep.add",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.dep_diagnostics",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.dep_diagnostics",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:dep.diagnostics",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.dep_remove",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.dep_remove",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:dep.remove",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.dep_replace",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.dep_replace",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:dep.replace",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.init_tool",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.init_tool",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.instruction_check",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.instruction_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:instruction.check",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.instruction_run",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.instruction_run",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.instruction_execution",
+      "worldId": "world.instruction.v1",
+      "morphismRowId": "wm.control.instruction.execution",
+      "commandSurfaceRefs": [
+        "hostAction:instruction.run",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_add",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_add",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_backend_status",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_backend_status",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:issue.backend_status",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_blocked",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_blocked",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:issue.blocked",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_check",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:issue.check",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_claim",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_claim",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.issue_claim_lease",
+      "worldId": "world.lease.v1",
+      "morphismRowId": "wm.control.lease.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:issue.claim",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_discover",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_discover",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.issue_claim_lease",
+      "worldId": "world.lease.v1",
+      "morphismRowId": "wm.control.lease.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:issue.discover",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_lease_projection",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_lease_projection",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_lease_release",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_lease_release",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.issue_claim_lease",
+      "worldId": "world.lease.v1",
+      "morphismRowId": "wm.control.lease.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:issue.lease_release",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_lease_renew",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_lease_renew",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.issue_claim_lease",
+      "worldId": "world.lease.v1",
+      "morphismRowId": "wm.control.lease.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:issue.lease_renew",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_list",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_list",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:issue.list",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_ready",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_ready",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:issue.ready",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.issue_update",
+      "operationClass": "tooling_only",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_update",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:issue.update",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.observe_instruction",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.observe_instruction",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:observe.instruction",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.observe_latest",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.observe_latest",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:observe.latest",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.observe_needs_attention",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.observe_needs_attention",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:observe.needs_attention",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.observe_projection",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.observe_projection",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "hostAction:observe.projection",
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.site_apply_change",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_apply_change_mcp",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.site_change",
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.site_build_change",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_build_change_mcp",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.site_change",
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.site_compose_changes",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_compose_changes_mcp",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.site_change",
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/mcp.site_current_digest",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_current_digest_mcp",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ],
+      "routeFamilyId": "route.session_projection",
+      "worldId": "world.control_plane.bundle.v0",
+      "morphismRowId": "wm.control.bundle.projection",
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/mcp_serve.rs"
+      ]
+    },
+    {
+      "operationId": "op/site.apply_change",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/site_apply.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_apply_change",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.site_change",
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:site.apply_change",
+        "path:crates/premath-cli/src/commands/site_apply.rs"
+      ]
+    },
+    {
+      "operationId": "op/site.build_change",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/site_build.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_build_change",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.site_change",
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:site.build_change",
+        "path:crates/premath-cli/src/commands/site_build.rs"
+      ]
+    },
+    {
+      "operationId": "op/site.compose_changes",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/site_compose.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_compose_changes",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.site_change",
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:site.compose_changes",
+        "path:crates/premath-cli/src/commands/site_compose.rs"
+      ]
+    },
+    {
+      "operationId": "op/site.current_digest",
+      "operationClass": "read_only_projection",
+      "path": "crates/premath-cli/src/commands/site_digest.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.site_current_digest",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": null,
+      "worldId": null,
+      "morphismRowId": null,
+      "commandSurfaceRefs": [
+        "hostAction:site.current_digest",
+        "path:crates/premath-cli/src/commands/site_digest.rs"
+      ]
+    },
+    {
+      "operationId": "op/transport.fiber_cancel",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.transport_fiber_cancel",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.world"
+      ],
+      "routeFamilyId": "route.fiber.lifecycle",
+      "worldId": "world.fiber.v1",
+      "morphismRowId": "wm.control.fiber.lifecycle",
+      "commandSurfaceRefs": [
+        "hostAction:fiber.cancel",
+        "path:crates/premath-cli/src/commands/transport_dispatch.rs"
+      ]
+    },
+    {
+      "operationId": "op/transport.fiber_join",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.transport_fiber_join",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.world"
+      ],
+      "routeFamilyId": "route.fiber.lifecycle",
+      "worldId": "world.fiber.v1",
+      "morphismRowId": "wm.control.fiber.lifecycle",
+      "commandSurfaceRefs": [
+        "hostAction:fiber.join",
+        "path:crates/premath-cli/src/commands/transport_dispatch.rs"
+      ]
+    },
+    {
+      "operationId": "op/transport.fiber_spawn",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.transport_fiber_spawn",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.world"
+      ],
+      "routeFamilyId": "route.fiber.lifecycle",
+      "worldId": "world.fiber.v1",
+      "morphismRowId": "wm.control.fiber.lifecycle",
+      "commandSurfaceRefs": [
+        "hostAction:fiber.spawn",
+        "path:crates/premath-cli/src/commands/transport_dispatch.rs"
+      ]
+    },
+    {
+      "operationId": "op/transport.issue_claim_next",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/issue.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.issue_claim_next",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ],
+      "routeFamilyId": "route.issue_claim_lease",
+      "worldId": "world.lease.v1",
+      "morphismRowId": "wm.control.lease.mutation",
+      "commandSurfaceRefs": [
+        "hostAction:issue.claim_next",
+        "path:crates/premath-cli/src/commands/issue.rs"
+      ]
+    },
+    {
+      "operationId": "op/transport.world_route_binding",
+      "operationClass": "route_bound",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "edgeId": "e.ci.op.transport_world_route_binding",
+      "morphisms": [
+        "dm.identity",
+        "dm.transport.world"
+      ],
+      "routeFamilyId": "route.transport.dispatch",
+      "worldId": "world.transport.v1",
+      "morphismRowId": "wm.control.transport.dispatch",
+      "commandSurfaceRefs": [
+        "path:crates/premath-cli/src/commands/transport_dispatch.rs"
+      ]
+    }
+  ],
+  "inventoryDigest": "8838a1c70331c8b7bfa28a9514ef0a0c674635c3be79c6d191e2b437c2ce8095"
+}

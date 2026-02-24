@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.sigpi_stepping",
+  "vectorId": "golden/sigpi_total_digest_coherence",
+  "description": "Total Sigma digest is coherent Merkle composition of per-fibre digests.",
+  "semanticScenarioId": "sigpi_digest_coherence_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.sigpi_stepping"],
+    "concernFibres": {
+      "issue_memory": {
+        "digest": "aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233"
+      },
+      "witnesses": {
+        "digest": "11223344556677881122334455667788112233445566778811223344556677ab"
+      },
+      "change_log": {
+        "digest": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+      },
+      "site_topology": {
+        "digest": "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe"
+      },
+      "working_copy": {
+        "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "observation_surfaces": {
+        "digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    },
+    "totalDigestCoherent": true,
+    "concernDagAcyclic": true
+  },
+  "expected": {
+    "result": "accepted",
+    "totalDigestCoherent": true,
+    "concernDagAcyclic": true
+  }
+}

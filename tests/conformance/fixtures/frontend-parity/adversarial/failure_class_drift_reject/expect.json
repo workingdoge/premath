@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "frontend_failure_class_parity_drift",
+    "frontend_kernel_verdict_drift"
+  ]
+}

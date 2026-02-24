@@ -18,17 +18,17 @@ Normative authority remains under `specs/`.
 
 Primary normative anchors:
 
-- `specs/premath/draft/UNIFICATION-DOCTRINE.md`:
-  - §10 Unified Evidence Plane contract (`Ev : Ctx^op -> V`)
-  - §10.5 fail-closed factorization boundary
-  - §10.6 staged typed evidence internalization + rollback
-  - §11 cross-layer obstruction algebra
-- `specs/premath/draft/PREMATH-COHERENCE.md`:
+- `specs/premath/draft/EVIDENCE-INF.md`:
+  - §1 Unified Evidence Plane contract (`Ev : Ctx^op -> V`)
+  - §1.5 fail-closed factorization boundary
+  - §1.6 staged typed evidence internalization + rollback
+  - §2 cross-layer obstruction algebra
+- `specs/premath/raw/PREMATH-COHERENCE.md`:
   - deterministic control-plane checker obligation surface
 - `specs/premath/draft/SPEC-INDEX.md`:
   - lane ownership, reading order, claim/profile boundaries
-- `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`
-- `specs/premath/draft/COHERENCE-CONTRACT.json`
+- `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json`
+- `specs/premath/contracts/COHERENCE-CONTRACT.json`
 
 ## 3. Current State
 
@@ -69,7 +69,7 @@ Core checks:
 - `mise run coherence-check`
 - `mise run docs-coherence-check`
 - `mise run traceability-check`
-- `python3 tools/ci/check_issue_graph.py`
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 Issue graph status:
 
@@ -94,7 +94,7 @@ If Stage 1 begins, keep scope minimal:
 
 ## 7. Stage 1 Checklist (Consolidated)
 
-Anchor: `specs/premath/draft/UNIFICATION-DOCTRINE.md` §10.6 (Stage 1).
+Anchor: `specs/premath/draft/EVIDENCE-INF.md` §1.6 (Stage 1).
 
 Goal:
 
@@ -139,24 +139,24 @@ Validation commands:
 - `mise run coherence-check`
 - `mise run docs-coherence-check`
 - `mise run traceability-check`
-- `python3 tools/ci/check_issue_graph.py`
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 Execution note (2026-02-22):
 
 - stage slices are implemented in repository surfaces:
-  - `draft/UNIFICATION-DOCTRINE` §10.6.1/§10.6.2/§10.6.3,
+  - `draft/EVIDENCE-INF` §1.6.1/§1.6.2/§1.6.3,
   - `draft/CONTROL-PLANE-CONTRACT` Stage 1 parity + rollback objects,
   - `premath-coherence` `gate_chain_parity` fail-closed enforcement,
   - coherence-site `gate_chain_parity_stage1_*` vectors.
 
 ## 8. Stage 3 Execution Runbook (Consolidated)
 
-Anchor: `UNIFICATION-DOCTRINE` Stage 3 (`typed-first cleanup`).
+Anchor: `EVIDENCE-INF` Stage 3 (`typed-first cleanup`).
 
 Normative authority remains in:
 
-- `specs/premath/draft/UNIFICATION-DOCTRINE.md` (§10.6),
-- `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`,
+- `specs/premath/draft/EVIDENCE-INF.md` (§1.6),
+- `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json`,
 - `specs/premath/draft/PREMATH-KERNEL.md`,
 - `specs/premath/draft/BIDIR-DESCENT.md`,
 - `specs/premath/draft/GATE.md`.
@@ -192,11 +192,11 @@ Per-task gate set:
 - bidir-handoff checks (`bd-150`):
   - `mise run coherence-check`
   - `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract`
-  - `python3 tools/ci/test_drift_budget.py`
+  - `cargo test --package premath-cli drift_budget_check_json_smoke`
 - docs closure (`bd-151`):
   - `mise run docs-coherence-check`
   - `mise run traceability-check`
-  - `python3 tools/ci/check_issue_graph.py`
+  - `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 Before push:
 

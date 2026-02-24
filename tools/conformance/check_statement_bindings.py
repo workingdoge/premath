@@ -29,7 +29,7 @@ def parse_args(repo_root: Path) -> argparse.Namespace:
     parser.add_argument(
         "--bindings",
         type=Path,
-        default=repo_root / "specs" / "premath" / "draft" / "KERNEL-STATEMENT-BINDINGS.json",
+        default=repo_root / "specs" / "premath" / "contracts" / "KERNEL-STATEMENT-BINDINGS.json",
         help="Typed binding contract path",
     )
     parser.add_argument(
@@ -75,7 +75,7 @@ def _as_string_list(value: Any, label: str) -> List[str]:
 def _load_obligation_ids(repo_root: Path) -> Set[str]:
     out: Set[str] = set()
 
-    contract_path = repo_root / "specs" / "premath" / "draft" / "COHERENCE-CONTRACT.json"
+    contract_path = repo_root / "specs" / "premath" / "contracts" / "COHERENCE-CONTRACT.json"
     payload = _load_json(contract_path)
     obligations = payload.get("obligations")
     if isinstance(obligations, list):
@@ -85,7 +85,7 @@ def _load_obligation_ids(repo_root: Path) -> Set[str]:
                 if isinstance(raw, str) and raw.strip():
                     out.add(raw.strip())
 
-    control_plane_path = repo_root / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json"
+    control_plane_path = repo_root / "specs" / "premath" / "contracts" / "CONTROL-PLANE-CONTRACT.json"
     control_plane = _load_json(control_plane_path)
     stage2 = control_plane.get("evidenceStage2Authority")
     if isinstance(stage2, dict):

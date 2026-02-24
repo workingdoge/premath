@@ -20,12 +20,12 @@ Current status:
 
 Spec-to-suite traceability is tracked in:
 
-- `specs/premath/draft/SPEC-TRACEABILITY.md`
+- `specs/premath/raw/SPEC-TRACEABILITY.md`
 
 Validate fixture integrity and invariance pairing with:
 
 ```bash
-python3 tools/conformance/check_stub_invariance.py
+cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json
 ```
 
 Run executable interop-core vectors with:
@@ -45,6 +45,10 @@ Run executable doctrine-inf vectors with:
 ```bash
 python3 tools/conformance/run_doctrine_inf_vectors.py
 ```
+
+`run_doctrine_inf_vectors.py` delegates semantic evaluation to
+`premath doctrine-inf-check` and only performs fixture orchestration/expect
+comparison.
 
 Run executable capability vectors with:
 

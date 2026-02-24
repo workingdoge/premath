@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.unified_evidence",
+  "vectorId": "invariance/same_unified_evidence_local_profile",
+  "description": "Unified evidence verdict is invariant across local profile permutations.",
+  "semanticScenarioId": "unified_evidence_invariance_01",
+  "profile": "local",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.unified_evidence"],
+    "evidenceFibres": {
+      "ci_witnesses": {
+        "factoringRoute": "eta_CI",
+        "deterministic": true
+      }
+    }
+  },
+  "expected": {
+    "result": "accepted",
+    "factoringCoherent": true
+  }
+}

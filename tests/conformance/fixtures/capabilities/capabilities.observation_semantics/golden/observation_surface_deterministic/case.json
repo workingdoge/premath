@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.observation_semantics",
+  "vectorId": "golden/observation_surface_deterministic",
+  "description": "Same witness state and issue memory produce identical observation surface.",
+  "semanticScenarioId": "observation_determinism_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.observation_semantics"],
+    "witnessState": {
+      "sources": [
+        {
+          "sourceId": "ci.baseline",
+          "runId": "run_001",
+          "state": "accepted",
+          "evidenceTier": "required"
+        }
+      ]
+    },
+    "issueMemory": {
+      "issues": [
+        {
+          "issueId": "bd-100",
+          "status": "open",
+          "deps": []
+        }
+      ]
+    },
+    "surfaceA": {
+      "derivedState": "accepted",
+      "needsAttention": false,
+      "topFailureClass": null,
+      "coherenceResults": {
+        "policyDrift": "pass",
+        "issuePar": "pass",
+        "dependencyIntegrity": "pass"
+      }
+    },
+    "surfaceB": {
+      "derivedState": "accepted",
+      "needsAttention": false,
+      "topFailureClass": null,
+      "coherenceResults": {
+        "policyDrift": "pass",
+        "issuePar": "pass",
+        "dependencyIntegrity": "pass"
+      }
+    }
+  },
+  "expected": {
+    "result": "accepted",
+    "surfaceDeterministic": true,
+    "surfaceAEqualsSurfaceB": true
+  }
+}

@@ -52,7 +52,7 @@ obligations and vectors:
   obstruction" descent shape.
 
 These are executed through `premath coherence-check` using
-`specs/premath/draft/COHERENCE-CONTRACT.json` and fixtures under
+`specs/premath/contracts/COHERENCE-CONTRACT.json` and fixtures under
 `tests/conformance/fixtures/coherence-site`.
 
 This keeps the foundation principle intact: minimum encoding, maximum

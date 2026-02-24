@@ -57,6 +57,8 @@ Current full baseline gate (`mise run baseline`) includes:
    - `ci-wiring-check`
    - `ci-instruction-check`
    - `ci-instruction-smoke`
+5. site-change enforcement
+   - `ci-site-change-chain-check`
 
 Local command:
 

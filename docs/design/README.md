@@ -8,13 +8,35 @@ Authority rule:
 - `docs/design/` explains implementation shape, boundaries, and operational
   composition.
 
+## Constructor-First Onboarding
+
+Use this order for newcomer/operator orientation:
+
+1. `README.md` for boundary shape and canonical command surfaces.
+2. `docs/design/generated/DOCTRINE-SITE-INVENTORY.md` for route/world inventory.
+3. `specs/premath/draft/SPEC-INDEX.md` for normative scope and lifecycle status.
+4. `docs/design/ARCHITECTURE-MAP.md` for implementation placement.
+   - start with `ARCHITECTURE-MAP.md` §0.1 (`WDAC-1`) for world-descent
+     authority/ordering, then read the linked spec chain.
+
+Then validate the active surface:
+
+- `mise run docs-coherence-check`
+- `mise run doctrine-check`
+- `mise run coherence-check`
+
+Invariant:
+
+- wrappers and fixtures replay/parity core command outputs; they never become
+  semantic admissibility authority.
+
 ## Lanes
 
 ### Tusk runtime (inside one world)
 
 - Promoted harness contract surfaces now live in:
-  - `specs/premath/draft/HARNESS-RUNTIME.md`
-  - `specs/premath/draft/HARNESS-RETRY-ESCALATION.md`
+  - `specs/premath/raw/HARNESS-RUNTIME.md`
+  - `specs/premath/archive/HARNESS-RETRY-ESCALATION.md`
   Design docs below remain implementation-facing runbooks.
 
 - `TUSK-ARCHITECTURE.md`: recursive unit contract and runtime surfaces.
@@ -42,6 +64,8 @@ Authority rule:
 ### Control/CI and architecture composition
 
 - `ARCHITECTURE-MAP.md`: doctrine-to-operation map + active execution order.
+- `generated/DOCTRINE-SITE-INVENTORY.md`: generated navigation index
+  (site -> operations -> route families -> world bindings -> command surfaces).
 - Phase-3 authority boundary: governance/KCIR mapping CI gates are premath core
   CLI surfaces (`governance-promotion-check`, `kcir-mapping-check`); Python CI
   wrappers are adapter-only orchestration transports.
@@ -64,6 +88,8 @@ Authority rule:
   operations, doctrine/decision) and write-discipline rules.
 - `TOOL-CALLING-HARNESS-TYPESTATE.md`: typed tool-calling harness turn contract
   and fail-closed runtime-gate design notes.
+- `FIBER-CONCURRENCY.md`: structured-concurrency design profile (`fiber.spawn |
+  fiber.join | fiber.cancel`) and runtime/backend split.
 - `RALPH-PLAYBOOK-PREMATH.md`: Ralph playbook execution-loop adaptation under
   premath issue/witness authority and fail-closed mutation gates.
 - `STEEL-REPL-DESCENT-CONTROL.md`: Scheme/Steel REPL control-surface design,
@@ -78,12 +104,27 @@ Authority rule:
 Design docs do not replace normative specs.
 
 - Semantic authority: `specs/premath/draft/PREMATH-KERNEL.md`,
-  `specs/premath/draft/GATE.md`, `specs/premath/draft/BIDIR-DESCENT.md`.
+  `specs/premath/draft/GATE.md`, `specs/premath/draft/BIDIR-DESCENT.md`,
+  `specs/premath/draft/WORLD-REGISTRY.md`.
 - Runtime/transport normative candidates:
   - `specs/premath/raw/TUSK-CORE.md`
   - `specs/premath/raw/SQUEAK-CORE.md`
   - `specs/premath/raw/SQUEAK-SITE.md`
+  - `specs/premath/raw/FIBER-CONCURRENCY.md`
+  - `specs/premath/raw/WORLD-PROFILES-CONTROL.md`
+  - `specs/premath/raw/TORSOR-EXT.md` (overlay interpretation only)
   - `specs/premath/raw/CI-TOPOS.md`
+
+## Where To Edit (Fast Map)
+
+| If you are changing... | Edit these first | Verify with |
+| --- | --- | --- |
+| Semantic admissibility laws | `specs/premath/draft/PREMATH-KERNEL.md`, `specs/premath/draft/GATE.md`, `specs/premath/draft/BIDIR-DESCENT.md`, `crates/premath-kernel/` | `mise run coherence-check` |
+| World/route binding behavior | `specs/premath/draft/WORLD-REGISTRY.md`, `specs/premath/contracts/DOCTRINE-SITE-INPUT.json`, `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json`, `specs/premath/raw/BEAM-COORDINATION.md`, `crates/premath-cli/src/commands/world/registry_check.rs`, `crates/premath-cli/src/commands/runtime_orchestration_check.rs`, `tools/conformance/run_runtime_orchestration_vectors.py`, `tools/conformance/run_world_core_vectors.py`, `tests/conformance/fixtures/world-core/` | `mise run doctrine-check`; `python3 tools/conformance/run_world_core_vectors.py` |
+| Site inventory/docs navigation | `specs/premath/site-packages/`, `specs/premath/contracts/DOCTRINE-SITE-INPUT.json`, `specs/premath/contracts/DOCTRINE-SITE-CUTOVER.json`, `tools/conformance/generate_doctrine_site_inventory.py`, `docs/design/generated/DOCTRINE-SITE-INVENTORY.md` | `mise run docs-coherence-check`; `mise run doctrine-site-inventory-check` |
+| Control-plane contract/wiring | `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json`, `specs/premath/raw/PREMATH-COHERENCE.md`, `tools/ci/pipeline_required.py`, `tools/ci/pipeline_instruction.py` | `mise run ci-pipeline-test` |
+| Torsor/extension overlays | `specs/premath/raw/TORSOR-EXT.md`, `specs/premath/raw/WORLD-PROFILES-CONTROL.md`, `specs/premath/draft/WORLD-REGISTRY.md` | `mise run doctrine-check` |
+| Newcomer-facing architecture narrative | `README.md`, `docs/design/ARCHITECTURE-MAP.md`, `specs/premath/draft/SPEC-INDEX.md` | `mise run docs-coherence-check` |
 
 ## Live Roadmap Source
 

@@ -29,20 +29,21 @@ The repository keeps one semantic authority lane:
 
 Control-plane execution remains deterministic and fail-closed through:
 
-- `specs/premath/draft/PREMATH-COHERENCE.md` +
-  `specs/premath/draft/COHERENCE-CONTRACT.json`,
-- `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`,
-- `specs/premath/draft/HARNESS-RUNTIME.md`,
-  `specs/premath/draft/HARNESS-TYPESTATE.md`,
-  `specs/premath/draft/HARNESS-RETRY-ESCALATION.md`.
+- `specs/premath/raw/PREMATH-COHERENCE.md` +
+  `specs/premath/contracts/COHERENCE-CONTRACT.json`,
+- `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json`,
+- `specs/premath/raw/HARNESS-RUNTIME.md`,
+  `specs/premath/archive/HARNESS-TYPESTATE.md`,
+  `specs/premath/archive/HARNESS-RETRY-ESCALATION.md`.
 
 ### Doctrine and unification program
 
 Architecture/lifecycle commitments are governed by:
 
-- `specs/premath/draft/UNIFICATION-DOCTRINE.md`,
+- `specs/premath/draft/EVIDENCE-INF.md`,
+- `specs/premath/profile/UNIFICATION-GOVERNANCE.md`,
 - `specs/premath/draft/DOCTRINE-INF.md`,
-- `specs/premath/draft/CONFORMANCE.md` (claim-gated capability/profile lanes).
+- `specs/premath/raw/CONFORMANCE.md` (claim-gated capability/profile lanes).
 
 ## Current state tracking
 

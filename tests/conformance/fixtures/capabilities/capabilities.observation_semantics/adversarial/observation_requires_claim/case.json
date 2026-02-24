@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.observation_semantics",
+  "vectorId": "adversarial/observation_requires_claim",
+  "description": "Observation semantics vectors require capabilities.observation_semantics to be claimed.",
+  "semanticScenarioId": "observation_requires_claim_01",
+  "artifacts": {
+    "claimedCapabilities": [],
+    "witnessState": {
+      "sources": []
+    },
+    "issueMemory": null
+  },
+  "expected": {
+    "result": "rejected",
+    "rejectionClasses": ["capability_not_claimed"]
+  }
+}

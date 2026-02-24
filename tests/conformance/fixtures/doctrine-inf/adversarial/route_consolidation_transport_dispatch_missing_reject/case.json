@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "doctrine-inf",
+  "vectorId": "adversarial/route_consolidation_transport_dispatch_missing_reject",
+  "description": "Route consolidation rejects when transport dispatch route family is absent.",
+  "artifacts": {
+    "doctrineRegistry": [
+      "dm.identity",
+      "dm.transport.world"
+    ],
+    "destinationDeclares": {
+      "preserved": [
+        "dm.identity",
+        "dm.transport.world"
+      ],
+      "notPreserved": []
+    },
+    "edgeMorphisms": [
+      "dm.identity"
+    ]
+  },
+  "routeConsolidation": {
+    "siteInput": {
+      "worldRouteBindings": {
+        "schema": 1,
+        "bindingKind": "premath.world_route_bindings.v1",
+        "rows": [
+          {
+            "routeFamilyId": "route.issue_claim_lease",
+            "operationIds": [
+              "op/transport.issue_claim_next"
+            ],
+            "worldId": "world.lease.v1",
+            "morphismRowId": "wm.control.lease.mutation",
+            "requiredMorphisms": [
+              "dm.transport.world"
+            ],
+            "failureClassUnbound": "world_route_unbound"
+          }
+        ]
+      }
+    },
+    "operations": [
+      {
+        "operationId": "op/transport.world_route_binding",
+        "morphisms": [
+          "dm.transport.world"
+        ]
+      }
+    ],
+    "requiredRouteFamilies": [
+      "route.transport.dispatch"
+    ]
+  }
+}

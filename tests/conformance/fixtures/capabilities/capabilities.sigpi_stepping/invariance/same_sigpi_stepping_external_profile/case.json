@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.sigpi_stepping",
+  "vectorId": "invariance/same_sigpi_stepping_external_profile",
+  "description": "SigPi stepping verdict is invariant across external profile permutations.",
+  "semanticScenarioId": "sigpi_stepping_invariance_01",
+  "profile": "external",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.sigpi_stepping"],
+    "concernFibres": {
+      "issue_memory": {
+        "digest": "aabbccdd00112233aabbccdd00112233aabbccdd00112233aabbccdd00112233"
+      },
+      "witnesses": {
+        "digest": "11223344556677881122334455667788112233445566778811223344556677ab"
+      },
+      "change_log": {
+        "digest": "deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef"
+      },
+      "site_topology": {
+        "digest": "cafebabecafebabecafebabecafebabecafebabecafebabecafebabecafebabe"
+      },
+      "working_copy": {
+        "digest": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      "observation_surfaces": {
+        "digest": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+      }
+    }
+  },
+  "expected": {
+    "result": "accepted",
+    "totalDigestCoherent": true
+  }
+}

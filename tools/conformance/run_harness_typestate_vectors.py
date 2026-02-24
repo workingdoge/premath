@@ -22,7 +22,7 @@ ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "harness-typestate"
 PREMATH_BIN = ROOT / "target" / "debug" / "premath"
 HARNESS_JOIN_CHECK_SOURCE = (
-    ROOT / "crates" / "premath-cli" / "src" / "commands" / "harness_join_check.rs"
+    ROOT / "crates" / "premath-cli" / "src" / "commands" / "harness" / "join_check.rs"
 )
 
 

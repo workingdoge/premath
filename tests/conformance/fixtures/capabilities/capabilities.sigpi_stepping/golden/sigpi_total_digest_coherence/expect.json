@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "total Sigma digest is coherent Merkle composition of per-fibre digests"
+  ]
+}

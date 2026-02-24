@@ -24,7 +24,7 @@ def parse_args() -> argparse.Namespace:
         description=(
             "Check parity between MCP tool names declared in "
             "crates/premath-cli/src/commands/mcp_serve.rs and doctrine "
-            "operation mappings in specs/premath/draft/DOCTRINE-OP-REGISTRY.json."
+            "operation mappings in specs/premath/contracts/DOCTRINE-OP-REGISTRY.json."
         )
     )
     parser.add_argument(
@@ -36,7 +36,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--registry",
         type=Path,
-        default=root / "specs" / "premath" / "draft" / "DOCTRINE-OP-REGISTRY.json",
+        default=root / "specs" / "premath" / "contracts" / "DOCTRINE-OP-REGISTRY.json",
         help="Path to doctrine operation registry JSON",
     )
     return parser.parse_args()

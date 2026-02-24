@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.observation_semantics",
+  "vectors": [
+    "golden/observation_surface_deterministic",
+    "adversarial/observation_requires_claim",
+    "invariance/same_observation_local_profile",
+    "invariance/same_observation_external_profile"
+  ]
+}

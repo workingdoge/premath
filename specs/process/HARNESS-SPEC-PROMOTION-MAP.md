@@ -78,8 +78,8 @@ Promotion text MUST reference existing routed operations (no new ops in `bd-192`
 
 Source of truth:
 
-- `specs/premath/draft/DOCTRINE-OP-REGISTRY.json`
-- `specs/premath/draft/DOCTRINE-SITE.json`
+- `specs/premath/contracts/DOCTRINE-OP-REGISTRY.json`
+- `specs/premath/contracts/DOCTRINE-SITE.json`
 
 ## 5. Merge-Safe Ordering
 
@@ -103,4 +103,4 @@ Source of truth:
   - `mise run traceability-check`
   - `mise run docs-coherence-check`
   - `mise run doctrine-check`
-  - `python3 tools/ci/check_issue_graph.py`
+  - `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`

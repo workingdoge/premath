@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.unified_evidence",
+  "vectorId": "golden/evidence_factoring_coherence",
+  "description": "Evidence factoring routes are unique and deterministic for fixed canonical inputs.",
+  "semanticScenarioId": "evidence_factoring_coherence_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.unified_evidence"],
+    "evidenceFibres": {
+      "ci_witnesses": {
+        "factoringRoute": "eta_CI",
+        "deterministic": true
+      },
+      "checker_witnesses": {
+        "factoringRoute": "eta_Chk",
+        "deterministic": true
+      },
+      "coherence_witnesses": {
+        "factoringRoute": "eta_Coh",
+        "deterministic": true
+      }
+    },
+    "factoringCoherent": true
+  },
+  "expected": {
+    "result": "accepted",
+    "factoringCoherent": true
+  }
+}

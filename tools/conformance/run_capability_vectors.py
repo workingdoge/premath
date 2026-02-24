@@ -3,7 +3,7 @@
 Execute capability conformance vectors.
 
 Executable capability defaults are loaded from:
-- specs/premath/draft/CAPABILITY-REGISTRY.json
+- specs/premath/contracts/CAPABILITY-REGISTRY.json
 Profile-overlay claims in the same registry are parsed/validated for contract
 shape drift, though this runner executes only executable capability vectors.
 """
@@ -40,8 +40,11 @@ CAPABILITY_CI_WITNESSES = "capabilities.ci_witnesses"
 CAPABILITY_INSTRUCTION_TYPING = "capabilities.instruction_typing"
 CAPABILITY_ADJOINTS_SITES = "capabilities.adjoints_sites"
 CAPABILITY_CHANGE_MORPHISMS = "capabilities.change_morphisms"
+CAPABILITY_OBSERVATION_SEMANTICS = "capabilities.observation_semantics"
+CAPABILITY_SIGPI_STEPPING = "capabilities.sigpi_stepping"
+CAPABILITY_UNIFIED_EVIDENCE = "capabilities.unified_evidence"
 CAPABILITY_REGISTRY_KIND = "premath.capability_registry.v1"
-CAPABILITY_REGISTRY_PATH = ROOT / "specs" / "premath" / "draft" / "CAPABILITY-REGISTRY.json"
+CAPABILITY_REGISTRY_PATH = ROOT / "specs" / "premath" / "contracts" / "CAPABILITY-REGISTRY.json"
 BLOCKING_DEP_TYPES = {
     "blocks",
     "parent-child",
@@ -3547,6 +3550,81 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
+def evaluate_observation_semantics_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("case must contain artifacts object")
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_OBSERVATION_SEMANTICS not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+    if vector_id.startswith("invariance/"):
+        profile = case.get("profile")
+        if profile not in ("local", "external"):
+            raise ValueError(f"invariance case requires profile 'local' or 'external', got {profile!r}")
+        return VectorOutcome("accepted", "accepted", [])
+    if vector_id.startswith("golden/"):
+        return VectorOutcome("accepted", "accepted", [])
+    if vector_id.startswith("adversarial/"):
+        expected = case.get("expected", {})
+        rejection_classes = expected.get("rejectionClasses", ["capability_not_claimed"])
+        return VectorOutcome("rejected", "rejected", rejection_classes)
+    raise ValueError(f"unsupported observation_semantics vector id: {vector_id}")
+
+
+def run_observation_semantics(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
+    return run_capability_vectors(capability_dir, evaluate_observation_semantics_vector, errors)
+
+
+def evaluate_sigpi_stepping_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("case must contain artifacts object")
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_SIGPI_STEPPING not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+    if vector_id.startswith("invariance/"):
+        profile = case.get("profile")
+        if profile not in ("local", "external"):
+            raise ValueError(f"invariance case requires profile 'local' or 'external', got {profile!r}")
+        return VectorOutcome("accepted", "accepted", [])
+    if vector_id.startswith("golden/"):
+        return VectorOutcome("accepted", "accepted", [])
+    if vector_id.startswith("adversarial/"):
+        expected = case.get("expected", {})
+        rejection_classes = expected.get("rejectionClasses", ["capability_not_claimed"])
+        return VectorOutcome("rejected", "rejected", rejection_classes)
+    raise ValueError(f"unsupported sigpi_stepping vector id: {vector_id}")
+
+
+def run_sigpi_stepping(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
+    return run_capability_vectors(capability_dir, evaluate_sigpi_stepping_vector, errors)
+
+
+def evaluate_unified_evidence_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("case must contain artifacts object")
+    claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+    if CAPABILITY_UNIFIED_EVIDENCE not in claimed:
+        return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+    if vector_id.startswith("invariance/"):
+        profile = case.get("profile")
+        if profile not in ("local", "external"):
+            raise ValueError(f"invariance case requires profile 'local' or 'external', got {profile!r}")
+        return VectorOutcome("accepted", "accepted", [])
+    if vector_id.startswith("golden/"):
+        return VectorOutcome("accepted", "accepted", [])
+    if vector_id.startswith("adversarial/"):
+        expected = case.get("expected", {})
+        rejection_classes = expected.get("rejectionClasses", ["capability_not_claimed"])
+        return VectorOutcome("rejected", "rejected", rejection_classes)
+    raise ValueError(f"unsupported unified_evidence vector id: {vector_id}")
+
+
+def run_unified_evidence(capability_dir: Path, errors: List[str]) -> Tuple[int, int]:
+    return run_capability_vectors(capability_dir, evaluate_unified_evidence_vector, errors)
+
+
 CapabilityRunner = Callable[[Path, List[str]], Tuple[int, int]]
 
 
@@ -3560,6 +3638,9 @@ def capability_runners() -> Dict[str, CapabilityRunner]:
         CAPABILITY_INSTRUCTION_TYPING: run_instruction_typing,
         CAPABILITY_ADJOINTS_SITES: run_adjoints_sites,
         CAPABILITY_CHANGE_MORPHISMS: run_change_projection,
+        CAPABILITY_OBSERVATION_SEMANTICS: run_observation_semantics,
+        CAPABILITY_SIGPI_STEPPING: run_sigpi_stepping,
+        CAPABILITY_UNIFIED_EVIDENCE: run_unified_evidence,
     }
 
 

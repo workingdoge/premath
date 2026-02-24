@@ -33,7 +33,7 @@ def parse_args(repo_root: Path) -> argparse.Namespace:
     parser.add_argument(
         "--bindings",
         type=Path,
-        default=repo_root / "specs" / "premath" / "draft" / "KERNEL-STATEMENT-BINDINGS.json",
+        default=repo_root / "specs" / "premath" / "contracts" / "KERNEL-STATEMENT-BINDINGS.json",
         help="Statement binding contract path",
     )
     parser.add_argument(

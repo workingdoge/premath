@@ -118,11 +118,11 @@ def _base_payload() -> dict:
             "artifactFamily": {
                 "id": "E_cp",
                 "artifactRefs": {
-                    "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
-                    "coherenceContract": "specs/premath/draft/COHERENCE-CONTRACT.json",
-                    "capabilityRegistry": "specs/premath/draft/CAPABILITY-REGISTRY.json",
-                    "doctrineSiteInput": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
-                    "doctrineOpRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
+                    "controlPlaneContract": "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json",
+                    "coherenceContract": "specs/premath/contracts/COHERENCE-CONTRACT.json",
+                    "capabilityRegistry": "specs/premath/contracts/CAPABILITY-REGISTRY.json",
+                    "doctrineSiteInput": "specs/premath/contracts/DOCTRINE-SITE-INPUT.json",
+                    "doctrineOpRegistry": "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json",
                 },
             },
             "reindexingCoherence": {
@@ -369,10 +369,54 @@ def _base_payload() -> dict:
                 "routeUnbound": "worker_lane_route_unbound",
             },
         },
+        "worldDescentContract": {
+            "contractId": "doctrine.world_descent.v1",
+            "requiredRouteFamilies": [
+                "route.gate_execution",
+                "route.instruction_execution",
+                "route.required_decision_attestation",
+                "route.fiber.lifecycle",
+                "route.issue_claim_lease",
+                "route.session_projection",
+                "route.transport.dispatch",
+            ],
+            "requiredActionRouteBindings": {
+                "route.instruction_execution": [
+                    "instruction.run",
+                ],
+                "route.required_decision_attestation": [
+                    "required.witness_verify",
+                    "required.witness_decide",
+                ],
+                "route.fiber.lifecycle": [
+                    "fiber.spawn",
+                    "fiber.join",
+                    "fiber.cancel",
+                ],
+                "route.issue_claim_lease": [
+                    "issue.claim_next",
+                    "issue.claim",
+                    "issue.lease_renew",
+                    "issue.lease_release",
+                    "issue.discover",
+                ],
+            },
+            "requiredStaticOperationBindings": {
+                "route.transport.dispatch": [
+                    "op/transport.world_route_binding",
+                ]
+            },
+            "failureClasses": {
+                "identityMissing": "world_route_identity_missing",
+                "descentDataMissing": "world_descent_data_missing",
+                "kcirHandoffIdentityMissing": "kcir_handoff_identity_missing",
+            },
+        },
         "runtimeRouteBindings": {
             "requiredOperationRoutes": {
                 "runGate": {
                     "operationId": "op/ci.run_gate",
+                    "routeFamilyId": "route.gate_execution",
                     "requiredMorphisms": [
                         "dm.identity",
                         "dm.profile.execution",
@@ -382,11 +426,21 @@ def _base_payload() -> dict:
                 },
                 "runGateTerraform": {
                     "operationId": "op/ci.run_gate_terraform",
+                    "routeFamilyId": "route.gate_execution",
                     "requiredMorphisms": [
                         "dm.identity",
                         "dm.profile.execution",
                         "dm.transport.location",
                         "dm.transport.world",
+                    ],
+                },
+                "runInstruction": {
+                    "operationId": "op/ci.run_instruction",
+                    "routeFamilyId": "route.instruction_execution",
+                    "requiredMorphisms": [
+                        "dm.commitment.attest",
+                        "dm.identity",
+                        "dm.profile.execution",
                     ],
                 },
             },
@@ -413,8 +467,17 @@ def _base_payload() -> dict:
             },
             "instructionEnvelopeCheck": {
                 "canonicalEntrypoint": [
-                    "python3",
-                    "tools/ci/check_instruction_envelope.py",
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "instruction-check",
+                    "--instruction",
+                    "$INSTRUCTION_PATH",
+                    "--repo-root",
+                    "$REPO_ROOT",
+                    "--json",
                 ],
                 "compatibilityAliases": [],
             },
@@ -497,6 +560,11 @@ def _base_payload() -> dict:
                 "coherence.check": {
                     "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
                     "mcpTool": None,
+                },
+                "instruction.run": {
+                    "canonicalCli": "premath transport-dispatch --action instruction.run --payload '<json>' --json",
+                    "mcpTool": "instruction_run",
+                    "operationId": "op/mcp.instruction_run",
                 },
                 "issue.lease_renew": {
                     "canonicalCli": None,
@@ -649,10 +717,46 @@ class ControlPlaneContractTests(unittest.TestCase):
             "worker_lane_route_unbound",
         )
         self.assertEqual(
+            loaded["worldDescentContract"]["contractId"],
+            "doctrine.world_descent.v1",
+        )
+        self.assertIn(
+            "route.transport.dispatch",
+            loaded["worldDescentContract"]["requiredRouteFamilies"],
+        )
+        self.assertEqual(
+            loaded["worldDescentContract"]["requiredStaticOperationBindings"][
+                "route.transport.dispatch"
+            ],
+            ["op/transport.world_route_binding"],
+        )
+        self.assertEqual(
+            loaded["worldDescentContract"]["failureClasses"]["descentDataMissing"],
+            "world_descent_data_missing",
+        )
+        self.assertEqual(
             loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runGate"][
                 "operationId"
             ],
             "op/ci.run_gate",
+        )
+        self.assertEqual(
+            loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runGate"][
+                "routeFamilyId"
+            ],
+            "route.gate_execution",
+        )
+        self.assertEqual(
+            loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runInstruction"][
+                "operationId"
+            ],
+            "op/ci.run_instruction",
+        )
+        self.assertEqual(
+            loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runInstruction"][
+                "routeFamilyId"
+            ],
+            "route.instruction_execution",
         )
         self.assertEqual(
             loaded["commandSurface"]["requiredDecision"]["canonicalEntrypoint"],
@@ -730,6 +834,12 @@ class ControlPlaneContractTests(unittest.TestCase):
             "op/mcp.issue_lease_renew",
         )
         self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["instruction.run"][
+                "canonicalCli"
+            ],
+            "premath transport-dispatch --action instruction.run --payload '<json>' --json",
+        )
+        self.assertEqual(
             loaded["hostActionSurface"]["mcpOnlyHostActions"],
             ["issue.lease_renew", "issue.lease_release"],
         )
@@ -786,6 +896,23 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload = _base_payload()
         payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = "issue_discover"
         with self.assertRaisesRegex(ValueError, "canonical route"):
+            self._load(payload)
+
+    def test_load_rejects_missing_world_descent_contract(self) -> None:
+        payload = _base_payload()
+        payload.pop("worldDescentContract")
+        with self.assertRaisesRegex(
+            ValueError, "controlPlaneContract.worldDescentContract"
+        ):
+            self._load(payload)
+
+    def test_load_rejects_world_descent_failure_class_key_drift(self) -> None:
+        payload = _base_payload()
+        payload["worldDescentContract"]["failureClasses"].pop("descentDataMissing")
+        with self.assertRaisesRegex(
+            ValueError,
+            "worldDescentContract.failureClasses.descentDataMissing",
+        ):
             self._load(payload)
 
     def test_load_rejects_runtime_route_morphism_drift(self) -> None:

@@ -9,7 +9,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
 
-import check_runtime_orchestration
+import core_command_client
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "runtime-orchestration"
@@ -54,6 +54,36 @@ def ensure_optional_string(value: Any, label: str) -> str | None:
 
 def canonical_set(values: Sequence[str]) -> List[str]:
     return sorted(set(values))
+
+
+def evaluate_runtime_orchestration(
+    *,
+    control_plane_contract: Dict[str, Any],
+    operation_registry: Dict[str, Any],
+    harness_runtime_text: str,
+    doctrine_site_input: Dict[str, Any] | None = None,
+) -> Dict[str, Any]:
+    payload = core_command_client.run_runtime_orchestration_check(
+        control_plane_contract=control_plane_contract,
+        operation_registry=operation_registry,
+        harness_runtime_text=harness_runtime_text,
+        doctrine_site_input=doctrine_site_input,
+    )
+
+    result = payload.get("result")
+    if not isinstance(result, str) or result.strip() not in {"accepted", "rejected"}:
+        raise ValueError("kernel.result must be 'accepted' or 'rejected'")
+
+    failure_classes = payload.get("failureClasses", [])
+    if not isinstance(failure_classes, list):
+        raise ValueError("kernel.failureClasses must be a list")
+    for idx, failure_class in enumerate(failure_classes):
+        if not isinstance(failure_class, str) or not failure_class.strip():
+            raise ValueError(
+                f"kernel.failureClasses[{idx}] must be a non-empty string"
+            )
+
+    return payload
 
 
 def validate_manifest(fixtures: Path) -> List[str]:
@@ -107,6 +137,9 @@ def run(fixtures: Path) -> int:
             doctrine_op_registry = case.get("doctrineOpRegistry")
             if not isinstance(doctrine_op_registry, dict):
                 raise ValueError(f"{case_path}: doctrineOpRegistry must be an object")
+            doctrine_site_input = case.get("doctrineSiteInput")
+            if doctrine_site_input is not None and not isinstance(doctrine_site_input, dict):
+                raise ValueError(f"{case_path}: doctrineSiteInput must be an object when provided")
             harness_runtime_text = ensure_string(
                 case.get("harnessRuntimeText"),
                 f"{case_path}: harnessRuntimeText",
@@ -122,10 +155,11 @@ def run(fixtures: Path) -> int:
                 )
             )
 
-            output = check_runtime_orchestration.evaluate_runtime_orchestration(
+            output = evaluate_runtime_orchestration(
                 control_plane_contract=control_plane_contract,
                 operation_registry=doctrine_op_registry,
                 harness_runtime_text=harness_runtime_text,
+                doctrine_site_input=doctrine_site_input,
             )
             got_result = ensure_string(output.get("result"), f"{vector_id}: output.result")
             got_failure_classes = canonical_set(

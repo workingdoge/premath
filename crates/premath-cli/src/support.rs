@@ -1,7 +1,7 @@
+use crate::jj::JjClient;
 use premath_bd::{DepType, Issue, MemoryStore, store_snapshot_ref};
-use premath_jj::JjClient;
 use premath_kernel::{CoherenceLevel, ContextId, FiberSignature};
-use premath_surreal::QueryCache;
+use premath_observe::QueryCache;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
 use std::collections::{BTreeSet, VecDeque};

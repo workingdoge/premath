@@ -1,0 +1,16 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.unified_evidence",
+  "vectorId": "adversarial/evidence_requires_claim",
+  "description": "Unified evidence vectors require capabilities.unified_evidence to be claimed.",
+  "semanticScenarioId": "evidence_requires_claim_01",
+  "artifacts": {
+    "claimedCapabilities": [],
+    "evidenceFibres": null
+  },
+  "expected": {
+    "result": "rejected",
+    "rejectionClasses": ["capability_not_claimed"]
+  }
+}

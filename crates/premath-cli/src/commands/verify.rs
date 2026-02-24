@@ -8,7 +8,7 @@ use serde_json::json;
 pub fn run(id: String, level: String, issues: String, repo: String, json_output: bool) {
     let level = parse_level_or_exit(&level);
     let (store, issues_path) = load_store_or_exit(&issues);
-    let cache = premath_surreal::QueryCache::hydrate(&store);
+    let cache = premath_observe::QueryCache::hydrate(&store);
 
     let scoped_ids = scope_ids_or_exit(&cache, &id);
     let context_id = ContextId::new(format!("scope:{id}"));

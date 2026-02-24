@@ -27,6 +27,49 @@
           "governance-promotion-check"
         ]
       }
+    },
+    "worldDescentContract": {
+      "contractId": "doctrine.world_descent.v1",
+      "requiredRouteFamilies": [
+        "route.gate_execution",
+        "route.instruction_execution",
+        "route.required_decision_attestation",
+        "route.fiber.lifecycle",
+        "route.issue_claim_lease",
+        "route.session_projection",
+        "route.transport.dispatch"
+      ],
+      "requiredActionRouteBindings": {
+        "route.instruction_execution": [
+          "instruction.run"
+        ],
+        "route.required_decision_attestation": [
+          "required.witness_verify",
+          "required.witness_decide"
+        ],
+        "route.fiber.lifecycle": [
+          "fiber.spawn",
+          "fiber.join",
+          "fiber.cancel"
+        ],
+        "route.issue_claim_lease": [
+          "issue.claim_next",
+          "issue.claim",
+          "issue.lease_renew",
+          "issue.lease_release",
+          "issue.discover"
+        ]
+      },
+      "requiredStaticOperationBindings": {
+        "route.transport.dispatch": [
+          "op/transport.world_route_binding"
+        ]
+      },
+      "failureClasses": {
+        "identityMissing": "world_route_identity_missing",
+        "descentDataMissing": "world_descent_data_missing",
+        "kcirHandoffIdentityMissing": "kcir_handoff_identity_missing"
+      }
     }
   },
   "doctrineOpRegistry": {

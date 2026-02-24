@@ -48,7 +48,10 @@ pub use required_verify::{
     verify_required_witness_payload, verify_required_witness_request,
 };
 
-use premath_kernel::{obligation_gate_registry, obligation_gate_registry_json};
+use premath_kernel::{
+    obligation_gate_registry, obligation_gate_registry_json, parse_operation_route_rows,
+    validate_world_route_bindings,
+};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value, json};
@@ -159,6 +162,21 @@ const GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE: &str =
     "coherence.gate_chain_parity.worker_lane_mutation_mode_drift";
 const GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE: &str =
     "coherence.gate_chain_parity.worker_lane_route_unbound";
+const GATE_CHAIN_WORLD_REGISTRY_ITERATED_CONTEXT_MISSING_FAILURE: &str =
+    "coherence.gate_chain_parity.world_registry_iterated_context_missing";
+const GATE_CHAIN_WORLD_REGISTRY_PALMGREN_REFERENCE_MISSING_FAILURE: &str =
+    "coherence.gate_chain_parity.world_registry_palmgren_reference_missing";
+const WORLD_REGISTRY_SPEC_PATH: &str = "specs/premath/draft/WORLD-REGISTRY.md";
+const WORLD_REGISTRY_ITERATED_CONTEXT_START: &str = "### 2.5.1 Iterated context chain (MPSh-1)";
+const WORLD_REGISTRY_ITERATED_CONTEXT_END: &str = "### 2.6 Authority boundary contract (WKS-1)";
+const WORLD_REGISTRY_PALMGREN_REFERENCE_URL: &str =
+    "https://staff.math.su.se/palmgren/iterated_presheaves_and_dependent_types_v8.pdf";
+const WORLD_REGISTRY_ITERATED_CONTEXT_REQUIRED_TERMS: &[&str] = &[
+    "iteratedContextChain",
+    "projectionTowerDigest",
+    "multinaturalProjectionLaw",
+    "qProjectionLaw",
+];
 const STAGE2_REQUIRED_KERNEL_OBLIGATIONS: &[&str] = &[
     "stability",
     "locality",
@@ -250,6 +268,10 @@ pub struct CoherenceSurfaces {
     pub mise_baseline_task: String,
     pub control_plane_contract_path: String,
     pub doctrine_site_path: String,
+    #[serde(default = "default_doctrine_site_input_path")]
+    pub doctrine_site_input_path: String,
+    #[serde(default = "default_doctrine_operation_registry_path")]
+    pub doctrine_operation_registry_path: String,
     pub doctrine_root_node_id: String,
     pub profile_readme_path: String,
     pub bidir_spec_path: String,
@@ -265,7 +287,15 @@ pub struct CoherenceSurfaces {
 }
 
 fn default_conformance_path() -> String {
-    "specs/premath/draft/CONFORMANCE.md".to_string()
+    "specs/premath/raw/CONFORMANCE.md".to_string()
+}
+
+fn default_doctrine_site_input_path() -> String {
+    "specs/premath/contracts/DOCTRINE-SITE-INPUT.json".to_string()
+}
+
+fn default_doctrine_operation_registry_path() -> String {
+    "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -701,6 +731,30 @@ pub struct CoherenceWitness {
     pub result: String,
     pub obligations: Vec<ObligationWitness>,
     pub failure_classes: Vec<String>,
+    pub constructor: CoherenceConstructor,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoherenceConstructorSources {
+    pub control_plane_contract_path: String,
+    pub doctrine_site_path: String,
+    pub doctrine_site_input_path: String,
+    pub doctrine_operation_registry_path: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CoherenceConstructor {
+    pub schema: u32,
+    pub constructor_kind: String,
+    pub contract_ref: String,
+    pub contract_digest: String,
+    pub binding: CoherenceBinding,
+    pub declared_obligation_ids: Vec<String>,
+    pub required_obligation_ids: Vec<String>,
+    pub execution_obligation_ids: Vec<String>,
+    pub sources: CoherenceConstructorSources,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -886,16 +940,13 @@ pub fn run_coherence_check(
             path: display_path(&contract_path),
             source,
         })?;
+    let constructor =
+        compile_coherence_constructor(&repo_root, &contract_path, &contract_bytes, &contract);
 
     let mut obligations: Vec<ObligationWitness> = Vec::new();
     let mut aggregate_failures: BTreeSet<String> = BTreeSet::new();
 
-    let contract_obligation_ids: Vec<String> = contract
-        .obligations
-        .iter()
-        .map(|item| item.id.clone())
-        .collect();
-    let contract_set_check = validate_contract_obligation_set(&contract_obligation_ids);
+    let contract_set_check = validate_contract_obligation_set(&constructor.declared_obligation_ids);
     if !contract_set_check.is_empty() {
         let failure_classes = contract_set_check;
         for class_name in &failure_classes {
@@ -906,13 +957,15 @@ pub fn run_coherence_check(
             result: "rejected".to_string(),
             failure_classes,
             details: json!({
-                "contractObligations": contract_obligation_ids,
-                "requiredObligations": REQUIRED_OBLIGATION_IDS,
+                "constructorKind": constructor.constructor_kind,
+                "contractObligations": constructor.declared_obligation_ids,
+                "requiredObligations": constructor.required_obligation_ids,
+                "executionObligations": constructor.execution_obligation_ids,
             }),
         });
     }
 
-    for obligation_id in REQUIRED_OBLIGATION_IDS {
+    for obligation_id in &constructor.execution_obligation_ids {
         let checked = execute_obligation(obligation_id, &repo_root, &contract);
         for class_name in &checked.failure_classes {
             aggregate_failures.insert(class_name.clone());
@@ -928,9 +981,6 @@ pub fn run_coherence_check(
             details: checked.details,
         });
     }
-
-    let contract_digest = format!("cohctr1_{}", hex_sha256_from_bytes(&contract_bytes));
-    let contract_ref = to_repo_relative_or_absolute(&repo_root, &contract_path);
     let failure_classes: Vec<String> = aggregate_failures.into_iter().collect();
 
     Ok(CoherenceWitness {
@@ -938,8 +988,8 @@ pub fn run_coherence_check(
         witness_kind: "premath.coherence.v1".to_string(),
         contract_kind: contract.contract_kind,
         contract_id: contract.contract_id,
-        contract_ref,
-        contract_digest,
+        contract_ref: constructor.contract_ref.clone(),
+        contract_digest: constructor.contract_digest.clone(),
         binding: contract.binding,
         result: if failure_classes.is_empty() {
             "accepted".to_string()
@@ -948,7 +998,49 @@ pub fn run_coherence_check(
         },
         obligations,
         failure_classes,
+        constructor,
     })
+}
+
+fn compile_coherence_constructor(
+    repo_root: &Path,
+    contract_path: &Path,
+    contract_bytes: &[u8],
+    contract: &CoherenceContract,
+) -> CoherenceConstructor {
+    let declared_obligation_ids = dedupe_sorted(
+        contract
+            .obligations
+            .iter()
+            .map(|item| item.id.trim().to_string())
+            .filter(|item| !item.is_empty())
+            .collect(),
+    );
+    let required_obligation_ids = REQUIRED_OBLIGATION_IDS
+        .iter()
+        .map(|obligation_id| (*obligation_id).to_string())
+        .collect::<Vec<_>>();
+    let execution_obligation_ids = required_obligation_ids.clone();
+
+    CoherenceConstructor {
+        schema: 1,
+        constructor_kind: "premath.coherence.constructor.v1".to_string(),
+        contract_ref: to_repo_relative_or_absolute(repo_root, contract_path),
+        contract_digest: format!("cohctr1_{}", hex_sha256_from_bytes(contract_bytes)),
+        binding: contract.binding.clone(),
+        declared_obligation_ids,
+        required_obligation_ids,
+        execution_obligation_ids,
+        sources: CoherenceConstructorSources {
+            control_plane_contract_path: contract.surfaces.control_plane_contract_path.clone(),
+            doctrine_site_path: contract.surfaces.doctrine_site_path.clone(),
+            doctrine_site_input_path: contract.surfaces.doctrine_site_input_path.clone(),
+            doctrine_operation_registry_path: contract
+                .surfaces
+                .doctrine_operation_registry_path
+                .clone(),
+        },
+    }
 }
 
 fn execute_obligation(
@@ -1738,6 +1830,13 @@ fn check_gate_chain_parity(
     failures.extend(lane_registry_check.failure_classes.clone());
     let worker_lane_check = evaluate_gate_chain_worker_lane_authority(&control_plane_contract);
     failures.extend(worker_lane_check.failure_classes.clone());
+    let world_registry_iterated_context_check =
+        evaluate_world_registry_iterated_context_parity(repo_root)?;
+    failures.extend(
+        world_registry_iterated_context_check
+            .failure_classes
+            .clone(),
+    );
 
     let lane_vectors_check = if contract.surfaces.site_fixture_root_path.trim().is_empty() {
         None
@@ -1778,8 +1877,92 @@ fn check_gate_chain_parity(
             "evidenceFactorization": evidence_factorization_check.details,
             "laneRegistry": lane_registry_check.details,
             "workerLaneAuthority": worker_lane_check.details,
+            "worldRegistryIteratedContext": world_registry_iterated_context_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
         }),
+    })
+}
+
+fn evaluate_world_registry_iterated_context_parity(
+    repo_root: &Path,
+) -> Result<ObligationCheck, CoherenceError> {
+    let world_registry_path = resolve_path(repo_root, WORLD_REGISTRY_SPEC_PATH);
+    let mut details = json!({
+        "present": world_registry_path.exists(),
+        "path": to_repo_relative_or_absolute(repo_root, &world_registry_path),
+        "iteratedContextSectionPresent": false,
+        "palmgrenReferencePresent": false,
+        "requiredTerms": WORLD_REGISTRY_ITERATED_CONTEXT_REQUIRED_TERMS,
+        "missingTerms": [],
+        "reasons": [],
+    });
+
+    if !world_registry_path.exists() {
+        return Ok(ObligationCheck {
+            failure_classes: Vec::new(),
+            details,
+        });
+    }
+
+    let mut failures = Vec::new();
+    let mut reasons = Vec::new();
+
+    let world_registry_text = read_text(&world_registry_path)?;
+    let palmgren_reference_present =
+        world_registry_text.contains(WORLD_REGISTRY_PALMGREN_REFERENCE_URL);
+    details["palmgrenReferencePresent"] = json!(palmgren_reference_present);
+    if !palmgren_reference_present {
+        failures.push(GATE_CHAIN_WORLD_REGISTRY_PALMGREN_REFERENCE_MISSING_FAILURE.to_string());
+        reasons.push(format!(
+            "WORLD-REGISTRY must reference Palmgren foundation URL `{WORLD_REGISTRY_PALMGREN_REFERENCE_URL}`"
+        ));
+    }
+
+    let section_result = extract_section_between(
+        &world_registry_text,
+        WORLD_REGISTRY_ITERATED_CONTEXT_START,
+        WORLD_REGISTRY_ITERATED_CONTEXT_END,
+    );
+    let section_text = match section_result {
+        Ok(section) => {
+            details["iteratedContextSectionPresent"] = json!(true);
+            section.to_string()
+        }
+        Err(error) => {
+            failures.push(GATE_CHAIN_WORLD_REGISTRY_ITERATED_CONTEXT_MISSING_FAILURE.to_string());
+            reasons.push(format!(
+                "WORLD-REGISTRY iterated-context section missing or malformed: {error}"
+            ));
+            String::new()
+        }
+    };
+
+    if !section_text.is_empty() {
+        let missing_terms: Vec<String> = WORLD_REGISTRY_ITERATED_CONTEXT_REQUIRED_TERMS
+            .iter()
+            .filter_map(|term| {
+                if section_text.contains(term) {
+                    None
+                } else {
+                    Some((*term).to_string())
+                }
+            })
+            .collect();
+        details["missingTerms"] = json!(&missing_terms);
+        if !missing_terms.is_empty() {
+            failures.push(GATE_CHAIN_WORLD_REGISTRY_ITERATED_CONTEXT_MISSING_FAILURE.to_string());
+            reasons.push(format!(
+                "WORLD-REGISTRY iterated-context section missing required constructor terms: {}",
+                missing_terms.join(", ")
+            ));
+        }
+    }
+
+    details["reasons"] = json!(dedupe_sorted(reasons));
+
+    Ok(ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details,
     })
 }
 
@@ -2997,6 +3180,11 @@ fn check_operation_reachability(
         }
     }
 
+    let world_route_check = evaluate_world_route_validation(repo_root, contract)?;
+    if let Some(check) = &world_route_check {
+        failures.extend(check.failure_classes.clone());
+    }
+
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
         details: json!({
@@ -3004,8 +3192,61 @@ fn check_operation_reachability(
             "operationNodeIds": operation_ids,
             "reachableCount": reachable.len(),
             "rootNodeId": contract.surfaces.doctrine_root_node_id,
+            "worldRouteValidation": world_route_check.map(|check| check.details),
         }),
     })
+}
+
+#[derive(Debug)]
+struct WorldRouteValidationOutcome {
+    failure_classes: Vec<String>,
+    details: Value,
+}
+
+fn evaluate_world_route_validation(
+    repo_root: &Path,
+    contract: &CoherenceContract,
+) -> Result<Option<WorldRouteValidationOutcome>, CoherenceError> {
+    if contract.surfaces.doctrine_site_input_path.trim().is_empty()
+        || contract
+            .surfaces
+            .doctrine_operation_registry_path
+            .trim()
+            .is_empty()
+    {
+        return Ok(None);
+    }
+
+    let doctrine_site_input_path = resolve_path(
+        repo_root,
+        contract.surfaces.doctrine_site_input_path.as_str(),
+    );
+    let doctrine_operation_registry_path = resolve_path(
+        repo_root,
+        contract.surfaces.doctrine_operation_registry_path.as_str(),
+    );
+    let doctrine_site_input = read_json_value(&doctrine_site_input_path)?;
+    let doctrine_operation_registry = read_json_value(&doctrine_operation_registry_path)?;
+    let operation_rows =
+        parse_operation_route_rows(&doctrine_operation_registry).map_err(|message| {
+            CoherenceError::Contract(format!(
+                "failed to parse doctrine operation registry at {}: {}",
+                display_path(&doctrine_operation_registry_path),
+                message
+            ))
+        })?;
+    let report = validate_world_route_bindings(&doctrine_site_input, &operation_rows);
+    Ok(Some(WorldRouteValidationOutcome {
+        failure_classes: report.failure_classes.clone(),
+        details: json!({
+            "doctrineSiteInputPath": to_repo_relative_or_absolute(repo_root, &doctrine_site_input_path),
+            "doctrineOperationRegistryPath": to_repo_relative_or_absolute(repo_root, &doctrine_operation_registry_path),
+            "result": report.result,
+            "failureClasses": report.failure_classes,
+            "issues": report.issues,
+            "operationCount": operation_rows.len(),
+        }),
+    }))
 }
 
 fn check_overlay_traceability(
@@ -5566,6 +5807,43 @@ Current deterministic projected check IDs include:
         );
     }
 
+    fn write_world_registry_with_iterated_context(path: &Path, include_palmgren_ref: bool) {
+        let palmgren = if include_palmgren_ref {
+            format!(
+                "- Palmgren v8: <{}>\n",
+                WORLD_REGISTRY_PALMGREN_REFERENCE_URL
+            )
+        } else {
+            String::new()
+        };
+        let content = format!(
+            r#"## 2. Canonical registry object
+
+### 2.5 Explicit Grothendieck constructor object (GC0)
+
+```text
+WorldGrothendieckConstructor {{
+  iteratedContextChain: {{
+    projectionTowerDigest: string
+    multinaturalProjectionLaw: string
+    qProjectionLaw: string
+  }}
+}}
+```
+
+### 2.5.1 Iterated context chain (MPSh-1)
+
+{palmgren}- required term: `iteratedContextChain`
+- required term: `projectionTowerDigest`
+- required term: `multinaturalProjectionLaw`
+- required term: `qProjectionLaw`
+
+### 2.6 Authority boundary contract (WKS-1)
+"#
+        );
+        write_text_file(path, content.as_str());
+    }
+
     fn base_control_plane_contract_payload() -> Value {
         json!({
             "schema": 1,
@@ -5833,6 +6111,88 @@ Current deterministic projected check IDs include:
         contract
     }
 
+    fn test_contract_for_operation_reachability() -> CoherenceContract {
+        let mut contract = test_contract_with_fixture_roots("", "");
+        contract.surfaces.doctrine_site_path =
+            "specs/premath/contracts/DOCTRINE-SITE.json".to_string();
+        contract.surfaces.doctrine_site_input_path =
+            "specs/premath/contracts/DOCTRINE-SITE-INPUT.json".to_string();
+        contract.surfaces.doctrine_operation_registry_path =
+            "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json".to_string();
+        contract.surfaces.doctrine_root_node_id = "draft/DOCTRINE-INF".to_string();
+        contract.expected_operation_paths = vec!["tools/ci/run_gate.sh".to_string()];
+        contract
+    }
+
+    fn write_operation_reachability_surfaces(
+        root: &Path,
+        operation_morphisms: &[&str],
+        required_morphisms: &[&str],
+    ) {
+        write_text_file(
+            &root.join("tools/ci/run_gate.sh"),
+            "#!/usr/bin/env sh\nexit 0\n",
+        );
+        write_json_file(
+            &root.join("specs/premath/contracts/DOCTRINE-SITE.json"),
+            &json!({
+                "nodes": [
+                    {
+                        "id": "draft/DOCTRINE-INF",
+                        "path": "specs/premath/draft/DOCTRINE-INF.md",
+                        "kind": "doctrine"
+                    },
+                    {
+                        "id": "op/ci.run_gate",
+                        "path": "tools/ci/run_gate.sh",
+                        "kind": "operation"
+                    }
+                ],
+                "covers": [],
+                "edges": [
+                    {
+                        "from": "draft/DOCTRINE-INF",
+                        "to": "op/ci.run_gate"
+                    }
+                ]
+            }),
+        );
+        write_json_file(
+            &root.join("specs/premath/contracts/DOCTRINE-SITE-INPUT.json"),
+            &json!({
+                "schema": 1,
+                "inputKind": "premath.doctrine_operation_site.input.v1",
+                "worldRouteBindings": {
+                    "schema": 1,
+                    "bindingKind": "premath.world_route_bindings.v1",
+                    "rows": [
+                        {
+                            "routeFamilyId": "route.gate_execution",
+                            "operationIds": ["op/ci.run_gate"],
+                            "worldId": "world.kernel.semantic.v1",
+                            "morphismRowId": "wm.kernel.semantic.runtime_gate",
+                            "requiredMorphisms": required_morphisms,
+                            "failureClassUnbound": "world_route_unbound"
+                        }
+                    ]
+                }
+            }),
+        );
+        write_json_file(
+            &root.join("specs/premath/contracts/DOCTRINE-OP-REGISTRY.json"),
+            &json!({
+                "schema": 1,
+                "registryKind": "premath.doctrine_operation_registry.v1",
+                "operations": [
+                    {
+                        "id": "op/ci.run_gate",
+                        "morphisms": operation_morphisms
+                    }
+                ]
+            }),
+        );
+    }
+
     fn write_transport_manifest(fixture_root: &Path, vectors: &[&str]) {
         write_json_file(
             &fixture_root.join("manifest.json"),
@@ -6091,6 +6451,8 @@ Current deterministic projected check IDs include:
                 mise_baseline_task: String::new(),
                 control_plane_contract_path: String::new(),
                 doctrine_site_path: String::new(),
+                doctrine_site_input_path: String::new(),
+                doctrine_operation_registry_path: String::new(),
                 doctrine_root_node_id: String::new(),
                 profile_readme_path: String::new(),
                 bidir_spec_path: String::new(),
@@ -6138,6 +6500,37 @@ Current deterministic projected check IDs include:
     }
 
     #[test]
+    fn compile_coherence_constructor_projects_required_obligations() {
+        let contract = test_contract_with_fixture_roots("", "");
+        let contract_bytes: &[u8] = b"{\"contract_id\":\"coherence.test.v1\"}";
+        let repo_root = Path::new(".");
+        let contract_path = Path::new("specs/premath/contracts/COHERENCE-CONTRACT.json");
+
+        let constructor =
+            compile_coherence_constructor(repo_root, contract_path, contract_bytes, &contract);
+        assert_eq!(
+            constructor.constructor_kind,
+            "premath.coherence.constructor.v1"
+        );
+        assert_eq!(constructor.schema, 1);
+        assert_eq!(constructor.declared_obligation_ids, Vec::<String>::new());
+        assert_eq!(
+            constructor.required_obligation_ids.len(),
+            REQUIRED_OBLIGATION_IDS.len()
+        );
+        assert_eq!(
+            constructor.execution_obligation_ids,
+            constructor.required_obligation_ids
+        );
+        assert_eq!(constructor.binding.normalizer_id, "normalizer.coherence.v1");
+        assert_eq!(constructor.binding.policy_digest, "policy.coherence.v1");
+        assert_eq!(
+            constructor.sources.doctrine_site_input_path,
+            contract.surfaces.doctrine_site_input_path
+        );
+    }
+
+    #[test]
     fn check_gate_chain_parity_accepts_valid_lane_registry() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-valid");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
@@ -6145,15 +6538,69 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &base_control_plane_contract_payload(),
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
         assert!(evaluated.failure_classes.is_empty());
+    }
+
+    #[test]
+    fn check_gate_chain_parity_accepts_world_registry_iterated_context_contract() {
+        let temp = TempDirGuard::new("gate-chain-world-registry-iterated-context-valid");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
+            &base_control_plane_contract_payload(),
+        );
+        write_world_registry_with_iterated_context(
+            &temp.path().join(WORLD_REGISTRY_SPEC_PATH),
+            true,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
+        assert_eq!(
+            evaluated.details["worldRegistryIteratedContext"]["present"],
+            json!(true)
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_world_registry_missing_palmgren_reference() {
+        let temp = TempDirGuard::new("gate-chain-world-registry-palmgren-missing");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
+            &base_control_plane_contract_payload(),
+        );
+        write_world_registry_with_iterated_context(
+            &temp.path().join(WORLD_REGISTRY_SPEC_PATH),
+            false,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated.failure_classes.contains(
+                &GATE_CHAIN_WORLD_REGISTRY_PALMGREN_REFERENCE_MISSING_FAILURE.to_string()
+            )
+        );
     }
 
     #[test]
@@ -6169,11 +6616,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6181,6 +6628,46 @@ Current deterministic projected check IDs include:
             evaluated
                 .failure_classes
                 .contains(&GATE_CHAIN_SCHEMA_LIFECYCLE_FAILURE.to_string())
+        );
+    }
+
+    #[test]
+    fn check_operation_reachability_accepts_matching_world_route_bindings() {
+        let temp = TempDirGuard::new("operation-reachability-world-routes-valid");
+        write_operation_reachability_surfaces(
+            temp.path(),
+            &["dm.identity", "dm.profile.execution"],
+            &["dm.identity", "dm.profile.execution"],
+        );
+        let contract = test_contract_for_operation_reachability();
+        let evaluated = check_operation_reachability(temp.path(), &contract)
+            .expect("operation reachability should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
+        assert_eq!(
+            evaluated.details["worldRouteValidation"]["result"],
+            json!("accepted")
+        );
+    }
+
+    #[test]
+    fn check_operation_reachability_rejects_world_route_morphism_drift() {
+        let temp = TempDirGuard::new("operation-reachability-world-routes-drift");
+        write_operation_reachability_surfaces(
+            temp.path(),
+            &["dm.identity"],
+            &["dm.identity", "dm.transport.world"],
+        );
+        let contract = test_contract_for_operation_reachability();
+        let evaluated = check_operation_reachability(temp.path(), &contract)
+            .expect("operation reachability should evaluate");
+        assert!(
+            evaluated
+                .failure_classes
+                .contains(&"world_route_morphism_drift".to_string())
+        );
+        assert_eq!(
+            evaluated.details["worldRouteValidation"]["result"],
+            json!("rejected")
         );
     }
 
@@ -6195,11 +6682,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6225,11 +6712,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6264,11 +6751,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6285,11 +6772,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6310,11 +6797,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6335,11 +6822,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6361,11 +6848,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6386,11 +6873,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6411,11 +6898,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6437,11 +6924,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6462,11 +6949,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6488,11 +6975,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6513,11 +7000,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6538,11 +7025,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6563,11 +7050,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6588,11 +7075,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6613,11 +7100,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6639,11 +7126,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6664,11 +7151,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6690,11 +7177,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6715,11 +7202,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6741,11 +7228,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6766,11 +7253,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6792,11 +7279,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6818,11 +7305,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
@@ -6844,11 +7331,11 @@ Current deterministic projected check IDs include:
         write_json_file(
             &temp
                 .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+                .join("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"),
             &payload,
         );
         let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+            test_contract_for_gate_chain("specs/premath/contracts/CONTROL-PLANE-CONTRACT.json");
 
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");

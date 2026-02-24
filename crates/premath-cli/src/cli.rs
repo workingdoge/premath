@@ -157,6 +157,21 @@ pub enum Commands {
         /// Directory to initialize
         #[arg(default_value = ".")]
         path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Generate first-run evaluator artifacts (scheme + rhai + contract stub)
+    EvaluatorScaffold {
+        /// Directory where scaffold files are generated
+        #[arg(long, default_value = ".premath/evaluator_scaffold")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
 
     /// Query Observation Surface v0 for frontend/user judgement views
@@ -224,6 +239,29 @@ pub enum Commands {
         bind: String,
     },
 
+    /// Validate Observation Surface v0 semantic projection invariants
+    ObservationSemanticsCheck {
+        /// Repository root used to resolve relative paths
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// CI witness artifact directory
+        #[arg(long, default_value = "artifacts/ciwitness")]
+        ciwitness_dir: String,
+
+        /// Observation surface JSON path
+        #[arg(long, default_value = "artifacts/observation/latest.json")]
+        surface: String,
+
+        /// Issue memory JSONL path
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues_path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Serve Premath MCP tools over stdio
     McpServe {
         /// Issues JSONL path used by issue/dep tools
@@ -262,7 +300,10 @@ pub enum Commands {
     /// Evaluate Premath coherence contract obligations against repository surfaces
     CoherenceCheck {
         /// Coherence contract JSON path
-        #[arg(long, default_value = "specs/premath/draft/COHERENCE-CONTRACT.json")]
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/COHERENCE-CONTRACT.json"
+        )]
         contract: String,
 
         /// Repository root used to resolve contract-relative surfaces
@@ -290,6 +331,21 @@ pub enum Commands {
         /// Instruction JSON path
         #[arg(long)]
         instruction: String,
+
+        /// Repository root used for policy artifact resolution
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate one or more instruction envelopes through core checker semantics
+    InstructionBatchCheck {
+        /// Instruction JSON path (repeatable). If omitted, checks default instruction globs.
+        #[arg(long = "instruction")]
+        instructions: Vec<String>,
 
         /// Repository root used for policy artifact resolution
         #[arg(long, default_value = ".")]
@@ -426,8 +482,596 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Evaluate one doctrine-inf vector case through core command semantics
+    DoctrineInfCheck {
+        /// Doctrine-inf case JSON path
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate doctrine operation registry coverage/morphism parity for MCP tools
+    DoctrineMcpParityCheck {
+        /// Path to mcp_serve.rs source file
+        #[arg(long, default_value = "crates/premath-cli/src/commands/mcp_serve.rs")]
+        mcp_source: String,
+
+        /// Path to doctrine operation registry JSON
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json"
+        )]
+        registry: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate doctrine-site generation/coherence parity against tracked artifacts
+    DoctrineSiteCheck {
+        /// Site-package source root
+        #[arg(long, default_value = "specs/premath/site-packages")]
+        packages_root: String,
+
+        /// Tracked doctrine-site map JSON path
+        #[arg(long, default_value = "specs/premath/contracts/DOCTRINE-SITE.json")]
+        site_map: String,
+
+        /// Tracked doctrine-site input JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-SITE-INPUT.json"
+        )]
+        input_map: String,
+
+        /// Tracked doctrine operation-registry JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json"
+        )]
+        operation_registry: String,
+
+        /// Tracked doctrine generation-digest JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-SITE-GENERATION-DIGEST.json"
+        )]
+        digest_contract: String,
+
+        /// Doctrine-site migration/cutover contract JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-SITE-CUTOVER.json"
+        )]
+        cutover_contract: String,
+
+        /// Optional operation-registry override path
+        #[arg(long)]
+        operation_registry_override: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate repository command-surface invariants (mise-only command surface)
+    CommandSurfaceCheck {
+        /// Repository root
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate capability fixture stub/invariance conformance vectors
+    CapabilityStubInvarianceCheck {
+        /// Capability fixture root directory
+        #[arg(long, default_value = "tests/conformance/fixtures/capabilities")]
+        fixtures: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate promoted draft spec traceability matrix integrity
+    SpecTraceabilityCheck {
+        /// Promoted draft spec directory
+        #[arg(long, default_value = "specs/premath/draft")]
+        draft_dir: String,
+
+        /// Traceability matrix markdown path
+        #[arg(long, default_value = "specs/premath/raw/SPEC-TRACEABILITY.md")]
+        matrix: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate docs-to-executable coherence invariants
+    DocsCoherenceCheck {
+        /// Repository root
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Enforce deterministic drift-budget sentinels across contracts/docs/checkers
+    DriftBudgetCheck {
+        /// Repository root used to resolve relative paths
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Optional precomputed coherence witness JSON path
+        #[arg(long)]
+        coherence_json: Option<String>,
+
+        /// Optional topology-budget contract JSON path
+        #[arg(long)]
+        topology_budget: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate baseline workflow wiring invariants for required gate entrypoint
+    CiWiringCheck {
+        /// Repository root used to resolve relative paths
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Workflow file path relative to repo root
+        #[arg(long, default_value = ".github/workflows/baseline.yml")]
+        workflow: String,
+
+        /// Control-plane contract path (used to derive required pipeline entrypoint)
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate provider-neutral pipeline wrapper wiring and hook parity
+    PipelineWiringCheck {
+        /// Repository root used to resolve relative paths
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Control-plane contract path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate repository hygiene guardrails for private/local-only surfaces
+    RepoHygieneCheck {
+        /// Repository root used for git index and `.gitignore` checks
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Optional explicit paths to evaluate instead of scanning the git index
+        paths: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate tracked branch/ruleset policy against effective GitHub rule payload
+    BranchPolicyCheck {
+        /// Branch-policy contract JSON path
+        #[arg(long, default_value = "specs/process/GITHUB-BRANCH-POLICY.json")]
+        policy: String,
+
+        /// Effective branch-rules payload JSON path (fixture/offline mode)
+        #[arg(long)]
+        rules_json: Option<String>,
+
+        /// Fetch live rules from GitHub API instead of --rules-json
+        #[arg(long)]
+        fetch_live: bool,
+
+        /// Repository slug owner/name override (defaults to policy.repository)
+        #[arg(long)]
+        repo: Option<String>,
+
+        /// Branch override (defaults to policy.branch)
+        #[arg(long)]
+        branch: Option<String>,
+
+        /// GitHub API base URL override (default: env GITHUB_API_URL or https://api.github.com)
+        #[arg(long)]
+        github_api_url: Option<String>,
+
+        /// Environment variable containing API token for --fetch-live
+        #[arg(long, default_value = "GITHUB_TOKEN")]
+        token_env: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate issue-graph contract checks plus compactness drift invariants
+    IssueGraphCheck {
+        /// Repository root used to resolve relative issue-graph paths
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Issue graph JSONL path relative to --repo-root
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Warning threshold for issue note length
+        #[arg(long, default_value_t = 2000)]
+        note_warn_threshold: usize,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Check/apply deterministic issue-graph compactness remediation
+    IssueGraphCompact {
+        /// Repository root used to resolve relative issue-graph paths
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Issue graph JSONL path relative to --repo-root
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues: String,
+
+        /// Compactness mode: check or apply
+        #[arg(long, default_value = "check")]
+        mode: IssueGraphCompactModeArg,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate typed transport action registry contract
+    TransportCheck {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Return current SITE-PACKAGE.json digest and summary counts
+    SiteDigest {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+
+        /// Repository root path
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+    },
+
+    /// Build a valid SiteChangeRequest from a mutation list
+    SiteBuild {
+        /// Path to a JSON file containing mutations and optional preservationClaims
+        #[arg(long)]
+        mutations: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+
+        /// Repository root path
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+    },
+
+    /// Compose two SiteChangeRequests into one
+    SiteCompose {
+        /// Path to first SiteChangeRequest JSON
+        #[arg(long)]
+        request1: String,
+
+        /// Path to second SiteChangeRequest JSON
+        #[arg(long)]
+        request2: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Verify SITE-PACKAGE.json digest matches the digest-chain log
+    SiteChangeChainCheck {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+
+        /// Repository root path
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+    },
+
+    /// Apply a SiteChangeRequest to SITE-PACKAGE.json
+    SiteApply {
+        /// Path to a JSON file containing a SiteChangeRequest
+        #[arg(long)]
+        change: String,
+
+        /// Validate only, do not write artifacts
+        #[arg(long)]
+        dry_run: bool,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Execute one typed transport dispatch envelope
+    TransportDispatch {
+        /// Transport action ID (for example: issue.claim)
+        #[arg(long)]
+        action: String,
+
+        /// JSON payload string for the action envelope
+        #[arg(long, default_value = "{}")]
+        payload: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Execute one bounded scheme-eval host-action program
+    SchemeEval {
+        /// Program JSON path
+        #[arg(long)]
+        program: String,
+
+        /// Control-plane contract JSON path used to derive host-action allowlist
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Harness trajectory JSONL path where host effects are bound
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        trajectory_path: String,
+
+        /// Step-id prefix for emitted trajectory rows
+        #[arg(long, default_value = "scheme_eval")]
+        step_prefix: String,
+
+        /// Maximum host calls per program
+        #[arg(long, default_value_t = 32)]
+        max_calls: usize,
+
+        /// Optional default issue ID for emitted rows
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Optional default policy digest (required for mutation actions)
+        #[arg(long)]
+        policy_digest: Option<String>,
+
+        /// Optional default instruction ref (required for mutation actions)
+        #[arg(long)]
+        instruction_ref: Option<String>,
+
+        /// Capability claim row (repeatable)
+        #[arg(long = "capability-claim")]
+        capability_claims: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Execute one bounded Rhai script over the canonical host-action ABI
+    #[cfg(feature = "rhai-frontend")]
+    RhaiEval {
+        /// Rhai script path
+        #[arg(long)]
+        script: String,
+
+        /// Control-plane contract JSON path used to derive host-action allowlist
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Harness trajectory JSONL path where host effects are bound
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        trajectory_path: String,
+
+        /// Step-id prefix for emitted trajectory rows
+        #[arg(long, default_value = "rhai_eval")]
+        step_prefix: String,
+
+        /// Maximum host calls per program
+        #[arg(long, default_value_t = 32)]
+        max_calls: usize,
+
+        /// Optional default issue ID for emitted rows
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Optional default policy digest (required for mutation actions)
+        #[arg(long)]
+        policy_digest: Option<String>,
+
+        /// Optional default instruction ref (required for mutation actions)
+        #[arg(long)]
+        instruction_ref: Option<String>,
+
+        /// Capability claim row (repeatable)
+        #[arg(long = "capability-claim")]
+        capability_claims: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate world registry + route binding consistency through kernel semantics
+    WorldRegistryCheck {
+        /// World registry JSON path
+        #[arg(long)]
+        registry: Option<String>,
+
+        /// Doctrine site input JSON path containing worldRouteBindings declaration
+        #[arg(long)]
+        site_input: Option<String>,
+
+        /// Optional operation registry/row JSON path used for morphism drift checks
+        #[arg(long)]
+        operations: Option<String>,
+
+        /// Optional control-plane contract JSON used to derive required world-route families/bindings
+        #[arg(long)]
+        control_plane_contract: Option<String>,
+
+        /// Required route family ID (repeatable; only used with --site-input)
+        #[arg(long = "required-route-family")]
+        required_route_families: Vec<String>,
+
+        /// Required route-operation binding (repeatable; `route-family-id=operation-id`)
+        #[arg(long = "required-route-binding")]
+        required_route_bindings: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate world-descent contract shape through doctrine authority
+    WorldDescentContractCheck {
+        /// Control-plane contract JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Resolve one operation to a deterministic site/route/world binding
+    SiteResolve {
+        /// Site resolve request JSON path
+        #[arg(long)]
+        request: String,
+
+        /// Doctrine site input JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-SITE-INPUT.json"
+        )]
+        doctrine_site_input: String,
+
+        /// Doctrine site JSON path
+        #[arg(long, default_value = "specs/premath/contracts/DOCTRINE-SITE.json")]
+        doctrine_site: String,
+
+        /// Doctrine operation registry JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json"
+        )]
+        doctrine_op_registry: String,
+
+        /// Control-plane contract JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Capability registry JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CAPABILITY-REGISTRY.json"
+        )]
+        capability_registry: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate runtime orchestration route/handoff bindings through core semantics
+    RuntimeOrchestrationCheck {
+        /// Control-plane contract JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Doctrine operation registry JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/contracts/DOCTRINE-OP-REGISTRY.json"
+        )]
+        doctrine_op_registry: String,
+
+        /// Harness runtime contract markdown path
+        #[arg(long, default_value = "specs/premath/raw/HARNESS-RUNTIME.md")]
+        harness_runtime: String,
+
+        /// Optional doctrine site input JSON path for world-route admission checks
+        #[arg(long)]
+        doctrine_site_input: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Run Gate checks against a real control-plane operation world
+    WorldGateCheck {
+        /// Operation registry/row JSON path
+        #[arg(long)]
+        operations: String,
+
+        /// Gate check fixture JSON path (either `{check:{...}}` or direct check object)
+        #[arg(long)]
+        check: String,
+
+        /// Gate profile label
+        #[arg(long, default_value = "control-plane")]
+        profile: String,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -650,8 +1294,12 @@ pub enum IssueCommands {
         description: Option<String>,
 
         /// New notes
-        #[arg(long)]
+        #[arg(long, conflicts_with = "notes_file")]
         notes: Option<String>,
+
+        /// Read notes from file path (`-` reads stdin)
+        #[arg(long, conflicts_with = "notes")]
+        notes_file: Option<String>,
 
         /// New status
         #[arg(long)]
@@ -1198,6 +1846,14 @@ pub enum HarnessTrajectoryModeArg {
     Failed,
     #[value(name = "retry-needed")]
     RetryNeeded,
+}
+
+#[derive(Clone, Debug, ValueEnum)]
+pub enum IssueGraphCompactModeArg {
+    #[value(name = "check")]
+    Check,
+    #[value(name = "apply")]
+    Apply,
 }
 
 #[derive(Subcommand, Clone, Debug)]

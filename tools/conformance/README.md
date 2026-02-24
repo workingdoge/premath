@@ -18,8 +18,18 @@ Runs the executable conformance fixture suites through one command surface:
 - `coherence-contract` (`premath coherence-check`)
 - `tusk-core` (`run_tusk_core_vectors.py`)
 - `harness-typestate` (`run_harness_typestate_vectors.py`)
-- `runtime-orchestration` (`run_runtime_orchestration_vectors.py`)
+- `runtime-orchestration` (`premath rhai-eval --script tools/conformance/rhai/runtime_orchestration_vectors.rhai`)
+- `frontend-parity` (`premath rhai-eval --script tools/conformance/rhai/frontend_parity_vectors.rhai`)
+- `world-core` (`premath rhai-eval --script tools/conformance/rhai/world_core_vectors.rhai`)
 - `capabilities` (`run_capability_vectors.py`)
+
+For the three constructor suites above, Rhai is the canonical orchestration lane and
+host actions dispatch into the existing Python vector runners:
+`run_runtime_orchestration_vectors.py`, `run_frontend_parity_vectors.py`,
+and `run_world_core_vectors.py`.
+Wrapper-lane faults stay non-semantic: `rhai-eval` surfaces
+`scheme_eval.host_action_execution_error`, while wrapper CLIs keep
+`result = error` + `errors[]` envelopes for non-kernel faults.
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
 
@@ -43,7 +53,7 @@ Disable cache for one run:
 PREMATH_CONFORMANCE_CACHE=0 python3 tools/conformance/run_fixture_suites.py --no-cache
 ```
 
-## `check_stub_invariance.py`
+## `premath capability-stub-invariance-check`
 
 Validates capability fixture stubs in:
 
@@ -60,14 +70,14 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_stub_invariance.py
+cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json
 ```
 
-## `check_spec_traceability.py`
+## `premath spec-traceability-check`
 
 Validates promoted draft spec coverage matrix integrity using:
 
-- `specs/premath/draft/SPEC-TRACEABILITY.md`
+- `specs/premath/raw/SPEC-TRACEABILITY.md`
 - `specs/premath/draft/` promoted draft spec set
 
 Checks include:
@@ -80,15 +90,15 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_spec_traceability.py
+cargo run --package premath-cli -- spec-traceability-check --draft-dir specs/premath/draft --matrix specs/premath/raw/SPEC-TRACEABILITY.md --json
 ```
 
-## `check_docs_coherence.py`
+## `premath docs-coherence-check`
 
 Validates critical docs-to-executable coherence invariants:
 
 - executable capability list parity across:
-  - `specs/premath/draft/CAPABILITY-REGISTRY.json` (`executableCapabilities`)
+  - `specs/premath/contracts/CAPABILITY-REGISTRY.json` (`executableCapabilities`)
   - `README.md`
   - `tools/conformance/README.md`
   - `specs/premath/draft/SPEC-INDEX.md` (§5.4)
@@ -104,13 +114,13 @@ Validates critical docs-to-executable coherence invariants:
 Run:
 
 ```bash
-python3 tools/conformance/check_docs_coherence.py
+cargo run --package premath-cli -- docs-coherence-check --repo-root . --json
 ```
 
 ## `premath coherence-check`
 
 Runs the typed coherence contract checker surface (`draft/PREMATH-COHERENCE`)
-using machine artifact `specs/premath/draft/COHERENCE-CONTRACT.json`.
+using machine artifact `specs/premath/contracts/COHERENCE-CONTRACT.json`.
 
 Checks include:
 
@@ -133,7 +143,7 @@ mise run coherence-check
 
 Runs executable capability vectors from typed registry:
 
-- `specs/premath/draft/CAPABILITY-REGISTRY.json`
+- `specs/premath/contracts/CAPABILITY-REGISTRY.json`
 
 Current set:
 
@@ -145,6 +155,9 @@ Current set:
 - `capabilities.instruction_typing`
 - `capabilities.adjoints_sites`
 - `capabilities.change_morphisms`
+- `capabilities.observation_semantics`
+- `capabilities.sigpi_stepping`
+- `capabilities.unified_evidence`
 
 Checks include:
 
@@ -334,6 +347,8 @@ Checks include deterministic accept/reject behavior for:
 - required handoff-shape contract markers for `HARNESS-RUNTIME`,
 - optional `controlPlaneKcirMappings` row-shape coverage when mapping rows are
   present,
+- constructor world-route family coverage including
+  `route.transport.dispatch` bound/missing reject paths,
 - invariance scenario parity across profile-permuted vectors.
 
 Run:
@@ -342,20 +357,69 @@ Run:
 python3 tools/conformance/run_runtime_orchestration_vectors.py
 ```
 
-## `check_doctrine_site.py`
+## `run_frontend_parity_vectors.py`
+
+Runs cross-frontend host-action parity vectors in:
+
+- `tests/conformance/fixtures/frontend-parity/`
+
+Checks include deterministic accept/reject behavior for:
+
+- required frontend coverage for Steel/Rhai/MCP/CLI rows,
+- core verdict/failure authority from `premath site-resolve --json`,
+- kernel verdict parity across required frontend rows relative to core outputs,
+- failure-class and witness-ref parity across equivalent host-action scenarios,
+- adversarial world-route drift and transport-profile mismatch detection,
+- invariance parity across profile-permuted vectors.
+
+Run:
+
+```bash
+python3 tools/conformance/run_frontend_parity_vectors.py
+```
+
+## `run_world_core_vectors.py`
+
+Runs deterministic world-core vectors in:
+
+- `tests/conformance/fixtures/world-core/`
+
+Checks include deterministic accept/reject behavior for:
+
+- world-route family coverage and operation binding completeness,
+- morphism-drift reject behavior on bound world routes,
+- control-plane host-action to world-route binding closure through
+  `premath world-registry-check --control-plane-contract ...`,
+- resolver overlap/glue/ambiguity fail-closed behavior through
+  `premath site-resolve --json`,
+- KCIR projection invariance on equivalent site-package inputs
+  (`sitePackageDigest` / `worldRouteDigest` / resolver witness semantic digest),
+- invariance parity across profile-permuted vectors.
+
+Run:
+
+```bash
+python3 tools/conformance/run_world_core_vectors.py
+```
+
+## `premath doctrine-site-check`
 
 Validates doctrine-to-operation site coherence using:
 
 - `specs/premath/draft/DOCTRINE-INF.md` (morphism registry),
-- `specs/premath/draft/DOCTRINE-SITE-INPUT.json` (single input authority),
-- generated `specs/premath/draft/DOCTRINE-SITE.json` (canonical site map),
-- generated `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node view),
+- `specs/premath/contracts/DOCTRINE-SITE-INPUT.json` (single input authority),
+- `specs/premath/contracts/DOCTRINE-SITE-CUTOVER.json` (migration/cutover phase
+  authority),
+- generated `specs/premath/contracts/DOCTRINE-SITE.json` (canonical site map),
+- generated `specs/premath/contracts/DOCTRINE-OP-REGISTRY.json` (operation-node view),
 - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`),
 - operation entrypoints referenced in the site map.
 
 Checks include:
 
 - generation roundtrip (`generated == tracked`),
+- cutover contract validity and fail-closed generated-only posture
+  (legacy source fallback/override disabled in active phase),
 - declaration presence and exact set coherence (`preserved`/`notPreserved`),
 - edge morphism validity against doctrine registry,
 - cover/node references,
@@ -364,7 +428,7 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_doctrine_site.py
+cargo run --package premath-cli -- doctrine-site-check --json
 ```
 
 ## `generate_doctrine_site.py`
@@ -378,19 +442,54 @@ Run:
 python3 tools/conformance/generate_doctrine_site.py
 ```
 
+## `generate_doctrine_site_inventory.py`
+
+Generates one canonical doctrine-site navigation index from site-package source
+and tracked doctrine artifacts.
+
+Outputs:
+
+- `docs/design/generated/DOCTRINE-SITE-INVENTORY.json`
+- `docs/design/generated/DOCTRINE-SITE-INVENTORY.md`
+
+Inventory shape includes deterministic:
+
+- site summary (`siteId`, topology counts),
+- route-family -> world/morphism bindings,
+- operation rows with route/world binding and command-surface refs
+  (`path:*`, `hostAction:*`, `runtimeRoute:*`),
+- cutover posture from `DOCTRINE-SITE-CUTOVER.json`.
+
+Run (write):
+
+```bash
+python3 tools/conformance/generate_doctrine_site_inventory.py
+```
+
+Run (drift check):
+
+```bash
+python3 tools/conformance/generate_doctrine_site_inventory.py --check
+```
+
 Drift check (no write):
 
 ```bash
 python3 tools/conformance/generate_doctrine_site.py --check
 ```
 
-## `check_runtime_orchestration.py`
+## `runtime-orchestration-check`
 
 Validates Harness+Squeak runtime orchestration bindings using:
 
-- `specs/premath/draft/CONTROL-PLANE-CONTRACT.json` (`runtimeRouteBindings`),
-- `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node bindings),
-- `specs/premath/draft/HARNESS-RUNTIME.md` (required handoff-shape contract).
+- `specs/premath/contracts/CONTROL-PLANE-CONTRACT.json` (`runtimeRouteBindings`),
+- `specs/premath/contracts/DOCTRINE-OP-REGISTRY.json` (operation-node bindings),
+- `specs/premath/raw/HARNESS-RUNTIME.md` (required handoff-shape contract).
+
+Canonical semantic authority lane:
+
+- `premath runtime-orchestration-check`
+  (`cargo run --package premath-cli -- runtime-orchestration-check ... --json`).
 
 Checks include:
 
@@ -399,12 +498,25 @@ Checks include:
 - routed operation path boundary enforcement (`tools/ci/*`),
 - required Harness/Squeak handoff-section shape markers in runtime contract,
 - optional `controlPlaneKcirMappings` row-shape validation when mapping rows are
-  provided.
+  provided,
+- world-route checks delegated to the core command lane
+  (`premath world-registry-check`) rather than duplicated semantic lanes.
 
-Run:
+Run (core command):
 
 ```bash
-python3 tools/conformance/check_runtime_orchestration.py
+cargo run --package premath-cli -- runtime-orchestration-check \
+  --control-plane-contract specs/premath/contracts/CONTROL-PLANE-CONTRACT.json \
+  --doctrine-op-registry specs/premath/contracts/DOCTRINE-OP-REGISTRY.json \
+  --harness-runtime specs/premath/raw/HARNESS-RUNTIME.md \
+  --doctrine-site-input specs/premath/contracts/DOCTRINE-SITE-INPUT.json \
+  --json
+```
+
+Run vectors (golden/adversarial/invariance):
+
+```bash
+python3 tools/conformance/run_runtime_orchestration_vectors.py
 ```
 
 ## `run_doctrine_inf_vectors.py`
@@ -419,6 +531,8 @@ Checks include deterministic reject/accept behavior for:
 - edge morphisms outside destination `preserved` declarations,
 - edge morphisms explicitly listed under destination `notPreserved`,
 - overlap violations between `preserved` and `notPreserved`,
+- route-consolidation closure through kernel world-route checks
+  (`premath doctrine-inf-check` -> `world_route_*` fail-closed classes),
 - claim-gated governance-profile (`profile.doctrine_inf_governance.v0`) checks
   for policy provenance pinning + digest mismatch, guardrail stage
   presence/order, eval gate threshold success, eval lineage evidence fields,
@@ -426,7 +540,7 @@ Checks include deterministic reject/accept behavior for:
   declaration requirements (retry/escalation/rollback).
 
 Governance claimed vectors are repository-claim-gated via
-`specs/premath/draft/CAPABILITY-REGISTRY.json` `profileOverlayClaims`.
+`specs/premath/contracts/CAPABILITY-REGISTRY.json` `profileOverlayClaims`.
 When the repository does not claim `profile.doctrine_inf_governance.v0`, vectors
 with `governanceProfile.claimed=true` are skipped unless
 `--ignore-repo-claims` is set.

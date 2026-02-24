@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.sigpi_stepping",
+  "vectors": [
+    "golden/sigpi_total_digest_coherence",
+    "adversarial/sigpi_requires_claim",
+    "invariance/same_sigpi_stepping_local_profile",
+    "invariance/same_sigpi_stepping_external_profile"
+  ]
+}

@@ -13,7 +13,7 @@ import check_doctrine_mcp_parity as parity
 
 ROOT = Path(__file__).resolve().parents[2]
 MCP_SOURCE = ROOT / "crates" / "premath-cli" / "src" / "commands" / "mcp_serve.rs"
-REGISTRY_PATH = ROOT / "specs" / "premath" / "draft" / "DOCTRINE-OP-REGISTRY.json"
+REGISTRY_PATH = ROOT / "specs" / "premath" / "contracts" / "DOCTRINE-OP-REGISTRY.json"
 
 
 class DoctrineMcpParityTests(unittest.TestCase):

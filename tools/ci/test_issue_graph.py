@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Integration tests for issue-graph CI wrapper delegation."""
+"""Integration tests for issue-graph checker command surfaces."""
 
 from __future__ import annotations
 
@@ -21,11 +21,15 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def run_wrapper(issues_path: Path, note_warn_threshold: int = 2000) -> subprocess.CompletedProcess[str]:
-    script = repo_root() / "tools" / "ci" / "check_issue_graph.py"
     return subprocess.run(
         [
-            "python3",
-            str(script),
+            "cargo",
+            "run",
+            "--quiet",
+            "--package",
+            "premath-cli",
+            "--",
+            "issue-graph-check",
             "--repo-root",
             str(repo_root()),
             "--issues",
@@ -43,10 +47,14 @@ def run_wrapper(issues_path: Path, note_warn_threshold: int = 2000) -> subproces
 def run_compact_helper(
     issues_path: Path, mode: str = "check", json_output: bool = False
 ) -> subprocess.CompletedProcess[str]:
-    script = repo_root() / "tools" / "ci" / "compact_issue_graph.py"
     command = [
-        "python3",
-        str(script),
+        "cargo",
+        "run",
+        "--quiet",
+        "--package",
+        "premath-cli",
+        "--",
+        "issue-graph-compact",
         "--repo-root",
         str(repo_root()),
         "--issues",
@@ -68,7 +76,7 @@ def run_compact_helper(
 def active_issue_description() -> str:
     return (
         "Acceptance:\n- complete work\n\nVerification commands:\n"
-        "- `python3 tools/ci/check_issue_graph.py`\n"
+        "- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl`\n"
     )
 
 
@@ -163,6 +171,10 @@ class IssueGraphWrapperTests(unittest.TestCase):
             self.assertIn(
                 "issue_graph.compactness.closed_block_edge", completed.stdout
             )
+            self.assertIn(
+                "issue-graph-compact",
+                completed.stdout,
+            )
 
     def test_compactness_fails_on_transitive_redundant_blocks_edge(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:
@@ -218,6 +230,10 @@ class IssueGraphWrapperTests(unittest.TestCase):
                 "issue_graph.compactness.transitive_block_edge", completed.stdout
             )
             self.assertIn("bd-a -> bd-c", completed.stdout)
+            self.assertIn(
+                "issue-graph-compact",
+                completed.stdout,
+            )
 
     def test_compactness_accepts_non_redundant_blocks_chain(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:

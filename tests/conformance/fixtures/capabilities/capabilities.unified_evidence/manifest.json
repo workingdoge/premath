@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.unified_evidence",
+  "vectors": [
+    "golden/evidence_factoring_coherence",
+    "adversarial/evidence_requires_claim",
+    "invariance/same_unified_evidence_local_profile",
+    "invariance/same_unified_evidence_external_profile"
+  ]
+}
