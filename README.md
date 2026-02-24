@@ -4,6 +4,30 @@
 
 This repository bundle contains a coherent, backend-generic Premath spec set.
 
+## Why this exists
+
+Most agent/control stacks fail the same way: semantics, workflow policy, and
+runtime behavior drift into separate authority lanes. When that happens, systems
+become hard to audit, hard to replay, and easy to regress.
+
+Premath exists to make that drift explicit and reject it by default:
+
+1. one semantic authority lane (`kernel -> Gate -> witness`),
+2. one mutation-authority lane (instruction-linked, capability-scoped),
+3. deterministic evidence lineage across control-plane/runtime transitions.
+
+## What this repository is
+
+This repo is not just an app and not just a paper spec. It is a working bundle
+that combines:
+
+1. normative contracts (`specs/premath/draft/`),
+2. operational/runtime/control implementations (`crates/*`, `tools/*`),
+3. deterministic conformance/coherence closure gates (`tests/*`, `mise` tasks).
+
+In practice: you can read the contracts, run the command surfaces, and verify
+the same boundaries end-to-end in one workspace.
+
 Design goals:
 - **Maximum expressiveness**: semantic structure lives in the kernel (reindexing + descent) and optional extensions.
 - **Minimal encoding**: when interop is desired, normalization and equality reduce to deterministic *reference equality* (via `project_ref`) rather than large proof objects.
@@ -33,6 +57,31 @@ Design goals:
 - `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md` — typed instruction
   doctrine for LLM-driven control loops.
 - `specs/premath/draft/PREMATH-KERNEL.md` — definability kernel (contractible descent).
+
+## Newcomer flow (implicit)
+
+If you are new to the repo, use this order:
+
+1. `specs/premath/draft/SPEC-INDEX.md` section `0. North Star`
+2. `docs/design/ARCHITECTURE-MAP.md`
+3. `docs/design/DEVELOPMENT-META-LOOP.md`
+4. `docs/design/RALPH-PLAYBOOK-PREMATH.md`
+5. `docs/design/STEEL-REPL-DESCENT-CONTROL.md`
+
+First commands to orient:
+
+```bash
+cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json
+cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --graph-scope active --json
+cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json
+```
+
+Core mental model:
+
+1. Semantic authority is kernel/Gate/descent.
+2. Issue graph is work authority; projections are views.
+3. Mutation authority is instruction-linked and fail-closed.
+4. Session continuity is typed handoff artifacts, not transcript carryover.
 
 ## Conformance
 
