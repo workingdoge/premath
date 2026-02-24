@@ -50,13 +50,17 @@ Premath targets one self-hosted, fail-closed decision spine:
 
 Current phase (as of 2026-02-24):
 
-- KCIR self-hosting phase 3 (`bd-287`), focused on moving control-plane
-  execution toward premath-native surfaces while keeping wrappers
-  adapter-only.
+- KCIR self-hosting phase 3 closure completed (`bd-287` closed); control-plane
+  gate authority now executes through premath-native command surfaces with
+  wrappers remaining adapter-only.
 
 Active epic IDs:
 
-- `bd-287` (`open`): KCIR self-hosting phase 3.
+- none.
+
+Recently closed epic IDs:
+
+- `bd-287`: KCIR self-hosting phase 3.
 
 Phase-3 dependency spine (ordered):
 
@@ -67,7 +71,7 @@ Phase-3 dependency spine (ordered):
 - `bd-235`: local REPL lease-op parity boundary (gates `bd-291`; closed).
 - `bd-291`: implementation (closed).
 - `bd-292`: conformance (closed).
-- `bd-293`: docs/traceability closure (active).
+- `bd-293`: docs/traceability closure (closed).
 
 This section records stable phase milestones only; mutable execution status
 remains issue-memory authority (`premath issue ready|list|blocked`).
