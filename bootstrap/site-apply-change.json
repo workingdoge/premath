@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "changeKind": "premath.site_change.v1",
+  "changeId": "__computed__",
+  "concernId": "doctrine_site_topology",
+  "fromDigest": "f987e1bf0061cb405c4a745e739faae35e2a08555e3d96ca7f1102a815252844",
+  "toDigest": "__computed__",
+  "morphismKind": "vertical",
+  "mutations": [
+    {
+      "type": "addOperation",
+      "id": "op/site.apply_change",
+      "edgeId": "e.ci.op.site_apply_change",
+      "path": "crates/premath-cli/src/commands/site_apply.rs",
+      "kind": "operation",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ],
+      "operationClass": "route_bound",
+      "routeEligibility": {
+        "resolverEligible": true,
+        "worldRouteRequired": true,
+        "routeFamilyId": "route.site_change"
+      }
+    },
+    {
+      "type": "updateWorldRouteBinding",
+      "routeFamilyId": "route.site_change",
+      "operationIds": ["op/site.apply_change"],
+      "worldId": "world.site_change.v1",
+      "morphismRowId": "wm.control.site_change.mutation",
+      "requiredMorphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.commitment.attest"
+      ],
+      "failureClassUnbound": "world_route_unbound"
+    }
+  ],
+  "preservationClaims": [
+    "kernel_verdict_invariant",
+    "gate_class_invariant"
+  ]
+}

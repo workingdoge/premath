@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "sessionKind": "premath.harness.session.v1",
+  "sessionId": null,
+  "state": "idle",
+  "issueId": null,
+  "summary": null,
+  "nextStep": null,
+  "instructionRefs": [],
+  "witnessRefs": [],
+  "lineageRefs": [],
+  "startedAt": null,
+  "updatedAt": "2026-03-01T00:00:00Z",
+  "stoppedAt": null,
+  "issuesPath": ".premath/issues.jsonl",
+  "issuesSnapshotRef": null
+}

@@ -4,7 +4,7 @@ Instruction envelopes are JSON files consumed by `tools/ci/run_instruction.sh`.
 
 Doctrine contract:
 
-- `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
+- `specs/premath/archive/LLM-INSTRUCTION-DOCTRINE.md`
 
 Recommended filename shape:
 
@@ -33,7 +33,7 @@ Optional doctrine-typing fields:
   enforcement for MCP issue/dep writes).
 - `proposal` (object): optional inline LLM proposal payload (or legacy alias
   `llmProposal`) validated under
-  `specs/premath/draft/LLM-PROPOSAL-CHECKING.md`.
+  `specs/premath/archive/LLM-PROPOSAL-CHECKING.md`.
   - include `proposalKind`, `targetCtxRef`, `targetJudgment`, and `binding`
     (`normalizerId`, `policyDigest`) at minimum.
   - proposal binding MUST match top-level instruction `normalizerId` and
