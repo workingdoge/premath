@@ -1,5 +1,6 @@
 pub mod check;
 pub mod coherence_check;
+pub mod control_plane_gate;
 pub mod dep;
 pub mod harness_feature;
 pub mod harness_join_check;

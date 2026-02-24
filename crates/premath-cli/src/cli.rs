@@ -404,6 +404,28 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Evaluate governance promotion gate semantics through core command surface
+    GovernancePromotionCheck {
+        /// Governance gate input JSON path
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Evaluate KCIR mapping gate semantics through core command surface
+    KcirMappingCheck {
+        /// KCIR mapping gate input JSON path
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON

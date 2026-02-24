@@ -49,10 +49,12 @@ Additive control-plane overlays (only when needed):
   and authority split boundaries), plus canonical KCIR control-plane mapping
   fields under `controlPlaneKcirMappings` (instruction/proposal/coherence/
   doctrine-route/required-decision mappings, digest-lineage bindings, and
-  non-KCIR compatibility deprecation policy). Phase-3 transition rule:
-  evaluator/REPL host-action surfaces remain design-level compatibility
-  overlays until contract-bound mapping rows and doctrine-site routed-operation
-  bindings are explicit.
+  non-KCIR compatibility deprecation policy). Phase-3 authority boundary:
+  governance/KCIR mapping CI gates execute through premath core CLI
+  (`governance-promotion-check`, `kcir-mapping-check`) while wrappers remain
+  adapter-only transports; evaluator/REPL host-action surfaces remain
+  design-level compatibility overlays until a promoted non-overlay route is
+  contract-bound and doctrine-site routed.
 - `CAPABILITY-REGISTRY.json` — shared typed executable-capability +
   profile-overlay-claim registry, including capability-to-normative-doc claim
   bindings (`capabilityDocBindings`) consumed by conformance/docs/coherence

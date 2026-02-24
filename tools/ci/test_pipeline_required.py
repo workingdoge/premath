@@ -314,7 +314,31 @@ class PipelineRequiredTests(unittest.TestCase):
                         details="test",
                     ),
                 ):
-                    exit_code, history, escalation = pipeline_required.run_required_with_retry(root, policy)
+                    with patch("pipeline_required.governance_failure_classes", return_value=tuple()):
+                        with patch(
+                            "pipeline_required.evaluate_required_mapping",
+                            return_value=pipeline_required.MappingGateReport(
+                                profile_id="cp.kcir.mapping.v0",
+                                declared_rows=(
+                                    "instructionEnvelope",
+                                    "proposalPayload",
+                                    "coherenceObligations",
+                                    "coherenceCheckPayload",
+                                    "doctrineRouteBinding",
+                                    "requiredDecisionInput",
+                                ),
+                                checked_rows=(
+                                    "coherenceCheckPayload",
+                                    "requiredDecisionInput",
+                                    "coherenceObligations",
+                                    "doctrineRouteBinding",
+                                ),
+                                failure_classes=tuple(),
+                            ),
+                        ):
+                            exit_code, history, escalation = pipeline_required.run_required_with_retry(
+                                root, policy
+                            )
 
             self.assertEqual(exit_code, 1)
             self.assertIsNotNone(escalation)
@@ -414,21 +438,44 @@ class PipelineRequiredTests(unittest.TestCase):
                     return_value=tuple(),
                 ):
                     with patch(
-                        "pipeline_required.apply_terminal_escalation",
-                        return_value=EscalationResult(
-                            action="mark_blocked",
-                            outcome="applied",
-                            issue_id="bd-190",
-                            created_issue_id=None,
-                            note_digest="note1_test",
-                            witness_ref="artifacts/ciwitness/latest-required.json",
-                            details="kcir mapping gate unmet",
+                        "pipeline_required.evaluate_required_mapping",
+                        return_value=pipeline_required.MappingGateReport(
+                            profile_id="cp.kcir.mapping.v0",
+                            declared_rows=(
+                                "instructionEnvelope",
+                                "proposalPayload",
+                                "coherenceObligations",
+                                "coherenceCheckPayload",
+                                "doctrineRouteBinding",
+                                "requiredDecisionInput",
+                            ),
+                            checked_rows=(
+                                "coherenceCheckPayload",
+                                "requiredDecisionInput",
+                                "coherenceObligations",
+                                "doctrineRouteBinding",
+                            ),
+                            failure_classes=(
+                                "kcir_mapping_legacy_encoding_authority_violation",
+                            ),
                         ),
                     ):
-                        exit_code, history, escalation = pipeline_required.run_required_with_retry(
-                            root,
-                            policy,
-                        )
+                        with patch(
+                            "pipeline_required.apply_terminal_escalation",
+                            return_value=EscalationResult(
+                                action="mark_blocked",
+                                outcome="applied",
+                                issue_id="bd-190",
+                                created_issue_id=None,
+                                note_digest="note1_test",
+                                witness_ref="artifacts/ciwitness/latest-required.json",
+                                details="kcir mapping gate unmet",
+                            ),
+                        ):
+                            exit_code, history, escalation = pipeline_required.run_required_with_retry(
+                                root,
+                                policy,
+                            )
 
             self.assertEqual(exit_code, 1)
             self.assertIsNotNone(escalation)

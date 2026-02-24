@@ -430,6 +430,28 @@ def _base_payload() -> dict:
                     ]
                 ],
             },
+            "governancePromotionCheck": {
+                "canonicalEntrypoint": [
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "governance-promotion-check",
+                ],
+                "compatibilityAliases": [],
+            },
+            "kcirMappingCheck": {
+                "canonicalEntrypoint": [
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "kcir-mapping-check",
+                ],
+                "compatibilityAliases": [],
+            },
             "failureClasses": {
                 "unbound": "control_plane_command_surface_unbound",
             },
@@ -639,6 +661,28 @@ class ControlPlaneContractTests(unittest.TestCase):
         self.assertEqual(
             loaded["commandSurface"]["instructionDecision"]["compatibilityAliases"],
             [["sh", "tools/ci/run_instruction.sh"]],
+        )
+        self.assertEqual(
+            loaded["commandSurface"]["governancePromotionCheck"]["canonicalEntrypoint"],
+            [
+                "cargo",
+                "run",
+                "--package",
+                "premath-cli",
+                "--",
+                "governance-promotion-check",
+            ],
+        )
+        self.assertEqual(
+            loaded["commandSurface"]["kcirMappingCheck"]["canonicalEntrypoint"],
+            [
+                "cargo",
+                "run",
+                "--package",
+                "premath-cli",
+                "--",
+                "kcir-mapping-check",
+            ],
         )
         self.assertEqual(
             loaded["pipelineWrapperSurface"]["requiredPipelineEntrypoint"],

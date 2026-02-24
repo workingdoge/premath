@@ -93,6 +93,8 @@ _REQUIRED_COMMAND_SURFACE_IDS = (
     "requiredDecision",
     "instructionEnvelopeCheck",
     "instructionDecision",
+    "governancePromotionCheck",
+    "kcirMappingCheck",
 )
 _REQUIRED_COMMAND_SURFACE_FAILURE_CLASS_KEYS = ("unbound",)
 _REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS = ("governance", "kcirMapping")
@@ -2390,6 +2392,28 @@ INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT: Tuple[str, ...] = tuple(
 INSTRUCTION_DECISION_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
     tuple(alias)
     for alias in CONTROL_PLANE_COMMAND_SURFACE.get("instructionDecision", {}).get(
+        "compatibilityAliases", ()
+    )
+)
+GOVERNANCE_PROMOTION_CHECK_CANONICAL_ENTRYPOINT: Tuple[str, ...] = tuple(
+    CONTROL_PLANE_COMMAND_SURFACE.get("governancePromotionCheck", {}).get(
+        "canonicalEntrypoint", ()
+    )
+)
+GOVERNANCE_PROMOTION_CHECK_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
+    tuple(alias)
+    for alias in CONTROL_PLANE_COMMAND_SURFACE.get(
+        "governancePromotionCheck", {}
+    ).get("compatibilityAliases", ())
+)
+KCIR_MAPPING_CHECK_CANONICAL_ENTRYPOINT: Tuple[str, ...] = tuple(
+    CONTROL_PLANE_COMMAND_SURFACE.get("kcirMappingCheck", {}).get(
+        "canonicalEntrypoint", ()
+    )
+)
+KCIR_MAPPING_CHECK_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
+    tuple(alias)
+    for alias in CONTROL_PLANE_COMMAND_SURFACE.get("kcirMappingCheck", {}).get(
         "compatibilityAliases", ()
     )
 )

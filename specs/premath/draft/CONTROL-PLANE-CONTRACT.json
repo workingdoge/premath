@@ -351,6 +351,28 @@
         ]
       ]
     },
+    "governancePromotionCheck": {
+      "canonicalEntrypoint": [
+        "cargo",
+        "run",
+        "--package",
+        "premath-cli",
+        "--",
+        "governance-promotion-check"
+      ],
+      "compatibilityAliases": []
+    },
+    "kcirMappingCheck": {
+      "canonicalEntrypoint": [
+        "cargo",
+        "run",
+        "--package",
+        "premath-cli",
+        "--",
+        "kcir-mapping-check"
+      ],
+      "compatibilityAliases": []
+    },
     "failureClasses": {
       "unbound": "control_plane_command_surface_unbound"
     }

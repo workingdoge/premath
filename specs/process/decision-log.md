@@ -3636,3 +3636,36 @@ sufficient for this boundary.
   bypass and mapping-row drift.
 - Doctrine/conformance gates retain one runtime checker entrypoint while
   carrying denser boundary evidence for KCIR phase-2 closure.
+
+---
+
+## 2026-02-24 — Decision 0119: Complete phase-3 gate authority migration and synchronize docs/traceability surfaces
+
+### Decision
+Complete KCIR self-hosting phase-3 authority placement for CI gate execution:
+
+1. Canonical gate authority for governance promotion and KCIR mapping checks is
+   the premath core CLI command surface:
+   - `premath governance-promotion-check`
+   - `premath kcir-mapping-check`
+2. Python CI wrappers (`tools/ci/governance_gate.py`,
+   `tools/ci/kcir_mapping_gate.py`) are adapter-only transports and MUST NOT
+   re-introduce normative gate semantics.
+3. Runtime-orchestration + capability conformance suites include explicit
+   phase-3 command-surface vectors for these gate surfaces.
+4. Draft/doc index and traceability surfaces are synchronized to this authority
+   placement.
+
+### Rationale
+Phase-3 required removing remaining wrapper-local gate semantics and proving the
+new core-authority path with deterministic conformance evidence. Without this,
+the repository risked dual authority paths (core + wrapper logic drift).
+
+### Consequences
+- Wrapper surfaces remain orchestration-compatible while normative gate
+  semantics execute in one premath-native lane.
+- Runtime/conformance/docs now expose the same phase-3 gate boundary
+  (`governancePromotionCheck`/`kcirMappingCheck`) with deterministic failure
+  classes.
+- Phase-3 closure can proceed through docs/traceability completion without
+  stale transition-state language on gate authority placement.

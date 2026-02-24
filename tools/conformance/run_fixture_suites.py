@@ -229,6 +229,9 @@ SUITES: Tuple[Suite, ...] = (
             ROOT / "specs" / "premath" / "draft" / "CONTROL-PLANE-CONTRACT.json",
             ROOT / "specs" / "premath" / "draft" / "DOCTRINE-OP-REGISTRY.json",
             ROOT / "specs" / "premath" / "draft" / "HARNESS-RUNTIME.md",
+            ROOT / "crates" / "premath-cli" / "src" / "commands" / "control_plane_gate.rs",
+            ROOT / "tools" / "ci" / "governance_gate.py",
+            ROOT / "tools" / "ci" / "kcir_mapping_gate.py",
         ),
     ),
     Suite(

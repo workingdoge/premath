@@ -61,16 +61,16 @@ Active epic IDs:
 Phase-3 dependency spine (ordered):
 
 - `bd-288`: architecture contract (target-state vs transition-state; closed).
-- `bd-289`: spec/index glue.
-- `bd-234`: host-action mapping contract/checker binding (gates `bd-290`).
-- `bd-290`: control-plane parity.
-- `bd-235`: local REPL lease-op parity boundary (gates `bd-291`).
-- `bd-291`: implementation.
-- `bd-292`: conformance.
-- `bd-293`: docs/traceability closure.
+- `bd-289`: spec/index glue (closed).
+- `bd-234`: host-action mapping contract/checker binding (gates `bd-290`; closed).
+- `bd-290`: control-plane parity (closed).
+- `bd-235`: local REPL lease-op parity boundary (gates `bd-291`; closed).
+- `bd-291`: implementation (closed).
+- `bd-292`: conformance (closed).
+- `bd-293`: docs/traceability closure (active).
 
-Status values are intentionally not duplicated here beyond closed milestones;
-read live status from issue-memory authority (`premath issue ready|list|blocked`).
+This section records stable phase milestones only; mutable execution status
+remains issue-memory authority (`premath issue ready|list|blocked`).
 
 Active non-epic blocker:
 

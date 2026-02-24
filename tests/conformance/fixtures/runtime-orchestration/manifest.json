@@ -4,12 +4,16 @@
   "vectors": [
     "golden/required_routes_bound_accept",
     "golden/mapping_rows_bound_accept",
+    "golden/phase3_command_surface_bound_accept",
     "adversarial/route_missing_reject",
     "adversarial/morphism_drift_reject",
     "adversarial/handoff_contract_missing_reject",
     "adversarial/operation_path_outside_ci_reject",
     "adversarial/mapping_row_missing_reject",
+    "adversarial/phase3_command_surface_missing_reject",
     "invariance/required_routes_bound_permuted_local_accept",
-    "invariance/required_routes_bound_permuted_external_accept"
+    "invariance/required_routes_bound_permuted_external_accept",
+    "invariance/phase3_command_surface_permuted_local_accept",
+    "invariance/phase3_command_surface_permuted_external_accept"
   ]
 }

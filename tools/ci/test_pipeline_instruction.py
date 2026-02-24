@@ -334,13 +334,34 @@ class PipelineInstructionTests(unittest.TestCase):
                         details="test",
                     ),
                 ):
-                    exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
-                        root,
-                        root / "instructions" / "sample.json",
-                        "sample",
-                        policy,
-                        allow_failure=False,
-                    )
+                    with patch(
+                        "pipeline_instruction.evaluate_instruction_mapping",
+                        return_value=pipeline_instruction.MappingGateReport(
+                            profile_id="cp.kcir.mapping.v0",
+                            declared_rows=(
+                                "instructionEnvelope",
+                                "proposalPayload",
+                                "coherenceObligations",
+                                "coherenceCheckPayload",
+                                "doctrineRouteBinding",
+                                "requiredDecisionInput",
+                            ),
+                            checked_rows=(
+                                "instructionEnvelope",
+                                "coherenceObligations",
+                                "doctrineRouteBinding",
+                                "proposalPayload",
+                            ),
+                            failure_classes=tuple(),
+                        ),
+                    ):
+                        exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
+                            root,
+                            root / "instructions" / "sample.json",
+                            "sample",
+                            policy,
+                            allow_failure=False,
+                        )
 
             self.assertEqual(exit_code, 1)
             self.assertIsNotNone(escalation)
@@ -428,24 +449,47 @@ class PipelineInstructionTests(unittest.TestCase):
                     return_value=tuple(),
                 ):
                     with patch(
-                        "pipeline_instruction.apply_terminal_escalation",
-                        return_value=EscalationResult(
-                            action="mark_blocked",
-                            outcome="applied",
-                            issue_id="bd-190",
-                            created_issue_id=None,
-                            note_digest="note1_test",
-                            witness_ref="artifacts/ciwitness/sample.json",
-                            details="kcir mapping gate unmet",
+                        "pipeline_instruction.evaluate_instruction_mapping",
+                        return_value=pipeline_instruction.MappingGateReport(
+                            profile_id="cp.kcir.mapping.v0",
+                            declared_rows=(
+                                "instructionEnvelope",
+                                "proposalPayload",
+                                "coherenceObligations",
+                                "coherenceCheckPayload",
+                                "doctrineRouteBinding",
+                                "requiredDecisionInput",
+                            ),
+                            checked_rows=(
+                                "instructionEnvelope",
+                                "coherenceObligations",
+                                "doctrineRouteBinding",
+                                "proposalPayload",
+                            ),
+                            failure_classes=(
+                                "kcir_mapping_legacy_encoding_authority_violation",
+                            ),
                         ),
                     ):
-                        exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
-                            root,
-                            instruction_path,
-                            "sample",
-                            policy,
-                            allow_failure=False,
-                        )
+                        with patch(
+                            "pipeline_instruction.apply_terminal_escalation",
+                            return_value=EscalationResult(
+                                action="mark_blocked",
+                                outcome="applied",
+                                issue_id="bd-190",
+                                created_issue_id=None,
+                                note_digest="note1_test",
+                                witness_ref="artifacts/ciwitness/sample.json",
+                                details="kcir mapping gate unmet",
+                            ),
+                        ):
+                            exit_code, history, escalation = pipeline_instruction.run_instruction_with_retry(
+                                root,
+                                instruction_path,
+                                "sample",
+                                policy,
+                                allow_failure=False,
+                            )
 
             self.assertEqual(exit_code, 1)
             self.assertIsNotNone(escalation)

@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/pipeline_phase3_gate_adapter_core_cli_accept",
+  "description": "Phase-3 wrappers bind governance/KCIR gates to core CLI subcommands.",
+  "semanticScenarioId": "change_projection_phase3_gate_adapter_01",
+  "profile": "local",
+  "artifacts": {
+    "input": {
+      "kernelVerdict": "accepted",
+      "gateFailureClasses": []
+    },
+    "requiredGateHooks": {
+      "governance": "governance_failure_classes",
+      "kcirMapping": "evaluate_required_mapping"
+    },
+    "instructionGateHooks": {
+      "governance": "governance_failure_classes",
+      "kcirMapping": "evaluate_instruction_mapping"
+    },
+    "requiredCoreSubcommands": {
+      "governance": "governance-promotion-check",
+      "kcirMapping": "kcir-mapping-check"
+    },
+    "instructionCoreSubcommands": {
+      "governance": "governance-promotion-check",
+      "kcirMapping": "kcir-mapping-check"
+    }
+  }
+}

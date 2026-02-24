@@ -42,6 +42,9 @@ Authority rule:
 ### Control/CI and architecture composition
 
 - `ARCHITECTURE-MAP.md`: doctrine-to-operation map + active execution order.
+- Phase-3 authority boundary: governance/KCIR mapping CI gates are premath core
+  CLI surfaces (`governance-promotion-check`, `kcir-mapping-check`); Python CI
+  wrappers are adapter-only orchestration transports.
 - `CI-CLOSURE.md`: closure gate and change-projected entry minimization.
 - `CI-PROVIDER-BINDINGS.md`: provider bindings to canonical CI contract.
 - `EV-COHERENCE-OVERVIEW.md`: compact status snapshot for Unified Evidence

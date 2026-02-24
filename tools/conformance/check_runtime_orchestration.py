@@ -35,6 +35,24 @@ REQUIRED_KCIR_MAPPING_ROW_FIELDS = (
     "targetDomain",
     "targetKind",
 )
+REQUIRED_PHASE3_COMMAND_SURFACES: Dict[str, Tuple[str, ...]] = {
+    "governancePromotionCheck": (
+        "cargo",
+        "run",
+        "--package",
+        "premath-cli",
+        "--",
+        "governance-promotion-check",
+    ),
+    "kcirMappingCheck": (
+        "cargo",
+        "run",
+        "--package",
+        "premath-cli",
+        "--",
+        "kcir-mapping-check",
+    ),
+}
 
 
 def parse_args(root: Path) -> argparse.Namespace:
@@ -209,6 +227,59 @@ def _check_kcir_mapping_rows(control_plane_contract: Dict[str, Any]) -> Tuple[Li
     return errors, mapping_rows
 
 
+def _check_phase3_command_surfaces(
+    control_plane_contract: Dict[str, Any]
+) -> Tuple[List[str], List[Dict[str, Any]]]:
+    command_rows: List[Dict[str, Any]] = []
+    errors: List[str] = []
+
+    command_surface = control_plane_contract.get("commandSurface")
+    if command_surface is None:
+        return errors, command_rows
+    if not isinstance(command_surface, dict):
+        return ["commandSurface must be an object when provided"], command_rows
+
+    for surface_id, expected_tokens in REQUIRED_PHASE3_COMMAND_SURFACES.items():
+        row = command_surface.get(surface_id)
+        row_errors: List[str] = []
+        actual_tokens: List[str] = []
+        if not isinstance(row, dict):
+            row_errors.append("missing row")
+            status = "missing"
+        else:
+            canonical = row.get("canonicalEntrypoint")
+            if not isinstance(canonical, list) or not canonical:
+                row_errors.append("canonicalEntrypoint must be a non-empty list")
+            else:
+                for idx, token in enumerate(canonical):
+                    if not isinstance(token, str) or not token.strip():
+                        row_errors.append(
+                            f"canonicalEntrypoint[{idx}] must be a non-empty string"
+                        )
+                        continue
+                    actual_tokens.append(token.strip())
+                if not row_errors and tuple(actual_tokens) != expected_tokens:
+                    row_errors.append("canonicalEntrypoint mismatch")
+            status = "ok" if not row_errors else "invalid"
+
+        command_rows.append(
+            {
+                "surfaceId": surface_id,
+                "status": status,
+                "expectedEntrypoint": list(expected_tokens),
+                "actualEntrypoint": actual_tokens,
+                "errors": row_errors,
+            }
+        )
+        if row_errors:
+            errors.append(
+                "commandSurface."
+                f"{surface_id} invalid: {', '.join(row_errors)}"
+            )
+
+    return errors, command_rows
+
+
 def evaluate_runtime_orchestration(
     *,
     control_plane_contract: Dict[str, Any],
@@ -219,6 +290,7 @@ def evaluate_runtime_orchestration(
     failure_classes: set[str] = set()
     route_rows: List[Dict[str, Any]] = []
     mapping_rows: List[Dict[str, Any]] = []
+    command_rows: List[Dict[str, Any]] = []
 
     try:
         runtime_routes = _extract_runtime_routes(control_plane_contract)
@@ -243,6 +315,11 @@ def evaluate_runtime_orchestration(
     if mapping_errors:
         errors.extend(mapping_errors)
         failure_classes.add(FAILURE_CLASS_KCIR_MAPPING_CONTRACT_VIOLATION)
+
+    command_errors, command_rows = _check_phase3_command_surfaces(control_plane_contract)
+    if command_errors:
+        errors.extend(command_errors)
+        failure_classes.add(FAILURE_CLASS_CONTRACT_UNBOUND)
 
     for route_id in sorted(runtime_routes):
         route = runtime_routes[route_id]
@@ -307,10 +384,12 @@ def evaluate_runtime_orchestration(
             "requiredRoutes": len(runtime_routes),
             "checkedRoutes": len(route_rows),
             "checkedKcirMappingRows": len(mapping_rows),
+            "checkedPhase3CommandSurfaces": len(command_rows),
             "errors": len(errors),
         },
         "routes": route_rows,
         "kcirMappingRows": mapping_rows,
+        "phase3CommandSurfaces": command_rows,
         "errors": errors,
     }
 
@@ -337,9 +416,13 @@ def main() -> int:
             "summary": {
                 "requiredRoutes": 0,
                 "checkedRoutes": 0,
+                "checkedKcirMappingRows": 0,
+                "checkedPhase3CommandSurfaces": 0,
                 "errors": 1,
             },
             "routes": [],
+            "kcirMappingRows": [],
+            "phase3CommandSurfaces": [],
             "errors": [str(exc)],
         }
 

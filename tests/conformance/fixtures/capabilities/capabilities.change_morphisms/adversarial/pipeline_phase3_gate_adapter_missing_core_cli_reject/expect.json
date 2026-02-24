@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "control_plane_phase3_gate_adapter_mismatch"
+  ],
+  "assertions": [
+    "gate adapter drift rejects deterministically"
+  ]
+}

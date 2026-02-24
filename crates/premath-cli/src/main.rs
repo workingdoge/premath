@@ -192,6 +192,14 @@ fn main() {
             commands::required_decision_verify::run(input, json)
         }
 
+        Commands::GovernancePromotionCheck { input, json } => {
+            commands::control_plane_gate::run_governance(input, json)
+        }
+
+        Commands::KcirMappingCheck { input, json } => {
+            commands::control_plane_gate::run_kcir_mapping(input, json)
+        }
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
 
         Commands::Ref { command } => match command {
