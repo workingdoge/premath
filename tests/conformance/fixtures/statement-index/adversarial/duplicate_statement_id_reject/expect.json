@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "statement_index_duplicate_statement_id"
+  ],
+  "expectedStatementIds": [
+    "KERNEL.DEF.DUPLICATE.1",
+    "KERNEL.AX.EXAMPLE.1",
+    "KERNEL.REQ.EXAMPLE.1",
+    "KERNEL.REJ.EXAMPLE.1"
+  ]
+}

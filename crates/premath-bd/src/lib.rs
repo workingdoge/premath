@@ -27,6 +27,7 @@ pub mod issue;
 pub mod issue_graph;
 pub mod jsonl;
 pub mod memory;
+pub mod spec_ir;
 
 pub use atomic_store::{AtomicStoreMutationError, issue_lock_path, mutate_store_jsonl};
 pub use claim_next::{
@@ -47,3 +48,8 @@ pub use issue_graph::{
     IssueGraphFinding, IssueGraphSummary, WARNING_CLASS_NOTES_LARGE, check_issue_graph,
 };
 pub use memory::{DependencyGraphScope, MemoryStore, MemoryStoreError};
+pub use spec_ir::{
+    SPEC_IR_AUTHORITY_MODE, SPEC_IR_EDGE_KIND_STATEMENT_BINDING, SPEC_IR_ENTITY_KIND_STATEMENT,
+    SPEC_IR_PROJECTION_SCHEMA, SpecIrEdge, SpecIrEntity, SpecIrProjection, SpecIrProjectionError,
+    SpecIrSources, load_spec_ir_projection_from_paths, load_spec_ir_projection_from_values,
+};

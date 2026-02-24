@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "suiteId": "statement-bindings",
+  "vectorId": "adversarial/digest_drift_reject",
+  "statementIndex": {
+    "rows": [
+      {
+        "statementId": "KERNEL.AX.STABILITY_UNIT.1",
+        "digest": "digest-stability-unit-live"
+      }
+    ]
+  },
+  "bindingContract": {
+    "relationKinds": [
+      "operationalized_by"
+    ],
+    "requiredStatementIds": [
+      "KERNEL.AX.STABILITY_UNIT.1"
+    ],
+    "bindings": [
+      {
+        "statementId": "KERNEL.AX.STABILITY_UNIT.1",
+        "statementDigest": "digest-stability-unit-expected",
+        "relationKind": "operationalized_by",
+        "targetKind": "obligation",
+        "targetRef": "stability",
+        "required": true
+      }
+    ]
+  }
+}

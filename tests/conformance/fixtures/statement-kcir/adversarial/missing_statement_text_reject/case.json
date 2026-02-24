@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "suiteId": "statement-kcir",
+  "vectorId": "adversarial/missing_statement_text_reject",
+  "statementCore": {
+    "statementId": "KERNEL.AX.CONTRACTIBLE_DESCENT.1",
+    "docPath": "specs/premath/draft/PREMATH-KERNEL.md",
+    "anchor": "8coherenceaxiomcontractibledescent",
+    "stmtType": "Axiom",
+    "statementText": ""
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "suiteId": "statement-index",
+  "vectorId": "adversarial/duplicate_statement_id_reject",
+  "docPath": "specs/premath/draft/PREMATH-KERNEL.md",
+  "markdown": "## 1. Overview\n- [KERNEL.DEF.DUPLICATE.1] First definition row.\n- [KERNEL.DEF.DUPLICATE.1] Duplicate definition row.\n- [KERNEL.AX.EXAMPLE.1] Axiom row.\n- [KERNEL.REQ.EXAMPLE.1] Requirement row.\n- [KERNEL.REJ.EXAMPLE.1] Rejection row.\n"
+}

@@ -1,0 +1,8 @@
+{
+  "suiteId": "statement-kcir",
+  "vectors": [
+    "golden/basic_projection_accept",
+    "invariance/basic_projection_permuted_accept_external",
+    "adversarial/missing_statement_text_reject"
+  ]
+}
