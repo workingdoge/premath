@@ -1,0 +1,9 @@
+{
+  "suiteId": "statement-index",
+  "vectors": [
+    "golden/minimal_classes_accept",
+    "adversarial/duplicate_statement_id_reject",
+    "adversarial/missing_statement_rows_reject",
+    "adversarial/missing_required_class_reject"
+  ]
+}

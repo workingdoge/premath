@@ -1,0 +1,8 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "statement_binding_contract_violation",
+    "statement_binding_digest_drift"
+  ]
+}

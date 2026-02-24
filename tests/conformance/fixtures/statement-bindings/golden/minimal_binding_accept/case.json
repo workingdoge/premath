@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "suiteId": "statement-bindings",
+  "vectorId": "golden/minimal_binding_accept",
+  "statementIndex": {
+    "rows": [
+      {
+        "statementId": "KERNEL.AX.STABILITY_UNIT.1",
+        "digest": "digest-stability-unit"
+      },
+      {
+        "statementId": "KERNEL.DEF.DESCENT_OBJECT.1",
+        "digest": "digest-descent-object"
+      }
+    ]
+  },
+  "bindingContract": {
+    "relationKinds": [
+      "operationalized_by",
+      "verified_by"
+    ],
+    "requiredStatementIds": [
+      "KERNEL.AX.STABILITY_UNIT.1",
+      "KERNEL.DEF.DESCENT_OBJECT.1"
+    ],
+    "bindings": [
+      {
+        "statementId": "KERNEL.AX.STABILITY_UNIT.1",
+        "statementDigest": "digest-stability-unit",
+        "relationKind": "operationalized_by",
+        "targetKind": "obligation",
+        "targetRef": "stability",
+        "required": true
+      },
+      {
+        "statementId": "KERNEL.DEF.DESCENT_OBJECT.1",
+        "statementDigest": "digest-descent-object",
+        "relationKind": "verified_by",
+        "targetKind": "checker",
+        "targetRef": "tools/conformance/check_statement_index.py",
+        "required": true
+      }
+    ]
+  }
+}

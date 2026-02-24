@@ -1,0 +1,14 @@
+{
+  "schema": 1,
+  "suiteId": "statement-kcir",
+  "vectorId": "invariance/basic_projection_permuted_accept_external",
+  "semanticScenarioId": "statement-kcir-basic-projection",
+  "profile": "external",
+  "statementCore": {
+    "statementText": "Contractible descent is required for every cover.",
+    "stmtType": "Axiom",
+    "anchor": "8coherenceaxiomcontractibledescent",
+    "docPath": "specs/premath/draft/PREMATH-KERNEL.md",
+    "statementId": "KERNEL.AX.CONTRACTIBLE_DESCENT.1"
+  }
+}

@@ -50,23 +50,30 @@ Premath targets one self-hosted, fail-closed decision spine:
 
 Current phase (as of 2026-02-24):
 
-- KCIR self-hosting phase 3 (`bd-287`), focused on moving control-plane
-  execution toward premath-native surfaces while keeping wrappers
-  adapter-only.
+- KCIR self-hosting phase 3 closure is complete (`bd-287` closed), with active
+  follow-on closure for statement-ID/KCIR projection indexing (`bd-294`).
 
 Active epic IDs:
 
-- `bd-287` (`open`): KCIR self-hosting phase 3.
+- `bd-294`: Kernel Statement-ID + KCIR Projection Index v1.
 
-Active ordered task chain:
+Recently closed epic IDs:
 
-- `bd-288` (`closed`): architecture contract (target-state vs
-  transition-state).
-- `bd-289` (`open`, ready): spec/index glue.
-- `bd-290` (`open`, blocked by `bd-289`): control-plane parity.
-- `bd-291` (`open`, blocked by `bd-290`): implementation.
-- `bd-292` (`open`, blocked by `bd-291`): conformance.
-- `bd-293` (`open`, blocked by `bd-292`): docs/traceability closure.
+- `bd-287`: KCIR self-hosting phase 3.
+
+Phase-3 dependency spine (ordered):
+
+- `bd-288`: architecture contract (target-state vs transition-state; closed).
+- `bd-289`: spec/index glue (closed).
+- `bd-234`: host-action mapping contract/checker binding (gates `bd-290`; closed).
+- `bd-290`: control-plane parity (closed).
+- `bd-235`: local REPL lease-op parity boundary (gates `bd-291`; closed).
+- `bd-291`: implementation (closed).
+- `bd-292`: conformance (closed).
+- `bd-293`: docs/traceability closure (closed).
+
+This section records stable phase milestones only; mutable execution status
+remains issue-memory authority (`premath issue ready|list|blocked`).
 
 Active non-epic blocker:
 
@@ -214,6 +221,10 @@ Worker-operation doctrine-site routing note:
   (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
   `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
   `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
+- Phase-3 transition boundary: REPL/control overlays MUST treat
+  `issue.lease_renew` and `issue.lease_release` as MCP-only host actions until
+  a promoted non-MCP authority surface exists; hidden local fallback mutation
+  paths are forbidden.
 - Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
   `draft/HARNESS-TYPESTATE`, `draft/HARNESS-RETRY-ESCALATION`) MUST reuse the
   same routed operation IDs above and MUST NOT introduce parallel
@@ -236,6 +247,10 @@ Worker-operation doctrine-site routing note:
   authority transfer). Any acceptance/rejection consumed by runtime/control
   surfaces MUST remain checker/Gate-discharged and factor through Unified
   Evidence routing (`draft/UNIFICATION-DOCTRINE` §10 and §12).
+- Evaluator/REPL transition surfaces (for example `scheme_eval`-style
+  host-action loops) MUST remain compatibility/control overlays until they are
+  bound to contract rows and doctrine-site routed operation IDs. They MUST NOT
+  introduce unrouted mutation/session authority paths.
 
 ### 5.5 Informative and optional
 
@@ -252,6 +267,9 @@ explicitly claimed under §5.4 or §5.6.
   for repository control-plane surfaces (`draft/COHERENCE-CONTRACT.json`).
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
+- `draft/KERNEL-STATEMENT-BINDINGS.json` — typed projection-only statement
+  binding contract linking kernel statement IDs to obligations/checkers/vectors
+  (indexing/query/evidence support only; no semantic admissibility authority).
 - `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
   `boot/step/stop` and the shared harness surface map
   (`draft/HARNESS-RUNTIME` §1.1) used by typestate and retry/escalation
@@ -320,6 +338,8 @@ explicitly claimed under §5.4 or §5.6.
 - `raw/PREMATH-CI` — higher-order CI/CD control-loop contract (normative only
   when `capabilities.ci_witnesses` is claimed).
 - `raw/CI-TOPOS` — closure-style CI projection discipline (informational/raw).
+- `raw/BEAM-COORDINATION` — BEAM/OTP coordination + lease/sublease profile
+  bound to existing Premath authority/witness lanes (informational/raw).
 - `docs/foundations/` — explanatory notes (non-normative).
 
 Raw capability-spec lifecycle policy:

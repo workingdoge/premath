@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "suiteId": "statement-bindings",
+  "vectorId": "adversarial/missing_statement_reject",
+  "statementIndex": {
+    "rows": [
+      {
+        "statementId": "KERNEL.AX.STABILITY_UNIT.1",
+        "digest": "digest-stability-unit"
+      }
+    ]
+  },
+  "bindingContract": {
+    "relationKinds": [
+      "operationalized_by"
+    ],
+    "requiredStatementIds": [
+      "KERNEL.AX.CONTRACTIBLE_DESCENT.1"
+    ],
+    "bindings": [
+      {
+        "statementId": "KERNEL.AX.CONTRACTIBLE_DESCENT.1",
+        "statementDigest": "digest-contractible",
+        "relationKind": "operationalized_by",
+        "targetKind": "obligation",
+        "targetRef": "descent_contractible",
+        "required": true
+      }
+    ]
+  }
+}

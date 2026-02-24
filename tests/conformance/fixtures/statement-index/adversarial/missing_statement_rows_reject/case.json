@@ -1,0 +1,7 @@
+{
+  "schema": 1,
+  "suiteId": "statement-index",
+  "vectorId": "adversarial/missing_statement_rows_reject",
+  "docPath": "specs/premath/draft/PREMATH-KERNEL.md",
+  "markdown": "## 1. Overview\nNo statement identifiers are present in this vector.\n"
+}

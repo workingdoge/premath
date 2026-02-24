@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "statement_index_missing_statement_class"
+  ],
+  "expectedStatementIds": [
+    "KERNEL.DEF.EXAMPLE.1",
+    "KERNEL.AX.EXAMPLE.1",
+    "KERNEL.REQ.EXAMPLE.1"
+  ]
+}
