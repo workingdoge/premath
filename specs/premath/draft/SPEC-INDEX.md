@@ -58,15 +58,19 @@ Active epic IDs:
 
 - `bd-287` (`open`): KCIR self-hosting phase 3.
 
-Active ordered task chain:
+Phase-3 dependency spine (ordered):
 
-- `bd-288` (`closed`): architecture contract (target-state vs
-  transition-state).
-- `bd-289` (`open`, ready): spec/index glue.
-- `bd-290` (`open`, blocked by `bd-289`): control-plane parity.
-- `bd-291` (`open`, blocked by `bd-290`): implementation.
-- `bd-292` (`open`, blocked by `bd-291`): conformance.
-- `bd-293` (`open`, blocked by `bd-292`): docs/traceability closure.
+- `bd-288`: architecture contract (target-state vs transition-state; closed).
+- `bd-289`: spec/index glue.
+- `bd-234`: host-action mapping contract/checker binding (gates `bd-290`).
+- `bd-290`: control-plane parity.
+- `bd-235`: local REPL lease-op parity boundary (gates `bd-291`).
+- `bd-291`: implementation.
+- `bd-292`: conformance.
+- `bd-293`: docs/traceability closure.
+
+Status values are intentionally not duplicated here beyond closed milestones;
+read live status from issue-memory authority (`premath issue ready|list|blocked`).
 
 Active non-epic blocker:
 
@@ -236,6 +240,10 @@ Worker-operation doctrine-site routing note:
   authority transfer). Any acceptance/rejection consumed by runtime/control
   surfaces MUST remain checker/Gate-discharged and factor through Unified
   Evidence routing (`draft/UNIFICATION-DOCTRINE` §10 and §12).
+- Evaluator/REPL transition surfaces (for example `scheme_eval`-style
+  host-action loops) MUST remain compatibility/control overlays until they are
+  bound to contract rows and doctrine-site routed operation IDs. They MUST NOT
+  introduce unrouted mutation/session authority paths.
 
 ### 5.5 Informative and optional
 
