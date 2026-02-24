@@ -334,3 +334,87 @@ Evidence boundary:
 - benchmark output is control-plane operational evidence only,
 - it does not alter semantic authority, checker verdicts, or issue-memory
   mutation authority.
+
+## 14. REPL Host API v0 (Phase-3 Transition)
+
+This section defines a compact `scheme_eval`-style control surface for agent
+workers. It does not replace harness supervision.
+
+Boundary rules:
+
+- REPL is orchestration/planning only.
+- Host functions are the only effect/mutation path.
+- Mutation host calls remain instruction-linked and fail closed when authority
+  evidence is missing.
+- Direct shell/network access is denied by default for the evaluator runtime.
+
+### 14.1 Host call envelope
+
+Each host call should return one typed envelope:
+
+- `schema`: `premath.host_effect.v0`
+- `action`: canonical action id (for example `issue.claim`)
+- `argsDigest`: deterministic digest over canonicalized args
+- `resultClass`: deterministic success/failure class
+- `payload`: action-specific typed JSON payload
+- `witnessRefs`: ordered refs emitted/consumed by this effect
+- `policyDigest`: required for mutation-capable actions
+- `instructionRef`: required for mutation-capable actions
+
+### 14.2 Function families and current command mappings
+
+Read/query (no mutation authority):
+
+- `issue.list|ready|blocked|check` ->
+  `premath issue list|ready|blocked|check ... --json`
+- `dep.diagnostics` ->
+  `premath dep diagnostics ... --json`
+- `observe.latest|needs_attention|instruction|projection` ->
+  `premath observe ... --json`
+- `instruction.check` ->
+  `premath instruction-check ... --json`
+- `coherence.check` ->
+  `premath coherence-check ... --json`
+- `required.projection|delta|gate_ref|witness.verify|decision.verify` ->
+  `premath required-* ... --json`
+
+Mutation (instruction-linked authority required):
+
+- `issue.claim|update|discover|lease_renew|lease_release` ->
+  `premath issue ... --json`
+- `dep.add|remove|replace` ->
+  `premath dep ... --json`
+- `instruction.run` ->
+  `sh tools/ci/run_instruction.sh ...` or `mise run ci-instruction`
+- `harness.session.write` ->
+  `premath harness-session write ... --json`
+- `harness.feature.write` ->
+  `premath harness-feature write ... --json`
+- `harness.trajectory.append` ->
+  `premath harness-trajectory append ... --json`
+
+### 14.3 Harness integration shape
+
+Keep coordinator/worker loop unchanged:
+
+1. worker claims issue,
+2. worker executes one bounded REPL program via `scheme_eval`,
+3. program emits host-effect rows and optional harness trajectory refs,
+4. existing verify/close/escalate logic remains authoritative in harness.
+
+This preserves the current durability lanes:
+
+- `.premath/issues.jsonl`
+- `.premath/harness_session.json`
+- `.premath/harness_feature_ledger.json`
+- `.premath/harness_trajectory.jsonl`
+
+### 14.4 Migration posture
+
+Recommended sequence:
+
+1. implement read-only `scheme_eval`,
+2. prove deterministic replay/effect parity,
+3. add mutation host calls with instruction-linked gating,
+4. switch worker `work-cmd` to `scheme_eval`,
+5. keep verification gates unchanged until parity is proven.

@@ -63,6 +63,8 @@ Authority rule:
   and fail-closed runtime-gate design notes.
 - `RALPH-PLAYBOOK-PREMATH.md`: Ralph playbook execution-loop adaptation under
   premath issue/witness authority and fail-closed mutation gates.
+- `STEEL-REPL-DESCENT-CONTROL.md`: Scheme/Steel REPL control-surface design,
+  descent/sheaf execution shape, host API boundaries, and harness integration.
 - `CONTROL-PLANE-THREAT-MODEL.md`: threat/hardening matrix for control-plane
   mutation, witness, and projection surfaces.
 - `HIGHER-ORDER-CI-CD.md`: control-loop framing inside coding environment.

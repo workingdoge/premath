@@ -30,6 +30,47 @@ Runtime composition route (required boundary shape):
 - Harness/Squeak remain operational routing surfaces; admissibility remains
   destination checker/Gate-owned.
 
+### 1.1 Phase-3 target vs transition contract
+
+Target state (`bd-287`/phase 3):
+
+- one premath-native control surface for multi-step worker execution
+  (`scheme_eval`-style evaluator over capability-scoped host functions),
+- semantic authority remains kernel/Gate-only,
+- wrappers remain transport/compatibility adapters only.
+
+Transition state (current):
+
+- Python/CLI wrappers still orchestrate parts of required/instruction flows,
+- wrapper logic must stay adapter-only and must not become a second authority
+  lane,
+- migration is accepted only when witness lineage, failure classes, and policy
+  digests stay deterministic.
+
+REPL/Steel integration rule (agent-facing control, not authority):
+
+- REPL program execution may plan and sequence host calls, but host calls are
+  the only mutation path.
+- Host API remains capability-scoped and instruction-linked for mutations.
+- REPL runtime must default deny direct shell/network effects.
+- Each host call must emit deterministic effect rows with at least:
+  `action`, `argsDigest`, `resultClass`, `witnessRefs[]`, `policyDigest`
+  (when mutation-capable).
+
+Design companion:
+
+- `docs/design/STEEL-REPL-DESCENT-CONTROL.md`
+
+Host API v0 families (mapped to current premath surfaces):
+
+- issue/dependency mutation: `issue.claim|update|discover`,
+  `dep.add|remove|replace` -> `premath issue ...`, `premath dep ...`
+- observation/query: `issue.ready|blocked|list|check`, `observe.latest|
+  needs_attention|instruction|projection`, `dep.diagnostics`
+- doctrine/control: `instruction.check|run`, `coherence.check`, `required.*`
+- harness durability: `harness.session.read|write|bootstrap`,
+  `harness.trajectory.append|query`, `harness.feature.*`
+
 `CI/Control` (one layer, two roles):
 - `specs/premath/raw/PREMATH-CI.md`
 - `specs/premath/raw/CI-TOPOS.md`
