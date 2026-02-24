@@ -132,6 +132,10 @@ Fallback strategy:
 - if compaction is explicitly enabled, compaction outputs must be typed and
   checked before resuming mutation-capable turns.
 
+REPL-oriented execution companion:
+
+- `docs/design/STEEL-REPL-DESCENT-CONTROL.md`
+
 Conformance target:
 
 - add paired golden/adversarial vectors that assert descent-first continuity

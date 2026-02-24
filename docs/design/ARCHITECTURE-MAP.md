@@ -57,6 +57,10 @@ REPL/Steel integration rule (agent-facing control, not authority):
   `action`, `argsDigest`, `resultClass`, `witnessRefs[]`, `policyDigest`
   (when mutation-capable).
 
+Design companion:
+
+- `docs/design/STEEL-REPL-DESCENT-CONTROL.md`
+
 Host API v0 families (mapped to current premath surfaces):
 
 - issue/dependency mutation: `issue.claim|update|discover`,

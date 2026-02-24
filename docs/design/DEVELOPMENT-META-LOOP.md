@@ -31,6 +31,7 @@ Authority references:
 - `specs/premath/draft/PREMATH-COHERENCE.md`
 - `docs/design/MEMORY-LANES-CONTRACT.md`
 - `docs/design/RALPH-PLAYBOOK-PREMATH.md` (external loop adaptation)
+- `docs/design/STEEL-REPL-DESCENT-CONTROL.md` (REPL/descent control surface)
 
 ## 3. Canonical Work Order (per epic)
 
