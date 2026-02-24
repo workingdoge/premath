@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "statement_index_missing_statement_class",
+    "statement_index_missing_statement_rows"
+  ],
+  "expectedStatementIds": []
+}

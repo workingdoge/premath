@@ -15,6 +15,28 @@
           ]
         }
       }
+    },
+    "commandSurface": {
+      "governancePromotionCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "governance-promotion-check"
+        ]
+      },
+      "kcirMappingCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "kcir-mapping-check"
+        ]
+      }
     }
   },
   "doctrineOpRegistry": {

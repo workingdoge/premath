@@ -1,0 +1,8 @@
+{
+  "suiteId": "statement-bindings",
+  "vectors": [
+    "golden/minimal_binding_accept",
+    "adversarial/missing_statement_reject",
+    "adversarial/digest_drift_reject"
+  ]
+}

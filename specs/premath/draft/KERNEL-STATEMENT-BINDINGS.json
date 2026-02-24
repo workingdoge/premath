@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "contractKind": "premath.statement_binding.contract.v1",
+  "contractId": "kernel.statement.bindings.v1",
+  "relationKinds": [
+    "operationalized_by",
+    "verified_by",
+    "covered_by_vector"
+  ],
+  "requiredStatementIds": [
+    "KERNEL.AX.STABILITY_UNIT.1",
+    "KERNEL.AX.STABILITY_COMPOSITION.1",
+    "KERNEL.REQ.PULLBACK.1",
+    "KERNEL.REQ.LOCALITY.1",
+    "KERNEL.AX.CONTRACTIBLE_DESCENT.1",
+    "KERNEL.AX.GLUE_FIBER.1",
+    "KERNEL.AX.REFINEMENT_CLOSURE.1",
+    "KERNEL.REJ.NON_UNIQUE.1"
+  ],
+  "bindings": [
+    {
+      "statementId": "KERNEL.AX.STABILITY_UNIT.1",
+      "statementDigest": "e6ad739db8075df83c6b6f14d287b6d66b186befee9a2cac3c76e94384852dcd",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "stability",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.AX.STABILITY_COMPOSITION.1",
+      "statementDigest": "1b33487eba39e15ee14b8ddcb4eed383784dfddaf0835a5a0a37c85594409481",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "stability",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.REQ.PULLBACK.1",
+      "statementDigest": "734f43044e09cd9db08b3626e0c9f43c22765e415cdad82d211201f04825b585",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "locality",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.REQ.LOCALITY.1",
+      "statementDigest": "1a887b24809ca9465f0ba52d96fec8d5555e71e317009b82690d136ce339b086",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "locality",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.AX.CONTRACTIBLE_DESCENT.1",
+      "statementDigest": "f06f3078fe37d4627c0167b26f6f5d4a670d18e7d62ad204fb7ce848a4dc3f8f",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "descent_contractible",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.AX.GLUE_FIBER.1",
+      "statementDigest": "8d9e2575b0a19fa44c65dbc0c9456531169706a76a592c9fd9356e1bc73cbaa4",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "descent_contractible",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.AX.REFINEMENT_CLOSURE.1",
+      "statementDigest": "1dadc74b0dbf9cac3b3da7d20e1d355aa8abd5d531ee387210e8f9c8b46f2db4",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "descent_exists",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.REJ.NON_UNIQUE.1",
+      "statementDigest": "475f5f21312d26ba4ed2f95deeb0773f16cf22acf5b7b794acfd3fa684b29b8e",
+      "relationKind": "operationalized_by",
+      "targetKind": "obligation",
+      "targetRef": "ext_ambiguous",
+      "required": true
+    },
+    {
+      "statementId": "KERNEL.DEF.DESCENT_OBJECT.1",
+      "statementDigest": "59e9eab01731797e03c0a1d9541de0314cbe37598f0b4fb19496833387e42c7f",
+      "relationKind": "verified_by",
+      "targetKind": "checker",
+      "targetRef": "tools/conformance/check_statement_index.py",
+      "required": false
+    },
+    {
+      "statementId": "KERNEL.AX.CONTRACTIBLE_DESCENT.1",
+      "statementDigest": "f06f3078fe37d4627c0167b26f6f5d4a670d18e7d62ad204fb7ce848a4dc3f8f",
+      "relationKind": "covered_by_vector",
+      "targetKind": "vector",
+      "targetRef": "tests/conformance/fixtures/coherence-site/golden/glue_or_witness_glue_accept/case.json",
+      "required": false
+    }
+  ]
+}

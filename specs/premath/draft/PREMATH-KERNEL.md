@@ -30,6 +30,23 @@ The key words **MUST**, **MUST NOT**, **REQUIRED**, **SHALL**, **SHALL NOT**,
 specification are to be interpreted as described in RFC 2119 (and RFC 8174 for
 capitalization).
 
+## Statement IDs (normative indexing surface)
+
+Kernel clauses intended for machine binding SHOULD carry stable statement IDs.
+IDs are indexing metadata only and MUST NOT alter semantic meaning.
+
+ID form:
+
+- `KERNEL.DEF.*` for definitions.
+- `KERNEL.AX.*` for axioms/laws.
+- `KERNEL.REQ.*` for explicit requirements.
+- `KERNEL.REJ.*` for rejection criteria.
+
+Stability rule:
+
+- IDs SHOULD remain stable across wording-only edits.
+- IDs MUST change only when the indexed semantic claim changes.
+
 ## 1. Overview
 
 Premath is the kernel doctrine of definability: a notion is admissible exactly when it is
@@ -116,6 +133,9 @@ Premath is parameterized by an ambient “sameness level” \(\mathcal V\), e.g.
 Implementations MUST choose an ambient level \(\mathcal V\) and interpret sameness \(\approx\)
 as equivalence in \(\mathcal V\).
 
+- [KERNEL.REQ.AMBIENT.1] Implementations MUST choose an ambient level
+  \(\mathcal V\) and interpret sameness \(\approx\) as equivalence in
+  \(\mathcal V\).
 - In \(\mathbf{Set}\): \(\approx\) is equality.
 - In \(\mathbf{Gpd}/\mathbf{Cat}\): \(\approx\) is isomorphism.
 - In \(\mathcal S_\infty\): \(\approx\) is equivalence.
@@ -126,14 +146,17 @@ as equivalence in \(\mathcal V\).
 
 A Premath world MUST provide:
 
-1. **Contexts:** a category \(\mathcal C\) with objects \(\Gamma\) and morphisms
-   \(f:\Gamma'\to\Gamma\).
-2. **Covers:** a coverage / Grothendieck pretopology \(\mathrm{Cov}\).
+1. [KERNEL.DEF.CTX.1] **Contexts:** a category \(\mathcal C\) with objects
+   \(\Gamma\) and morphisms \(f:\Gamma'\to\Gamma\).
+2. [KERNEL.DEF.COV.1] **Covers:** a coverage / Grothendieck pretopology
+   \(\mathrm{Cov}\).
 
-A cover of \(\Gamma\) is a family \(U=\{u_i:\Gamma_i\to\Gamma\}\triangleright\Gamma\).
+- [KERNEL.DEF.COVER.1] A cover of \(\Gamma\) is a family
+  \(U=\{u_i:\Gamma_i\to\Gamma\}\triangleright\Gamma\).
 
-Implementations MUST make pullbacks of covering maps available so overlaps \(\Gamma_i\times_\Gamma\Gamma_j\)
-exist for descent checks.
+- [KERNEL.REQ.PULLBACK.1] Implementations MUST make pullbacks of covering maps
+  available so overlaps \(\Gamma_i\times_\Gamma\Gamma_j\) exist for descent
+  checks.
 
 ## 4. Indexed definables
 
@@ -145,42 +168,52 @@ A Premath world MUST provide an indexed assignment
 
 together with reindexing (pullback) maps \(f^*\) for each morphism \(f\).
 
-**Indexed coherence is REQUIRED:** \(\mathrm{Def}\) MUST be a pseudo/∞-functor appropriate to \(\mathcal V\).
-Reindexing coherence is structure, not optional.
+- [KERNEL.DEF.INDEXED.1] A Premath world MUST provide indexed assignment
+  \(\mathrm{Def}:\mathcal C^{op}\to\mathcal V\) with reindexing maps \(f^*\).
+- [KERNEL.REQ.INDEXED_COHERENCE.1] **Indexed coherence is REQUIRED:**
+  \(\mathrm{Def}\) MUST be a pseudo/∞-functor appropriate to \(\mathcal V\).
+  Reindexing coherence is structure, not optional.
 
 ## 5. Stability (reindexing coherence)
 
 For every morphism \(f:\Gamma'\to\Gamma\) and \(g:\Gamma''\to\Gamma'\), and every
 \(A\in\mathrm{Def}(\Gamma)\):
 
-- **Unit:** \((id_\Gamma)^*A \approx A\)
-- **Composition:** \((f\circ g)^*A \approx g^*(f^*A)\)
+- [KERNEL.AX.STABILITY_UNIT.1] **Unit:** \((id_\Gamma)^*A \approx A\)
+- [KERNEL.AX.STABILITY_COMPOSITION.1] **Composition:**
+  \((f\circ g)^*A \approx g^*(f^*A)\)
 
 with the standard coherence laws demanded by \(\mathcal V\).
 
 ## 6. Locality (restriction)
 
-For every cover \(U=\{u_i\}\triangleright\Gamma\), restrictions \(u_i^*A\) MUST exist.
+- [KERNEL.REQ.LOCALITY.1] For every cover
+  \(U=\{u_i\}\triangleright\Gamma\), restrictions \(u_i^*A\) MUST exist.
 
 ## 7. Descent data
 
-A descent datum over \(U\triangleright\Gamma\) consists of:
+- [KERNEL.DEF.DESCENT_DATUM.1] A descent datum over
+  \(U\triangleright\Gamma\) consists of:
 
 - local definables \(A_i\in\mathrm{Def}(\Gamma_i)\), and
 - overlap compatibilities \(\phi_{ij}:p_1^*A_i\approx p_2^*A_j\)
 
 satisfying cocycle coherence on triple overlaps (in the sense of \(\mathcal V\)).
 
-Let \(\mathrm{Desc}_U(\Gamma)\) denote the \(\mathcal V\)-object of descent data, and
-\(\mathrm{res}_U:\mathrm{Def}(\Gamma)\to\mathrm{Desc}_U(\Gamma)\) the restriction map.
+- [KERNEL.DEF.DESCENT_OBJECT.1] Let \(\mathrm{Desc}_U(\Gamma)\) denote the
+  \(\mathcal V\)-object of descent data, and
+  \(\mathrm{res}_U:\mathrm{Def}(\Gamma)\to\mathrm{Desc}_U(\Gamma)\) the
+  restriction map.
 
 ## 8. Coherence axiom: contractible descent
 
-**Contractible Descent is REQUIRED:** for every cover \(U\triangleright\Gamma\),
-\(\mathrm{res}_U\) MUST be an equivalence in \(\mathcal V\).
+- [KERNEL.AX.CONTRACTIBLE_DESCENT.1] **Contractible Descent is REQUIRED:** for
+  every cover \(U\triangleright\Gamma\), \(\mathrm{res}_U\) MUST be an
+  equivalence in \(\mathcal V\).
 
-Equivalently, for each datum \(d\in\mathrm{Desc}_U(\Gamma)\), the homotopy fiber
-\(\mathrm{Glue}(d):=\mathrm{fib}_d(\mathrm{res}_U)\) MUST be contractible.
+- [KERNEL.AX.GLUE_FIBER.1] Equivalently, for each datum
+  \(d\in\mathrm{Desc}_U(\Gamma)\), the homotopy fiber
+  \(\mathrm{Glue}(d):=\mathrm{fib}_d(\mathrm{res}_U)\) MUST be contractible.
 
 This axiom specializes as:
 
@@ -190,18 +223,20 @@ This axiom specializes as:
 
 ## 9. Refinement closure
 
-Let \(J\) be the Grothendieck topology generated by \(\mathrm{Cov}\).
-Premath descent MUST hold for all \(J\)-covers, not just generating families.
+- [KERNEL.AX.REFINEMENT_CLOSURE.1] Let \(J\) be the Grothendieck topology
+  generated by \(\mathrm{Cov}\). Premath descent MUST hold for all \(J\)-covers,
+  not just generating families.
 
 ## 10. Rejection criteria
 
 A notion is NOT Premath-admissible if it is:
 
-- non-stable (fails reindexing coherence),
-- non-local (cannot restrict to covers),
-- non-gluable (descent existence fails),
-- non-unique (glue-space non-contractible),
-- refinement-sensitive (meaning changes under refinement without \(\approx\)-identification).
+- [KERNEL.REJ.NON_STABLE.1] non-stable (fails reindexing coherence),
+- [KERNEL.REJ.NON_LOCAL.1] non-local (cannot restrict to covers),
+- [KERNEL.REJ.NON_GLUABLE.1] non-gluable (descent existence fails),
+- [KERNEL.REJ.NON_UNIQUE.1] non-unique (glue-space non-contractible),
+- [KERNEL.REJ.REFINEMENT_SENSITIVE.1] refinement-sensitive (meaning changes
+  under refinement without \(\approx\)-identification).
 
 ## 11. Doctrine Preservation Declaration (v0)
 

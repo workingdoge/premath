@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "result": "accepted",
+  "expectedFailureClasses": [],
+  "expectedStatementIds": [
+    "KERNEL.DEF.EXAMPLE.1",
+    "KERNEL.AX.EXAMPLE.1",
+    "KERNEL.REQ.EXAMPLE.1",
+    "KERNEL.REJ.EXAMPLE.1"
+  ]
+}
