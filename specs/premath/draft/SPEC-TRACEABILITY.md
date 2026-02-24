@@ -47,7 +47,8 @@ Purpose:
 | Draft spec | Primary executable surface | Status | Coverage target |
 | --- | --- | --- | --- |
 | `DOCTRINE-INF.md` | `mise run doctrine-check` (declaration-set + edge coherence + reachability + doctrine-inf semantic boundary vectors + claim-gated governance-profile vectors for policy provenance pin/mismatch, staged guardrails, eval gate + lineage evidence, observability/risk-tier policy, and self-evolution declaration bounds) | covered | - |
-| `PREMATH-KERNEL.md` | `python3 tools/conformance/run_kernel_profile_vectors.py`; `cargo test -p premath-kernel`; `mise run test-toy`; `mise run test-kcir-toy` | covered | - |
+| `PREMATH-KERNEL.md` | `python3 tools/conformance/run_kernel_profile_vectors.py`; `python3 tools/conformance/check_statement_index.py`; `python3 tools/conformance/run_statement_index_vectors.py`; `python3 tools/conformance/run_statement_kcir_vectors.py`; `cargo test -p premath-kernel`; `mise run test-toy`; `mise run test-kcir-toy` | covered | - |
+| `KERNEL-STATEMENT-BINDINGS.json` | `python3 tools/conformance/check_statement_bindings.py`; `python3 tools/conformance/run_statement_binding_vectors.py`; `python3 tools/conformance/check_statement_projection_lane.py`; `cargo test -p premath-bd` | covered | - |
 | `KCIR-CORE.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`kcir_domain_table_*`) | covered | - |
 | `REF-BINDING.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`ref_projection_and_verify_*`) | covered | - |
 | `NF.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`nf_*`) + `capabilities.normal_forms` + kernel tests | covered | - |

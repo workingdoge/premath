@@ -31,6 +31,9 @@ Additive control-plane overlays (only when needed):
   repository control-plane consistency.
 - `COHERENCE-CONTRACT.json` — machine contract artifact consumed by
   `premath coherence-check`.
+- `KERNEL-STATEMENT-BINDINGS.json` — projection-only statement binding contract
+  from kernel statement IDs to obligations/checkers/vectors (index/query lane;
+  not a semantic authority surface).
 - `HARNESS-RUNTIME.md` — promoted harness runtime contract for
   `boot/step/stop` plus the shared harness surface map used by typestate and
   retry/escalation contracts.

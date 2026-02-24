@@ -50,13 +50,12 @@ Premath targets one self-hosted, fail-closed decision spine:
 
 Current phase (as of 2026-02-24):
 
-- KCIR self-hosting phase 3 closure completed (`bd-287` closed); control-plane
-  gate authority now executes through premath-native command surfaces with
-  wrappers remaining adapter-only.
+- KCIR self-hosting phase 3 closure is complete (`bd-287` closed), with active
+  follow-on closure for statement-ID/KCIR projection indexing (`bd-294`).
 
 Active epic IDs:
 
-- none.
+- `bd-294`: Kernel Statement-ID + KCIR Projection Index v1.
 
 Recently closed epic IDs:
 
@@ -268,6 +267,9 @@ explicitly claimed under §5.4 or §5.6.
   for repository control-plane surfaces (`draft/COHERENCE-CONTRACT.json`).
 - `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
   deterministic checker execution.
+- `draft/KERNEL-STATEMENT-BINDINGS.json` — typed projection-only statement
+  binding contract linking kernel statement IDs to obligations/checkers/vectors
+  (indexing/query/evidence support only; no semantic admissibility authority).
 - `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
   `boot/step/stop` and the shared harness surface map
   (`draft/HARNESS-RUNTIME` §1.1) used by typestate and retry/escalation
@@ -336,6 +338,8 @@ explicitly claimed under §5.4 or §5.6.
 - `raw/PREMATH-CI` — higher-order CI/CD control-loop contract (normative only
   when `capabilities.ci_witnesses` is claimed).
 - `raw/CI-TOPOS` — closure-style CI projection discipline (informational/raw).
+- `raw/BEAM-COORDINATION` — BEAM/OTP coordination + lease/sublease profile
+  bound to existing Premath authority/witness lanes (informational/raw).
 - `docs/foundations/` — explanatory notes (non-normative).
 
 Raw capability-spec lifecycle policy:
