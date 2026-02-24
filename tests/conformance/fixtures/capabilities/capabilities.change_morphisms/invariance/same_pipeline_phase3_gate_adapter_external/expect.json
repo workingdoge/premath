@@ -3,6 +3,8 @@
   "status": "executable",
   "result": "accepted",
   "assertions": [
-    "external phase-3 adapter binding accepted"
+    "external phase-3 adapter binding accepted",
+    "kernel verdict matches paired profile",
+    "Gate failure classes match paired profile"
   ]
 }
