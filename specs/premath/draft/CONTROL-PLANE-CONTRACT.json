@@ -355,6 +355,164 @@
       "unbound": "control_plane_command_surface_unbound"
     }
   },
+  "hostActionSurface": {
+    "requiredActions": {
+      "issue.ready": {
+        "canonicalCli": "premath issue ready --issues <path> --json",
+        "mcpTool": "issue_ready"
+      },
+      "issue.list": {
+        "canonicalCli": "premath issue list --issues <path> --json",
+        "mcpTool": "issue_list"
+      },
+      "issue.blocked": {
+        "canonicalCli": "premath issue blocked --issues <path> --json",
+        "mcpTool": "issue_blocked"
+      },
+      "issue.check": {
+        "canonicalCli": "premath issue check --issues <path> --json",
+        "mcpTool": "issue_check"
+      },
+      "issue.backend_status": {
+        "canonicalCli": "premath issue backend-status --issues <path> --repo <repo> --projection <path> --json",
+        "mcpTool": "issue_backend_status"
+      },
+      "issue.claim": {
+        "canonicalCli": "premath issue claim <issue-id> --assignee <name> --issues <path> --json",
+        "mcpTool": "issue_claim"
+      },
+      "issue.lease_renew": {
+        "canonicalCli": null,
+        "mcpTool": "issue_lease_renew"
+      },
+      "issue.lease_release": {
+        "canonicalCli": null,
+        "mcpTool": "issue_lease_release"
+      },
+      "issue.update": {
+        "canonicalCli": "premath issue update <issue-id> --status <status> --issues <path> --json",
+        "mcpTool": "issue_update"
+      },
+      "issue.discover": {
+        "canonicalCli": "premath issue discover <parent-issue-id> <title> --issues <path> --json",
+        "mcpTool": "issue_discover"
+      },
+      "dep.add": {
+        "canonicalCli": "premath dep add <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json",
+        "mcpTool": "dep_add"
+      },
+      "dep.remove": {
+        "canonicalCli": "premath dep remove <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json",
+        "mcpTool": "dep_remove"
+      },
+      "dep.replace": {
+        "canonicalCli": "premath dep replace <issue-id> <depends-on-id> --from-type <dep-type> --to-type <dep-type> --issues <path> --json",
+        "mcpTool": "dep_replace"
+      },
+      "dep.diagnostics": {
+        "canonicalCli": "premath dep diagnostics --issues <path> --graph-scope <scope> --json",
+        "mcpTool": "dep_diagnostics"
+      },
+      "observe.latest": {
+        "canonicalCli": "premath observe --surface <path> --mode latest --json",
+        "mcpTool": "observe_latest"
+      },
+      "observe.needs_attention": {
+        "canonicalCli": "premath observe --surface <path> --mode needs_attention --json",
+        "mcpTool": "observe_needs_attention"
+      },
+      "observe.instruction": {
+        "canonicalCli": "premath observe --surface <path> --mode instruction --instruction-id <id> --json",
+        "mcpTool": "observe_instruction"
+      },
+      "observe.projection": {
+        "canonicalCli": "premath observe --surface <path> --mode projection --projection-digest <digest> --json",
+        "mcpTool": "observe_projection"
+      },
+      "instruction.check": {
+        "canonicalCli": "premath instruction-check --instruction <path> --repo-root <repo> --json",
+        "mcpTool": "instruction_check"
+      },
+      "instruction.run": {
+        "canonicalCli": "mise run ci-pipeline-instruction",
+        "mcpTool": "instruction_run"
+      },
+      "coherence.check": {
+        "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
+        "mcpTool": null
+      },
+      "required.projection": {
+        "canonicalCli": "premath required-projection --input <path> --json",
+        "mcpTool": null
+      },
+      "required.delta": {
+        "canonicalCli": "premath required-delta --input <path> --json",
+        "mcpTool": null
+      },
+      "required.gate_ref": {
+        "canonicalCli": "premath required-gate-ref --input <path> --json",
+        "mcpTool": null
+      },
+      "required.witness": {
+        "canonicalCli": "premath required-witness --runtime <path> --json",
+        "mcpTool": null
+      },
+      "required.witness_verify": {
+        "canonicalCli": "premath required-witness-verify --input <path> --json",
+        "mcpTool": null
+      },
+      "required.witness_decide": {
+        "canonicalCli": "premath required-witness-decide --input <path> --json",
+        "mcpTool": null
+      },
+      "required.decision_verify": {
+        "canonicalCli": "premath required-decision-verify --input <path> --json",
+        "mcpTool": null
+      },
+      "harness.session.read": {
+        "canonicalCli": "premath harness-session read --path <path> --json",
+        "mcpTool": null
+      },
+      "harness.session.write": {
+        "canonicalCli": "premath harness-session write --path <path> ... --json",
+        "mcpTool": null
+      },
+      "harness.session.bootstrap": {
+        "canonicalCli": "premath harness-session bootstrap --path <path> --feature-ledger <path> --json",
+        "mcpTool": null
+      },
+      "harness.feature.read": {
+        "canonicalCli": "premath harness-feature read --path <path> --json",
+        "mcpTool": null
+      },
+      "harness.feature.write": {
+        "canonicalCli": "premath harness-feature write --path <path> ... --json",
+        "mcpTool": null
+      },
+      "harness.feature.check": {
+        "canonicalCli": "premath harness-feature check --path <path> [--require-closure] --json",
+        "mcpTool": null
+      },
+      "harness.feature.next": {
+        "canonicalCli": "premath harness-feature next --path <path> --json",
+        "mcpTool": null
+      },
+      "harness.trajectory.append": {
+        "canonicalCli": "premath harness-trajectory append --path <path> ... --json",
+        "mcpTool": null
+      },
+      "harness.trajectory.query": {
+        "canonicalCli": "premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json",
+        "mcpTool": null
+      }
+    },
+    "failureClasses": {
+      "unregisteredHostId": "control_plane_host_action_unregistered",
+      "bindingMismatch": "control_plane_host_action_binding_mismatch",
+      "duplicateBinding": "control_plane_host_action_duplicate_binding",
+      "contractUnbound": "control_plane_host_action_contract_unbound"
+    }
+  },
   "harnessRetry": {
     "policyKind": "ci.harness.retry.policy.v1",
     "policyPath": "policies/control/harness-retry-policy-v1.json",

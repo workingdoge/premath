@@ -434,6 +434,32 @@ def _base_payload() -> dict:
                 "unbound": "control_plane_command_surface_unbound",
             },
         },
+        "hostActionSurface": {
+            "requiredActions": {
+                "issue.ready": {
+                    "canonicalCli": "premath issue ready --issues <path> --json",
+                    "mcpTool": "issue_ready",
+                },
+                "issue.claim": {
+                    "canonicalCli": "premath issue claim <issue-id> --assignee <name> --issues <path> --json",
+                    "mcpTool": "issue_claim",
+                },
+                "coherence.check": {
+                    "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
+                    "mcpTool": None,
+                },
+                "issue.lease_renew": {
+                    "canonicalCli": None,
+                    "mcpTool": "issue_lease_renew",
+                },
+            },
+            "failureClasses": {
+                "unregisteredHostId": "control_plane_host_action_unregistered",
+                "bindingMismatch": "control_plane_host_action_binding_mismatch",
+                "duplicateBinding": "control_plane_host_action_duplicate_binding",
+                "contractUnbound": "control_plane_host_action_contract_unbound",
+            },
+        },
         "harnessRetry": {
             "policyKind": "ci.harness.retry.policy.v1",
             "policyPath": "policies/control/harness-retry-policy-v1.json",
@@ -577,6 +603,28 @@ class ControlPlaneContractTests(unittest.TestCase):
             [["sh", "tools/ci/run_instruction.sh"]],
         )
         self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.ready"][
+                "canonicalCli"
+            ],
+            "premath issue ready --issues <path> --json",
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+                "canonicalCli"
+            ],
+            None,
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+                "mcpTool"
+            ],
+            "issue_lease_renew",
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["failureClasses"]["duplicateBinding"],
+            "control_plane_host_action_duplicate_binding",
+        )
+        self.assertEqual(
             loaded["controlPlaneBundleProfile"]["profileId"],
             "cp.bundle.v0",
         )
@@ -651,6 +699,39 @@ class ControlPlaneContractTests(unittest.TestCase):
             ["python3", "tools/ci/run_instruction.py"]
         ]
         with self.assertRaisesRegex(ValueError, "must not include canonicalEntrypoint"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_with_no_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.ready"] = {
+            "canonicalCli": None,
+            "mcpTool": None,
+        }
+        with self.assertRaisesRegex(ValueError, "must bind at least one"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_duplicate_cli_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.list"] = {
+            "canonicalCli": "premath issue ready --issues <path> --json",
+            "mcpTool": "issue_list",
+        }
+        with self.assertRaisesRegex(ValueError, "canonicalCli binding is ambiguous"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_duplicate_mcp_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.list"] = {
+            "canonicalCli": "premath issue list --issues <path> --json",
+            "mcpTool": "issue_ready",
+        }
+        with self.assertRaisesRegex(ValueError, "mcpTool binding is ambiguous"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_failure_class_key_drift(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["failureClasses"].pop("contractUnbound")
+        with self.assertRaisesRegex(ValueError, "missing required keys"):
             self._load(payload)
 
     def test_load_rejects_control_plane_bundle_context_family_id_mismatch(self) -> None:

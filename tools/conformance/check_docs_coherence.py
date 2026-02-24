@@ -17,6 +17,14 @@ CAPABILITY_REGISTRY_KIND = "premath.capability_registry.v1"
 PROFILE_CLAIM_RE = re.compile(r"`(profile\.[a-z0-9_.]+)`")
 README_WORKSPACE_CRATE_RE = re.compile(r"`(crates/premath-[a-z0-9_-]+)`")
 TRACKED_ISSUE_RE = re.compile(r"tracked by issue\s+`?(bd-\d+)`?", re.IGNORECASE)
+STEEL_HOST_ACTION_SECTION_START = "### 5.1 Exact command/tool mapping (host id -> CLI/MCP)"
+STEEL_HOST_ACTION_SECTION_END = "## 6. Deterministic Effect Row Contract"
+HOST_ACTION_FAILURE_CLASS_KEYS: Tuple[str, ...] = (
+    "unregisteredHostId",
+    "bindingMismatch",
+    "duplicateBinding",
+    "contractUnbound",
+)
 
 
 SPEC_INDEX_RAW_LIFECYCLE_MARKERS: Tuple[str, ...] = (
@@ -463,6 +471,134 @@ def parse_control_plane_projection_checks(contract_path: Path) -> List[str]:
     return parsed
 
 
+def _parse_mapping_cell(
+    value: str, *, label: str, allow_na: bool
+) -> str | None:
+    trimmed = value.strip()
+    if allow_na and trimmed.lower() == "n/a":
+        return None
+    if not (trimmed.startswith("`") and trimmed.endswith("`")):
+        raise ValueError(f"{label} must be backtick-wrapped command/tool text or `n/a`")
+    inner = trimmed[1:-1].strip()
+    if not inner:
+        raise ValueError(f"{label} must not be empty")
+    return inner
+
+
+def parse_control_plane_host_action_contract(
+    contract_path: Path,
+) -> Dict[str, Tuple[str | None, str | None]]:
+    payload = json.loads(contract_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"{contract_path}: root must be an object")
+    if payload.get("schema") != 1:
+        raise ValueError(f"{contract_path}: schema must be 1")
+    if payload.get("contractKind") != "premath.control_plane.contract.v1":
+        raise ValueError(f"{contract_path}: contractKind mismatch")
+    host_action_surface = payload.get("hostActionSurface")
+    if not isinstance(host_action_surface, dict):
+        raise ValueError(f"{contract_path}: hostActionSurface must be an object")
+    required_actions = host_action_surface.get("requiredActions")
+    if not isinstance(required_actions, dict) or not required_actions:
+        raise ValueError(f"{contract_path}: hostActionSurface.requiredActions must be a non-empty object")
+    out: Dict[str, Tuple[str | None, str | None]] = {}
+    for host_action_id, row in sorted(required_actions.items()):
+        if not isinstance(host_action_id, str) or not host_action_id.strip():
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions key must be a non-empty string"
+            )
+        if not isinstance(row, dict):
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions.{host_action_id} must be an object"
+            )
+        canonical_cli = row.get("canonicalCli")
+        if canonical_cli is not None and (
+            not isinstance(canonical_cli, str) or not canonical_cli.strip()
+        ):
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions.{host_action_id}.canonicalCli must be a non-empty string or null"
+            )
+        mcp_tool = row.get("mcpTool")
+        if mcp_tool is not None and (
+            not isinstance(mcp_tool, str) or not mcp_tool.strip()
+        ):
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions.{host_action_id}.mcpTool must be a non-empty string or null"
+            )
+        if canonical_cli is None and mcp_tool is None:
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions.{host_action_id} must bind canonicalCli or mcpTool"
+            )
+        out[host_action_id.strip()] = (
+            canonical_cli.strip() if isinstance(canonical_cli, str) else None,
+            mcp_tool.strip() if isinstance(mcp_tool, str) else None,
+        )
+    failure_classes = host_action_surface.get("failureClasses")
+    if not isinstance(failure_classes, dict):
+        raise ValueError(f"{contract_path}: hostActionSurface.failureClasses must be an object")
+    missing_failure_keys = sorted(set(HOST_ACTION_FAILURE_CLASS_KEYS) - set(failure_classes))
+    if missing_failure_keys:
+        raise ValueError(
+            f"{contract_path}: hostActionSurface.failureClasses missing required keys: {missing_failure_keys}"
+        )
+    unknown_failure_keys = sorted(set(failure_classes) - set(HOST_ACTION_FAILURE_CLASS_KEYS))
+    if unknown_failure_keys:
+        raise ValueError(
+            f"{contract_path}: hostActionSurface.failureClasses includes unknown keys: {unknown_failure_keys}"
+        )
+    return out
+
+
+def parse_steel_host_action_mapping_table(
+    design_doc_path: Path,
+) -> Dict[str, Tuple[str | None, str | None]]:
+    text = load_text(design_doc_path)
+    section = extract_section_between(
+        text,
+        STEEL_HOST_ACTION_SECTION_START,
+        STEEL_HOST_ACTION_SECTION_END,
+    )
+    out: Dict[str, Tuple[str | None, str | None]] = {}
+    for line_number, line in enumerate(section.splitlines(), start=1):
+        line = line.strip()
+        if not line.startswith("|"):
+            continue
+        if "Host function id" in line or line.startswith("|---"):
+            continue
+        cells = [cell.strip() for cell in line.strip("|").split("|")]
+        if len(cells) != 3:
+            raise ValueError(
+                f"{design_doc_path}: malformed host-action table row at local line {line_number}"
+            )
+        host_id_raw, cli_raw, mcp_raw = cells
+        host_id = _parse_mapping_cell(
+            host_id_raw,
+            label=f"{design_doc_path}: host-action table host id (line {line_number})",
+            allow_na=False,
+        )
+        assert host_id is not None
+        if host_id in out:
+            raise ValueError(f"{design_doc_path}: duplicate host-action id in table: {host_id!r}")
+        cli = _parse_mapping_cell(
+            cli_raw,
+            label=f"{design_doc_path}: host-action table CLI surface for {host_id!r}",
+            allow_na=True,
+        )
+        mcp = _parse_mapping_cell(
+            mcp_raw,
+            label=f"{design_doc_path}: host-action table MCP tool for {host_id!r}",
+            allow_na=True,
+        )
+        if cli is None and mcp is None:
+            raise ValueError(
+                f"{design_doc_path}: host-action table row for {host_id!r} must bind CLI or MCP"
+            )
+        out[host_id] = (cli, mcp)
+    if not out:
+        raise ValueError(f"{design_doc_path}: host-action mapping table has no data rows")
+    return out
+
+
 def parse_control_plane_stage1_contract(contract_path: Path) -> Dict[str, Dict[str, object]]:
     payload = json.loads(contract_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
@@ -827,6 +963,7 @@ def main() -> int:
     pre_math_coherence = root / "specs" / "premath" / "draft" / "PREMATH-COHERENCE.md"
     capability_vectors = root / "specs" / "premath" / "draft" / "CAPABILITY-VECTORS.md"
     adjoints_profile = root / "specs" / "premath" / "profile" / "ADJOINTS-AND-SITES.md"
+    steel_repl_descent_control = root / "docs" / "design" / "STEEL-REPL-DESCENT-CONTROL.md"
     roadmap = root / "specs" / "premath" / "raw" / "ROADMAP.md"
     fixtures_root = root / "tests" / "conformance" / "fixtures" / "capabilities"
 
@@ -1016,7 +1153,31 @@ def main() -> int:
 
     projection_checks = parse_control_plane_projection_checks(control_plane_contract)
     projection_check_set = set(projection_checks)
+    contract_host_actions = parse_control_plane_host_action_contract(control_plane_contract)
+    docs_host_actions = parse_steel_host_action_mapping_table(steel_repl_descent_control)
     parse_control_plane_stage1_contract(control_plane_contract)
+    missing_host_actions_in_docs = sorted(
+        set(contract_host_actions) - set(docs_host_actions)
+    )
+    missing_host_actions_in_contract = sorted(
+        set(docs_host_actions) - set(contract_host_actions)
+    )
+    mismatched_host_action_bindings = sorted(
+        host_action_id
+        for host_action_id in set(contract_host_actions) & set(docs_host_actions)
+        if contract_host_actions[host_action_id] != docs_host_actions[host_action_id]
+    )
+    if (
+        missing_host_actions_in_docs
+        or missing_host_actions_in_contract
+        or mismatched_host_action_bindings
+    ):
+        errors.append(
+            "STEEL-REPL-DESCENT-CONTROL §5.1 host-action mapping mismatch with CONTROL-PLANE-CONTRACT hostActionSurface.requiredActions: "
+            f"missingInDocs={missing_host_actions_in_docs}, "
+            f"missingInContract={missing_host_actions_in_contract}, "
+            f"mismatched={mismatched_host_action_bindings}"
+        )
 
     ci_projection_section = extract_section_between(
         ci_closure_text,

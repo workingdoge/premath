@@ -121,20 +121,20 @@ Harness durability family:
 | `issue.check` | `premath issue check --issues <path> --json` | `issue_check` |
 | `issue.backend_status` | `premath issue backend-status --issues <path> --repo <repo> --projection <path> --json` | `issue_backend_status` |
 | `issue.claim` | `premath issue claim <issue-id> --assignee <name> --issues <path> --json` | `issue_claim` |
-| `issue.lease_renew` | n/a (CLI surface pending) | `issue_lease_renew` |
-| `issue.lease_release` | n/a (CLI surface pending) | `issue_lease_release` |
+| `issue.lease_renew` | n/a | `issue_lease_renew` |
+| `issue.lease_release` | n/a | `issue_lease_release` |
 | `issue.update` | `premath issue update <issue-id> --status <status> --issues <path> --json` | `issue_update` |
 | `issue.discover` | `premath issue discover <parent-issue-id> <title> --issues <path> --json` | `issue_discover` |
 | `dep.add` | `premath dep add <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json` | `dep_add` |
 | `dep.remove` | `premath dep remove <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json` | `dep_remove` |
 | `dep.replace` | `premath dep replace <issue-id> <depends-on-id> --from-type <dep-type> --to-type <dep-type> --issues <path> --json` | `dep_replace` |
-| `dep.diagnostics` | `premath dep diagnostics --issues <path> --graph-scope active|full --json` | `dep_diagnostics` |
+| `dep.diagnostics` | `premath dep diagnostics --issues <path> --graph-scope <scope> --json` | `dep_diagnostics` |
 | `observe.latest` | `premath observe --surface <path> --mode latest --json` | `observe_latest` |
 | `observe.needs_attention` | `premath observe --surface <path> --mode needs_attention --json` | `observe_needs_attention` |
 | `observe.instruction` | `premath observe --surface <path> --mode instruction --instruction-id <id> --json` | `observe_instruction` |
 | `observe.projection` | `premath observe --surface <path> --mode projection --projection-digest <digest> --json` | `observe_projection` |
 | `instruction.check` | `premath instruction-check --instruction <path> --repo-root <repo> --json` | `instruction_check` |
-| `instruction.run` | `mise run ci-pipeline-instruction` or `premath mcp-serve` instruction runner path | `instruction_run` |
+| `instruction.run` | `mise run ci-pipeline-instruction` | `instruction_run` |
 | `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a |
 | `required.projection` | `premath required-projection --input <path> --json` | n/a |
 | `required.delta` | `premath required-delta --input <path> --json` | n/a |
@@ -151,7 +151,7 @@ Harness durability family:
 | `harness.feature.check` | `premath harness-feature check --path <path> [--require-closure] --json` | n/a |
 | `harness.feature.next` | `premath harness-feature next --path <path> --json` | n/a |
 | `harness.trajectory.append` | `premath harness-trajectory append --path <path> ... --json` | n/a |
-| `harness.trajectory.query` | `premath harness-trajectory query --path <path> --mode latest|failed|retry-needed --limit <n> --json` | n/a |
+| `harness.trajectory.query` | `premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json` | n/a |
 
 ## 6. Deterministic Effect Row Contract
 

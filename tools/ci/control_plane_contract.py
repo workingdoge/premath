@@ -88,6 +88,14 @@ _REQUIRED_COMMAND_SURFACE_IDS = (
     "instructionDecision",
 )
 _REQUIRED_COMMAND_SURFACE_FAILURE_CLASS_KEYS = ("unbound",)
+_HOST_ACTION_ID_RE = re.compile(r"^[a-z][a-z0-9_.]*$")
+_HOST_ACTION_MCP_TOOL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+_REQUIRED_HOST_ACTION_SURFACE_FAILURE_CLASS_KEYS = (
+    "unregisteredHostId",
+    "bindingMismatch",
+    "duplicateBinding",
+    "contractUnbound",
+)
 _CONTROL_PLANE_BUNDLE_PROFILE_ID = "cp.bundle.v0"
 _CONTROL_PLANE_BUNDLE_CONTEXT_FAMILY_ID = "C_cp"
 _CONTROL_PLANE_BUNDLE_CONTEXT_KINDS = (
@@ -1199,6 +1207,125 @@ def _validate_command_surface(payload: Any) -> Dict[str, Any]:
     return parsed_surface
 
 
+def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
+    host_action_surface = _require_object(payload, "hostActionSurface")
+    required_actions = _require_object(
+        host_action_surface.get("requiredActions"),
+        "hostActionSurface.requiredActions",
+    )
+    if not required_actions:
+        raise ValueError("hostActionSurface.requiredActions must be a non-empty object")
+
+    parsed_actions: Dict[str, Dict[str, Optional[str]]] = {}
+    canonical_cli_bindings: Dict[str, str] = {}
+    mcp_tool_bindings: Dict[str, str] = {}
+    for host_action_id in sorted(required_actions):
+        host_action_id_norm = _require_non_empty_string(
+            host_action_id,
+            "hostActionSurface.requiredActions.<hostActionId>",
+        )
+        if _HOST_ACTION_ID_RE.fullmatch(host_action_id_norm) is None:
+            raise ValueError(
+                "hostActionSurface.requiredActions."
+                f"{host_action_id_norm} must use `<family>.<action>` id shape"
+            )
+        row = _require_object(
+            required_actions.get(host_action_id),
+            f"hostActionSurface.requiredActions.{host_action_id_norm}",
+        )
+        unknown_row_keys = sorted(set(row) - {"canonicalCli", "mcpTool"})
+        if unknown_row_keys:
+            raise ValueError(
+                "hostActionSurface.requiredActions."
+                f"{host_action_id_norm} includes unknown keys: "
+                + ", ".join(unknown_row_keys)
+            )
+        canonical_cli_raw = row.get("canonicalCli")
+        canonical_cli = (
+            _require_non_empty_string(
+                canonical_cli_raw,
+                f"hostActionSurface.requiredActions.{host_action_id_norm}.canonicalCli",
+            )
+            if canonical_cli_raw is not None
+            else None
+        )
+        mcp_tool_raw = row.get("mcpTool")
+        mcp_tool = (
+            _require_non_empty_string(
+                mcp_tool_raw,
+                f"hostActionSurface.requiredActions.{host_action_id_norm}.mcpTool",
+            )
+            if mcp_tool_raw is not None
+            else None
+        )
+        if mcp_tool is not None and _HOST_ACTION_MCP_TOOL_RE.fullmatch(mcp_tool) is None:
+            raise ValueError(
+                "hostActionSurface.requiredActions."
+                f"{host_action_id_norm}.mcpTool must be a snake_case tool id"
+            )
+        if canonical_cli is None and mcp_tool is None:
+            raise ValueError(
+                "hostActionSurface.requiredActions."
+                f"{host_action_id_norm} must bind at least one of canonicalCli or mcpTool"
+            )
+        if canonical_cli is not None:
+            bound_host = canonical_cli_bindings.get(canonical_cli)
+            if bound_host is not None and bound_host != host_action_id_norm:
+                raise ValueError(
+                    "hostActionSurface.requiredActions canonicalCli binding is ambiguous: "
+                    f"{canonical_cli!r} used by {bound_host!r} and {host_action_id_norm!r}"
+                )
+            canonical_cli_bindings[canonical_cli] = host_action_id_norm
+        if mcp_tool is not None:
+            bound_host = mcp_tool_bindings.get(mcp_tool)
+            if bound_host is not None and bound_host != host_action_id_norm:
+                raise ValueError(
+                    "hostActionSurface.requiredActions mcpTool binding is ambiguous: "
+                    f"{mcp_tool!r} used by {bound_host!r} and {host_action_id_norm!r}"
+                )
+            mcp_tool_bindings[mcp_tool] = host_action_id_norm
+
+        parsed_actions[host_action_id_norm] = {
+            "canonicalCli": canonical_cli,
+            "mcpTool": mcp_tool,
+        }
+
+    failure_classes = _require_object(
+        host_action_surface.get("failureClasses"),
+        "hostActionSurface.failureClasses",
+    )
+    missing_failure_class_keys = sorted(
+        set(_REQUIRED_HOST_ACTION_SURFACE_FAILURE_CLASS_KEYS) - set(failure_classes)
+    )
+    if missing_failure_class_keys:
+        raise ValueError(
+            "hostActionSurface.failureClasses missing required keys: "
+            + ", ".join(missing_failure_class_keys)
+        )
+    unknown_failure_class_keys = sorted(
+        set(failure_classes) - set(_REQUIRED_HOST_ACTION_SURFACE_FAILURE_CLASS_KEYS)
+    )
+    if unknown_failure_class_keys:
+        raise ValueError(
+            "hostActionSurface.failureClasses includes unknown keys: "
+            + ", ".join(unknown_failure_class_keys)
+        )
+    parsed_failure_classes = {
+        key: _require_non_empty_string(
+            failure_classes.get(key),
+            f"hostActionSurface.failureClasses.{key}",
+        )
+        for key in _REQUIRED_HOST_ACTION_SURFACE_FAILURE_CLASS_KEYS
+    }
+    if len(set(parsed_failure_classes.values())) != len(parsed_failure_classes):
+        raise ValueError("hostActionSurface.failureClasses must not contain duplicate values")
+
+    return {
+        "requiredActions": parsed_actions,
+        "failureClasses": parsed_failure_classes,
+    }
+
+
 def _validate_control_plane_bundle_profile(payload: Any) -> Dict[str, Any]:
     profile = _require_object(payload, "controlPlaneBundleProfile")
     profile_id = _require_non_empty_string(
@@ -1665,6 +1792,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         root.get("runtimeRouteBindings")
     )
     command_surface = _validate_command_surface(root.get("commandSurface"))
+    host_action_surface = _validate_host_action_surface(root.get("hostActionSurface"))
 
     harness_retry_obj = _require_object(
         root.get("harnessRetry"),
@@ -1830,6 +1958,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         "workerLaneAuthority": worker_lane_authority,
         "runtimeRouteBindings": runtime_route_bindings,
         "commandSurface": command_surface,
+        "hostActionSurface": host_action_surface,
         "harnessRetry": {
             "policyKind": harness_retry_policy_kind,
             "policyPath": harness_retry_policy_path,
@@ -2029,6 +2158,19 @@ INSTRUCTION_DECISION_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
 )
 CONTROL_PLANE_COMMAND_SURFACE_FAILURE_CLASS_UNBOUND: str = (
     CONTROL_PLANE_COMMAND_SURFACE.get("failureClasses", {}).get("unbound", "")
+)
+HOST_ACTION_SURFACE_REQUIRED_ACTIONS: Dict[str, Dict[str, Optional[str]]] = {
+    host_action_id: {
+        "canonicalCli": row.get("canonicalCli"),
+        "mcpTool": row.get("mcpTool"),
+    }
+    for host_action_id, row in _CONTRACT.get("hostActionSurface", {})
+    .get("requiredActions", {})
+    .items()
+    if isinstance(row, dict)
+}
+HOST_ACTION_SURFACE_FAILURE_CLASSES: Dict[str, str] = dict(
+    _CONTRACT.get("hostActionSurface", {}).get("failureClasses", {})
 )
 CONTROL_PLANE_BUNDLE_PROFILE: Dict[str, Any] = dict(
     _CONTRACT.get("controlPlaneBundleProfile", {})
