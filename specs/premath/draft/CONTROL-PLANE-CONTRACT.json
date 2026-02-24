@@ -532,6 +532,10 @@
         "mcpTool": null
       }
     },
+    "mcpOnlyHostActions": [
+      "issue.lease_renew",
+      "issue.lease_release"
+    ],
     "failureClasses": {
       "unregisteredHostId": "control_plane_host_action_unregistered",
       "bindingMismatch": "control_plane_host_action_binding_mismatch",

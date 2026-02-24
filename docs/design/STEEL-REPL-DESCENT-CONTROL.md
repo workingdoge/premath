@@ -40,6 +40,9 @@ Transport placement:
 - internal workers MAY call REPL directly,
 - external clients MAY use MCP as a thin transport wrapper (for example one
   `scheme_eval` tool).
+- phase-3 lease lifecycle operations (`issue.lease_renew`,
+  `issue.lease_release`) are MCP-only by contract and are not exposed as local
+  canonical CLI actions.
 
 ## 4. Sheaf/Descent Shape
 
@@ -153,6 +156,12 @@ Harness durability family:
 | `harness.trajectory.append` | `premath harness-trajectory append --path <path> ... --json` | n/a |
 | `harness.trajectory.query` | `premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json` | n/a |
 
+Phase-3 lease-op boundary:
+
+- `issue.lease_renew` and `issue.lease_release` are MCP-only host actions.
+- Option A local REPL runs that need explicit lease renew/release MUST escalate
+  to Option B transport for those actions (no hidden local fallback path).
+
 ## 6. Deterministic Effect Row Contract
 
 Every host call from REPL emits one host-effect envelope and binds it to one
@@ -216,7 +225,9 @@ Default REPL profile MUST:
 Option A: REPL-first local harness
 
 - worker loop invokes Steel directly,
-- no MCP in internal execution path.
+- no MCP in internal execution path for canonical CLI-backed host actions,
+- explicit lease lifecycle recovery (`issue.lease_renew`,
+  `issue.lease_release`) uses Option B transport in phase 3.
 
 Option B: thin MCP wrapper (recommended for interoperability)
 

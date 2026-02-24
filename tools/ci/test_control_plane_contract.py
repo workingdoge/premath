@@ -478,7 +478,15 @@ def _base_payload() -> dict:
                     "canonicalCli": None,
                     "mcpTool": "issue_lease_renew",
                 },
+                "issue.lease_release": {
+                    "canonicalCli": None,
+                    "mcpTool": "issue_lease_release",
+                },
             },
+            "mcpOnlyHostActions": [
+                "issue.lease_renew",
+                "issue.lease_release",
+            ],
             "failureClasses": {
                 "unregisteredHostId": "control_plane_host_action_unregistered",
                 "bindingMismatch": "control_plane_host_action_binding_mismatch",
@@ -668,6 +676,10 @@ class ControlPlaneContractTests(unittest.TestCase):
             "issue_lease_renew",
         )
         self.assertEqual(
+            loaded["hostActionSurface"]["mcpOnlyHostActions"],
+            ["issue.lease_renew", "issue.lease_release"],
+        )
+        self.assertEqual(
             loaded["hostActionSurface"]["failureClasses"]["duplicateBinding"],
             "control_plane_host_action_duplicate_binding",
         )
@@ -791,6 +803,20 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload = _base_payload()
         payload["hostActionSurface"]["failureClasses"].pop("contractUnbound")
         with self.assertRaisesRegex(ValueError, "missing required keys"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_mcp_only_set_drift(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["mcpOnlyHostActions"] = ["issue.lease_renew"]
+        with self.assertRaisesRegex(ValueError, "must match canonical set"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_mcp_only_cli_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+            "canonicalCli"
+        ] = "premath issue lease-renew <issue-id>"
+        with self.assertRaisesRegex(ValueError, "requires null canonicalCli"):
             self._load(payload)
 
     def test_load_rejects_control_plane_bundle_context_family_id_mismatch(self) -> None:

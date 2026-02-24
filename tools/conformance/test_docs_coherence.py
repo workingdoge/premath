@@ -166,11 +166,23 @@ members = [
                         "canonicalCli": "premath issue ready --issues <path> --json",
                         "mcpTool": "issue_ready",
                     },
+                    "issue.lease_renew": {
+                        "canonicalCli": None,
+                        "mcpTool": "issue_lease_renew",
+                    },
+                    "issue.lease_release": {
+                        "canonicalCli": None,
+                        "mcpTool": "issue_lease_release",
+                    },
                     "coherence.check": {
                         "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
                         "mcpTool": None,
                     },
                 },
+                "mcpOnlyHostActions": [
+                    "issue.lease_renew",
+                    "issue.lease_release",
+                ],
                 "failureClasses": {
                     "unregisteredHostId": "control_plane_host_action_unregistered",
                     "bindingMismatch": "control_plane_host_action_binding_mismatch",

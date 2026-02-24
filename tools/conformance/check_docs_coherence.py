@@ -25,6 +25,10 @@ HOST_ACTION_FAILURE_CLASS_KEYS: Tuple[str, ...] = (
     "duplicateBinding",
     "contractUnbound",
 )
+HOST_ACTION_MCP_ONLY_IDS: Tuple[str, ...] = (
+    "issue.lease_renew",
+    "issue.lease_release",
+)
 
 
 SPEC_INDEX_RAW_LIFECYCLE_MARKERS: Tuple[str, ...] = (
@@ -533,6 +537,40 @@ def parse_control_plane_host_action_contract(
             canonical_cli.strip() if isinstance(canonical_cli, str) else None,
             mcp_tool.strip() if isinstance(mcp_tool, str) else None,
         )
+    mcp_only_host_actions = host_action_surface.get("mcpOnlyHostActions")
+    if not isinstance(mcp_only_host_actions, list) or not mcp_only_host_actions:
+        raise ValueError(
+            f"{contract_path}: hostActionSurface.mcpOnlyHostActions must be a non-empty list"
+        )
+    parsed_mcp_only: List[str] = []
+    for idx, host_action_id in enumerate(mcp_only_host_actions):
+        if not isinstance(host_action_id, str) or not host_action_id.strip():
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.mcpOnlyHostActions[{idx}] must be a non-empty string"
+            )
+        parsed_mcp_only.append(host_action_id.strip())
+    if len(set(parsed_mcp_only)) != len(parsed_mcp_only):
+        raise ValueError(
+            f"{contract_path}: hostActionSurface.mcpOnlyHostActions must not contain duplicates"
+        )
+    if set(parsed_mcp_only) != set(HOST_ACTION_MCP_ONLY_IDS):
+        raise ValueError(
+            f"{contract_path}: hostActionSurface.mcpOnlyHostActions must match canonical set: {list(HOST_ACTION_MCP_ONLY_IDS)}"
+        )
+    for host_action_id in parsed_mcp_only:
+        row = out.get(host_action_id)
+        if row is None:
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.mcpOnlyHostActions references unknown action: {host_action_id!r}"
+            )
+        if row[0] is not None:
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.mcpOnlyHostActions action {host_action_id!r} must have canonicalCli=null"
+            )
+        if row[1] is None:
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.mcpOnlyHostActions action {host_action_id!r} must bind mcpTool"
+            )
     failure_classes = host_action_surface.get("failureClasses")
     if not isinstance(failure_classes, dict):
         raise ValueError(f"{contract_path}: hostActionSurface.failureClasses must be an object")

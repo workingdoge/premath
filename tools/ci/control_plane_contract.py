@@ -97,6 +97,10 @@ _REQUIRED_PIPELINE_WRAPPER_FAILURE_CLASS_KEYS = (
 )
 _HOST_ACTION_ID_RE = re.compile(r"^[a-z][a-z0-9_.]*$")
 _HOST_ACTION_MCP_TOOL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+_REQUIRED_HOST_ACTION_SURFACE_MCP_ONLY_ACTION_IDS = (
+    "issue.lease_renew",
+    "issue.lease_release",
+)
 _REQUIRED_HOST_ACTION_SURFACE_FAILURE_CLASS_KEYS = (
     "unregisteredHostId",
     "bindingMismatch",
@@ -1324,12 +1328,28 @@ def _validate_pipeline_wrapper_surface(payload: Any) -> Dict[str, Any]:
 
 def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
     host_action_surface = _require_object(payload, "hostActionSurface")
+    unknown_surface_keys = sorted(
+        set(host_action_surface) - {"requiredActions", "mcpOnlyHostActions", "failureClasses"}
+    )
+    if unknown_surface_keys:
+        raise ValueError(
+            "hostActionSurface includes unknown keys: " + ", ".join(unknown_surface_keys)
+        )
     required_actions = _require_object(
         host_action_surface.get("requiredActions"),
         "hostActionSurface.requiredActions",
     )
     if not required_actions:
         raise ValueError("hostActionSurface.requiredActions must be a non-empty object")
+    mcp_only_host_actions = _require_string_list(
+        host_action_surface.get("mcpOnlyHostActions"),
+        "hostActionSurface.mcpOnlyHostActions",
+    )
+    if set(mcp_only_host_actions) != set(_REQUIRED_HOST_ACTION_SURFACE_MCP_ONLY_ACTION_IDS):
+        raise ValueError(
+            "hostActionSurface.mcpOnlyHostActions must match canonical set: "
+            + ", ".join(_REQUIRED_HOST_ACTION_SURFACE_MCP_ONLY_ACTION_IDS)
+        )
 
     parsed_actions: Dict[str, Dict[str, Optional[str]]] = {}
     canonical_cli_bindings: Dict[str, str] = {}
@@ -1405,6 +1425,24 @@ def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
             "mcpTool": mcp_tool,
         }
 
+    for host_action_id in mcp_only_host_actions:
+        row = parsed_actions.get(host_action_id)
+        if row is None:
+            raise ValueError(
+                "hostActionSurface.mcpOnlyHostActions references unknown host action: "
+                f"{host_action_id!r}"
+            )
+        if row.get("canonicalCli") is not None:
+            raise ValueError(
+                "hostActionSurface.mcpOnlyHostActions requires null canonicalCli for "
+                f"{host_action_id!r}"
+            )
+        if row.get("mcpTool") is None:
+            raise ValueError(
+                "hostActionSurface.mcpOnlyHostActions requires mcpTool binding for "
+                f"{host_action_id!r}"
+            )
+
     failure_classes = _require_object(
         host_action_surface.get("failureClasses"),
         "hostActionSurface.failureClasses",
@@ -1437,6 +1475,7 @@ def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
 
     return {
         "requiredActions": parsed_actions,
+        "mcpOnlyHostActions": list(mcp_only_host_actions),
         "failureClasses": parsed_failure_classes,
     }
 
@@ -2312,6 +2351,9 @@ HOST_ACTION_SURFACE_REQUIRED_ACTIONS: Dict[str, Dict[str, Optional[str]]] = {
     .items()
     if isinstance(row, dict)
 }
+HOST_ACTION_SURFACE_MCP_ONLY_ACTIONS: Tuple[str, ...] = tuple(
+    _CONTRACT.get("hostActionSurface", {}).get("mcpOnlyHostActions", ())
+)
 HOST_ACTION_SURFACE_FAILURE_CLASSES: Dict[str, str] = dict(
     _CONTRACT.get("hostActionSurface", {}).get("failureClasses", {})
 )

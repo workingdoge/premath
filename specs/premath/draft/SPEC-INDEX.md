@@ -218,6 +218,10 @@ Worker-operation doctrine-site routing note:
   (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
   `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
   `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
+- Phase-3 transition boundary: REPL/control overlays MUST treat
+  `issue.lease_renew` and `issue.lease_release` as MCP-only host actions until
+  a promoted non-MCP authority surface exists; hidden local fallback mutation
+  paths are forbidden.
 - Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
   `draft/HARNESS-TYPESTATE`, `draft/HARNESS-RETRY-ESCALATION`) MUST reuse the
   same routed operation IDs above and MUST NOT introduce parallel
