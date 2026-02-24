@@ -120,6 +120,8 @@ Runtime crates are split by responsibility:
     Gate-class mapping, witness envelope emission).
 - `crates/premath-bd`:
   - Canonical memory/storage model (`Issue`, `Dependency`, JSONL, `MemoryStore`).
+  - Projection-only spec-IR lane (`spec_ir`) for typed statement entity/edge
+    indexing from draft artifacts.
   - No orchestration with VCS or query backends.
 - `crates/premath-surreal`:
   - Query/index adapters (issue graph cache + observation-surface indexing).
