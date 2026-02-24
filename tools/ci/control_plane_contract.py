@@ -88,6 +88,13 @@ _REQUIRED_COMMAND_SURFACE_IDS = (
     "instructionDecision",
 )
 _REQUIRED_COMMAND_SURFACE_FAILURE_CLASS_KEYS = ("unbound",)
+_REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS = ("governance", "kcirMapping")
+_REQUIRED_PIPELINE_WRAPPER_FAILURE_CLASS_KEYS = (
+    "unbound",
+    "parityDrift",
+    "governanceGateMissing",
+    "kcirMappingGateMissing",
+)
 _HOST_ACTION_ID_RE = re.compile(r"^[a-z][a-z0-9_.]*$")
 _HOST_ACTION_MCP_TOOL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
 _REQUIRED_HOST_ACTION_SURFACE_FAILURE_CLASS_KEYS = (
@@ -1207,6 +1214,114 @@ def _validate_command_surface(payload: Any) -> Dict[str, Any]:
     return parsed_surface
 
 
+def _validate_pipeline_wrapper_surface(payload: Any) -> Dict[str, Any]:
+    wrapper_surface = _require_object(payload, "pipelineWrapperSurface")
+    required_pipeline_entrypoint = _require_command_tokens(
+        wrapper_surface.get("requiredPipelineEntrypoint"),
+        "pipelineWrapperSurface.requiredPipelineEntrypoint",
+    )
+    instruction_pipeline_entrypoint = _require_command_tokens(
+        wrapper_surface.get("instructionPipelineEntrypoint"),
+        "pipelineWrapperSurface.instructionPipelineEntrypoint",
+    )
+
+    required_gate_hooks = _require_object(
+        wrapper_surface.get("requiredGateHooks"),
+        "pipelineWrapperSurface.requiredGateHooks",
+    )
+    missing_required_gate_hook_keys = sorted(
+        set(_REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS) - set(required_gate_hooks)
+    )
+    if missing_required_gate_hook_keys:
+        raise ValueError(
+            "pipelineWrapperSurface.requiredGateHooks missing required keys: "
+            + ", ".join(missing_required_gate_hook_keys)
+        )
+    unknown_required_gate_hook_keys = sorted(
+        set(required_gate_hooks) - set(_REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS)
+    )
+    if unknown_required_gate_hook_keys:
+        raise ValueError(
+            "pipelineWrapperSurface.requiredGateHooks includes unknown keys: "
+            + ", ".join(unknown_required_gate_hook_keys)
+        )
+    parsed_required_gate_hooks = {
+        key: _require_non_empty_string(
+            required_gate_hooks.get(key),
+            f"pipelineWrapperSurface.requiredGateHooks.{key}",
+        )
+        for key in _REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS
+    }
+
+    instruction_gate_hooks = _require_object(
+        wrapper_surface.get("instructionGateHooks"),
+        "pipelineWrapperSurface.instructionGateHooks",
+    )
+    missing_instruction_gate_hook_keys = sorted(
+        set(_REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS) - set(instruction_gate_hooks)
+    )
+    if missing_instruction_gate_hook_keys:
+        raise ValueError(
+            "pipelineWrapperSurface.instructionGateHooks missing required keys: "
+            + ", ".join(missing_instruction_gate_hook_keys)
+        )
+    unknown_instruction_gate_hook_keys = sorted(
+        set(instruction_gate_hooks) - set(_REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS)
+    )
+    if unknown_instruction_gate_hook_keys:
+        raise ValueError(
+            "pipelineWrapperSurface.instructionGateHooks includes unknown keys: "
+            + ", ".join(unknown_instruction_gate_hook_keys)
+        )
+    parsed_instruction_gate_hooks = {
+        key: _require_non_empty_string(
+            instruction_gate_hooks.get(key),
+            f"pipelineWrapperSurface.instructionGateHooks.{key}",
+        )
+        for key in _REQUIRED_PIPELINE_WRAPPER_HOOK_KEYS
+    }
+
+    failure_classes = _require_object(
+        wrapper_surface.get("failureClasses"),
+        "pipelineWrapperSurface.failureClasses",
+    )
+    missing_failure_class_keys = sorted(
+        set(_REQUIRED_PIPELINE_WRAPPER_FAILURE_CLASS_KEYS) - set(failure_classes)
+    )
+    if missing_failure_class_keys:
+        raise ValueError(
+            "pipelineWrapperSurface.failureClasses missing required keys: "
+            + ", ".join(missing_failure_class_keys)
+        )
+    unknown_failure_class_keys = sorted(
+        set(failure_classes) - set(_REQUIRED_PIPELINE_WRAPPER_FAILURE_CLASS_KEYS)
+    )
+    if unknown_failure_class_keys:
+        raise ValueError(
+            "pipelineWrapperSurface.failureClasses includes unknown keys: "
+            + ", ".join(unknown_failure_class_keys)
+        )
+    parsed_failure_classes = {
+        key: _require_non_empty_string(
+            failure_classes.get(key),
+            f"pipelineWrapperSurface.failureClasses.{key}",
+        )
+        for key in _REQUIRED_PIPELINE_WRAPPER_FAILURE_CLASS_KEYS
+    }
+    if len(set(parsed_failure_classes.values())) != len(parsed_failure_classes):
+        raise ValueError(
+            "pipelineWrapperSurface.failureClasses must not contain duplicate values"
+        )
+
+    return {
+        "requiredPipelineEntrypoint": list(required_pipeline_entrypoint),
+        "instructionPipelineEntrypoint": list(instruction_pipeline_entrypoint),
+        "requiredGateHooks": parsed_required_gate_hooks,
+        "instructionGateHooks": parsed_instruction_gate_hooks,
+        "failureClasses": parsed_failure_classes,
+    }
+
+
 def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
     host_action_surface = _require_object(payload, "hostActionSurface")
     required_actions = _require_object(
@@ -1792,6 +1907,9 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         root.get("runtimeRouteBindings")
     )
     command_surface = _validate_command_surface(root.get("commandSurface"))
+    pipeline_wrapper_surface = _validate_pipeline_wrapper_surface(
+        root.get("pipelineWrapperSurface")
+    )
     host_action_surface = _validate_host_action_surface(root.get("hostActionSurface"))
 
     harness_retry_obj = _require_object(
@@ -1958,6 +2076,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         "workerLaneAuthority": worker_lane_authority,
         "runtimeRouteBindings": runtime_route_bindings,
         "commandSurface": command_surface,
+        "pipelineWrapperSurface": pipeline_wrapper_surface,
         "hostActionSurface": host_action_surface,
         "harnessRetry": {
             "policyKind": harness_retry_policy_kind,
@@ -2158,6 +2277,30 @@ INSTRUCTION_DECISION_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
 )
 CONTROL_PLANE_COMMAND_SURFACE_FAILURE_CLASS_UNBOUND: str = (
     CONTROL_PLANE_COMMAND_SURFACE.get("failureClasses", {}).get("unbound", "")
+)
+PIPELINE_WRAPPER_SURFACE: Dict[str, Any] = dict(
+    _CONTRACT.get("pipelineWrapperSurface", {})
+)
+PIPELINE_WRAPPER_REQUIRED_ENTRYPOINT: Tuple[str, ...] = tuple(
+    PIPELINE_WRAPPER_SURFACE.get("requiredPipelineEntrypoint", ())
+)
+PIPELINE_WRAPPER_INSTRUCTION_ENTRYPOINT: Tuple[str, ...] = tuple(
+    PIPELINE_WRAPPER_SURFACE.get("instructionPipelineEntrypoint", ())
+)
+PIPELINE_WRAPPER_REQUIRED_GOVERNANCE_HOOK: str = (
+    PIPELINE_WRAPPER_SURFACE.get("requiredGateHooks", {}).get("governance", "")
+)
+PIPELINE_WRAPPER_REQUIRED_KCIR_MAPPING_HOOK: str = (
+    PIPELINE_WRAPPER_SURFACE.get("requiredGateHooks", {}).get("kcirMapping", "")
+)
+PIPELINE_WRAPPER_INSTRUCTION_GOVERNANCE_HOOK: str = (
+    PIPELINE_WRAPPER_SURFACE.get("instructionGateHooks", {}).get("governance", "")
+)
+PIPELINE_WRAPPER_INSTRUCTION_KCIR_MAPPING_HOOK: str = (
+    PIPELINE_WRAPPER_SURFACE.get("instructionGateHooks", {}).get("kcirMapping", "")
+)
+PIPELINE_WRAPPER_FAILURE_CLASSES: Dict[str, str] = dict(
+    PIPELINE_WRAPPER_SURFACE.get("failureClasses", {})
 )
 HOST_ACTION_SURFACE_REQUIRED_ACTIONS: Dict[str, Dict[str, Optional[str]]] = {
     host_action_id: {

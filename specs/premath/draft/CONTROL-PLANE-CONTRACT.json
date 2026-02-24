@@ -355,6 +355,32 @@
       "unbound": "control_plane_command_surface_unbound"
     }
   },
+  "pipelineWrapperSurface": {
+    "requiredPipelineEntrypoint": [
+      "python3",
+      "tools/ci/pipeline_required.py"
+    ],
+    "instructionPipelineEntrypoint": [
+      "python3",
+      "tools/ci/pipeline_instruction.py",
+      "--instruction",
+      "$INSTRUCTION_PATH"
+    ],
+    "requiredGateHooks": {
+      "governance": "governance_failure_classes",
+      "kcirMapping": "evaluate_required_mapping"
+    },
+    "instructionGateHooks": {
+      "governance": "governance_failure_classes",
+      "kcirMapping": "evaluate_instruction_mapping"
+    },
+    "failureClasses": {
+      "unbound": "control_plane_pipeline_wrapper_unbound",
+      "parityDrift": "control_plane_pipeline_wrapper_parity_drift",
+      "governanceGateMissing": "control_plane_pipeline_governance_gate_missing",
+      "kcirMappingGateMissing": "control_plane_pipeline_kcir_mapping_gate_missing"
+    }
+  },
   "hostActionSurface": {
     "requiredActions": {
       "issue.ready": {

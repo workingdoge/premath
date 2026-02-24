@@ -144,6 +144,7 @@ run = [
   "python3 tools/ci/test_harness_retry_policy.py",
   "python3 tools/ci/test_harness_escalation.py",
   "python3 tools/ci/test_harness_multithread_loop.py",
+  "python3 tools/ci/test_pipeline_wiring.py",
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_proposal.py",

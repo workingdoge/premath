@@ -434,6 +434,32 @@ def _base_payload() -> dict:
                 "unbound": "control_plane_command_surface_unbound",
             },
         },
+        "pipelineWrapperSurface": {
+            "requiredPipelineEntrypoint": [
+                "python3",
+                "tools/ci/pipeline_required.py",
+            ],
+            "instructionPipelineEntrypoint": [
+                "python3",
+                "tools/ci/pipeline_instruction.py",
+                "--instruction",
+                "$INSTRUCTION_PATH",
+            ],
+            "requiredGateHooks": {
+                "governance": "governance_failure_classes",
+                "kcirMapping": "evaluate_required_mapping",
+            },
+            "instructionGateHooks": {
+                "governance": "governance_failure_classes",
+                "kcirMapping": "evaluate_instruction_mapping",
+            },
+            "failureClasses": {
+                "unbound": "control_plane_pipeline_wrapper_unbound",
+                "parityDrift": "control_plane_pipeline_wrapper_parity_drift",
+                "governanceGateMissing": "control_plane_pipeline_governance_gate_missing",
+                "kcirMappingGateMissing": "control_plane_pipeline_kcir_mapping_gate_missing",
+            },
+        },
         "hostActionSurface": {
             "requiredActions": {
                 "issue.ready": {
@@ -603,6 +629,27 @@ class ControlPlaneContractTests(unittest.TestCase):
             [["sh", "tools/ci/run_instruction.sh"]],
         )
         self.assertEqual(
+            loaded["pipelineWrapperSurface"]["requiredPipelineEntrypoint"],
+            ["python3", "tools/ci/pipeline_required.py"],
+        )
+        self.assertEqual(
+            loaded["pipelineWrapperSurface"]["instructionPipelineEntrypoint"],
+            [
+                "python3",
+                "tools/ci/pipeline_instruction.py",
+                "--instruction",
+                "$INSTRUCTION_PATH",
+            ],
+        )
+        self.assertEqual(
+            loaded["pipelineWrapperSurface"]["requiredGateHooks"]["governance"],
+            "governance_failure_classes",
+        )
+        self.assertEqual(
+            loaded["pipelineWrapperSurface"]["instructionGateHooks"]["kcirMapping"],
+            "evaluate_instruction_mapping",
+        )
+        self.assertEqual(
             loaded["hostActionSurface"]["requiredActions"]["issue.ready"][
                 "canonicalCli"
             ],
@@ -699,6 +746,18 @@ class ControlPlaneContractTests(unittest.TestCase):
             ["python3", "tools/ci/run_instruction.py"]
         ]
         with self.assertRaisesRegex(ValueError, "must not include canonicalEntrypoint"):
+            self._load(payload)
+
+    def test_load_rejects_pipeline_wrapper_missing_gate_hook(self) -> None:
+        payload = _base_payload()
+        payload["pipelineWrapperSurface"]["requiredGateHooks"].pop("governance")
+        with self.assertRaisesRegex(ValueError, "requiredGateHooks missing required keys"):
+            self._load(payload)
+
+    def test_load_rejects_pipeline_wrapper_failure_class_key_drift(self) -> None:
+        payload = _base_payload()
+        payload["pipelineWrapperSurface"]["failureClasses"].pop("parityDrift")
+        with self.assertRaisesRegex(ValueError, "failureClasses missing required keys"):
             self._load(payload)
 
     def test_load_rejects_host_action_with_no_binding(self) -> None:
