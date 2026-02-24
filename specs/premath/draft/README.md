@@ -8,6 +8,8 @@ treated as normative for claimed conformance profiles/capabilities.
 Minimal authority path (read first):
 
 - `SPEC-INDEX.md` — front door for claims, profiles, and normative scope.
+  - canonical North Star target/invariants/phase posture lives in
+    `SPEC-INDEX.md` §0.
 - `DOCTRINE-INF.md` — doctrine/infinity-layer preservation contract.
 - `PREMATH-KERNEL.md` — semantic kernel contract.
 - `BIDIR-DESCENT.md` + `GATE.md` — obligation/discharge and admissibility gate

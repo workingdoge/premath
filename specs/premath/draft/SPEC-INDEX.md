@@ -23,6 +23,48 @@ This specification is dedicated to the public domain under **CC0 1.0** (see
 
 This document is governed by the process in `../../process/coss.md`.
 
+## 0. North Star (Canonical Target State)
+
+This section is the single-source statement of target state and phase posture.
+
+### 0.1 Target state sentence
+
+Premath targets one self-hosted, fail-closed decision spine:
+`compile -> KCIR -> Gate -> witness`, with semantic admissibility owned only by
+`draft/PREMATH-KERNEL`, `draft/GATE`, and `draft/BIDIR-DESCENT`.
+
+### 0.2 Non-negotiable invariants
+
+1. Single semantic authority lane: no checker/CI/runtime wrapper may introduce
+   a parallel admissibility path.
+2. Single mutation-authority lane: operational mutation is instruction-mediated
+   by default and fail-closed when authority evidence is missing.
+3. Claim-gated normativity: optional capability and profile-overlay requirements
+   are normative only when explicitly claimed.
+4. Deterministic evidence lineage: control-plane/runtime outcomes remain
+   witness-linked, digest-bound, and replay-stable.
+5. Coherence-before-convenience: docs/spec/contracts/checkers must stay
+   synchronized under deterministic parity gates.
+
+### 0.3 Current phase and active epic IDs
+
+Current phase (as of 2026-02-24):
+
+- post-reconciliation closure on `main`, with focus on maintaining compact,
+  deterministic authority surfaces while progressing remaining governance gates.
+
+Active epic IDs:
+
+- none (no `open`/`in_progress` epics in `.premath/issues.jsonl`).
+
+Active non-epic blocker:
+
+- `bd-67` (`blocked`) for governance reviewer-pool readiness.
+
+Live status authority:
+
+- `.premath/issues.jsonl` via `premath issue list|ready|blocked`.
+
 ## 1. Purpose
 
 This file is the **front door**. It answers:
