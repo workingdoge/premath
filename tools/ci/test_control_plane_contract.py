@@ -465,10 +465,12 @@ def _base_payload() -> dict:
                 "issue.ready": {
                     "canonicalCli": "premath issue ready --issues <path> --json",
                     "mcpTool": "issue_ready",
+                    "operationId": "op/mcp.issue_ready",
                 },
                 "issue.claim": {
                     "canonicalCli": "premath issue claim <issue-id> --assignee <name> --issues <path> --json",
                     "mcpTool": "issue_claim",
+                    "operationId": "op/mcp.issue_claim",
                 },
                 "coherence.check": {
                     "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
@@ -477,10 +479,12 @@ def _base_payload() -> dict:
                 "issue.lease_renew": {
                     "canonicalCli": None,
                     "mcpTool": "issue_lease_renew",
+                    "operationId": "op/mcp.issue_lease_renew",
                 },
                 "issue.lease_release": {
                     "canonicalCli": None,
                     "mcpTool": "issue_lease_release",
+                    "operationId": "op/mcp.issue_lease_release",
                 },
             },
             "mcpOnlyHostActions": [
@@ -676,6 +680,12 @@ class ControlPlaneContractTests(unittest.TestCase):
             "issue_lease_renew",
         )
         self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+                "operationId"
+            ],
+            "op/mcp.issue_lease_renew",
+        )
+        self.assertEqual(
             loaded["hostActionSurface"]["mcpOnlyHostActions"],
             ["issue.lease_renew", "issue.lease_release"],
         )
@@ -786,6 +796,7 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload["hostActionSurface"]["requiredActions"]["issue.list"] = {
             "canonicalCli": "premath issue ready --issues <path> --json",
             "mcpTool": "issue_list",
+            "operationId": "op/mcp.issue_list",
         }
         with self.assertRaisesRegex(ValueError, "canonicalCli binding is ambiguous"):
             self._load(payload)
@@ -795,6 +806,7 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload["hostActionSurface"]["requiredActions"]["issue.list"] = {
             "canonicalCli": "premath issue list --issues <path> --json",
             "mcpTool": "issue_ready",
+            "operationId": "op/mcp.issue_ready",
         }
         with self.assertRaisesRegex(ValueError, "mcpTool binding is ambiguous"):
             self._load(payload)
@@ -805,10 +817,27 @@ class ControlPlaneContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "missing required keys"):
             self._load(payload)
 
-    def test_load_rejects_host_action_mcp_only_set_drift(self) -> None:
+    def test_load_rejects_host_action_mcp_only_unknown_action(self) -> None:
         payload = _base_payload()
-        payload["hostActionSurface"]["mcpOnlyHostActions"] = ["issue.lease_renew"]
-        with self.assertRaisesRegex(ValueError, "must match canonical set"):
+        payload["hostActionSurface"]["mcpOnlyHostActions"] = [
+            "issue.lease_renew",
+            "issue.not_real",
+        ]
+        with self.assertRaisesRegex(ValueError, "references unknown host action"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_missing_mcp_operation_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.claim"].pop("operationId")
+        with self.assertRaisesRegex(ValueError, "must match mcpTool binding"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_unknown_operation_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.claim"][
+            "operationId"
+        ] = "op/mcp.issue_claim_shadow"
+        with self.assertRaisesRegex(ValueError, "must exist in doctrine op registry"):
             self._load(payload)
 
     def test_load_rejects_host_action_mcp_only_cli_binding(self) -> None:

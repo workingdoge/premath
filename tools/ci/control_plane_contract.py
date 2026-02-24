@@ -17,6 +17,13 @@ CONTROL_PLANE_CONTRACT_PATH = (
     / "draft"
     / "CONTROL-PLANE-CONTRACT.json"
 )
+DOCTRINE_OP_REGISTRY_PATH = (
+    Path(__file__).resolve().parents[2]
+    / "specs"
+    / "premath"
+    / "draft"
+    / "DOCTRINE-OP-REGISTRY.json"
+)
 _EPOCH_RE = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 _REQUIRED_SCHEMA_KIND_FAMILIES = (
     "controlPlaneContractKind",
@@ -97,10 +104,12 @@ _REQUIRED_PIPELINE_WRAPPER_FAILURE_CLASS_KEYS = (
 )
 _HOST_ACTION_ID_RE = re.compile(r"^[a-z][a-z0-9_.]*$")
 _HOST_ACTION_MCP_TOOL_RE = re.compile(r"^[a-z][a-z0-9_]*$")
-_REQUIRED_HOST_ACTION_SURFACE_MCP_ONLY_ACTION_IDS = (
-    "issue.lease_renew",
-    "issue.lease_release",
-)
+_HOST_ACTION_OPERATION_ID_RE = re.compile(r"^op/[a-z0-9_.]+$")
+_HARNESS_SESSION_OPERATION_IDS = {
+    "harness.session.read": "op/harness.session_read",
+    "harness.session.write": "op/harness.session_write",
+    "harness.session.bootstrap": "op/harness.session_bootstrap",
+}
 _REQUIRED_HOST_ACTION_SURFACE_FAILURE_CLASS_KEYS = (
     "unregisteredHostId",
     "bindingMismatch",
@@ -182,6 +191,32 @@ def _require_optional_string_list(value: Any, label: str) -> Tuple[str, ...]:
     if value is None:
         return tuple()
     return _require_string_list(value, label)
+
+
+def _load_doctrine_operation_ids(path: Path) -> frozenset[str]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except OSError as exc:
+        raise ValueError(f"failed to read doctrine op registry at {path}: {exc}") from exc
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"invalid doctrine op registry JSON at {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError(f"doctrine op registry at {path} must be an object")
+    operations = payload.get("operations")
+    if not isinstance(operations, list) or not operations:
+        raise ValueError(f"doctrine op registry at {path} must include non-empty operations")
+    out: set[str] = set()
+    for idx, row in enumerate(operations):
+        if not isinstance(row, dict):
+            raise ValueError(
+                f"doctrine op registry at {path} operations[{idx}] must be an object"
+            )
+        operation_id = _require_non_empty_string(
+            row.get("id"),
+            f"doctrine op registry at {path} operations[{idx}].id",
+        )
+        out.add(operation_id)
+    return frozenset(out)
 
 
 def _require_command_tokens(value: Any, label: str) -> Tuple[str, ...]:
@@ -1074,7 +1109,9 @@ def _validate_worker_lane_authority_contract(
     }
 
 
-def _validate_runtime_route_bindings(payload: Any) -> Dict[str, Any]:
+def _validate_runtime_route_bindings(
+    payload: Any, *, doctrine_operation_ids: frozenset[str]
+) -> Dict[str, Any]:
     runtime_routes = _require_object(payload, "runtimeRouteBindings")
     required_routes = _require_object(
         runtime_routes.get("requiredOperationRoutes"),
@@ -1097,6 +1134,11 @@ def _validate_runtime_route_bindings(payload: Any) -> Dict[str, Any]:
             route_obj.get("operationId"),
             f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}.operationId",
         )
+        if operation_id not in doctrine_operation_ids:
+            raise ValueError(
+                "runtimeRouteBindings.requiredOperationRoutes."
+                f"{key_norm}.operationId must exist in doctrine op registry: {operation_id!r}"
+            )
         required_morphisms = tuple(
             sorted(
                 _require_string_list(
@@ -1326,7 +1368,9 @@ def _validate_pipeline_wrapper_surface(payload: Any) -> Dict[str, Any]:
     }
 
 
-def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
+def _validate_host_action_surface(
+    payload: Any, *, doctrine_operation_ids: frozenset[str]
+) -> Dict[str, Any]:
     host_action_surface = _require_object(payload, "hostActionSurface")
     unknown_surface_keys = sorted(
         set(host_action_surface) - {"requiredActions", "mcpOnlyHostActions", "failureClasses"}
@@ -1345,11 +1389,6 @@ def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
         host_action_surface.get("mcpOnlyHostActions"),
         "hostActionSurface.mcpOnlyHostActions",
     )
-    if set(mcp_only_host_actions) != set(_REQUIRED_HOST_ACTION_SURFACE_MCP_ONLY_ACTION_IDS):
-        raise ValueError(
-            "hostActionSurface.mcpOnlyHostActions must match canonical set: "
-            + ", ".join(_REQUIRED_HOST_ACTION_SURFACE_MCP_ONLY_ACTION_IDS)
-        )
 
     parsed_actions: Dict[str, Dict[str, Optional[str]]] = {}
     canonical_cli_bindings: Dict[str, str] = {}
@@ -1368,7 +1407,7 @@ def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
             required_actions.get(host_action_id),
             f"hostActionSurface.requiredActions.{host_action_id_norm}",
         )
-        unknown_row_keys = sorted(set(row) - {"canonicalCli", "mcpTool"})
+        unknown_row_keys = sorted(set(row) - {"canonicalCli", "mcpTool", "operationId"})
         if unknown_row_keys:
             raise ValueError(
                 "hostActionSurface.requiredActions."
@@ -1393,15 +1432,49 @@ def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
             if mcp_tool_raw is not None
             else None
         )
+        operation_id_raw = row.get("operationId")
+        operation_id = (
+            _require_non_empty_string(
+                operation_id_raw,
+                f"hostActionSurface.requiredActions.{host_action_id_norm}.operationId",
+            )
+            if operation_id_raw is not None
+            else None
+        )
         if mcp_tool is not None and _HOST_ACTION_MCP_TOOL_RE.fullmatch(mcp_tool) is None:
             raise ValueError(
                 "hostActionSurface.requiredActions."
                 f"{host_action_id_norm}.mcpTool must be a snake_case tool id"
             )
+        if operation_id is not None and _HOST_ACTION_OPERATION_ID_RE.fullmatch(operation_id) is None:
+            raise ValueError(
+                "hostActionSurface.requiredActions."
+                f"{host_action_id_norm}.operationId must use `op/<family>.<action>` shape"
+            )
+        if operation_id is not None and operation_id not in doctrine_operation_ids:
+            raise ValueError(
+                "hostActionSurface.requiredActions."
+                f"{host_action_id_norm}.operationId must exist in doctrine op registry: {operation_id!r}"
+            )
         if canonical_cli is None and mcp_tool is None:
             raise ValueError(
                 "hostActionSurface.requiredActions."
                 f"{host_action_id_norm} must bind at least one of canonicalCli or mcpTool"
+            )
+        if mcp_tool is not None:
+            expected_mcp_operation_id = f"op/mcp.{mcp_tool}"
+            if operation_id != expected_mcp_operation_id:
+                raise ValueError(
+                    "hostActionSurface.requiredActions."
+                    f"{host_action_id_norm}.operationId must match mcpTool binding "
+                    f"({expected_mcp_operation_id!r})"
+                )
+        expected_harness_operation_id = _HARNESS_SESSION_OPERATION_IDS.get(host_action_id_norm)
+        if expected_harness_operation_id is not None and operation_id != expected_harness_operation_id:
+            raise ValueError(
+                "hostActionSurface.requiredActions."
+                f"{host_action_id_norm}.operationId must match harness session route "
+                f"({expected_harness_operation_id!r})"
             )
         if canonical_cli is not None:
             bound_host = canonical_cli_bindings.get(canonical_cli)
@@ -1423,6 +1496,7 @@ def _validate_host_action_surface(payload: Any) -> Dict[str, Any]:
         parsed_actions[host_action_id_norm] = {
             "canonicalCli": canonical_cli,
             "mcpTool": mcp_tool,
+            "operationId": operation_id,
         }
 
     for host_action_id in mcp_only_host_actions:
@@ -1938,18 +2012,23 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     lane_failure_classes = _require_optional_string_list(
         root.get("laneFailureClasses"), "laneFailureClasses"
     )
+    doctrine_operation_ids = _load_doctrine_operation_ids(DOCTRINE_OP_REGISTRY_PATH)
     worker_lane_authority = _validate_worker_lane_authority_contract(
         root.get("workerLaneAuthority"),
         active_epoch=active_epoch,
     )
     runtime_route_bindings = _validate_runtime_route_bindings(
-        root.get("runtimeRouteBindings")
+        root.get("runtimeRouteBindings"),
+        doctrine_operation_ids=doctrine_operation_ids,
     )
     command_surface = _validate_command_surface(root.get("commandSurface"))
     pipeline_wrapper_surface = _validate_pipeline_wrapper_surface(
         root.get("pipelineWrapperSurface")
     )
-    host_action_surface = _validate_host_action_surface(root.get("hostActionSurface"))
+    host_action_surface = _validate_host_action_surface(
+        root.get("hostActionSurface"),
+        doctrine_operation_ids=doctrine_operation_ids,
+    )
 
     harness_retry_obj = _require_object(
         root.get("harnessRetry"),
@@ -2345,6 +2424,7 @@ HOST_ACTION_SURFACE_REQUIRED_ACTIONS: Dict[str, Dict[str, Optional[str]]] = {
     host_action_id: {
         "canonicalCli": row.get("canonicalCli"),
         "mcpTool": row.get("mcpTool"),
+        "operationId": row.get("operationId"),
     }
     for host_action_id, row in _CONTRACT.get("hostActionSurface", {})
     .get("requiredActions", {})

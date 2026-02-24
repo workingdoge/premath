@@ -25,10 +25,11 @@ HOST_ACTION_FAILURE_CLASS_KEYS: Tuple[str, ...] = (
     "duplicateBinding",
     "contractUnbound",
 )
-HOST_ACTION_MCP_ONLY_IDS: Tuple[str, ...] = (
-    "issue.lease_renew",
-    "issue.lease_release",
-)
+HOST_ACTION_HARNESS_SESSION_OPERATION_IDS: Dict[str, str] = {
+    "harness.session.read": "op/harness.session_read",
+    "harness.session.write": "op/harness.session_write",
+    "harness.session.bootstrap": "op/harness.session_bootstrap",
+}
 
 
 SPEC_INDEX_RAW_LIFECYCLE_MARKERS: Tuple[str, ...] = (
@@ -491,7 +492,7 @@ def _parse_mapping_cell(
 
 def parse_control_plane_host_action_contract(
     contract_path: Path,
-) -> Dict[str, Tuple[str | None, str | None]]:
+) -> Dict[str, Tuple[str | None, str | None, str | None]]:
     payload = json.loads(contract_path.read_text(encoding="utf-8"))
     if not isinstance(payload, dict):
         raise ValueError(f"{contract_path}: root must be an object")
@@ -505,7 +506,7 @@ def parse_control_plane_host_action_contract(
     required_actions = host_action_surface.get("requiredActions")
     if not isinstance(required_actions, dict) or not required_actions:
         raise ValueError(f"{contract_path}: hostActionSurface.requiredActions must be a non-empty object")
-    out: Dict[str, Tuple[str | None, str | None]] = {}
+    out: Dict[str, Tuple[str | None, str | None, str | None]] = {}
     for host_action_id, row in sorted(required_actions.items()):
         if not isinstance(host_action_id, str) or not host_action_id.strip():
             raise ValueError(
@@ -529,13 +530,39 @@ def parse_control_plane_host_action_contract(
             raise ValueError(
                 f"{contract_path}: hostActionSurface.requiredActions.{host_action_id}.mcpTool must be a non-empty string or null"
             )
+        operation_id = row.get("operationId")
+        if operation_id is not None and (
+            not isinstance(operation_id, str) or not operation_id.strip()
+        ):
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions.{host_action_id}.operationId must be a non-empty string or null"
+            )
         if canonical_cli is None and mcp_tool is None:
             raise ValueError(
                 f"{contract_path}: hostActionSurface.requiredActions.{host_action_id} must bind canonicalCli or mcpTool"
             )
+        expected_mcp_operation = (
+            f"op/mcp.{mcp_tool.strip()}" if isinstance(mcp_tool, str) else None
+        )
+        if expected_mcp_operation is not None and (
+            not isinstance(operation_id, str) or operation_id.strip() != expected_mcp_operation
+        ):
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions.{host_action_id}.operationId must match mcpTool binding ({expected_mcp_operation})"
+            )
+        expected_harness_operation = HOST_ACTION_HARNESS_SESSION_OPERATION_IDS.get(
+            host_action_id.strip()
+        )
+        if expected_harness_operation is not None and (
+            not isinstance(operation_id, str) or operation_id.strip() != expected_harness_operation
+        ):
+            raise ValueError(
+                f"{contract_path}: hostActionSurface.requiredActions.{host_action_id}.operationId must match harness session binding ({expected_harness_operation})"
+            )
         out[host_action_id.strip()] = (
             canonical_cli.strip() if isinstance(canonical_cli, str) else None,
             mcp_tool.strip() if isinstance(mcp_tool, str) else None,
+            operation_id.strip() if isinstance(operation_id, str) else None,
         )
     mcp_only_host_actions = host_action_surface.get("mcpOnlyHostActions")
     if not isinstance(mcp_only_host_actions, list) or not mcp_only_host_actions:
@@ -552,10 +579,6 @@ def parse_control_plane_host_action_contract(
     if len(set(parsed_mcp_only)) != len(parsed_mcp_only):
         raise ValueError(
             f"{contract_path}: hostActionSurface.mcpOnlyHostActions must not contain duplicates"
-        )
-    if set(parsed_mcp_only) != set(HOST_ACTION_MCP_ONLY_IDS):
-        raise ValueError(
-            f"{contract_path}: hostActionSurface.mcpOnlyHostActions must match canonical set: {list(HOST_ACTION_MCP_ONLY_IDS)}"
         )
     for host_action_id in parsed_mcp_only:
         row = out.get(host_action_id)
@@ -589,14 +612,14 @@ def parse_control_plane_host_action_contract(
 
 def parse_steel_host_action_mapping_table(
     design_doc_path: Path,
-) -> Dict[str, Tuple[str | None, str | None]]:
+) -> Dict[str, Tuple[str | None, str | None, str | None]]:
     text = load_text(design_doc_path)
     section = extract_section_between(
         text,
         STEEL_HOST_ACTION_SECTION_START,
         STEEL_HOST_ACTION_SECTION_END,
     )
-    out: Dict[str, Tuple[str | None, str | None]] = {}
+    out: Dict[str, Tuple[str | None, str | None, str | None]] = {}
     for line_number, line in enumerate(section.splitlines(), start=1):
         line = line.strip()
         if not line.startswith("|"):
@@ -604,11 +627,11 @@ def parse_steel_host_action_mapping_table(
         if "Host function id" in line or line.startswith("|---"):
             continue
         cells = [cell.strip() for cell in line.strip("|").split("|")]
-        if len(cells) != 3:
+        if len(cells) != 4:
             raise ValueError(
                 f"{design_doc_path}: malformed host-action table row at local line {line_number}"
             )
-        host_id_raw, cli_raw, mcp_raw = cells
+        host_id_raw, cli_raw, mcp_raw, operation_raw = cells
         host_id = _parse_mapping_cell(
             host_id_raw,
             label=f"{design_doc_path}: host-action table host id (line {line_number})",
@@ -627,11 +650,27 @@ def parse_steel_host_action_mapping_table(
             label=f"{design_doc_path}: host-action table MCP tool for {host_id!r}",
             allow_na=True,
         )
+        operation_id = _parse_mapping_cell(
+            operation_raw,
+            label=f"{design_doc_path}: host-action table operation id for {host_id!r}",
+            allow_na=True,
+        )
         if cli is None and mcp is None:
             raise ValueError(
                 f"{design_doc_path}: host-action table row for {host_id!r} must bind CLI or MCP"
             )
-        out[host_id] = (cli, mcp)
+        if mcp is not None:
+            expected_mcp_operation = f"op/mcp.{mcp}"
+            if operation_id != expected_mcp_operation:
+                raise ValueError(
+                    f"{design_doc_path}: host-action table operation id for {host_id!r} must match mcp tool binding ({expected_mcp_operation})"
+                )
+        expected_harness_operation = HOST_ACTION_HARNESS_SESSION_OPERATION_IDS.get(host_id)
+        if expected_harness_operation is not None and operation_id != expected_harness_operation:
+            raise ValueError(
+                f"{design_doc_path}: host-action table operation id for {host_id!r} must match harness session binding ({expected_harness_operation})"
+            )
+        out[host_id] = (cli, mcp, operation_id)
     if not out:
         raise ValueError(f"{design_doc_path}: host-action mapping table has no data rows")
     return out

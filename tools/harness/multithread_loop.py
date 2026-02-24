@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import json
 import os
@@ -17,6 +18,12 @@ from typing import Any, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+CONTROL_PLANE_CONTRACT_PATH = REPO_ROOT / "specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
+MCP_ONLY_TRANSPORT_FAILURE_CLASS = "control_plane_host_action_mcp_transport_required"
+LEASE_ACTION_TO_HOST_ACTION_ID = {
+    "issue_lease_renew": "issue.lease_renew",
+    "issue_lease_release": "issue.lease_release",
+}
 
 
 def parse_args() -> argparse.Namespace:
@@ -149,6 +156,15 @@ def add_common_worker_args(parser: argparse.ArgumentParser) -> None:
         default="",
         help="Required when mutation mode is a non-default override (for example human-override).",
     )
+    parser.add_argument(
+        "--host-action-transport",
+        choices=("mcp", "local-repl"),
+        default=resolve_default_host_action_transport(),
+        help=(
+            "Host-action transport profile for failure-recovery actions "
+            "(default: PREMATH_HOST_ACTION_TRANSPORT or mcp)."
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -227,6 +243,63 @@ def parse_rfc3339(value: str) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def resolve_default_host_action_transport() -> str:
+    raw = os.environ.get("PREMATH_HOST_ACTION_TRANSPORT", "").strip().lower()
+    if raw == "local":
+        return "local-repl"
+    if raw in {"mcp", "local-repl"}:
+        return raw
+    return "mcp"
+
+
+@functools.lru_cache(maxsize=1)
+def load_mcp_only_host_actions() -> frozenset[str]:
+    try:
+        payload = json.loads(CONTROL_PLANE_CONTRACT_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return frozenset()
+    if not isinstance(payload, dict):
+        return frozenset()
+    host_action_surface = payload.get("hostActionSurface")
+    if not isinstance(host_action_surface, dict):
+        return frozenset()
+    rows = host_action_surface.get("mcpOnlyHostActions")
+    if not isinstance(rows, list):
+        return frozenset()
+    actions = []
+    for item in rows:
+        if isinstance(item, str) and item.strip():
+            actions.append(item.strip())
+    return frozenset(actions)
+
+
+def enforce_mcp_only_transport(
+    handoff: StopHandoff, *, host_action_transport: str
+) -> StopHandoff:
+    if host_action_transport == "mcp":
+        return handoff
+    host_action_id = LEASE_ACTION_TO_HOST_ACTION_ID.get(handoff.lease_action)
+    if host_action_id is None:
+        return handoff
+    mcp_only_actions = load_mcp_only_host_actions()
+    if host_action_id not in mcp_only_actions:
+        return handoff
+    return StopHandoff(
+        lease_state=handoff.lease_state,
+        lease_action=handoff.lease_action,
+        result_class=MCP_ONLY_TRANSPORT_FAILURE_CLASS,
+        summary=(
+            "mcp-only lease action cannot execute on local-repl transport "
+            f"(action={handoff.lease_action})"
+        ),
+        next_step=(
+            "switch to MCP transport for lease recovery "
+            f"(required host action: {host_action_id})"
+        ),
+        lease_ref=handoff.lease_ref,
+    )
 
 
 def read_issue_lease_snapshot(issues_path: Path, issue_id: str) -> IssueLeaseSnapshot:
@@ -356,11 +429,12 @@ def classify_failed_stop_handoff(
     snapshot: IssueLeaseSnapshot,
     worker_id: str,
     claimed_lease_id: str | None,
+    host_action_transport: str = "mcp",
 ) -> StopHandoff:
     if snapshot.lease_state == "active":
         lease_id = snapshot.lease_id or claimed_lease_id
         owner = snapshot.lease_owner or worker_id
-        return StopHandoff(
+        handoff = StopHandoff(
             lease_state=snapshot.lease_state,
             lease_action="issue_lease_renew",
             result_class="retry_needed_lease_active",
@@ -379,6 +453,9 @@ def classify_failed_stop_handoff(
                 status=snapshot.status,
                 assignee=snapshot.assignee,
             ),
+        )
+        return enforce_mcp_only_transport(
+            handoff, host_action_transport=host_action_transport
         )
 
     if snapshot.lease_state == "stale":
@@ -403,7 +480,7 @@ def classify_failed_stop_handoff(
         )
 
     if snapshot.lease_state == "contended":
-        return StopHandoff(
+        handoff = StopHandoff(
             lease_state=snapshot.lease_state,
             lease_action="issue_lease_release",
             result_class="retry_needed_lease_contended",
@@ -421,6 +498,9 @@ def classify_failed_stop_handoff(
                 status=snapshot.status,
                 assignee=snapshot.assignee,
             ),
+        )
+        return enforce_mcp_only_transport(
+            handoff, host_action_transport=host_action_transport
         )
 
     if snapshot.lease_state == "released" and snapshot.status == "closed":
@@ -1025,6 +1105,7 @@ def run_worker(args: argparse.Namespace) -> int:
             snapshot=snapshot,
             worker_id=worker_id,
             claimed_lease_id=claimed_lease_id,
+            host_action_transport=args.host_action_transport,
         )
         append_trajectory_projection(
             base_cmd,
@@ -1142,6 +1223,8 @@ def run_coordinator(args: argparse.Namespace) -> int:
                 args.verify_cmd,
                 "--witness-ref-prefix",
                 args.witness_ref_prefix,
+                "--host-action-transport",
+                args.host_action_transport,
             ]
             if args.continue_on_failure:
                 cmd.append("--continue-on-failure")

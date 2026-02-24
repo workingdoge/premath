@@ -44,7 +44,8 @@ mise run harness-coordinator-loop -- \
   --mutation-mode human-override \
   --override-reason 'operator approved local multithread batch' \
   --work-cmd 'true' \
-  --verify-cmd 'mise run ci-check'
+  --verify-cmd 'mise run ci-check' \
+  --host-action-transport mcp
 ```
 
 Determinism contract:
@@ -102,6 +103,8 @@ Each worker step does:
 8. failure path:
    - issue-memory-derived lease state determines recovery action
      (`issue_lease_renew` / `issue_lease_release` / reclaim / stop),
+   - when transport is `local-repl`, MCP-only lease actions fail closed with
+     `control_plane_host_action_mcp_transport_required`,
    - append `harness-trajectory` row with lease handoff witness ref,
    - `harness-feature write` (`blocked`) carrying lease state/action summary,
    - `harness-session write` (`stopped`) carrying deterministic next-step derived

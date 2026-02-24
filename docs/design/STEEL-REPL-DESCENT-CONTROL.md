@@ -116,51 +116,53 @@ Harness durability family:
 
 ### 5.1 Exact command/tool mapping (host id -> CLI/MCP)
 
-| Host function id | Canonical CLI surface | MCP tool |
-|---|---|---|
-| `issue.ready` | `premath issue ready --issues <path> --json` | `issue_ready` |
-| `issue.list` | `premath issue list --issues <path> --json` | `issue_list` |
-| `issue.blocked` | `premath issue blocked --issues <path> --json` | `issue_blocked` |
-| `issue.check` | `premath issue check --issues <path> --json` | `issue_check` |
-| `issue.backend_status` | `premath issue backend-status --issues <path> --repo <repo> --projection <path> --json` | `issue_backend_status` |
-| `issue.claim` | `premath issue claim <issue-id> --assignee <name> --issues <path> --json` | `issue_claim` |
-| `issue.lease_renew` | n/a | `issue_lease_renew` |
-| `issue.lease_release` | n/a | `issue_lease_release` |
-| `issue.update` | `premath issue update <issue-id> --status <status> --issues <path> --json` | `issue_update` |
-| `issue.discover` | `premath issue discover <parent-issue-id> <title> --issues <path> --json` | `issue_discover` |
-| `dep.add` | `premath dep add <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json` | `dep_add` |
-| `dep.remove` | `premath dep remove <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json` | `dep_remove` |
-| `dep.replace` | `premath dep replace <issue-id> <depends-on-id> --from-type <dep-type> --to-type <dep-type> --issues <path> --json` | `dep_replace` |
-| `dep.diagnostics` | `premath dep diagnostics --issues <path> --graph-scope <scope> --json` | `dep_diagnostics` |
-| `observe.latest` | `premath observe --surface <path> --mode latest --json` | `observe_latest` |
-| `observe.needs_attention` | `premath observe --surface <path> --mode needs_attention --json` | `observe_needs_attention` |
-| `observe.instruction` | `premath observe --surface <path> --mode instruction --instruction-id <id> --json` | `observe_instruction` |
-| `observe.projection` | `premath observe --surface <path> --mode projection --projection-digest <digest> --json` | `observe_projection` |
-| `instruction.check` | `premath instruction-check --instruction <path> --repo-root <repo> --json` | `instruction_check` |
-| `instruction.run` | `mise run ci-pipeline-instruction` | `instruction_run` |
-| `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a |
-| `required.projection` | `premath required-projection --input <path> --json` | n/a |
-| `required.delta` | `premath required-delta --input <path> --json` | n/a |
-| `required.gate_ref` | `premath required-gate-ref --input <path> --json` | n/a |
-| `required.witness` | `premath required-witness --runtime <path> --json` | n/a |
-| `required.witness_verify` | `premath required-witness-verify --input <path> --json` | n/a |
-| `required.witness_decide` | `premath required-witness-decide --input <path> --json` | n/a |
-| `required.decision_verify` | `premath required-decision-verify --input <path> --json` | n/a |
-| `harness.session.read` | `premath harness-session read --path <path> --json` | n/a |
-| `harness.session.write` | `premath harness-session write --path <path> ... --json` | n/a |
-| `harness.session.bootstrap` | `premath harness-session bootstrap --path <path> --feature-ledger <path> --json` | n/a |
-| `harness.feature.read` | `premath harness-feature read --path <path> --json` | n/a |
-| `harness.feature.write` | `premath harness-feature write --path <path> ... --json` | n/a |
-| `harness.feature.check` | `premath harness-feature check --path <path> [--require-closure] --json` | n/a |
-| `harness.feature.next` | `premath harness-feature next --path <path> --json` | n/a |
-| `harness.trajectory.append` | `premath harness-trajectory append --path <path> ... --json` | n/a |
-| `harness.trajectory.query` | `premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json` | n/a |
+| Host function id | Canonical CLI surface | MCP tool | Doctrine operation id |
+|---|---|---|---|
+| `issue.ready` | `premath issue ready --issues <path> --json` | `issue_ready` | `op/mcp.issue_ready` |
+| `issue.list` | `premath issue list --issues <path> --json` | `issue_list` | `op/mcp.issue_list` |
+| `issue.blocked` | `premath issue blocked --issues <path> --json` | `issue_blocked` | `op/mcp.issue_blocked` |
+| `issue.check` | `premath issue check --issues <path> --json` | `issue_check` | `op/mcp.issue_check` |
+| `issue.backend_status` | `premath issue backend-status --issues <path> --repo <repo> --projection <path> --json` | `issue_backend_status` | `op/mcp.issue_backend_status` |
+| `issue.claim` | `premath issue claim <issue-id> --assignee <name> --issues <path> --json` | `issue_claim` | `op/mcp.issue_claim` |
+| `issue.lease_renew` | n/a | `issue_lease_renew` | `op/mcp.issue_lease_renew` |
+| `issue.lease_release` | n/a | `issue_lease_release` | `op/mcp.issue_lease_release` |
+| `issue.update` | `premath issue update <issue-id> --status <status> --issues <path> --json` | `issue_update` | `op/mcp.issue_update` |
+| `issue.discover` | `premath issue discover <parent-issue-id> <title> --issues <path> --json` | `issue_discover` | `op/mcp.issue_discover` |
+| `dep.add` | `premath dep add <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json` | `dep_add` | `op/mcp.dep_add` |
+| `dep.remove` | `premath dep remove <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json` | `dep_remove` | `op/mcp.dep_remove` |
+| `dep.replace` | `premath dep replace <issue-id> <depends-on-id> --from-type <dep-type> --to-type <dep-type> --issues <path> --json` | `dep_replace` | `op/mcp.dep_replace` |
+| `dep.diagnostics` | `premath dep diagnostics --issues <path> --graph-scope <scope> --json` | `dep_diagnostics` | `op/mcp.dep_diagnostics` |
+| `observe.latest` | `premath observe --surface <path> --mode latest --json` | `observe_latest` | `op/mcp.observe_latest` |
+| `observe.needs_attention` | `premath observe --surface <path> --mode needs_attention --json` | `observe_needs_attention` | `op/mcp.observe_needs_attention` |
+| `observe.instruction` | `premath observe --surface <path> --mode instruction --instruction-id <id> --json` | `observe_instruction` | `op/mcp.observe_instruction` |
+| `observe.projection` | `premath observe --surface <path> --mode projection --projection-digest <digest> --json` | `observe_projection` | `op/mcp.observe_projection` |
+| `instruction.check` | `premath instruction-check --instruction <path> --repo-root <repo> --json` | `instruction_check` | `op/mcp.instruction_check` |
+| `instruction.run` | `mise run ci-pipeline-instruction` | `instruction_run` | `op/mcp.instruction_run` |
+| `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a | n/a |
+| `required.projection` | `premath required-projection --input <path> --json` | n/a | n/a |
+| `required.delta` | `premath required-delta --input <path> --json` | n/a | n/a |
+| `required.gate_ref` | `premath required-gate-ref --input <path> --json` | n/a | n/a |
+| `required.witness` | `premath required-witness --runtime <path> --json` | n/a | n/a |
+| `required.witness_verify` | `premath required-witness-verify --input <path> --json` | n/a | n/a |
+| `required.witness_decide` | `premath required-witness-decide --input <path> --json` | n/a | n/a |
+| `required.decision_verify` | `premath required-decision-verify --input <path> --json` | n/a | n/a |
+| `harness.session.read` | `premath harness-session read --path <path> --json` | n/a | `op/harness.session_read` |
+| `harness.session.write` | `premath harness-session write --path <path> ... --json` | n/a | `op/harness.session_write` |
+| `harness.session.bootstrap` | `premath harness-session bootstrap --path <path> --feature-ledger <path> --json` | n/a | `op/harness.session_bootstrap` |
+| `harness.feature.read` | `premath harness-feature read --path <path> --json` | n/a | n/a |
+| `harness.feature.write` | `premath harness-feature write --path <path> ... --json` | n/a | n/a |
+| `harness.feature.check` | `premath harness-feature check --path <path> [--require-closure] --json` | n/a | n/a |
+| `harness.feature.next` | `premath harness-feature next --path <path> --json` | n/a | n/a |
+| `harness.trajectory.append` | `premath harness-trajectory append --path <path> ... --json` | n/a | n/a |
+| `harness.trajectory.query` | `premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json` | n/a | n/a |
 
 Phase-3 lease-op boundary:
 
 - `issue.lease_renew` and `issue.lease_release` are MCP-only host actions.
 - Option A local REPL runs that need explicit lease renew/release MUST escalate
   to Option B transport for those actions (no hidden local fallback path).
+- runtime violation of this boundary MUST fail closed with deterministic class
+  `control_plane_host_action_mcp_transport_required`.
 
 ## 6. Deterministic Effect Row Contract
 

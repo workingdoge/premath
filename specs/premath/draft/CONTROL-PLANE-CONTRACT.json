@@ -385,83 +385,103 @@
     "requiredActions": {
       "issue.ready": {
         "canonicalCli": "premath issue ready --issues <path> --json",
-        "mcpTool": "issue_ready"
+        "mcpTool": "issue_ready",
+        "operationId": "op/mcp.issue_ready"
       },
       "issue.list": {
         "canonicalCli": "premath issue list --issues <path> --json",
-        "mcpTool": "issue_list"
+        "mcpTool": "issue_list",
+        "operationId": "op/mcp.issue_list"
       },
       "issue.blocked": {
         "canonicalCli": "premath issue blocked --issues <path> --json",
-        "mcpTool": "issue_blocked"
+        "mcpTool": "issue_blocked",
+        "operationId": "op/mcp.issue_blocked"
       },
       "issue.check": {
         "canonicalCli": "premath issue check --issues <path> --json",
-        "mcpTool": "issue_check"
+        "mcpTool": "issue_check",
+        "operationId": "op/mcp.issue_check"
       },
       "issue.backend_status": {
         "canonicalCli": "premath issue backend-status --issues <path> --repo <repo> --projection <path> --json",
-        "mcpTool": "issue_backend_status"
+        "mcpTool": "issue_backend_status",
+        "operationId": "op/mcp.issue_backend_status"
       },
       "issue.claim": {
         "canonicalCli": "premath issue claim <issue-id> --assignee <name> --issues <path> --json",
-        "mcpTool": "issue_claim"
+        "mcpTool": "issue_claim",
+        "operationId": "op/mcp.issue_claim"
       },
       "issue.lease_renew": {
         "canonicalCli": null,
-        "mcpTool": "issue_lease_renew"
+        "mcpTool": "issue_lease_renew",
+        "operationId": "op/mcp.issue_lease_renew"
       },
       "issue.lease_release": {
         "canonicalCli": null,
-        "mcpTool": "issue_lease_release"
+        "mcpTool": "issue_lease_release",
+        "operationId": "op/mcp.issue_lease_release"
       },
       "issue.update": {
         "canonicalCli": "premath issue update <issue-id> --status <status> --issues <path> --json",
-        "mcpTool": "issue_update"
+        "mcpTool": "issue_update",
+        "operationId": "op/mcp.issue_update"
       },
       "issue.discover": {
         "canonicalCli": "premath issue discover <parent-issue-id> <title> --issues <path> --json",
-        "mcpTool": "issue_discover"
+        "mcpTool": "issue_discover",
+        "operationId": "op/mcp.issue_discover"
       },
       "dep.add": {
         "canonicalCli": "premath dep add <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json",
-        "mcpTool": "dep_add"
+        "mcpTool": "dep_add",
+        "operationId": "op/mcp.dep_add"
       },
       "dep.remove": {
         "canonicalCli": "premath dep remove <issue-id> <depends-on-id> --type <dep-type> --issues <path> --json",
-        "mcpTool": "dep_remove"
+        "mcpTool": "dep_remove",
+        "operationId": "op/mcp.dep_remove"
       },
       "dep.replace": {
         "canonicalCli": "premath dep replace <issue-id> <depends-on-id> --from-type <dep-type> --to-type <dep-type> --issues <path> --json",
-        "mcpTool": "dep_replace"
+        "mcpTool": "dep_replace",
+        "operationId": "op/mcp.dep_replace"
       },
       "dep.diagnostics": {
         "canonicalCli": "premath dep diagnostics --issues <path> --graph-scope <scope> --json",
-        "mcpTool": "dep_diagnostics"
+        "mcpTool": "dep_diagnostics",
+        "operationId": "op/mcp.dep_diagnostics"
       },
       "observe.latest": {
         "canonicalCli": "premath observe --surface <path> --mode latest --json",
-        "mcpTool": "observe_latest"
+        "mcpTool": "observe_latest",
+        "operationId": "op/mcp.observe_latest"
       },
       "observe.needs_attention": {
         "canonicalCli": "premath observe --surface <path> --mode needs_attention --json",
-        "mcpTool": "observe_needs_attention"
+        "mcpTool": "observe_needs_attention",
+        "operationId": "op/mcp.observe_needs_attention"
       },
       "observe.instruction": {
         "canonicalCli": "premath observe --surface <path> --mode instruction --instruction-id <id> --json",
-        "mcpTool": "observe_instruction"
+        "mcpTool": "observe_instruction",
+        "operationId": "op/mcp.observe_instruction"
       },
       "observe.projection": {
         "canonicalCli": "premath observe --surface <path> --mode projection --projection-digest <digest> --json",
-        "mcpTool": "observe_projection"
+        "mcpTool": "observe_projection",
+        "operationId": "op/mcp.observe_projection"
       },
       "instruction.check": {
         "canonicalCli": "premath instruction-check --instruction <path> --repo-root <repo> --json",
-        "mcpTool": "instruction_check"
+        "mcpTool": "instruction_check",
+        "operationId": "op/mcp.instruction_check"
       },
       "instruction.run": {
         "canonicalCli": "mise run ci-pipeline-instruction",
-        "mcpTool": "instruction_run"
+        "mcpTool": "instruction_run",
+        "operationId": "op/mcp.instruction_run"
       },
       "coherence.check": {
         "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
@@ -497,15 +517,18 @@
       },
       "harness.session.read": {
         "canonicalCli": "premath harness-session read --path <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.session_read"
       },
       "harness.session.write": {
         "canonicalCli": "premath harness-session write --path <path> ... --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.session_write"
       },
       "harness.session.bootstrap": {
         "canonicalCli": "premath harness-session bootstrap --path <path> --feature-ledger <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.session_bootstrap"
       },
       "harness.feature.read": {
         "canonicalCli": "premath harness-feature read --path <path> --json",

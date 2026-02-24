@@ -165,14 +165,17 @@ members = [
                     "issue.ready": {
                         "canonicalCli": "premath issue ready --issues <path> --json",
                         "mcpTool": "issue_ready",
+                        "operationId": "op/mcp.issue_ready",
                     },
                     "issue.lease_renew": {
                         "canonicalCli": None,
                         "mcpTool": "issue_lease_renew",
+                        "operationId": "op/mcp.issue_lease_renew",
                     },
                     "issue.lease_release": {
                         "canonicalCli": None,
                         "mcpTool": "issue_lease_release",
+                        "operationId": "op/mcp.issue_lease_release",
                     },
                     "coherence.check": {
                         "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
@@ -197,21 +200,21 @@ members = [
             parsed = check_docs_coherence.parse_control_plane_host_action_contract(path)
             self.assertEqual(
                 parsed["issue.ready"],
-                ("premath issue ready --issues <path> --json", "issue_ready"),
+                ("premath issue ready --issues <path> --json", "issue_ready", "op/mcp.issue_ready"),
             )
             self.assertEqual(
                 parsed["coherence.check"],
-                ("premath coherence-check --contract <path> --repo-root <repo> --json", None),
+                ("premath coherence-check --contract <path> --repo-root <repo> --json", None, None),
             )
 
     def test_parse_steel_host_action_mapping_table(self) -> None:
         doc = """
 ### 5.1 Exact command/tool mapping (host id -> CLI/MCP)
 
-| Host function id | Canonical CLI surface | MCP tool |
-|---|---|---|
-| `issue.ready` | `premath issue ready --issues <path> --json` | `issue_ready` |
-| `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a |
+| Host function id | Canonical CLI surface | MCP tool | Doctrine operation id |
+|---|---|---|---|
+| `issue.ready` | `premath issue ready --issues <path> --json` | `issue_ready` | `op/mcp.issue_ready` |
+| `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a | n/a |
 
 ## 6. Deterministic Effect Row Contract
 """
@@ -221,11 +224,11 @@ members = [
             parsed = check_docs_coherence.parse_steel_host_action_mapping_table(path)
             self.assertEqual(
                 parsed["issue.ready"],
-                ("premath issue ready --issues <path> --json", "issue_ready"),
+                ("premath issue ready --issues <path> --json", "issue_ready", "op/mcp.issue_ready"),
             )
             self.assertEqual(
                 parsed["coherence.check"],
-                ("premath coherence-check --contract <path> --repo-root <repo> --json", None),
+                ("premath coherence-check --contract <path> --repo-root <repo> --json", None, None),
             )
 
     def test_parse_control_plane_stage1_contract(self) -> None:
