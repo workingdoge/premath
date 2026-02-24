@@ -50,16 +50,27 @@ Premath targets one self-hosted, fail-closed decision spine:
 
 Current phase (as of 2026-02-24):
 
-- post-reconciliation closure on `main`, with focus on maintaining compact,
-  deterministic authority surfaces while progressing remaining governance gates.
+- KCIR self-hosting phase 3 (`bd-287`), focused on moving control-plane
+  execution toward premath-native surfaces while keeping wrappers
+  adapter-only.
 
 Active epic IDs:
 
-- none (no `open`/`in_progress` epics in `.premath/issues.jsonl`).
+- `bd-287` (`open`): KCIR self-hosting phase 3.
+
+Active ordered task chain:
+
+- `bd-288` (`closed`): architecture contract (target-state vs
+  transition-state).
+- `bd-289` (`open`, ready): spec/index glue.
+- `bd-290` (`open`, blocked by `bd-289`): control-plane parity.
+- `bd-291` (`open`, blocked by `bd-290`): implementation.
+- `bd-292` (`open`, blocked by `bd-291`): conformance.
+- `bd-293` (`open`, blocked by `bd-292`): docs/traceability closure.
 
 Active non-epic blocker:
 
-- `bd-67` (`blocked`) for governance reviewer-pool readiness.
+- `bd-67` (`blocked`, manual): governance reviewer-pool readiness.
 
 Live status authority:
 
