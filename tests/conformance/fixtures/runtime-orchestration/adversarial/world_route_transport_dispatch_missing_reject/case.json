@@ -1,0 +1,280 @@
+{
+  "schema": 1,
+  "suiteId": "runtime-orchestration",
+  "vectorId": "adversarial/world_route_transport_dispatch_missing_reject",
+  "controlPlaneContract": {
+    "runtimeRouteBindings": {
+      "requiredOperationRoutes": {
+        "runGate": {
+          "operationId": "op/ci.run_gate",
+          "requiredMorphisms": [
+            "dm.identity"
+          ]
+        },
+        "runGateTerraform": {
+          "operationId": "op/ci.run_gate_terraform",
+          "requiredMorphisms": [
+            "dm.identity"
+          ]
+        }
+      }
+    },
+    "hostActionSurface": {
+      "requiredActions": {
+        "instruction.run": {
+          "operationId": "op/mcp.instruction_run"
+        },
+        "required.witness_verify": {
+          "operationId": "op/ci.verify_required_witness"
+        },
+        "required.witness_decide": {
+          "operationId": "op/ci.decide_required"
+        },
+        "fiber.spawn": {
+          "operationId": "op/transport.fiber_spawn"
+        },
+        "fiber.join": {
+          "operationId": "op/transport.fiber_join"
+        },
+        "fiber.cancel": {
+          "operationId": "op/transport.fiber_cancel"
+        },
+        "issue.claim_next": {
+          "operationId": "op/transport.issue_claim_next"
+        },
+        "issue.claim": {
+          "operationId": "op/mcp.issue_claim"
+        },
+        "issue.lease_renew": {
+          "operationId": "op/mcp.issue_lease_renew"
+        },
+        "issue.lease_release": {
+          "operationId": "op/mcp.issue_lease_release"
+        },
+        "issue.discover": {
+          "operationId": "op/mcp.issue_discover"
+        }
+      }
+    },
+    "commandSurface": {
+      "governancePromotionCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "governance-promotion-check"
+        ]
+      },
+      "kcirMappingCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "kcir-mapping-check"
+        ]
+      }
+    }
+  },
+  "doctrineOpRegistry": {
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "path": "tools/ci/run_gate.sh",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/ci.run_gate_terraform",
+        "path": "tools/ci/run_gate_terraform.sh",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/mcp.instruction_run",
+        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/ci.verify_required_witness",
+        "path": "tools/ci/verify_required_witness.py",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/ci.decide_required",
+        "path": "tools/ci/decide_required.py",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/transport.fiber_spawn",
+        "path": "crates/premath-cli/src/commands/transport.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/transport.fiber_join",
+        "path": "crates/premath-cli/src/commands/transport.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/transport.fiber_cancel",
+        "path": "crates/premath-cli/src/commands/transport.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/transport.issue_claim_next",
+        "path": "crates/premath-cli/src/commands/transport.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_claim",
+        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_lease_renew",
+        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_lease_release",
+        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_discover",
+        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/mcp.observe_latest",
+        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/transport.world_route_binding",
+        "path": "crates/premath-cli/src/commands/transport.rs",
+        "morphisms": [
+          "dm.identity"
+        ]
+      }
+    ]
+  },
+  "doctrineSiteInput": {
+    "worldRouteBindings": {
+      "schema": 1,
+      "bindingKind": "premath.world_route_bindings.v1",
+      "rows": [
+        {
+          "routeFamilyId": "route.gate_execution",
+          "operationIds": [
+            "op/ci.run_gate",
+            "op/ci.run_gate_terraform"
+          ],
+          "worldId": "world.kernel.semantic.v1",
+          "morphismRowId": "wm.kernel.semantic.runtime_gate",
+          "requiredMorphisms": [
+            "dm.identity"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.instruction_execution",
+          "operationIds": [
+            "op/mcp.instruction_run"
+          ],
+          "worldId": "world.instruction.v1",
+          "morphismRowId": "wm.control.instruction.execution",
+          "requiredMorphisms": [
+            "dm.identity"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.required_decision_attestation",
+          "operationIds": [
+            "op/ci.decide_required",
+            "op/ci.verify_required_witness"
+          ],
+          "worldId": "world.ci_witness.v1",
+          "morphismRowId": "wm.control.ci_witness.attest",
+          "requiredMorphisms": [
+            "dm.identity"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.fiber.lifecycle",
+          "operationIds": [
+            "op/transport.fiber_cancel",
+            "op/transport.fiber_join",
+            "op/transport.fiber_spawn"
+          ],
+          "worldId": "world.fiber.v1",
+          "morphismRowId": "wm.control.fiber.lifecycle",
+          "requiredMorphisms": [
+            "dm.identity"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.issue_claim_lease",
+          "operationIds": [
+            "op/mcp.issue_claim",
+            "op/mcp.issue_discover",
+            "op/mcp.issue_lease_release",
+            "op/mcp.issue_lease_renew",
+            "op/transport.issue_claim_next"
+          ],
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "requiredMorphisms": [
+            "dm.identity"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.session_projection",
+          "operationIds": [
+            "op/mcp.observe_latest"
+          ],
+          "worldId": "world.control_plane.bundle.v0",
+          "morphismRowId": "wm.control.bundle.projection",
+          "requiredMorphisms": [
+            "dm.identity"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        }
+      ]
+    }
+  },
+  "harnessRuntimeText": "## 1.2 Harness-Squeak composition boundary (required)\nHarness computes deterministic work context and witness lineage refs.\nSqueak performs transport/runtime-placement mapping and emits transport-class witness outcomes.\nDestination Tusk/Gate performs destination-local admissibility checks and emits Gate-class outcomes.\nHarness records the resulting references in session/trajectory projections."
+}

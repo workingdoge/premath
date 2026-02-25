@@ -29,6 +29,14 @@ RUNTIME_ORCHESTRATION_CHECK_COMMAND_PREFIX: Tuple[str, ...] = (
     "--",
     "runtime-orchestration-check",
 )
+SITE_RESOLVE_COMMAND_PREFIX: Tuple[str, ...] = (
+    "cargo",
+    "run",
+    "--package",
+    "premath-cli",
+    "--",
+    "site-resolve",
+)
 
 
 def _validate_command_prefix(cmd: List[str], prefix: Tuple[str, ...], label: str) -> None:
@@ -50,6 +58,10 @@ def validate_runtime_orchestration_check_command(cmd: List[str]) -> None:
     )
 
 
+def validate_site_resolve_command(cmd: List[str]) -> None:
+    _validate_command_prefix(cmd, SITE_RESOLVE_COMMAND_PREFIX, "site-resolve")
+
+
 def resolve_world_registry_check_command() -> List[str]:
     override = os.environ.get("PREMATH_WORLD_REGISTRY_CHECK_CMD", "").strip()
     if override:
@@ -67,6 +79,16 @@ def resolve_runtime_orchestration_check_command() -> List[str]:
     else:
         command = list(RUNTIME_ORCHESTRATION_CHECK_COMMAND_PREFIX)
     validate_runtime_orchestration_check_command(command)
+    return command
+
+
+def resolve_site_resolve_command() -> List[str]:
+    override = os.environ.get("PREMATH_SITE_RESOLVE_CMD", "").strip()
+    if override:
+        command = shlex.split(override)
+    else:
+        command = list(SITE_RESOLVE_COMMAND_PREFIX)
+    validate_site_resolve_command(command)
     return command
 
 
@@ -196,4 +218,70 @@ def run_runtime_orchestration_check(
             cmd,
             allowed_exit_codes=(0, 1),
             label="runtime-orchestration-check",
+        )
+
+
+def run_site_resolve(
+    *,
+    request: Dict[str, Any],
+    doctrine_site_input: Dict[str, Any],
+    doctrine_site: Dict[str, Any],
+    doctrine_operation_registry: Dict[str, Any],
+    control_plane_contract: Dict[str, Any],
+    capability_registry: Dict[str, Any],
+) -> Dict[str, Any]:
+    command = resolve_site_resolve_command()
+    with tempfile.TemporaryDirectory(prefix="premath-site-resolve-") as tmp:
+        tmp_root = Path(tmp)
+        request_path = tmp_root / "request.json"
+        site_input_path = tmp_root / "doctrine_site_input.json"
+        site_path = tmp_root / "doctrine_site.json"
+        operations_path = tmp_root / "doctrine_operation_registry.json"
+        control_plane_path = tmp_root / "control_plane_contract.json"
+        capability_path = tmp_root / "capability_registry.json"
+        request_path.write_text(
+            json.dumps(request, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        site_input_path.write_text(
+            json.dumps(doctrine_site_input, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        site_path.write_text(
+            json.dumps(doctrine_site, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        operations_path.write_text(
+            json.dumps(doctrine_operation_registry, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        control_plane_path.write_text(
+            json.dumps(control_plane_contract, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        capability_path.write_text(
+            json.dumps(capability_registry, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+
+        cmd = [
+            *command,
+            "--request",
+            str(request_path),
+            "--doctrine-site-input",
+            str(site_input_path),
+            "--doctrine-site",
+            str(site_path),
+            "--doctrine-op-registry",
+            str(operations_path),
+            "--control-plane-contract",
+            str(control_plane_path),
+            "--capability-registry",
+            str(capability_path),
+            "--json",
+        ]
+        return _run_checked_json_command(
+            cmd,
+            allowed_exit_codes=(0, 1),
+            label="site-resolve",
         )

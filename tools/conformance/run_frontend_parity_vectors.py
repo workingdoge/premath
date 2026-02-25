@@ -5,13 +5,11 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import shlex
-import subprocess
 import sys
-import tempfile
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
+
+import core_command_client
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "frontend-parity"
@@ -20,14 +18,6 @@ DEFAULT_DOCTRINE_SITE_INPUT = ROOT / "specs" / "premath" / "draft" / "DOCTRINE-S
 DEFAULT_DOCTRINE_SITE = ROOT / "specs" / "premath" / "draft" / "DOCTRINE-SITE.json"
 DEFAULT_DOCTRINE_OP_REGISTRY = ROOT / "specs" / "premath" / "draft" / "DOCTRINE-OP-REGISTRY.json"
 DEFAULT_CAPABILITY_REGISTRY = ROOT / "specs" / "premath" / "draft" / "CAPABILITY-REGISTRY.json"
-SITE_RESOLVE_COMMAND_PREFIX = (
-    "cargo",
-    "run",
-    "--package",
-    "premath-cli",
-    "--",
-    "site-resolve",
-)
 
 FAILURE_FRONTEND_REQUIRED_MISSING = "frontend_required_missing"
 FAILURE_KERNEL_VERDICT_DRIFT = "frontend_kernel_verdict_drift"
@@ -112,27 +102,12 @@ def validate_manifest(fixtures: Path) -> List[str]:
     return vectors
 
 
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
-
 def _validate_site_resolve_command(cmd: List[str]) -> None:
-    prefix = SITE_RESOLVE_COMMAND_PREFIX
-    if tuple(cmd[: len(prefix)]) != prefix:
-        raise ValueError(
-            "site-resolve command surface drift: expected prefix "
-            f"{list(prefix)!r}, got {cmd!r}"
-        )
+    core_command_client.validate_site_resolve_command(cmd)
 
 
 def _resolve_site_resolve_command() -> List[str]:
-    override = os.environ.get("PREMATH_SITE_RESOLVE_CMD", "").strip()
-    if override:
-        command = shlex.split(override)
-    else:
-        command = list(SITE_RESOLVE_COMMAND_PREFIX)
-    _validate_site_resolve_command(command)
-    return command
+    return core_command_client.resolve_site_resolve_command()
 
 
 def _run_kernel_site_resolve(
@@ -144,8 +119,6 @@ def _run_kernel_site_resolve(
     profile_id: str,
     context_ref: str,
 ) -> Dict[str, Any]:
-    root = _repo_root()
-    command = _resolve_site_resolve_command()
     request: Dict[str, Any] = {
         "schema": 1,
         "requestKind": "premath.site_resolve.request.v1",
@@ -158,46 +131,14 @@ def _run_kernel_site_resolve(
     if route_family_hint is not None:
         request["routeFamilyHint"] = route_family_hint
 
-    with tempfile.TemporaryDirectory(prefix="premath-frontend-parity-site-resolve-") as tmp:
-        tmp_root = Path(tmp)
-        request_path = tmp_root / "request.json"
-        request_path.write_text(json.dumps(request, indent=2, sort_keys=True), encoding="utf-8")
-
-        cmd = [
-            *command,
-            "--request",
-            str(request_path),
-            "--doctrine-site-input",
-            str(DEFAULT_DOCTRINE_SITE_INPUT),
-            "--doctrine-site",
-            str(DEFAULT_DOCTRINE_SITE),
-            "--doctrine-op-registry",
-            str(DEFAULT_DOCTRINE_OP_REGISTRY),
-            "--control-plane-contract",
-            str(DEFAULT_CONTROL_PLANE_CONTRACT),
-            "--capability-registry",
-            str(DEFAULT_CAPABILITY_REGISTRY),
-            "--json",
-        ]
-        completed = subprocess.run(
-            cmd,
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if completed.returncode not in {0, 1}:
-            raise ValueError(
-                "kernel site-resolve command failed: "
-                f"exit={completed.returncode}, stderr={completed.stderr.strip()!r}"
-            )
-        stdout = completed.stdout.strip()
-        if not stdout:
-            raise ValueError("kernel site-resolve produced empty stdout")
-        payload = json.loads(stdout)
-        if not isinstance(payload, dict):
-            raise ValueError("kernel site-resolve payload must be an object")
-        return payload
+    return core_command_client.run_site_resolve(
+        request=request,
+        doctrine_site_input=load_json(DEFAULT_DOCTRINE_SITE_INPUT),
+        doctrine_site=load_json(DEFAULT_DOCTRINE_SITE),
+        doctrine_operation_registry=load_json(DEFAULT_DOCTRINE_OP_REGISTRY),
+        control_plane_contract=load_json(DEFAULT_CONTROL_PLANE_CONTRACT),
+        capability_registry=load_json(DEFAULT_CAPABILITY_REGISTRY),
+    )
 
 
 def _normalize_core_resolver_witness(payload: Dict[str, Any], case_path: Path) -> Dict[str, Any]:

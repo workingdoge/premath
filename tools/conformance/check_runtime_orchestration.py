@@ -10,16 +10,12 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 import core_command_client
 
 SCHEMA = 1
 CHECK_KIND = "conformance.runtime_orchestration.v1"
-FAILURE_CLASS_CONTRACT_UNBOUND = "runtime_route_contract_unbound"
-WORLD_REGISTRY_CHECK_COMMAND_PREFIX = (
-    core_command_client.WORLD_REGISTRY_CHECK_COMMAND_PREFIX
-)
 RUNTIME_ORCHESTRATION_CHECK_COMMAND_PREFIX = (
     core_command_client.RUNTIME_ORCHESTRATION_CHECK_COMMAND_PREFIX
 )
@@ -69,31 +65,6 @@ def _load_json(path: Path) -> Dict[str, Any]:
     if not isinstance(payload, dict):
         raise ValueError(f"{path}: root must be an object")
     return payload
-
-
-def _validate_world_registry_check_command(cmd: List[str]) -> None:
-    core_command_client.validate_world_registry_check_command(cmd)
-
-
-def _resolve_world_registry_check_command() -> List[str]:
-    return core_command_client.resolve_world_registry_check_command()
-
-
-def _run_kernel_world_registry_check(
-    *,
-    doctrine_site_input: Dict[str, Any],
-    doctrine_operation_registry: Dict[str, Any],
-    control_plane_contract: Dict[str, Any] | None = None,
-    required_route_families: Tuple[str, ...] | None = None,
-    required_route_bindings: Dict[str, List[str]] | None = None,
-) -> Dict[str, Any]:
-    return core_command_client.run_world_registry_check(
-        doctrine_site_input=doctrine_site_input,
-        doctrine_operation_registry=doctrine_operation_registry,
-        control_plane_contract=control_plane_contract,
-        required_route_families=required_route_families,
-        required_route_bindings=required_route_bindings,
-    )
 
 
 def _validate_runtime_orchestration_check_command(cmd: List[str]) -> None:
@@ -165,25 +136,22 @@ def main() -> int:
             doctrine_site_input=doctrine_site_input,
         )
     except Exception as exc:  # noqa: BLE001
-        payload = {
-            "schema": SCHEMA,
-            "checkKind": CHECK_KIND,
-            "result": "rejected",
-            "failureClasses": [FAILURE_CLASS_CONTRACT_UNBOUND],
-            "summary": {
-                "requiredRoutes": 0,
-                "checkedRoutes": 0,
-                "checkedKcirMappingRows": 0,
-                "checkedPhase3CommandSurfaces": 0,
-                "checkedWorldRouteFamilies": 0,
-                "errors": 1,
-            },
-            "routes": [],
-            "kcirMappingRows": [],
-            "phase3CommandSurfaces": [],
-            "worldRouteBindings": [],
-            "errors": [str(exc)],
-        }
+        if args.json:
+            print(
+                json.dumps(
+                    {
+                        "schema": SCHEMA,
+                        "checkKind": CHECK_KIND,
+                        "result": "error",
+                        "errors": [str(exc)],
+                    },
+                    indent=2,
+                    sort_keys=True,
+                )
+            )
+        else:
+            print(f"[runtime-orchestration] ERROR: {exc}")
+        return 2
 
     if args.json:
         print(json.dumps(payload, indent=2, sort_keys=True))

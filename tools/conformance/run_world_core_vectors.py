@@ -5,11 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
-import shlex
-import subprocess
 import sys
-import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
@@ -18,14 +14,6 @@ import core_command_client
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "world-core"
-SITE_RESOLVE_COMMAND_PREFIX = (
-    "cargo",
-    "run",
-    "--package",
-    "premath-cli",
-    "--",
-    "site-resolve",
-)
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -120,109 +108,6 @@ class EvaluationResult:
     result: str
     failure_classes: List[str]
     projection_signature: Tuple[str, ...] | None
-
-
-def _repo_root() -> Path:
-    return Path(__file__).resolve().parents[2]
-
-
-def _validate_site_resolve_command(cmd: List[str]) -> None:
-    prefix = SITE_RESOLVE_COMMAND_PREFIX
-    if tuple(cmd[: len(prefix)]) != prefix:
-        raise ValueError(
-            "site-resolve command surface drift: expected prefix "
-            f"{list(prefix)!r}, got {cmd!r}"
-        )
-
-
-def _resolve_site_resolve_command() -> List[str]:
-    override = os.environ.get("PREMATH_SITE_RESOLVE_CMD", "").strip()
-    if override:
-        command = shlex.split(override)
-    else:
-        command = list(SITE_RESOLVE_COMMAND_PREFIX)
-    _validate_site_resolve_command(command)
-    return command
-
-
-def _run_kernel_site_resolve(
-    *,
-    request: Dict[str, Any],
-    doctrine_site_input: Dict[str, Any],
-    doctrine_site: Dict[str, Any],
-    doctrine_operation_registry: Dict[str, Any],
-    control_plane_contract: Dict[str, Any],
-    capability_registry: Dict[str, Any],
-) -> Dict[str, Any]:
-    root = _repo_root()
-    command = _resolve_site_resolve_command()
-    with tempfile.TemporaryDirectory(prefix="premath-site-resolve-") as tmp:
-        tmp_root = Path(tmp)
-        request_path = tmp_root / "request.json"
-        site_input_path = tmp_root / "doctrine_site_input.json"
-        site_path = tmp_root / "doctrine_site.json"
-        operations_path = tmp_root / "doctrine_operation_registry.json"
-        control_plane_path = tmp_root / "control_plane_contract.json"
-        capability_path = tmp_root / "capability_registry.json"
-        request_path.write_text(
-            json.dumps(request, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
-        site_input_path.write_text(
-            json.dumps(doctrine_site_input, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
-        site_path.write_text(
-            json.dumps(doctrine_site, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
-        operations_path.write_text(
-            json.dumps(doctrine_operation_registry, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
-        control_plane_path.write_text(
-            json.dumps(control_plane_contract, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
-        capability_path.write_text(
-            json.dumps(capability_registry, indent=2, sort_keys=True),
-            encoding="utf-8",
-        )
-        cmd = [
-            *command,
-            "--request",
-            str(request_path),
-            "--doctrine-site-input",
-            str(site_input_path),
-            "--doctrine-site",
-            str(site_path),
-            "--doctrine-op-registry",
-            str(operations_path),
-            "--control-plane-contract",
-            str(control_plane_path),
-            "--capability-registry",
-            str(capability_path),
-            "--json",
-        ]
-        completed = subprocess.run(
-            cmd,
-            cwd=root,
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        if completed.returncode not in {0, 1}:
-            raise ValueError(
-                "kernel site-resolve command failed: "
-                f"exit={completed.returncode}, stderr={completed.stderr.strip()!r}"
-            )
-        stdout = completed.stdout.strip()
-        if not stdout:
-            raise ValueError("kernel site-resolve produced empty stdout")
-        payload = json.loads(stdout)
-        if not isinstance(payload, dict):
-            raise ValueError("kernel site-resolve payload must be an object")
-        return payload
 
 
 def _site_resolve_projection_signature(payload: Dict[str, Any]) -> Tuple[str, ...] | None:
@@ -321,7 +206,7 @@ def evaluate_site_resolve_vector(case: Dict[str, Any]) -> EvaluationResult:
             "case.capabilityRegistry must be an object for mode=site-resolve"
         )
 
-    payload = _run_kernel_site_resolve(
+    payload = core_command_client.run_site_resolve(
         request=request,
         doctrine_site_input=doctrine_site_input,
         doctrine_site=doctrine_site,
