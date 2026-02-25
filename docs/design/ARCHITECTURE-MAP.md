@@ -79,7 +79,7 @@ Boundary rule:
 | world-route semantics + failure classes | `crates/premath-kernel/src/world_registry.rs` | single semantic authority for route/world/morphism admissibility |
 | executable world check surface | `crates/premath-cli/src/commands/world_registry_check.rs` | `premath world-registry-check` derives required world-route bindings from `CONTROL-PLANE-CONTRACT` |
 | semantic conformance lane | `tools/conformance/run_world_core_vectors.py`, `tests/conformance/fixtures/world-core/` | validates core world semantics and fixture parity against core outputs |
-| adapter/runtime route parity lane | `tools/conformance/check_runtime_orchestration.py`, `tests/conformance/fixtures/runtime-orchestration/` | wrapper transport/format checks only; no duplicate world semantic vectors |
+| adapter/runtime route parity lane | `tools/conformance/check_runtime_orchestration.py`, `premath runtime-orchestration-check`, `tests/conformance/fixtures/runtime-orchestration/` | semantic authority is `runtime-orchestration-check`; wrapper keeps transport/format parity only; no duplicate world semantic vectors |
 
 ### 1.4 Constructor-First Coherence Contract
 
@@ -174,7 +174,8 @@ Role split inside CI/Control:
 - `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
 - `tools/conformance/check_doctrine_site.py`
-- `tools/conformance/check_runtime_orchestration.py`
+- `premath runtime-orchestration-check` (canonical authority)
+- `tools/conformance/check_runtime_orchestration.py` (wrapper adapter)
 - `tools/conformance/check_doctrine_mcp_parity.py`
 - `tools/conformance/run_doctrine_inf_vectors.py`
 - `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
@@ -196,8 +197,8 @@ DOCTRINE-INF
         -> tools/ci/verify_required_witness.py
         -> tools/ci/run_gate.sh
   -> tools/conformance/check_doctrine_site.py /
-     check_runtime_orchestration.py / check_doctrine_mcp_parity.py /
-     run_doctrine_inf_vectors.py
+     runtime-orchestration-check (core) + check_runtime_orchestration.py (wrapper) /
+     check_doctrine_mcp_parity.py / run_doctrine_inf_vectors.py
   -> tools/conformance/generate_doctrine_site_inventory.py
      -> docs/design/generated/DOCTRINE-SITE-INVENTORY.md
   -> hk/mise tasks (.mise baseline + ci-required-attested)
@@ -269,7 +270,8 @@ Baseline gate (`mise run baseline`) enforces:
 - conformance + traceability + coherence-check + docs-coherence + doctrine closure,
 - doctrine closure includes doctrine-site roundtrip/reachability plus MCP
   doctrine-operation parity + runtime-route parity
-  (`check_doctrine_site.py`, `check_runtime_orchestration.py`,
+  (`check_doctrine_site.py`, `runtime-orchestration-check`,
+  `check_runtime_orchestration.py`,
   `check_doctrine_mcp_parity.py`),
 - world semantic route/binding closure runs in dedicated `world-core` vectors
   (`run_world_core_vectors.py`) with fixture parity against core outputs,

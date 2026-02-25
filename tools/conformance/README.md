@@ -473,6 +473,13 @@ Validates Harness+Squeak runtime orchestration bindings using:
 - `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node bindings),
 - `specs/premath/draft/HARNESS-RUNTIME.md` (required handoff-shape contract).
 
+Canonical semantic authority lane:
+
+- `premath runtime-orchestration-check`
+  (`cargo run --package premath-cli -- runtime-orchestration-check ... --json`).
+- `check_runtime_orchestration.py` is an adapter wrapper that invokes the
+  canonical command and preserves doctrine-check command-surface compatibility.
+
 Checks include:
 
 - required runtime route presence in doctrine operation bindings,
@@ -488,6 +495,17 @@ Run:
 
 ```bash
 python3 tools/conformance/check_runtime_orchestration.py
+```
+
+Direct core command:
+
+```bash
+cargo run --package premath-cli -- runtime-orchestration-check \
+  --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json \
+  --doctrine-op-registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json \
+  --harness-runtime specs/premath/draft/HARNESS-RUNTIME.md \
+  --doctrine-site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json \
+  --json
 ```
 
 ## `run_doctrine_inf_vectors.py`

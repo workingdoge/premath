@@ -25,7 +25,8 @@ Additive control-plane overlays (only when needed):
   generated `DOCTRINE-OP-REGISTRY.json`), including explicit runtime
   orchestration route bindings (`op/conformance.runtime_orchestration`) and
   operation class policy rows (`route_bound`, `read_only_projection`,
-  `tooling_only`).
+  `tooling_only`). Runtime orchestration semantic authority is bound to
+  `premath runtime-orchestration-check`; wrapper surfaces remain adapter-only.
 - `DOCTRINE-SITE-CUTOVER.json` — deterministic migration/cutover contract
   declaring bounded compatibility window and generated-only cutoff phase.
 - `DOCTRINE-SITE-GENERATION-DIGEST.json` — deterministic generation digest

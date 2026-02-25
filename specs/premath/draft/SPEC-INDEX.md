@@ -252,7 +252,9 @@ Worker-operation doctrine-site routing note:
   `draft/DOCTRINE-OP-REGISTRY.json` operation nodes, enforcing routed
   operation path boundaries (`tools/ci/*`) and optional
   `controlPlaneKcirMappings` row-shape checks (when mapping rows are present),
-  with invariance vectors for profile-permuted route scenarios.
+  with invariance vectors for profile-permuted route scenarios. Canonical
+  semantic authority executes via `premath runtime-orchestration-check`;
+  `tools/conformance/check_runtime_orchestration.py` is a wrapper adapter.
 - World-route semantic closure is enforced through the core command lane
   (`premath world-registry-check`) with dedicated executable vectors in
   `tests/conformance/fixtures/world-core/` (`run_world_core_vectors.py`).
