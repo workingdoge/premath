@@ -276,7 +276,7 @@ one operational chain without introducing a parallel authority path.
 Minimum deterministic verification includes:
 
 - `mise run ci-hygiene-check`
-- `python3 tools/ci/check_issue_graph.py`
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 - `mise run docs-coherence-check`
 - `mise run doctrine-check`
 

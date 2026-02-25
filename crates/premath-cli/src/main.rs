@@ -120,6 +120,20 @@ fn main() {
 
         Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
 
+        Commands::ObservationSemanticsCheck {
+            repo_root,
+            ciwitness_dir,
+            surface,
+            issues_path,
+            json,
+        } => commands::observation_semantics_check::run(
+            repo_root,
+            ciwitness_dir,
+            surface,
+            issues_path,
+            json,
+        ),
+
         Commands::McpServe {
             issues,
             issue_query_backend,
@@ -153,6 +167,12 @@ fn main() {
             repo_root,
             json,
         } => commands::instruction_check::run(instruction, repo_root, json),
+
+        Commands::InstructionBatchCheck {
+            instructions,
+            repo_root,
+            json,
+        } => commands::instruction_batch_check::run(instructions, repo_root, json),
 
         Commands::InstructionWitness {
             instruction,
@@ -206,7 +226,86 @@ fn main() {
             commands::doctrine_inf_check::run(input, json)
         }
 
+        Commands::DoctrineMcpParityCheck {
+            mcp_source,
+            registry,
+            json,
+        } => commands::doctrine_mcp_parity_check::run(mcp_source, registry, json),
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
+
+        Commands::CommandSurfaceCheck { repo_root, json } => {
+            commands::command_surface_check::run(repo_root, json)
+        }
+
+        Commands::SpecTraceabilityCheck {
+            draft_dir,
+            matrix,
+            json,
+        } => commands::spec_traceability_check::run(draft_dir, matrix, json),
+
+        Commands::DriftBudgetCheck {
+            repo_root,
+            coherence_json,
+            topology_budget,
+            json,
+        } => commands::drift_budget_check::run(repo_root, coherence_json, topology_budget, json),
+
+        Commands::CiWiringCheck {
+            repo_root,
+            workflow,
+            control_plane_contract,
+            json,
+        } => commands::ci_wiring_check::run(repo_root, workflow, control_plane_contract, json),
+
+        Commands::PipelineWiringCheck {
+            repo_root,
+            control_plane_contract,
+            json,
+        } => commands::pipeline_wiring_check::run(repo_root, control_plane_contract, json),
+
+        Commands::RepoHygieneCheck {
+            repo_root,
+            paths,
+            json,
+        } => commands::repo_hygiene_check::run(repo_root, paths, json),
+
+        Commands::BranchPolicyCheck {
+            policy,
+            rules_json,
+            fetch_live,
+            repo,
+            branch,
+            github_api_url,
+            token_env,
+            json,
+        } => commands::branch_policy_check::run(commands::branch_policy_check::Args {
+            policy,
+            rules_json,
+            fetch_live,
+            repo,
+            branch,
+            github_api_url: github_api_url.unwrap_or_else(|| {
+                std::env::var("GITHUB_API_URL")
+                    .unwrap_or_else(|_| "https://api.github.com".to_string())
+            }),
+            token_env,
+            json_output: json,
+        }),
+
+        Commands::IssueGraphCheck {
+            repo_root,
+            issues,
+            note_warn_threshold,
+            json,
+        } => commands::issue_graph_check::run(repo_root, issues, note_warn_threshold, json),
+
+        Commands::IssueGraphCompact {
+            repo_root,
+            issues,
+            mode,
+            json,
+        } => commands::issue_graph_compact::run(repo_root, issues, mode, json),
 
         Commands::TransportCheck { json } => commands::transport_check::run(json),
 
@@ -282,6 +381,11 @@ fn main() {
             required_route_bindings,
             json,
         ),
+
+        Commands::WorldDescentContractCheck {
+            control_plane_contract,
+            json,
+        } => commands::world_descent_contract_check::run(control_plane_contract, json),
 
         Commands::SiteResolve {
             request,

@@ -14,8 +14,8 @@ THIS_DIR = Path(__file__).resolve().parent
 if str(THIS_DIR) not in sys.path:
     sys.path.insert(0, str(THIS_DIR))
 
-import check_runtime_orchestration
-import wrapper_failure_guard
+import core_command_client
+import run_runtime_orchestration_vectors
 
 
 class RuntimeOrchestrationCheckerTests(unittest.TestCase):
@@ -95,7 +95,7 @@ class RuntimeOrchestrationCheckerTests(unittest.TestCase):
                 ValueError,
                 "runtime-orchestration-check command surface drift",
             ):
-                check_runtime_orchestration._resolve_runtime_orchestration_check_command()  # noqa: SLF001
+                core_command_client.resolve_runtime_orchestration_check_command()
 
     def test_evaluate_runtime_orchestration_fails_closed_on_malformed_core_payload(self) -> None:
         (
@@ -106,15 +106,15 @@ class RuntimeOrchestrationCheckerTests(unittest.TestCase):
         ) = self._baseline_inputs()
 
         with patch.object(
-            check_runtime_orchestration,
-            "_run_kernel_runtime_orchestration_check",
+            run_runtime_orchestration_vectors.core_command_client,
+            "run_runtime_orchestration_check",
             return_value={"failureClasses": []},
         ):
             with self.assertRaisesRegex(
                 ValueError,
                 "kernel.result must be 'accepted' or 'rejected'",
             ):
-                check_runtime_orchestration.evaluate_runtime_orchestration(
+                run_runtime_orchestration_vectors.evaluate_runtime_orchestration(
                     control_plane_contract=control_plane_contract,
                     operation_registry=operation_registry,
                     harness_runtime_text=harness_runtime_text,
@@ -153,11 +153,11 @@ class RuntimeOrchestrationCheckerTests(unittest.TestCase):
         }
 
         with patch.object(
-            check_runtime_orchestration,
-            "_run_kernel_runtime_orchestration_check",
+            run_runtime_orchestration_vectors.core_command_client,
+            "run_runtime_orchestration_check",
             return_value=core_payload,
         ):
-            payload = check_runtime_orchestration.evaluate_runtime_orchestration(
+            payload = run_runtime_orchestration_vectors.evaluate_runtime_orchestration(
                 control_plane_contract=control_plane_contract,
                 operation_registry=operation_registry,
                 harness_runtime_text=harness_runtime_text,
@@ -176,8 +176,8 @@ class RuntimeOrchestrationCheckerTests(unittest.TestCase):
         ) = self._baseline_inputs()
 
         with patch.object(
-            check_runtime_orchestration,
-            "_run_kernel_runtime_orchestration_check",
+            run_runtime_orchestration_vectors.core_command_client,
+            "run_runtime_orchestration_check",
             return_value={
                 "schema": 1,
                 "checkKind": "conformance.runtime_orchestration.v1",
@@ -198,7 +198,7 @@ class RuntimeOrchestrationCheckerTests(unittest.TestCase):
                 "errors": [],
             },
         ) as patched:
-            check_runtime_orchestration.evaluate_runtime_orchestration(
+            run_runtime_orchestration_vectors.evaluate_runtime_orchestration(
                 control_plane_contract=control_plane_contract,
                 operation_registry=operation_registry,
                 harness_runtime_text=harness_runtime_text,
@@ -207,24 +207,6 @@ class RuntimeOrchestrationCheckerTests(unittest.TestCase):
 
         _, kwargs = patched.call_args
         self.assertEqual(kwargs["doctrine_site_input"], doctrine_site_input)
-
-    def test_wrapper_failure_constants_stay_nonsemantic(self) -> None:
-        failure_constants = [
-            value
-            for name, value in vars(check_runtime_orchestration).items()
-            if name.startswith("FAILURE_") and isinstance(value, str)
-        ]
-        wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
-            wrapper_id="runtime-orchestration-wrapper",
-            failure_classes=failure_constants,
-        )
-
-    def test_wrapper_nonsemantic_guard_rejects_semantic_failure_class_prefixes(self) -> None:
-        with self.assertRaisesRegex(ValueError, "wrapper non-semantic guard"):
-            wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
-                wrapper_id="runtime-orchestration-wrapper",
-                failure_classes=["runtime_route_missing"],
-            )
 
 
 if __name__ == "__main__":

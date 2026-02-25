@@ -73,7 +73,7 @@ Run:
 python3 tools/conformance/check_stub_invariance.py
 ```
 
-## `check_spec_traceability.py`
+## `premath spec-traceability-check`
 
 Validates promoted draft spec coverage matrix integrity using:
 
@@ -90,7 +90,7 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_spec_traceability.py
+cargo run --package premath-cli -- spec-traceability-check --draft-dir specs/premath/draft --matrix specs/premath/draft/SPEC-TRACEABILITY.md --json
 ```
 
 ## `check_docs_coherence.py`
@@ -475,7 +475,7 @@ Drift check (no write):
 python3 tools/conformance/generate_doctrine_site.py --check
 ```
 
-## `check_runtime_orchestration.py`
+## `runtime-orchestration-check`
 
 Validates Harness+Squeak runtime orchestration bindings using:
 
@@ -487,8 +487,6 @@ Canonical semantic authority lane:
 
 - `premath runtime-orchestration-check`
   (`cargo run --package premath-cli -- runtime-orchestration-check ... --json`).
-- `check_runtime_orchestration.py` is an adapter wrapper that invokes the
-  canonical command and preserves doctrine-check command-surface compatibility.
 
 Checks include:
 
@@ -499,17 +497,9 @@ Checks include:
 - optional `controlPlaneKcirMappings` row-shape validation when mapping rows are
   provided,
 - world-route checks delegated to the core command lane
-  (`premath world-registry-check`) rather than duplicated wrapper semantics,
-- wrapper/runtime faults return non-semantic wrapper errors (`result=error`)
-  and do not synthesize semantic failure classes.
+  (`premath world-registry-check`) rather than duplicated semantic lanes.
 
-Run:
-
-```bash
-python3 tools/conformance/check_runtime_orchestration.py
-```
-
-Direct core command:
+Run (core command):
 
 ```bash
 cargo run --package premath-cli -- runtime-orchestration-check \
@@ -518,6 +508,12 @@ cargo run --package premath-cli -- runtime-orchestration-check \
   --harness-runtime specs/premath/draft/HARNESS-RUNTIME.md \
   --doctrine-site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json \
   --json
+```
+
+Run vectors (golden/adversarial/invariance):
+
+```bash
+python3 tools/conformance/run_runtime_orchestration_vectors.py
 ```
 
 ## `run_doctrine_inf_vectors.py`

@@ -92,6 +92,15 @@ fn write_sample_issues(path: &Path) {
     fs::write(path, format!("{}\n", lines.join("\n"))).expect("sample issues should be written");
 }
 
+fn write_issue_graph_ok_issues(path: &Path) {
+    let lines = [
+        r#"{"id":"bd-a","title":"Issue A","status":"open","description":"Acceptance:\n- complete work\n\nVerification commands:\n- `mise run ci-hygiene-check`"}"#,
+        r#"{"id":"bd-b","title":"Issue B","status":"closed"}"#,
+    ];
+    fs::write(path, format!("{}\n", lines.join("\n")))
+        .expect("issue-graph fixture issues should be written");
+}
+
 fn write_claim_next_issues(path: &Path) {
     let lines = [
         r#"{"id":"bd-1","title":"Issue 1","status":"open"}"#,
@@ -1362,6 +1371,275 @@ fn instruction_check_json_smoke() {
 }
 
 #[test]
+fn instruction_batch_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+
+    let output = run_premath([
+        OsString::from("instruction-batch-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.instruction_envelope_check.v1");
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["errors"], serde_json::json!([]));
+    assert!(
+        payload["checked"]
+            .as_u64()
+            .expect("checked should be a u64")
+            >= 1
+    );
+}
+
+#[test]
+fn command_surface_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+
+    let output = run_premath([
+        OsString::from("command-surface-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.command_surface_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn doctrine_mcp_parity_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let mcp_source = repo_root.join("crates/premath-cli/src/commands/mcp_serve.rs");
+    let registry = repo_root.join("specs/premath/draft/DOCTRINE-OP-REGISTRY.json");
+
+    let output = run_premath([
+        OsString::from("doctrine-mcp-parity-check"),
+        OsString::from("--mcp-source"),
+        mcp_source.as_os_str().to_os_string(),
+        OsString::from("--registry"),
+        registry.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.doctrine_mcp_parity_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn drift_budget_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+
+    let output = run_premath([
+        OsString::from("drift-budget-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.drift_budget.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn spec_traceability_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let draft_dir = repo_root.join("specs/premath/draft");
+    let matrix_path = repo_root.join("specs/premath/draft/SPEC-TRACEABILITY.md");
+
+    let output = run_premath([
+        OsString::from("spec-traceability-check"),
+        OsString::from("--draft-dir"),
+        draft_dir.as_os_str().to_os_string(),
+        OsString::from("--matrix"),
+        matrix_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.spec_traceability_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn ci_wiring_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+
+    let output = run_premath([
+        OsString::from("ci-wiring-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.ci_wiring_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn pipeline_wiring_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+
+    let output = run_premath([
+        OsString::from("pipeline-wiring-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.pipeline_wiring_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn repo_hygiene_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+
+    let output = run_premath([
+        OsString::from("repo-hygiene-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.repo_hygiene_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn branch_policy_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let policy_path = repo_root.join("specs/process/GITHUB-BRANCH-POLICY.json");
+    let rules_path =
+        repo_root.join("tests/ci/fixtures/branch-policy/effective-main-rules-golden.json");
+
+    let output = run_premath([
+        OsString::from("branch-policy-check"),
+        OsString::from("--policy"),
+        policy_path.as_os_str().to_os_string(),
+        OsString::from("--rules-json"),
+        rules_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.branch_policy_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn issue_graph_check_json_smoke() {
+    let tmp = TempDirGuard::new("issue-graph-check-json");
+    let repo_root = tmp.path().to_path_buf();
+    let issues = repo_root.join("issues.jsonl");
+    write_issue_graph_ok_issues(&issues);
+
+    let output = run_premath([
+        OsString::from("issue-graph-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--note-warn-threshold"),
+        OsString::from("2000"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.issue_graph_check.v1");
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["compactness"]["evaluated"], true);
+    assert_eq!(payload["compactness"]["findingCount"], 0);
+}
+
+#[test]
+fn issue_graph_compact_check_json_smoke() {
+    let tmp = TempDirGuard::new("issue-graph-compact-json");
+    let repo_root = tmp.path().to_path_buf();
+    let issues = repo_root.join("issues.jsonl");
+    write_issue_graph_ok_issues(&issues);
+
+    let output = run_premath([
+        OsString::from("issue-graph-compact"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--issues"),
+        issues.as_os_str().to_os_string(),
+        OsString::from("--mode"),
+        OsString::from("check"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.issue_graph_compactness.v1");
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["findingCount"], 0);
+}
+
+#[test]
 fn instruction_witness_json_smoke() {
     let tmp = TempDirGuard::new("instruction-witness-json");
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
@@ -2329,6 +2607,50 @@ fn world_registry_check_site_input_json_smoke() {
 }
 
 #[test]
+fn world_descent_contract_check_json_smoke() {
+    let control_plane_contract = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+    let output = run_premath([
+        OsString::from("world-descent-contract-check"),
+        OsString::from("--control-plane-contract"),
+        control_plane_contract.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["checkKind"],
+        serde_json::json!("premath.world_descent_contract_check.v1")
+    );
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
+fn world_descent_contract_check_rejects_missing_contract_section() {
+    let tmp = TempDirGuard::new("world-descent-contract-check-reject");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    fs::write(&contract_path, b"{}").expect("contract fixture should be written");
+
+    let output = run_premath([
+        OsString::from("world-descent-contract-check"),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_failure(&output);
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["result"], "rejected");
+    assert!(
+        payload["issues"]
+            .as_array()
+            .expect("issues should be an array")
+            .iter()
+            .any(|issue| issue["path"] == "controlPlaneContract.worldDescentContract")
+    );
+}
+
+#[test]
 fn site_resolve_json_smoke() {
     let tmp = TempDirGuard::new("site-resolve-json");
     let (
@@ -2810,6 +3132,112 @@ fn observe_build_json_smoke() {
     let events_raw = fs::read_to_string(out_jsonl).expect("events jsonl should read");
     assert!(events_raw.contains("\"kind\":\"ci.required.v1.summary\""));
     assert!(events_raw.contains("\"kind\":\"ci.observation.surface.v0.summary\""));
+}
+
+#[test]
+fn observation_semantics_check_json_smoke() {
+    let tmp = TempDirGuard::new("observe-semantics-json");
+    let repo_root = tmp.path();
+    let ciwitness = repo_root.join("artifacts/ciwitness");
+    let issues = repo_root.join(".premath/issues.jsonl");
+    fs::create_dir_all(&ciwitness).expect("ciwitness dir should be created");
+    fs::create_dir_all(issues.parent().expect("issues parent should exist"))
+        .expect("issues parent should be created");
+
+    fs::write(
+        ciwitness.join("latest-delta.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "projectionPolicy": "ci-topos-v0",
+            "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
+            "deltaSource": "explicit",
+            "changedPaths": ["README.md"]
+        }))
+        .expect("delta should serialize"),
+    )
+    .expect("delta should write");
+    fs::write(
+        ciwitness.join("latest-required.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "witnessKind": "ci.required.v1",
+            "projectionPolicy": "ci-topos-v0",
+            "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
+            "verdictClass": "accepted",
+            "requiredChecks": ["baseline"],
+            "executedChecks": ["baseline"],
+            "failureClasses": []
+        }))
+        .expect("required should serialize"),
+    )
+    .expect("required should write");
+    fs::write(
+        ciwitness.join("latest-decision.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "decisionKind": "ci.required.decision.v1",
+            "projectionDigest": "proj1_alpha",
+            "typedCoreProjectionDigest": "ev1_alpha",
+            "decision": "accept",
+            "reasonClass": "verified_accept"
+        }))
+        .expect("decision should serialize"),
+    )
+    .expect("decision should write");
+    fs::write(
+        ciwitness.join("20260222T010000Z-ci.json"),
+        serde_json::to_vec_pretty(&serde_json::json!({
+            "witnessKind": "ci.instruction.v1",
+            "instructionId": "20260222T010000Z-ci",
+            "instructionDigest": "instr1_alpha",
+            "policyDigest": "pol1_alpha",
+            "verdictClass": "accepted",
+            "requiredChecks": ["baseline"],
+            "executedChecks": ["baseline"],
+            "failureClasses": [],
+            "runFinishedAt": "2026-02-22T01:00:00Z"
+        }))
+        .expect("instruction should serialize"),
+    )
+    .expect("instruction should write");
+    fs::write(
+        &issues,
+        "{\"id\":\"bd-root\",\"title\":\"Root\",\"status\":\"open\"}\n",
+    )
+    .expect("issues should write");
+
+    let output_build = run_premath([
+        OsString::from("observe-build"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--ciwitness-dir"),
+        OsString::from("artifacts/ciwitness"),
+        OsString::from("--issues-path"),
+        OsString::from(".premath/issues.jsonl"),
+        OsString::from("--out-json"),
+        OsString::from("artifacts/observation/latest.json"),
+        OsString::from("--out-jsonl"),
+        OsString::from("artifacts/observation/events.jsonl"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output_build);
+
+    let output_check = run_premath([
+        OsString::from("observation-semantics-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--ciwitness-dir"),
+        OsString::from("artifacts/ciwitness"),
+        OsString::from("--surface"),
+        OsString::from("artifacts/observation/latest.json"),
+        OsString::from("--issues-path"),
+        OsString::from(".premath/issues.jsonl"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output_check);
+
+    let payload = parse_json_stdout(&output_check);
+    assert_eq!(payload["checkKind"], "ci.observation_semantics.v1");
+    assert_eq!(payload["result"], "accepted");
 }
 
 #[test]

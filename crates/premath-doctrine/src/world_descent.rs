@@ -6,7 +6,7 @@ const CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX: &str = "controlPlaneContract";
 const WORLD_DESCENT_CONTRACT_ID: &str = "doctrine.world_descent.v1";
 const WORLD_ROUTE_IDENTITY_MISSING: &str = "world_route_identity_missing";
 const WORLD_DESCENT_DATA_MISSING: &str = "world_descent_data_missing";
-const WORLD_DESCENT_FAILURE_DESCENT_DATA_MISSING: &str = "world_descent_data_missing";
+const KCIR_HANDOFF_IDENTITY_MISSING: &str = "kcir_handoff_identity_missing";
 const DEFAULT_WORLD_ROUTE_FAMILIES: [&str; 7] = [
     "route.gate_execution",
     "route.instruction_execution",
@@ -65,6 +65,16 @@ pub struct DerivedWorldRequirements {
     pub bindings: Vec<DoctrineRequiredRouteBinding>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct WorldDescentContractProjection {
+    pub contract_id: String,
+    pub required_route_families: Vec<String>,
+    pub required_action_route_bindings: BTreeMap<String, Vec<String>>,
+    pub required_static_operation_bindings: BTreeMap<String, Vec<String>>,
+    pub failure_classes: BTreeMap<String, String>,
+}
+
 #[derive(Debug, Clone)]
 struct WorldDescentConfig {
     required_families: BTreeSet<String>,
@@ -72,6 +82,7 @@ struct WorldDescentConfig {
     required_static_bindings: BTreeMap<String, BTreeSet<String>>,
     failure_class_identity_missing: String,
     failure_class_descent_data_missing: String,
+    failure_class_kcir_handoff_identity_missing: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -81,10 +92,6 @@ enum DeriveMode {
 }
 
 impl DeriveMode {
-    fn strict(self) -> bool {
-        matches!(self, Self::RuntimeOrchestration)
-    }
-
     fn include_runtime_route_operations(self) -> bool {
         matches!(self, Self::RuntimeOrchestration)
     }
@@ -100,6 +107,28 @@ pub fn derive_world_descent_requirements_for_world_registry_check(
     control_plane_contract: &Value,
 ) -> (DerivedWorldRequirements, Vec<DoctrineValidationIssue>) {
     derive_world_descent_requirements(control_plane_contract, DeriveMode::WorldRegistryCheck)
+}
+
+pub fn validate_world_descent_contract_projection(
+    control_plane_contract: &Value,
+) -> (WorldDescentContractProjection, Vec<DoctrineValidationIssue>) {
+    let mut config = default_world_descent_config();
+    let mut issues: Vec<DoctrineValidationIssue> = Vec::new();
+
+    let Some(contract_obj) = control_plane_contract.as_object() else {
+        issues.push(control_plane_contract_issue_with_failure(
+            CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX.to_string(),
+            config.failure_class_descent_data_missing.as_str(),
+            "must be an object",
+        ));
+        return (project_world_descent_contract(&config), issues);
+    };
+
+    if let Err(mut parse_issues) = parse_world_descent_contract(contract_obj, &mut config) {
+        issues.append(&mut parse_issues);
+    }
+
+    (project_world_descent_contract(&config), issues)
 }
 
 fn derive_world_descent_requirements(
@@ -138,7 +167,7 @@ fn derive_world_descent_requirements(
     };
 
     if let Err(mut parse_issues) =
-        parse_world_descent_contract(contract_obj, &mut world_descent_config, mode)
+        parse_world_descent_contract(contract_obj, &mut world_descent_config)
     {
         issues.append(&mut parse_issues);
     }
@@ -312,13 +341,13 @@ fn default_world_descent_config() -> WorldDescentConfig {
         required_static_bindings,
         failure_class_identity_missing: WORLD_ROUTE_IDENTITY_MISSING.to_string(),
         failure_class_descent_data_missing: WORLD_DESCENT_DATA_MISSING.to_string(),
+        failure_class_kcir_handoff_identity_missing: KCIR_HANDOFF_IDENTITY_MISSING.to_string(),
     }
 }
 
 fn parse_world_descent_contract(
     contract_obj: &serde_json::Map<String, Value>,
     config: &mut WorldDescentConfig,
-    mode: DeriveMode,
 ) -> Result<(), Vec<DoctrineValidationIssue>> {
     let mut issues: Vec<DoctrineValidationIssue> = Vec::new();
 
@@ -353,45 +382,53 @@ fn parse_world_descent_contract(
         .and_then(Value::as_object);
     match failure_classes_obj {
         Some(row) => {
-            if mode.strict() {
-                if let Some(identity_missing) = non_empty_string(row.get("identityMissing")) {
-                    config.failure_class_identity_missing = identity_missing;
-                } else {
+            let expected_failure_classes = expected_failure_classes(config);
+            for key in [
+                "identityMissing",
+                "descentDataMissing",
+                "kcirHandoffIdentityMissing",
+            ] {
+                let path = format!(
+                    "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.failureClasses.{key}"
+                );
+                let Some(value) = non_empty_string(row.get(key)) else {
                     issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.failureClasses.identityMissing"
-                        ),
+                        path,
                         config.failure_class_descent_data_missing.as_str(),
                         "must be a non-empty string",
                     ));
-                }
-                if let Some(descent_missing) = non_empty_string(row.get("descentDataMissing")) {
-                    config.failure_class_descent_data_missing = descent_missing;
-                } else {
+                    continue;
+                };
+                if let Some(expected_value) = expected_failure_classes.get(key)
+                    && &value != expected_value
+                {
                     issues.push(control_plane_contract_issue_with_failure(
                         format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.failureClasses.descentDataMissing"
-                        ),
-                        WORLD_DESCENT_FAILURE_DESCENT_DATA_MISSING,
-                        "must be a non-empty string",
-                    ));
-                }
-                if non_empty_string(row.get("kcirHandoffIdentityMissing")).is_none() {
-                    issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.failureClasses.kcirHandoffIdentityMissing"
+                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.failureClasses.{key}"
                         ),
                         config.failure_class_descent_data_missing.as_str(),
-                        "must be a non-empty string",
+                        &format!("must equal {expected_value}"),
                     ));
                 }
-            } else {
-                if let Some(identity_missing) = non_empty_string(row.get("identityMissing")) {
-                    config.failure_class_identity_missing = identity_missing;
-                }
-                if let Some(descent_missing) = non_empty_string(row.get("descentDataMissing")) {
-                    config.failure_class_descent_data_missing = descent_missing;
-                }
+            }
+            let unknown_failure_class_keys: Vec<String> = row
+                .keys()
+                .filter(|key| {
+                    !matches!(
+                        key.as_str(),
+                        "identityMissing" | "descentDataMissing" | "kcirHandoffIdentityMissing"
+                    )
+                })
+                .cloned()
+                .collect();
+            if !unknown_failure_class_keys.is_empty() {
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.failureClasses"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "must include only identityMissing, descentDataMissing, and kcirHandoffIdentityMissing",
+                ));
             }
         }
         None => {
@@ -416,7 +453,7 @@ fn parse_world_descent_contract(
             .filter(|family| !family.is_empty())
             .map(ToOwned::to_owned)
             .collect::<BTreeSet<_>>();
-        if mode.strict() && parsed.is_empty() {
+        if parsed.is_empty() {
             issues.push(control_plane_contract_issue_with_failure(
                 format!(
                     "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredRouteFamilies"
@@ -424,8 +461,14 @@ fn parse_world_descent_contract(
                 config.failure_class_descent_data_missing.as_str(),
                 "must be a non-empty list",
             ));
-        } else if !parsed.is_empty() {
-            config.required_families = parsed;
+        } else if parsed != config.required_families {
+            issues.push(control_plane_contract_issue_with_failure(
+                format!(
+                    "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredRouteFamilies"
+                ),
+                config.failure_class_descent_data_missing.as_str(),
+                "must match canonical route-family set",
+            ));
         }
     } else {
         issues.push(control_plane_contract_issue_with_failure(
@@ -445,27 +488,23 @@ fn parse_world_descent_contract(
         for (route_family_id, host_action_ids) in action_bindings {
             let route_family_id = route_family_id.trim();
             if route_family_id.is_empty() {
-                if mode.strict() {
-                    issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings.<routeFamilyId>"
-                        ),
-                        config.failure_class_descent_data_missing.as_str(),
-                        "route family id must be non-empty",
-                    ));
-                }
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings.<routeFamilyId>"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "route family id must be non-empty",
+                ));
                 continue;
             }
             let Some(host_action_ids) = host_action_ids.as_array() else {
-                if mode.strict() {
-                    issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings.{route_family_id}"
-                        ),
-                        config.failure_class_descent_data_missing.as_str(),
-                        "must be a non-empty list",
-                    ));
-                }
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings.{route_family_id}"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "must be a non-empty list",
+                ));
                 continue;
             };
             let parsed = host_action_ids
@@ -476,21 +515,35 @@ fn parse_world_descent_contract(
                 .map(ToOwned::to_owned)
                 .collect::<BTreeSet<_>>();
             if parsed.is_empty() {
-                if mode.strict() {
-                    issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings.{route_family_id}"
-                        ),
-                        config.failure_class_descent_data_missing.as_str(),
-                        "must be a non-empty list",
-                    ));
-                }
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings.{route_family_id}"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "must be a non-empty list",
+                ));
+                continue;
+            }
+            if !config.required_families.contains(route_family_id) {
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings.{route_family_id}"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "must reference requiredRouteFamilies",
+                ));
                 continue;
             }
             parsed_bindings.insert(route_family_id.to_string(), parsed);
         }
-        if !parsed_bindings.is_empty() {
-            config.required_action_bindings = parsed_bindings;
+        if parsed_bindings != config.required_action_bindings {
+            issues.push(control_plane_contract_issue_with_failure(
+                format!(
+                    "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredActionRouteBindings"
+                ),
+                config.failure_class_descent_data_missing.as_str(),
+                "must match canonical route-family host-action bindings",
+            ));
         }
     } else {
         issues.push(control_plane_contract_issue_with_failure(
@@ -510,27 +563,23 @@ fn parse_world_descent_contract(
         for (route_family_id, operation_ids) in static_bindings {
             let route_family_id = route_family_id.trim();
             if route_family_id.is_empty() {
-                if mode.strict() {
-                    issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings.<routeFamilyId>"
-                        ),
-                        config.failure_class_descent_data_missing.as_str(),
-                        "route family id must be non-empty",
-                    ));
-                }
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings.<routeFamilyId>"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "route family id must be non-empty",
+                ));
                 continue;
             }
             let Some(operation_ids) = operation_ids.as_array() else {
-                if mode.strict() {
-                    issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings.{route_family_id}"
-                        ),
-                        config.failure_class_descent_data_missing.as_str(),
-                        "must be a non-empty list",
-                    ));
-                }
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings.{route_family_id}"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "must be a non-empty list",
+                ));
                 continue;
             };
             let parsed = operation_ids
@@ -541,21 +590,35 @@ fn parse_world_descent_contract(
                 .map(ToOwned::to_owned)
                 .collect::<BTreeSet<_>>();
             if parsed.is_empty() {
-                if mode.strict() {
-                    issues.push(control_plane_contract_issue_with_failure(
-                        format!(
-                            "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings.{route_family_id}"
-                        ),
-                        config.failure_class_descent_data_missing.as_str(),
-                        "must be a non-empty list",
-                    ));
-                }
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings.{route_family_id}"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "must be a non-empty list",
+                ));
+                continue;
+            }
+            if !config.required_families.contains(route_family_id) {
+                issues.push(control_plane_contract_issue_with_failure(
+                    format!(
+                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings.{route_family_id}"
+                    ),
+                    config.failure_class_descent_data_missing.as_str(),
+                    "must reference requiredRouteFamilies",
+                ));
                 continue;
             }
             parsed_bindings.insert(route_family_id.to_string(), parsed);
         }
-        if !parsed_bindings.is_empty() {
-            config.required_static_bindings = parsed_bindings;
+        if parsed_bindings != config.required_static_bindings {
+            issues.push(control_plane_contract_issue_with_failure(
+                format!(
+                    "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.worldDescentContract.requiredStaticOperationBindings"
+                ),
+                config.failure_class_descent_data_missing.as_str(),
+                "must match canonical route-family operation bindings",
+            ));
         }
     } else {
         issues.push(control_plane_contract_issue_with_failure(
@@ -572,6 +635,51 @@ fn parse_world_descent_contract(
     } else {
         Err(issues)
     }
+}
+
+fn project_world_descent_contract(config: &WorldDescentConfig) -> WorldDescentContractProjection {
+    WorldDescentContractProjection {
+        contract_id: WORLD_DESCENT_CONTRACT_ID.to_string(),
+        required_route_families: config.required_families.iter().cloned().collect(),
+        required_action_route_bindings: config
+            .required_action_bindings
+            .iter()
+            .map(|(route_family_id, host_action_ids)| {
+                (
+                    route_family_id.clone(),
+                    host_action_ids.iter().cloned().collect::<Vec<_>>(),
+                )
+            })
+            .collect(),
+        required_static_operation_bindings: config
+            .required_static_bindings
+            .iter()
+            .map(|(route_family_id, operation_ids)| {
+                (
+                    route_family_id.clone(),
+                    operation_ids.iter().cloned().collect::<Vec<_>>(),
+                )
+            })
+            .collect(),
+        failure_classes: expected_failure_classes(config),
+    }
+}
+
+fn expected_failure_classes(config: &WorldDescentConfig) -> BTreeMap<String, String> {
+    let mut out = BTreeMap::new();
+    out.insert(
+        "identityMissing".to_string(),
+        config.failure_class_identity_missing.clone(),
+    );
+    out.insert(
+        "descentDataMissing".to_string(),
+        config.failure_class_descent_data_missing.clone(),
+    );
+    out.insert(
+        "kcirHandoffIdentityMissing".to_string(),
+        config.failure_class_kcir_handoff_identity_missing.clone(),
+    );
+    out
 }
 
 fn parse_runtime_route_operation_ids(control_plane_contract: &Value) -> Vec<String> {
@@ -818,6 +926,38 @@ mod tests {
 
         let (_requirements, issues) =
             derive_world_descent_requirements_for_runtime_orchestration(&control_plane);
+        assert!(issues.iter().any(|issue| {
+            issue.path == "controlPlaneContract.worldDescentContract.failureClasses.identityMissing"
+        }));
+        assert!(issues.iter().any(|issue| {
+            issue.path
+                == "controlPlaneContract.worldDescentContract.failureClasses.descentDataMissing"
+        }));
+        assert!(issues.iter().any(|issue| {
+            issue.path
+                == "controlPlaneContract.worldDescentContract.failureClasses.kcirHandoffIdentityMissing"
+        }));
+    }
+
+    #[test]
+    fn world_registry_mode_requires_failure_class_fields() {
+        let control_plane = serde_json::json!({
+            "worldDescentContract": {
+                "contractId": "doctrine.world_descent.v1",
+                "requiredRouteFamilies": ["route.gate_execution"],
+                "requiredActionRouteBindings": {"route.instruction_execution": ["instruction.run"]},
+                "requiredStaticOperationBindings": {"route.transport.dispatch": ["op/transport.world_route_binding"]},
+                "failureClasses": {}
+            },
+            "hostActionSurface": {
+                "requiredActions": {
+                    "instruction.run": {"operationId": "op/mcp.instruction_run"}
+                }
+            }
+        });
+
+        let (_requirements, issues) =
+            derive_world_descent_requirements_for_world_registry_check(&control_plane);
         assert!(issues.iter().any(|issue| {
             issue.path == "controlPlaneContract.worldDescentContract.failureClasses.identityMissing"
         }));

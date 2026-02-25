@@ -24,7 +24,7 @@ local fast_steps = new Mapping<String, Step> {
 
   ["repo-hygiene"] {
     glob = List("**/*")
-    check = "python3 tools/ci/check_repo_hygiene.py {{files}}"
+    check = "cargo run --package premath-cli -- repo-hygiene-check --repo-root . {{files}}"
   }
 
   ["trailing-whitespace"] {

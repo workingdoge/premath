@@ -80,8 +80,8 @@ Warning classes:
 1. Add core checker in `premath-bd` + tests.
 2. Add CLI command in `premath-cli` + tests.
 3. Add MCP wrapper (`issue_check`) to expose same core result.
-4. Replace `tools/ci/check_issue_graph.py` with compatibility shim that calls
-   `premath issue check` (or remove once callers are migrated).
+4. Replace wrapper scripts with native checker command surfaces
+   (`premath issue-graph-check`, `premath issue-graph-compact`).
 5. Keep CI gate unchanged at the task level (`mise run ci-hygiene-check`) but
    backed by core semantics.
 

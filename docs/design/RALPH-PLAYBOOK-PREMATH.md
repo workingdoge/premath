@@ -94,7 +94,7 @@ Ralph concept -> Premath surface:
   - `mise run harness-coordinator-loop`
   - `mise run harness-worker-loop`
 - issue graph integrity:
-  - `python3 tools/ci/check_issue_graph.py`
+  - `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
   - `cargo run --package premath-cli -- dep diagnostics --graph-scope active --json`
 - baseline backpressure:
   - `mise run baseline`

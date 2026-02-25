@@ -778,7 +778,7 @@ dashboard:
 Implementation surfaces:
 
 - reducer/query: `tools/ci/observation_surface.py`
-- semantic invariance checks: `tools/ci/check_observation_semantics.py`
+- semantic invariance checks: `premath observation-semantics-check`
 - reducer tests: `tools/ci/test_observation_surface.py`
 - observe read models: `crates/premath-surreal/src/observation.rs`,
   `crates/premath-ux/src/lib.rs`,
@@ -4124,3 +4124,88 @@ and prevents wrapper lanes from reintroducing parallel authority semantics.
 - Docs now provide a single first stop for authority boundaries and ordering.
 - Spec and implementation slices remain linked to the same lane map, reducing
   ambiguity during issue decomposition and review.
+
+---
+
+## 2026-02-25 — Decision 0134: Migrate traceability matrix validation to checker-native CLI surface
+
+### Decision
+Move promoted draft traceability matrix validation from Python script surface
+to native checker command surface:
+
+1. Add `premath spec-traceability-check` as the canonical validator for
+   `specs/premath/draft/SPEC-TRACEABILITY.md` parity against promoted draft set.
+2. Rewire `mise run traceability-check` to execute only the CLI checker.
+3. Remove `tools/conformance/check_spec_traceability.py` from active command
+   surface.
+
+### Rationale
+Traceability parity is deterministic checker logic and belongs on the same
+native command surface as other migrated CI/control checks. Keeping it in Python
+adds avoidable semantic split and extra command-surface cognitive load.
+
+### Consequences
+- traceability validation now runs through one checker-native command boundary.
+- baseline/task wiring no longer depends on a dedicated Python entrypoint for
+  this check family.
+- docs and traceability references now point to `premath spec-traceability-check`
+  as the active command surface.
+
+---
+
+## 2026-02-25 — Decision 0135: Migrate branch-policy validation to checker-native CLI surface
+
+### Decision
+Move GitHub branch/ruleset policy validation from Python script surface to
+native checker command surface:
+
+1. Add `premath branch-policy-check` as the canonical command for policy
+   contract validation against fixture or live GitHub rules payloads.
+2. Rewire:
+   - `mise run ci-branch-policy-check`
+   - `mise run ci-branch-policy-check-live`
+   to execute the CLI checker.
+3. Remove legacy Python branch-policy checker/test entrypoints from active task
+   surface.
+
+### Rationale
+Branch-policy enforcement is a governance checker concern and should share the
+same command-surface authority model as other migrated CI/control checks.
+Consolidating this removes one more Python-only semantic lane and reduces
+surface drift risk.
+
+### Consequences
+- branch-policy fixture validation and live-server drift checks now route
+  through one checker-native CLI boundary.
+- `ci-pipeline-test` now exercises branch-policy via CLI smoke test
+  (`branch_policy_check_json_smoke`) rather than Python unit test lane.
+- repository branch-policy checker surface aligns better with minimum encoding /
+  maximum expressiveness posture.
+
+---
+
+## 2026-02-25 — Decision 0136: Route doctrine MCP parity check through checker-native CLI
+
+### Decision
+Move doctrine MCP operation parity checking to checker-native CLI and wire
+`doctrine-check` task through that surface:
+
+1. add `premath doctrine-mcp-parity-check` for deterministic MCP tool coverage
+   + morphism classification parity checks,
+2. rewire `mise run doctrine-check` to execute the CLI command instead of the
+   Python checker for this family,
+3. update `docs-coherence` expected doctrine-check command list and pipeline
+   smoke coverage to checker-native command surface.
+
+### Rationale
+MCP doctrine parity is a control/doctrine checker concern and should live on the
+same CLI authority surface as other migrated checks. This reduces one more
+semantic Python lane while preserving deterministic parity behavior.
+
+### Consequences
+- doctrine-check now executes runtime-orchestration + MCP parity through
+  `premath-cli` command surfaces.
+- `ci-pipeline-test` doctrine parity coverage now uses
+  `doctrine_mcp_parity_check_json_smoke`.
+- legacy Python checker file can remain temporarily as a compatibility/path
+  reference lane, but active enforcement route is checker-native.

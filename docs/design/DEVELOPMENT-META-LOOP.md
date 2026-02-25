@@ -94,8 +94,8 @@ Diagnostic convention:
 
 Operational surfaces:
 
-- `python3 tools/ci/check_issue_graph.py` (gate-level compactness enforcement)
-- `python3 tools/ci/compact_issue_graph.py --mode check|apply` (deterministic remediation)
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000` (gate-level compactness enforcement)
+- `cargo run --package premath-cli -- issue-graph-compact --repo-root . --issues .premath/issues.jsonl --mode check|apply` (deterministic remediation)
 - compactness failures print the canonical `--mode apply` command with current
   `--repo-root`/`--issues` bindings.
 
@@ -120,7 +120,7 @@ Minimum gate cadence by change class:
 
 Always finish with:
 
-- `python3 tools/ci/check_issue_graph.py`
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 ## 7. Definition of Done (issue-level)
 

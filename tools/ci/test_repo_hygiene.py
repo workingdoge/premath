@@ -1,51 +1,85 @@
 #!/usr/bin/env python3
-"""Unit tests for deterministic repo hygiene checks."""
+"""Integration tests for `premath repo-hygiene-check`."""
 
 from __future__ import annotations
 
+import json
+import subprocess
+import tempfile
 import unittest
+from pathlib import Path
 
-import check_repo_hygiene
+
+def run_repo_hygiene(repo_root: Path, *paths: str) -> subprocess.CompletedProcess[str]:
+    command = [
+        "cargo",
+        "run",
+        "--quiet",
+        "--package",
+        "premath-cli",
+        "--",
+        "repo-hygiene-check",
+        "--repo-root",
+        str(repo_root),
+    ]
+    command.extend(paths)
+    command.append("--json")
+    return subprocess.run(
+        command,
+        cwd=Path(__file__).resolve().parents[2],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
 
 
 class RepoHygieneTests(unittest.TestCase):
-    def test_classify_forbidden_path_prefixes(self) -> None:
-        self.assertEqual(
-            check_repo_hygiene.classify_forbidden_path(".claude/session.json"),
-            "private_agent_surface",
-        )
-        self.assertEqual(
-            check_repo_hygiene.classify_forbidden_path(".serena/memory.md"),
-            "private_agent_surface",
-        )
-        self.assertEqual(
-            check_repo_hygiene.classify_forbidden_path(".premath/cache/conformance/cache.json"),
-            "local_cache_surface",
-        )
-        self.assertEqual(
-            check_repo_hygiene.classify_forbidden_path("artifacts/ciwitness/latest-required.json"),
-            "ephemeral_ci_artifact_surface",
-        )
-        self.assertIsNone(check_repo_hygiene.classify_forbidden_path("specs/premath/draft/README.md"))
+    def test_rejects_private_surface_path(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-repo-hygiene-") as tmp:
+            repo_root = Path(tmp)
+            (repo_root / ".gitignore").write_text(
+                "\n".join([".claude/", ".serena/", ".premath/cache/"]) + "\n",
+                encoding="utf-8",
+            )
+            completed = run_repo_hygiene(repo_root, ".claude/session.json")
+            self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["result"], "rejected")
+            self.assertIn("repo_hygiene_violation", payload["failureClasses"])
+            self.assertTrue(
+                any("private_agent_surface" in row for row in payload["violations"]),
+                payload["violations"],
+            )
 
-    def test_missing_required_gitignore_entries(self) -> None:
-        text = """
-        .DS_Store
-        .claude/
-        # comment
-        """
-        missing = check_repo_hygiene.missing_required_gitignore_entries(text)
-        self.assertEqual(missing, [".premath/cache/", ".serena/"])
+    def test_rejects_missing_gitignore_entries(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-repo-hygiene-") as tmp:
+            repo_root = Path(tmp)
+            (repo_root / ".gitignore").write_text(".claude/\n", encoding="utf-8")
+            completed = run_repo_hygiene(repo_root, "specs/premath/draft/README.md")
+            self.assertEqual(completed.returncode, 1, completed.stdout + completed.stderr)
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["result"], "rejected")
+            self.assertTrue(
+                any(".premath/cache/" in row for row in payload["violations"]),
+                payload["violations"],
+            )
+            self.assertTrue(
+                any(".serena/" in row for row in payload["violations"]),
+                payload["violations"],
+            )
 
-    def test_check_paths_reports_forbidden_entries(self) -> None:
-        violations = check_repo_hygiene.check_paths(
-            [
-                "specs/premath/draft/CONFORMANCE.md",
-                ".serena/memory.md",
-            ]
-        )
-        self.assertEqual(len(violations), 1)
-        self.assertIn("private_agent_surface", violations[0])
+    def test_accepts_clean_explicit_paths(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-repo-hygiene-") as tmp:
+            repo_root = Path(tmp)
+            (repo_root / ".gitignore").write_text(
+                "\n".join([".claude/", ".serena/", ".premath/cache/"]) + "\n",
+                encoding="utf-8",
+            )
+            completed = run_repo_hygiene(repo_root, "specs/premath/draft/README.md")
+            self.assertEqual(completed.returncode, 0, completed.stdout + completed.stderr)
+            payload = json.loads(completed.stdout)
+            self.assertEqual(payload["result"], "accepted")
+            self.assertEqual(payload["violations"], [])
 
 
 if __name__ == "__main__":

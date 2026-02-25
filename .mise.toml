@@ -33,13 +33,13 @@ run = "python3 tools/kcir_toy/run_kcir_toy_vectors.py --fixtures tests/kcir_toy/
 run = "python3 tools/conformance/check_stub_invariance.py"
 
 [tasks.traceability-check]
-run = "python3 tools/conformance/check_spec_traceability.py"
+run = "cargo run --package premath-cli -- spec-traceability-check --json"
 
 [tasks.docs-coherence-check]
 run = "python3 tools/conformance/check_docs_coherence.py"
 
 [tasks.ci-drift-budget-check]
-run = "python3 tools/ci/check_drift_budget.py --json"
+run = "cargo run --package premath-cli -- drift-budget-check --repo-root . --json"
 
 [tasks.coherence-check]
 run = "cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json"
@@ -48,7 +48,7 @@ run = "cargo run --package premath-cli -- coherence-check --contract specs/prema
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
   "cargo run --package premath-cli -- runtime-orchestration-check --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json --doctrine-op-registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --harness-runtime specs/premath/draft/HARNESS-RUNTIME.md --doctrine-site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json --json",
-  "python3 tools/conformance/check_doctrine_mcp_parity.py",
+  "cargo run --package premath-cli -- doctrine-mcp-parity-check --mcp-source crates/premath-cli/src/commands/mcp_serve.rs --registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --json",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
 
@@ -106,32 +106,32 @@ run = "hk run pre-push"
 run = "python3 tools/ci/project_checks.py"
 
 [tasks.ci-command-surface-check]
-run = "python3 tools/ci/check_command_surface.py"
+run = "cargo run --package premath-cli -- command-surface-check --repo-root ."
 
 [tasks.ci-hygiene-check]
 run = [
-  "python3 tools/ci/check_repo_hygiene.py",
-  "python3 tools/ci/compact_issue_graph.py --mode check",
-  "python3 tools/ci/check_issue_graph.py",
+  "cargo run --package premath-cli -- repo-hygiene-check --repo-root .",
+  "cargo run --package premath-cli -- issue-graph-compact --repo-root . --issues .premath/issues.jsonl --mode check",
+  "cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000",
 ]
 
 [tasks.ci-issue-compact-check]
-run = "python3 tools/ci/compact_issue_graph.py --mode check"
+run = "cargo run --package premath-cli -- issue-graph-compact --repo-root . --issues .premath/issues.jsonl --mode check"
 
 [tasks.ci-issue-compact-apply]
-run = "python3 tools/ci/compact_issue_graph.py --mode apply"
+run = "cargo run --package premath-cli -- issue-graph-compact --repo-root . --issues .premath/issues.jsonl --mode apply"
 
 [tasks.ci-branch-policy-check]
-run = "python3 tools/ci/check_branch_policy.py --rules-json tests/ci/fixtures/branch-policy/effective-main-rules-golden.json"
+run = "cargo run --package premath-cli -- branch-policy-check --policy specs/process/GITHUB-BRANCH-POLICY.json --rules-json tests/ci/fixtures/branch-policy/effective-main-rules-golden.json --json"
 
 [tasks.ci-branch-policy-check-live]
-run = "python3 tools/ci/check_branch_policy.py --fetch-live"
+run = "cargo run --package premath-cli -- branch-policy-check --policy specs/process/GITHUB-BRANCH-POLICY.json --fetch-live --json"
 
 [tasks.ci-wiring-check]
-run = "python3 tools/ci/check_ci_wiring.py"
+run = "cargo run --package premath-cli -- ci-wiring-check --repo-root ."
 
 [tasks.ci-pipeline-check]
-run = "python3 tools/ci/check_pipeline_wiring.py"
+run = "cargo run --package premath-cli -- pipeline-wiring-check --repo-root . --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
 
 [tasks.ci-pipeline-test]
 run = [
@@ -154,18 +154,18 @@ run = [
   "python3 tools/ci/test_instruction_proposal.py",
   "python3 tools/ci/test_kcir_mapping_gate.py",
   "python3 tools/ci/test_control_plane_contract.py",
-  "python3 tools/ci/test_drift_budget.py",
+  "cargo test --package premath-cli drift_budget_check_json_smoke",
   "python3 tools/ci/test_instruction_check_client.py",
   "python3 tools/ci/test_proposal_check_client.py",
   "python3 tools/ci/test_client_transport_parity.py",
   "python3 tools/ci/test_instruction_reject_witness.py",
-  "python3 tools/ci/test_branch_policy.py",
+  "cargo test --package premath-cli branch_policy_check_json_smoke",
   "python3 tools/ci/test_repo_hygiene.py",
   "python3 tools/ci/test_issue_graph.py",
   "python3 tools/conformance/test_docs_coherence.py",
   "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
-  "python3 tools/conformance/test_doctrine_mcp_parity.py",
+  "cargo test --package premath-cli doctrine_mcp_parity_check_json_smoke",
   "python3 tools/conformance/test_runtime_orchestration.py",
   "python3 tools/conformance/test_world_core_vectors.py",
   "python3 tools/conformance/test_frontend_parity_vectors.py",
@@ -210,7 +210,7 @@ run = "python3 tools/harness/benchmark_kpi.py --json"
 [tasks.ci-observation-check]
 run = [
   "mise run ci-observation-build",
-  "python3 tools/ci/check_observation_semantics.py",
+  "cargo run --package premath-cli -- observation-semantics-check --repo-root . --ciwitness-dir artifacts/ciwitness --surface artifacts/observation/latest.json --issues-path .premath/issues.jsonl",
 ]
 
 [tasks.ci-pipeline-required]
@@ -264,7 +264,7 @@ run = "sh tools/ci/run_gate.sh hk-pre-commit"
 run = "sh tools/ci/run_instruction.sh ${INSTRUCTION:?set INSTRUCTION=instructions/<ts>-<id>.json}"
 
 [tasks.ci-instruction-check]
-run = "sh -lc 'if [ -n \"${INSTRUCTION:-}\" ]; then python3 tools/ci/check_instruction_envelope.py \"$INSTRUCTION\"; else python3 tools/ci/check_instruction_envelope.py; fi'"
+run = "cargo run --package premath-cli -- instruction-batch-check --repo-root ."
 
 [tasks.ci-instruction-smoke]
 run = "python3 tools/ci/test_instruction_smoke.py --instruction tests/ci/fixtures/instructions/20260221T010000Z-ci-wiring-golden.json"

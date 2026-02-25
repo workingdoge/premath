@@ -114,7 +114,7 @@ Historical chain details are preserved in:
 - `mise run coherence-check`
 - `mise run doctrine-check`
 - `mise run conformance-run`
-- `python3 tools/ci/check_issue_graph.py`
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 ## Fast Resume Commands
 
@@ -241,3 +241,145 @@ This file is context-recovery memory only; canonical authority remains issues/sp
   - `python3 tools/conformance/run_world_core_vectors.py`
   - `python3 tools/conformance/run_frontend_parity_vectors.py`
   - `mise run conformance-run`
+
+## 2026-02-25 Checker Migration Progress (issue graph lane)
+
+- Migrated issue-graph wrapper scripts into native checker commands:
+  - `premath issue-graph-check`
+  - `premath issue-graph-compact --mode check|apply`
+- Rewired hygiene tasks to checker commands:
+  - `.mise.toml` `ci-hygiene-check`
+  - `.mise.toml` `ci-issue-compact-check`
+  - `.mise.toml` `ci-issue-compact-apply`
+- Removed superseded scripts:
+  - `tools/ci/check_issue_graph.py`
+  - `tools/ci/compact_issue_graph.py`
+- Updated command/test/docs anchors:
+  - `tools/ci/test_issue_graph.py`
+  - `tools/ci/README.md`
+  - `AGENTS.md`
+  - `specs/premath/draft/HARNESS-RUNTIME.md`
+  - `specs/premath/draft/HARNESS-TYPESTATE.md`
+  - `specs/premath/draft/SPEC-TRACEABILITY.md`
+  - `docs/design/DEVELOPMENT-META-LOOP.md`
+  - `docs/design/EV-COHERENCE-OVERVIEW.md`
+- Verification anchors (pass):
+  - `mise run ci-hygiene-check`
+  - `python3 tools/ci/test_issue_graph.py`
+  - `mise run ci-pipeline-test`
+  - `mise run docs-coherence-check`
+  - `mise run traceability-check`
+  - `cargo clippy --package premath-cli --all-targets -- -D warnings`
+
+## 2026-02-25 Checker Migration Progress (traceability lane, bd-371)
+
+- Claimed issue: `bd-371` (`in_progress`) to migrate traceability matrix
+  validation into checker-native CLI surface.
+- Implemented command:
+  - `premath spec-traceability-check`
+  - source: `crates/premath-cli/src/commands/spec_traceability_check.rs`
+- Command surface wiring:
+  - `crates/premath-cli/src/cli.rs`
+  - `crates/premath-cli/src/main.rs`
+  - `crates/premath-cli/src/commands/mod.rs`
+- Task/docs wiring updates:
+  - `.mise.toml` (`traceability-check` -> CLI checker command)
+  - `tools/conformance/README.md`
+  - `AGENTS.md`
+  - `specs/premath/draft/SPEC-TRACEABILITY.md`
+- Removed superseded script:
+  - `tools/conformance/check_spec_traceability.py`
+- Decision anchor:
+  - `specs/process/decision-log.md` (Decision 0134)
+- Verification anchors (pass):
+  - `cargo test --package premath-cli spec_traceability_check_json_smoke`
+  - `mise run traceability-check`
+  - `mise run ci-command-surface-check`
+  - `mise run docs-coherence-check`
+
+## 2026-02-25 Checker Migration Progress (branch-policy lane, bd-372)
+
+- Claimed issue: `bd-372` (`in_progress`) to migrate branch-policy contract
+  validation into checker-native CLI surface.
+- Implemented command:
+  - `premath branch-policy-check`
+  - source: `crates/premath-cli/src/commands/branch_policy_check.rs`
+  - supports fixture payload mode (`--rules-json`) and live GitHub mode
+    (`--fetch-live` + token env).
+- Command surface wiring:
+  - `crates/premath-cli/src/cli.rs`
+  - `crates/premath-cli/src/main.rs`
+  - `crates/premath-cli/src/commands/mod.rs`
+  - `crates/premath-cli/tests/cli_smoke.rs` (`branch_policy_check_json_smoke`)
+- Task/docs wiring updates:
+  - `.mise.toml`:
+    - `ci-branch-policy-check` -> CLI checker
+    - `ci-branch-policy-check-live` -> CLI checker
+    - `ci-pipeline-test` -> CLI smoke for branch-policy
+  - `AGENTS.md`
+  - `tools/ci/README.md`
+  - `docs/design/CI-PROVIDER-BINDINGS.md`
+- Removed superseded Python lane:
+  - `tools/ci/check_branch_policy.py`
+  - `tools/ci/test_branch_policy.py`
+- Decision anchor:
+  - `specs/process/decision-log.md` (Decision 0135)
+- Verification anchors (pass):
+  - `cargo test --package premath-cli branch_policy_check_json_smoke`
+  - `cargo clippy --package premath-cli --all-targets -- -D warnings`
+  - `mise run ci-branch-policy-check`
+  - `mise run ci-pipeline-test`
+  - `mise run docs-coherence-check`
+
+## Next Refinement Queue
+
+- Ordered checker-migration chain (dependency-locked):
+  1. `bd-374` (`in_progress`) capability stub invariance -> CLI checker
+  2. `bd-375` (`open`, blocks on `bd-374`) doctrine-site checker -> CLI
+  3. `bd-376` (`open`, blocks on `bd-375`) docs-coherence checker -> CLI
+  4. `bd-377` (`open`, blocks on `bd-376`) cleanup + doctrine path alignment
+
+- Active dependency edges:
+  - `bd-375 --blocks--> bd-374`
+  - `bd-376 --blocks--> bd-375`
+  - `bd-377 --blocks--> bd-376`
+
+- Integrity snapshot:
+  - `dep diagnostics --graph-scope active`: no cycles
+  - `issue ready`: 0 (expected while `bd-374` is active)
+  - `issue blocked`: `bd-375`, `bd-376`, `bd-377` dependency-blocked;
+    `bd-67` manual governance block
+
+## 2026-02-25 Checker Migration Progress (doctrine MCP parity lane, bd-373)
+
+- Claimed issue: `bd-373` (`closed`) for doctrine MCP parity migration.
+- Implemented command:
+  - `premath doctrine-mcp-parity-check`
+  - source: `crates/premath-cli/src/commands/doctrine_mcp_parity_check.rs`
+  - checks:
+    - MCP tool name coverage parity (`mcp_serve.rs` vs `DOCTRINE-OP-REGISTRY`)
+    - read-only/mutating morphism classification parity
+    - `dm.identity` presence in registry MCP rows
+- Command surface wiring:
+  - `crates/premath-cli/src/cli.rs`
+  - `crates/premath-cli/src/main.rs`
+  - `crates/premath-cli/src/commands/mod.rs`
+  - `crates/premath-cli/tests/cli_smoke.rs`
+- Task/docs/test wiring updates:
+  - `.mise.toml`:
+    - `doctrine-check` now calls CLI doctrine MCP parity command,
+    - `ci-pipeline-test` uses CLI doctrine MCP parity smoke.
+  - `tools/conformance/check_docs_coherence.py` expected doctrine-check command
+    list updated.
+  - `tools/conformance/test_docs_coherence.py` doctrine-check parser fixture
+    updated.
+  - `AGENTS.md` command surface map updated.
+- Decision anchor:
+  - `specs/process/decision-log.md` (Decision 0136).
+- Verification anchors (pass):
+  - `cargo test --package premath-cli doctrine_mcp_parity_check_json_smoke`
+  - `cargo clippy --package premath-cli --all-targets -- -D warnings`
+  - `mise run doctrine-check`
+  - `mise run docs-coherence-check`
+  - `mise run ci-pipeline-test`
+  - `mise run ci-hygiene-check`

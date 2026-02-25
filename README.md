@@ -234,6 +234,9 @@ Runtime crates are split by responsibility:
 - `crates/premath-kernel`:
   - Generic laws only (contexts, covers, reindexing, descent, witnesses).
   - No storage or backend policy.
+- `crates/premath-doctrine`:
+  - Canonical doctrine/control-plane contract parsing + world-descent requirement
+    derivation used by kernel/CLI surfaces.
 - `crates/premath-coherence`:
   - Typed coherence-obligation evaluator used by `premath coherence-check`.
   - Emits deterministic checker witness output over the coherence contract.

@@ -288,7 +288,7 @@ mod tests {
             "Active issue",
             "task",
             "open",
-            "Acceptance:\n- complete work\n\nVerification commands:\n- `python3 tools/ci/check_issue_graph.py`\n",
+            "Acceptance:\n- complete work\n\nVerification commands:\n- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl`\n",
         )])
         .expect("store should build");
 

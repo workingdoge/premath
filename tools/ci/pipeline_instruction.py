@@ -117,6 +117,29 @@ def _run_with_streamed_output(cmd: Sequence[str], *, cwd: Path) -> subprocess.Co
     return completed
 
 
+def _materialize_instruction_command(
+    entrypoint: Sequence[str],
+    *,
+    instruction_path: Path,
+    repo_root: Path,
+    append_instruction_when_missing: bool,
+) -> list[str]:
+    cmd: list[str] = []
+    has_instruction_placeholder = False
+    for token in entrypoint:
+        if token == "$INSTRUCTION_PATH":
+            cmd.append(str(instruction_path))
+            has_instruction_placeholder = True
+            continue
+        if token == "$REPO_ROOT":
+            cmd.append(str(repo_root))
+            continue
+        cmd.append(token)
+    if append_instruction_when_missing and not has_instruction_placeholder:
+        cmd.append(str(instruction_path))
+    return cmd
+
+
 def _render_retry_lines(retry_history: Sequence[RetryDecision]) -> list[str]:
     if not retry_history:
         return []
@@ -250,18 +273,24 @@ def run_instruction_once(
     instruction_path: Path,
     allow_failure: bool,
 ) -> tuple[int, tuple[str, ...]]:
-    validate_cmd = list(INSTRUCTION_ENVELOPE_CHECK_CANONICAL_ENTRYPOINT) + [
-        str(instruction_path)
-    ]
+    validate_cmd = _materialize_instruction_command(
+        INSTRUCTION_ENVELOPE_CHECK_CANONICAL_ENTRYPOINT,
+        instruction_path=instruction_path,
+        repo_root=root,
+        append_instruction_when_missing=True,
+    )
     validate = _run_with_streamed_output(
         validate_cmd,
         cwd=root,
     )
     validate_failure_classes = failure_classes_from_completed_process(validate)
     if validate.returncode != 0:
-        reject_cmd = list(INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT) + [
-            str(instruction_path)
-        ]
+        reject_cmd = _materialize_instruction_command(
+            INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT,
+            instruction_path=instruction_path,
+            repo_root=root,
+            append_instruction_when_missing=True,
+        )
         reject_run = _run_with_streamed_output(
             reject_cmd,
             cwd=root,
@@ -272,7 +301,12 @@ def run_instruction_once(
             combine_failure_class_sources(reject_failure_classes, validate_failure_classes),
         )
 
-    run_cmd = list(INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT) + [str(instruction_path)]
+    run_cmd = _materialize_instruction_command(
+        INSTRUCTION_DECISION_CANONICAL_ENTRYPOINT,
+        instruction_path=instruction_path,
+        repo_root=root,
+        append_instruction_when_missing=True,
+    )
     if allow_failure:
         run_cmd.append("--allow-failure")
     run = _run_with_streamed_output(run_cmd, cwd=root)

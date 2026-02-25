@@ -31,4 +31,5 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 async-trait = "0.1"
 rust-mcp-sdk = { version = "0.8.3", default-features = false, features = ["server", "stdio", "macros"] }
+regex = { workspace = true }
 rhai = { version = "1", optional = true }

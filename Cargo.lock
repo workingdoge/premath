@@ -749,6 +749,7 @@ dependencies = [
  "premath-transport",
  "premath-tusk",
  "premath-ux",
+ "regex",
  "rhai",
  "rust-mcp-sdk",
  "serde",

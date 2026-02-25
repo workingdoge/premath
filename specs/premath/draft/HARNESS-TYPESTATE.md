@@ -187,7 +187,7 @@ contract. Canonical surfaces in this repository are:
 - `premath harness-join-check --input <json> --json`
 - `python3 tools/conformance/run_harness_typestate_vectors.py`
 - `mise run conformance-run`
-- `python3 tools/ci/check_issue_graph.py`
+- `premath issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 ## 10. Related surfaces
 

@@ -387,8 +387,17 @@
     },
     "instructionEnvelopeCheck": {
       "canonicalEntrypoint": [
-        "python3",
-        "tools/ci/check_instruction_envelope.py"
+        "cargo",
+        "run",
+        "--package",
+        "premath-cli",
+        "--",
+        "instruction-check",
+        "--instruction",
+        "$INSTRUCTION_PATH",
+        "--repo-root",
+        "$REPO_ROOT",
+        "--json"
       ],
       "compatibilityAliases": []
     },

@@ -265,12 +265,11 @@ Repository v0 note:
   paths in `crates/premath-cli/src/commands/harness_session.rs`.
 - doctrine-conformance operation nodes currently include
   `tools/conformance/check_doctrine_site.py`,
-  `tools/conformance/check_runtime_orchestration.py`,
+  `premath runtime-orchestration-check`,
   `tools/conformance/check_doctrine_mcp_parity.py`, and
   `tools/conformance/run_doctrine_inf_vectors.py` (including claim-gated
   governance-profile vectors). Runtime-orchestration semantic authority for
-  this node is the core command `premath runtime-orchestration-check`; the
-  Python path remains an adapter wrapper.
+  this node is the core command `premath runtime-orchestration-check`.
 
 ## 5. Edge discipline
 
@@ -322,8 +321,6 @@ In this repository, that checker is:
 
 - `tools/conformance/check_doctrine_site.py`
 - `premath runtime-orchestration-check` (canonical semantic authority lane)
-- `tools/conformance/check_runtime_orchestration.py` (adapter wrapper over the
-  canonical command lane)
 - `tools/conformance/check_doctrine_mcp_parity.py` (MCP operation parity
   against `draft/DOCTRINE-OP-REGISTRY.json`)
 - `tools/conformance/run_doctrine_inf_vectors.py` (semantic-boundary +

@@ -65,16 +65,16 @@ README_DOCTRINE_MARKERS: Tuple[str, ...] = (
     "mise run doctrine-check",
 )
 ARCHITECTURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
-    "`tools/conformance/check_runtime_orchestration.py`",
+    "`premath runtime-orchestration-check`",
     "`tools/conformance/check_doctrine_mcp_parity.py`",
     "doctrine-operation parity + runtime-route parity",
-    "`check_runtime_orchestration.py`,",
+    "`runtime-orchestration-check`,",
     "`check_doctrine_mcp_parity.py`),",
 )
 EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
     "python3 tools/conformance/check_doctrine_site.py",
     "cargo run --package premath-cli -- runtime-orchestration-check --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json --doctrine-op-registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --harness-runtime specs/premath/draft/HARNESS-RUNTIME.md --doctrine-site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json --json",
-    "python3 tools/conformance/check_doctrine_mcp_parity.py",
+    "cargo run --package premath-cli -- doctrine-mcp-parity-check --mcp-source crates/premath-cli/src/commands/mcp_serve.rs --registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --json",
     "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 )
 CI_CLOSURE_DOCTRINE_MARKERS: Tuple[str, ...] = (

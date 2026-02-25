@@ -69,7 +69,7 @@ Core checks:
 - `mise run coherence-check`
 - `mise run docs-coherence-check`
 - `mise run traceability-check`
-- `python3 tools/ci/check_issue_graph.py`
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 Issue graph status:
 
@@ -139,7 +139,7 @@ Validation commands:
 - `mise run coherence-check`
 - `mise run docs-coherence-check`
 - `mise run traceability-check`
-- `python3 tools/ci/check_issue_graph.py`
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 Execution note (2026-02-22):
 
@@ -192,11 +192,11 @@ Per-task gate set:
 - bidir-handoff checks (`bd-150`):
   - `mise run coherence-check`
   - `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract`
-  - `python3 tools/ci/test_drift_budget.py`
+  - `cargo test --package premath-cli drift_budget_check_json_smoke`
 - docs closure (`bd-151`):
   - `mise run docs-coherence-check`
   - `mise run traceability-check`
-  - `python3 tools/ci/check_issue_graph.py`
+  - `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000`
 
 Before push:
 

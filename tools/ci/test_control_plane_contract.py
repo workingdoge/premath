@@ -456,8 +456,17 @@ def _base_payload() -> dict:
             },
             "instructionEnvelopeCheck": {
                 "canonicalEntrypoint": [
-                    "python3",
-                    "tools/ci/check_instruction_envelope.py",
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "instruction-check",
+                    "--instruction",
+                    "$INSTRUCTION_PATH",
+                    "--repo-root",
+                    "$REPO_ROOT",
+                    "--json",
                 ],
                 "compatibilityAliases": [],
             },
@@ -852,13 +861,18 @@ class ControlPlaneContractTests(unittest.TestCase):
     def test_load_rejects_missing_world_descent_contract(self) -> None:
         payload = _base_payload()
         payload.pop("worldDescentContract")
-        with self.assertRaisesRegex(ValueError, "worldDescentContract must be an object"):
+        with self.assertRaisesRegex(
+            ValueError, "controlPlaneContract.worldDescentContract"
+        ):
             self._load(payload)
 
     def test_load_rejects_world_descent_failure_class_key_drift(self) -> None:
         payload = _base_payload()
         payload["worldDescentContract"]["failureClasses"].pop("descentDataMissing")
-        with self.assertRaisesRegex(ValueError, "failureClasses missing required keys"):
+        with self.assertRaisesRegex(
+            ValueError,
+            "worldDescentContract.failureClasses.descentDataMissing",
+        ):
             self._load(payload)
 
     def test_load_rejects_runtime_route_morphism_drift(self) -> None:

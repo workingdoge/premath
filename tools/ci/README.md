@@ -68,23 +68,23 @@ It delegates attestation-chain semantics to core
 `premath required-decision-verify`; Python wrapper logic is path/artifact
 transport only.
 
-`tools/ci/check_ci_wiring.py` validates that CI workflow wiring uses the
-canonical attested gate chain entrypoint and does not split the required gate
-steps.
+`premath ci-wiring-check` validates that CI workflow wiring uses the canonical
+provider-neutral required pipeline entrypoint and does not split the required
+gate steps (`mise run ci-wiring-check`).
 
-`tools/ci/check_command_surface.py` validates the repository command surface is
+`premath command-surface-check` validates the repository command surface is
 `mise`-only and rejects legacy task-runner command/file references
 (`mise run ci-command-surface-check`).
 
-`tools/ci/check_repo_hygiene.py` validates repository hygiene guardrails for
+`premath repo-hygiene-check` validates repository hygiene guardrails for
 private/local-only surfaces (for example `.claude/`, `.serena/`,
 `.premath/cache/`) and required ignore entries
 (`mise run ci-hygiene-check`).
 
-`tools/ci/check_issue_graph.py` delegates core contract validation to
-`premath issue check` and then applies deterministic compactness drift checks.
-It uses core issue-memory semantics from `premath-bd` for machine-actionable
-planning surfaces:
+`premath issue-graph-check` evaluates core issue-graph contract validation and
+then applies deterministic compactness drift checks. It uses core
+issue-memory semantics from `premath-bd` for machine-actionable planning
+surfaces:
 
 - `[EPIC]` title rows must use `issue_type=epic`,
 - active issues (`open`/`in_progress`) must carry an `Acceptance:` section,
@@ -94,15 +94,15 @@ planning surfaces:
 - transitive-redundant active `blocks` edges fail as compactness drift.
 
 For deterministic compactness remediation, use
-`tools/ci/compact_issue_graph.py`:
+`premath issue-graph-compact`:
 
 - `--mode check` reports compactness drift and exits non-zero on findings,
 - `--mode apply` removes redundant `blocks` edges through canonical
-  `premath dep remove` command paths and verifies ready/blocked semantics plus
+  issue-memory mutation surfaces and verifies ready/blocked semantics plus
   active-scope cycle integrity are preserved.
 
-`tools/ci/check_branch_policy.py` validates effective GitHub `main` branch
-rules against tracked process policy (`specs/process/GITHUB-BRANCH-POLICY.json`)
+`premath branch-policy-check` validates effective GitHub `main` branch rules
+against tracked process policy (`specs/process/GITHUB-BRANCH-POLICY.json`)
 with two modes:
 
 - fixture/offline deterministic mode (`mise run ci-branch-policy-check`),
@@ -114,13 +114,14 @@ and checks the effective rules API surface:
 `/repos/{owner}/{repo}/rules/branches/{branch}`.
 For this repo policy, bypass actors are fail-closed.
 
-`tools/ci/check_pipeline_wiring.py` validates provider-specific workflow files
-remain thin wrappers around provider-neutral pipeline entrypoints
+`premath pipeline-wiring-check` validates provider-specific workflow files
+remain thin wrappers around provider-neutral pipeline entrypoints and hook
+bindings declared in `CONTROL-PLANE-CONTRACT`
 (`mise run ci-pipeline-check`).
 
 `tools/ci/test_pipeline_required.py`,
 `tools/ci/test_pipeline_instruction.py`, and
-`tools/ci/test_drift_budget.py` are deterministic unit tests for
+`cargo test --package premath-cli drift_budget_check_json_smoke` are deterministic tests for
 provider-neutral pipeline summary/digest logic and drift-budget sentinels
 (`mise run ci-pipeline-test`).
 
@@ -143,10 +144,10 @@ It writes:
 
 `tools/ci/test_observation_surface.py` validates deterministic reducer/query
 behavior (`mise run ci-observation-test`).
-`tools/ci/check_observation_semantics.py` enforces projection invariance:
+`premath observation-semantics-check` enforces projection invariance:
 observation output must match a fresh `premath observe-build` projection from
 current CI witness and issue-memory artifacts (`mise run ci-observation-check`).
-`tools/ci/check_drift_budget.py` enforces fail-closed drift-budget sentinels
+`premath drift-budget-check` enforces fail-closed drift-budget sentinels
 across docs/contracts/checkers/cache-closure surfaces, includes deterministic
 topology-budget metrics from `specs/process/TOPOLOGY-BUDGET.json`, and emits
 deterministic `driftClasses` + `warningClasses` summary output
@@ -188,8 +189,8 @@ Workflow authoring contract:
   - `mise run ci-pipeline-test`
   - `mise run ci-wiring-check`
 
-`tools/ci/check_instruction_envelope.py` validates instruction envelope
-schema/shape before execution (`mise run ci-instruction-check`).
+`premath instruction-batch-check` validates instruction envelope schema/shape
+before execution (`mise run ci-instruction-check`).
 
 `tools/ci/test_instruction_smoke.py` runs a deterministic instruction witness
 smoke check against a golden fixture (`mise run ci-instruction-smoke`).
@@ -254,7 +255,7 @@ Command-surface contract authority is
 - `requiredDecision.canonicalEntrypoint`: `mise run ci-required-attested`
 - `requiredDecision.compatibilityAliases`: `mise run ci-check`
 - `instructionEnvelopeCheck.canonicalEntrypoint`:
-  `python3 tools/ci/check_instruction_envelope.py`
+  `cargo run --package premath-cli -- instruction-check --instruction "$INSTRUCTION_PATH" --repo-root "$REPO_ROOT" --json`
 - `instructionDecision.canonicalEntrypoint`:
   `python3 tools/ci/run_instruction.py`
 - `instructionDecision.compatibilityAliases`:

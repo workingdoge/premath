@@ -90,6 +90,7 @@
 - `cargo run --package premath-cli -- governance-promotion-check --input <governance_gate_input.json> --json` — evaluate governance promotion gate semantics through core CLI surfaces and emit deterministic `failureClasses`.
 - `cargo run --package premath-cli -- kcir-mapping-check --input <kcir_mapping_gate_input.json> --json` — evaluate KCIR mapping gate semantics (`scope=required|instruction`) through core CLI surfaces and emit deterministic coverage/failure rows.
 - `cargo run --package premath-cli -- doctrine-inf-check --input <doctrine_inf_case.json> --json` — evaluate one doctrine-inf boundary/governance/route-consolidation case through core CLI semantics and emit deterministic `{result,failureClasses}`.
+- `cargo run --package premath-cli -- doctrine-mcp-parity-check --mcp-source crates/premath-cli/src/commands/mcp_serve.rs --registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --json` — validate MCP tool coverage + morphism classification parity against doctrine operation registry.
 - `cargo run --package premath-cli -- world-registry-check --registry <world_registry.json> [--operations <operation_rows_or_registry.json>] --json` — validate world rows/morphism rows/route bindings and optional operation-morphism drift through kernel `WorldRegistry` semantics.
 - `cargo run --package premath-cli -- world-registry-check --site-input <doctrine_site_input.json> --operations <doctrine_op_registry.json> [--required-route-family <route.id> ...] [--required-route-binding <route.id>=<operation.id> ...] --json` — validate `DOCTRINE-SITE-INPUT.worldRouteBindings` directly through kernel world-route semantics (including required family and required operation binding fail-closed checks).
 - `cargo run --package premath-cli -- transport-check --json` — validate typed transport action registry semantics (`action`/`actionId`/route/world/morphism projection + semantic digest closure) and emit deterministic check witness output.
@@ -99,10 +100,14 @@
 - `cargo run --package premath-cli -- evaluator-scaffold --path .premath/evaluator_scaffold --json` — generate deterministic first-run evaluator artifacts (`issues.jsonl`, `control-plane-contract.json`, `scheme-program.json`, `program.rhai`, `harness-trajectory.jsonl`) and canonical next-run commands for Scheme/Rhai.
 - `cargo run --package premath-cli -- world-gate-check --operations <operation_rows_or_registry.json> --check <gate_check.json> --profile control-plane --json` — run Gate checks against a real control-plane operation world (non-toy `World` binding).
 - `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json` — evaluate typed coherence obligations and emit deterministic coherence witness output.
+- `cargo run --package premath-cli -- drift-budget-check --repo-root . --json` — enforce deterministic drift-budget sentinels across contract/docs/checker/cache-closure surfaces.
+- `cargo run --package premath-cli -- spec-traceability-check --draft-dir specs/premath/draft --matrix specs/premath/draft/SPEC-TRACEABILITY.md --json` — validate promoted draft spec coverage matrix integrity through checker-native command surface.
+- `cargo run --package premath-cli -- branch-policy-check --policy specs/process/GITHUB-BRANCH-POLICY.json --rules-json tests/ci/fixtures/branch-policy/effective-main-rules-golden.json --json` — validate tracked GitHub branch-policy contract against deterministic effective-rules payload (or `--fetch-live` with token env for server parity).
 - `cargo run --package premath-cli -- ref project --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --json` — project deterministic backend refs via profile-bound `project_ref`.
 - `cargo run --package premath-cli -- ref verify --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --evidence-hex <hex> --ref-scheme-id <id> --ref-params-hash <hash> --ref-domain <domain> --ref-digest <digest> --json` — verify provided refs via profile-bound `verify_ref`.
 - `cargo run --package premath-cli -- observe --mode latest --json` — query Observation Surface v0 through the UX composition layer.
 - `cargo run --package premath-cli -- observe-build --repo-root . --json` — project Observation Surface v0 from canonical CI witness + issue memory substrates.
+- `cargo run --package premath-cli -- observation-semantics-check --repo-root . --ciwitness-dir artifacts/ciwitness --surface artifacts/observation/latest.json --issues-path .premath/issues.jsonl --json` — enforce deterministic projection invariance for Observation Surface v0.
 - `cargo run --package premath-cli -- observe-serve --bind 127.0.0.1:43174` — serve Observation Surface v0 through the UX HTTP API.
 - `cargo run --package premath-cli -- mcp-serve --issues .premath/issues.jsonl --issue-query-backend jsonl --mutation-policy instruction-linked --surface artifacts/observation/latest.json --repo-root .` — run MCP tools over stdio (includes doctrine-gated `instruction_check` and `instruction_run`).
 - `cargo run --package premath-cli -- harness-session write --path .premath/harness_session.json --state stopped --issue-id <bd-id> --summary <text> --next-step <text> --instruction-ref <path-or-ref> --witness-ref <path-or-ref> --json` — write/update compact handoff state for fresh-context restartability.
@@ -122,6 +127,8 @@
 - `cargo run --package premath-cli -- issue backend-status --issues .premath/issues.jsonl --repo . --projection .premath/surreal_issue_cache.json --json` — report backend integration state (JSONL authority refs/errors, surreal projection provenance/freshness state, JJ availability/head metadata).
 - `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json` — list issues with optional filters.
 - `cargo run --package premath-cli -- issue check --issues .premath/issues.jsonl --json` — run deterministic issue-memory contract checks (epic typing + active acceptance/verification + note-size warnings).
+- `cargo run --package premath-cli -- issue-graph-check --repo-root . --issues .premath/issues.jsonl --note-warn-threshold 2000 --json` — run issue-memory contract checks plus compactness drift invariants through one checker surface.
+- `cargo run --package premath-cli -- issue-graph-compact --repo-root . --issues .premath/issues.jsonl --mode check|apply --json` — report or deterministically remediate compactness drift (`blocks` edge redundancy/closed-target drift).
 - `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json` — return unblocked open issues.
 - `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues explicitly blocked (`status=blocked`) or blocked by unresolved dependencies.
 - `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .premath/issues.jsonl --json` — update issue fields (`--notes-file <path>` or `--notes-file -` avoids shell interpolation hazards for complex notes payloads).
@@ -176,7 +183,7 @@
 - On context compaction/new session, resume in this order:
   1. read `.premath/SCRATCHSHEET.md`,
   2. read active issue state from `.premath/issues.jsonl` (`issue ready/list`),
-  3. validate dependency integrity (`dep diagnostics`, `tools/ci/check_issue_graph.py`),
+  3. validate dependency integrity (`dep diagnostics`, `premath issue-graph-check`),
   4. continue from the highest-priority unblocked issue.
 - For non-trivial epics, keep dependency order explicit:
   1. architecture contract
