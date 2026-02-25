@@ -8,6 +8,7 @@ pub mod control_plane_gate;
 pub mod dep;
 pub mod doctrine_inf_check;
 pub mod doctrine_mcp_parity_check;
+pub mod doctrine_site_check;
 pub mod drift_budget_check;
 pub mod evaluator_scaffold;
 pub mod harness_feature;

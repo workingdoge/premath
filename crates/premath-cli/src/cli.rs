@@ -505,6 +505,44 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Validate doctrine-site generation/coherence parity against tracked artifacts
+    DoctrineSiteCheck {
+        /// Site-package source root
+        #[arg(long, default_value = "specs/premath/site-packages")]
+        packages_root: String,
+
+        /// Tracked doctrine-site map JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-SITE.json")]
+        site_map: String,
+
+        /// Tracked doctrine-site input JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-SITE-INPUT.json")]
+        input_map: String,
+
+        /// Tracked doctrine operation-registry JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-OP-REGISTRY.json")]
+        operation_registry: String,
+
+        /// Tracked doctrine generation-digest JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/draft/DOCTRINE-SITE-GENERATION-DIGEST.json"
+        )]
+        digest_contract: String,
+
+        /// Doctrine-site migration/cutover contract JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-SITE-CUTOVER.json")]
+        cutover_contract: String,
+
+        /// Optional operation-registry override path
+        #[arg(long)]
+        operation_registry_override: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
         /// Output as JSON

@@ -232,6 +232,26 @@ fn main() {
             json,
         } => commands::doctrine_mcp_parity_check::run(mcp_source, registry, json),
 
+        Commands::DoctrineSiteCheck {
+            packages_root,
+            site_map,
+            input_map,
+            operation_registry,
+            digest_contract,
+            cutover_contract,
+            operation_registry_override,
+            json,
+        } => commands::doctrine_site_check::run(
+            packages_root,
+            site_map,
+            input_map,
+            operation_registry,
+            digest_contract,
+            cutover_contract,
+            operation_registry_override,
+            json,
+        ),
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
 
         Commands::CommandSurfaceCheck { repo_root, json } => {

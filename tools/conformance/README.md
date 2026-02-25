@@ -399,7 +399,7 @@ Run:
 python3 tools/conformance/run_world_core_vectors.py
 ```
 
-## `check_doctrine_site.py`
+## `premath doctrine-site-check`
 
 Validates doctrine-to-operation site coherence using:
 
@@ -425,7 +425,7 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_doctrine_site.py
+cargo run --package premath-cli -- doctrine-site-check --json
 ```
 
 ## `generate_doctrine_site.py`
