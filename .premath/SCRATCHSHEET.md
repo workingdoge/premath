@@ -301,3 +301,14 @@ This file is context-recovery memory only; canonical authority remains issues/sp
   (`warningCount=0`, `draftSpecNodes=34`, `specTraceabilityRows=34`),
   `mise run traceability-check` (`draftSpecs=34`, `matrixRows=34`),
   `mise run docs-coherence-check`.
+
+## 2026-02-25 Docs Coherence Follow-up (bd-350)
+
+- Closed `bd-350` by aligning `SPEC-INDEX` section 0.3 with issue-memory
+  authority.
+- `specs/premath/draft/SPEC-INDEX.md` now reflects:
+  - `bd-294` and `bd-332` as recently closed,
+  - active epic list as empty (`none currently open/in-progress`).
+- Verification anchors:
+  `mise run docs-coherence-check` (pass),
+  open/in-progress epic scan over `.premath/issues.jsonl` (0).

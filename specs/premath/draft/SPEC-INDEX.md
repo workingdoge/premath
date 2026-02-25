@@ -51,19 +51,22 @@ Premath targets one self-hosted, fail-closed decision spine:
 
 ### 0.3 Current phase and active epic IDs
 
-Current phase (as of 2026-02-24):
+Current phase (as of 2026-02-25):
 
-- KCIR self-hosting phase 3 closure is complete (`bd-287` closed), with active
-  follow-on closure for statement-ID/KCIR projection indexing (`bd-294`).
+- KCIR self-hosting phase 3 closure is complete (`bd-287` closed).
+- Follow-on closure for statement-ID/KCIR projection indexing is complete
+  (`bd-294` closed).
+- Doctrine-site resolver unification closure is complete (`bd-332` closed).
 
 Active epic IDs:
 
-- `bd-294`: Kernel Statement-ID + KCIR Projection Index v1.
-- `bd-332`: Doctrine-Site Resolver Unification (INF/SITE/WORLD selection).
+- none currently open/in-progress.
 
 Recently closed epic IDs:
 
 - `bd-287`: KCIR self-hosting phase 3.
+- `bd-294`: Kernel Statement-ID + KCIR Projection Index v1.
+- `bd-332`: Doctrine-Site Resolver Unification (INF/SITE/WORLD selection).
 
 Phase-3 dependency spine (ordered):
 
