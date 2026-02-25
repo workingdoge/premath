@@ -331,3 +331,38 @@ This file is context-recovery memory only; canonical authority remains issues/sp
   - `premath dep diagnostics --graph-scope active` (no cycles),
   - `premath issue check` (accepted),
   - `premath issue ready` (0 after claiming `bd-352`).
+
+## 2026-02-25 World Self-Hosting Progress (bd-351 chain)
+
+- Closed tasks:
+  - `bd-352` WKS-1 architecture contract,
+  - `bd-353` WKS-2 doctrine-site/spec glue,
+  - `bd-354` WKS-3 control-plane parity enforcement,
+  - `bd-355` WKS-4 wrapper-lane implementation migration (kernel authority only),
+  - `bd-356` WKS-5 conformance vector extension.
+- Active task:
+  - `bd-357` WKS-6 docs/traceability closure (claimed, in progress).
+- Design/spec anchors used during this chain:
+  - `specs/premath/draft/WORLD-REGISTRY.md`
+  - `specs/premath/draft/DOCTRINE-SITE.md`
+  - `specs/premath/draft/PREMATH-COHERENCE.md`
+  - `specs/premath/draft/SPEC-INDEX.md`
+  - `specs/premath/draft/SPEC-TRACEABILITY.md`
+  - `tools/conformance/README.md`
+- Implementation anchors:
+  - `crates/premath-kernel/src/runtime_orchestration.rs`
+  - `tools/conformance/core_command_client.py`
+  - `tools/conformance/check_runtime_orchestration.py`
+  - `tools/conformance/run_world_core_vectors.py`
+  - `tools/conformance/run_frontend_parity_vectors.py`
+- New vector coverage anchors:
+  - `tests/conformance/fixtures/runtime-orchestration/golden/world_route_transport_dispatch_bound_accept/case.json`
+  - `tests/conformance/fixtures/runtime-orchestration/adversarial/world_route_transport_dispatch_missing_reject/case.json`
+- Verification anchors (pass):
+  - `cargo test --workspace`
+  - `mise run doctrine-check`
+  - `mise run coherence-check`
+  - `python3 tools/conformance/run_runtime_orchestration_vectors.py`
+  - `python3 tools/conformance/run_world_core_vectors.py`
+  - `python3 tools/conformance/run_frontend_parity_vectors.py`
+  - `mise run conformance-run`

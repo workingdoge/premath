@@ -336,6 +336,8 @@ Checks include deterministic accept/reject behavior for:
 - required handoff-shape contract markers for `HARNESS-RUNTIME`,
 - optional `controlPlaneKcirMappings` row-shape coverage when mapping rows are
   present,
+- constructor world-route family coverage including
+  `route.transport.dispatch` bound/missing reject paths,
 - invariance scenario parity across profile-permuted vectors.
 
 Run:
@@ -489,7 +491,9 @@ Checks include:
 - optional `controlPlaneKcirMappings` row-shape validation when mapping rows are
   provided,
 - world-route checks delegated to the core command lane
-  (`premath world-registry-check`) rather than duplicated wrapper semantics.
+  (`premath world-registry-check`) rather than duplicated wrapper semantics,
+- wrapper/runtime faults return non-semantic wrapper errors (`result=error`)
+  and do not synthesize semantic failure classes.
 
 Run:
 
