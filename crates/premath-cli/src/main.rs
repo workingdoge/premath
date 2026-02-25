@@ -268,6 +268,10 @@ fn main() {
             json,
         } => commands::spec_traceability_check::run(draft_dir, matrix, json),
 
+        Commands::DocsCoherenceCheck { repo_root, json } => {
+            commands::docs_coherence_check::run(repo_root, json)
+        }
+
         Commands::DriftBudgetCheck {
             repo_root,
             coherence_json,

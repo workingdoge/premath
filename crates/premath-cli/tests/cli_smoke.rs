@@ -1535,6 +1535,28 @@ fn spec_traceability_check_json_smoke() {
 }
 
 #[test]
+fn docs_coherence_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+
+    let output = run_premath([
+        OsString::from("docs-coherence-check"),
+        OsString::from("--repo-root"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "ci.docs_coherence_check.v1");
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
 fn ci_wiring_check_json_smoke() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = crate_dir

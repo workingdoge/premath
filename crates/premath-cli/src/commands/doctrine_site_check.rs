@@ -169,7 +169,11 @@ pub fn run(
     } else {
         vec![FAILURE_CLASS_VIOLATION]
     };
-    let errors = collect_error_lines(&stdout, &stderr);
+    let errors = if accepted {
+        Vec::new()
+    } else {
+        collect_error_lines(&stdout, &stderr)
+    };
     let summary = parse_summary(&stdout);
 
     if json_output {

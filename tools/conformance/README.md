@@ -93,7 +93,7 @@ Run:
 cargo run --package premath-cli -- spec-traceability-check --draft-dir specs/premath/draft --matrix specs/premath/draft/SPEC-TRACEABILITY.md --json
 ```
 
-## `check_docs_coherence.py`
+## `premath docs-coherence-check`
 
 Validates critical docs-to-executable coherence invariants:
 
@@ -114,7 +114,7 @@ Validates critical docs-to-executable coherence invariants:
 Run:
 
 ```bash
-python3 tools/conformance/check_docs_coherence.py
+cargo run --package premath-cli -- docs-coherence-check --repo-root . --json
 ```
 
 ## `premath coherence-check`

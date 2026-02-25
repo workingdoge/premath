@@ -6,6 +6,7 @@ pub mod coherence_check;
 pub mod command_surface_check;
 pub mod control_plane_gate;
 pub mod dep;
+pub mod docs_coherence_check;
 pub mod doctrine_inf_check;
 pub mod doctrine_mcp_parity_check;
 pub mod doctrine_site_check;

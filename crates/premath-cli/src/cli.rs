@@ -587,6 +587,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Validate docs-to-executable coherence invariants
+    DocsCoherenceCheck {
+        /// Repository root
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Enforce deterministic drift-budget sentinels across contracts/docs/checkers
     DriftBudgetCheck {
         /// Repository root used to resolve relative paths
