@@ -5,9 +5,14 @@ from __future__ import annotations
 
 import copy
 import os
+import sys
 import unittest
 from pathlib import Path
 from unittest.mock import patch
+
+THIS_DIR = Path(__file__).resolve().parent
+if str(THIS_DIR) not in sys.path:
+    sys.path.insert(0, str(THIS_DIR))
 
 import run_frontend_parity_vectors as frontend_parity
 
@@ -24,9 +29,6 @@ class FrontendParityVectorTests(unittest.TestCase):
     def _load_golden_case(self) -> dict:
         return frontend_parity.load_json(self._golden_case_path())
 
-    def _load_control_plane_contract(self) -> dict:
-        return frontend_parity.load_json(frontend_parity.DEFAULT_CONTROL_PLANE_CONTRACT)
-
     def test_site_resolve_command_override_rejects_noncanonical_prefix(self) -> None:
         with patch.dict(
             os.environ,
@@ -38,7 +40,6 @@ class FrontendParityVectorTests(unittest.TestCase):
 
     def test_evaluate_case_fails_closed_when_core_payload_missing_witness(self) -> None:
         case = self._load_golden_case()
-        control_plane_contract = self._load_control_plane_contract()
 
         with patch.object(
             frontend_parity,
@@ -49,7 +50,6 @@ class FrontendParityVectorTests(unittest.TestCase):
                 frontend_parity.evaluate_case(
                     case,
                     self._golden_case_path(),
-                    control_plane_contract,
                 )
 
     def test_evaluate_case_uses_core_authority_not_fixture_kernel_verdict(self) -> None:
@@ -57,7 +57,6 @@ class FrontendParityVectorTests(unittest.TestCase):
         case = copy.deepcopy(case)
         case["scenario"]["kernelVerdict"] = "rejected"
         row = case["scenario"]["frontends"]["steel"]
-        control_plane_contract = self._load_control_plane_contract()
 
         core_payload = {
             "result": "accepted",
@@ -84,11 +83,18 @@ class FrontendParityVectorTests(unittest.TestCase):
             result, failure_classes = frontend_parity.evaluate_case(
                 case,
                 self._golden_case_path(),
-                control_plane_contract,
             )
 
         self.assertEqual(result, "accepted")
         self.assertEqual(failure_classes, [])
+
+    def test_evaluate_case_rejects_missing_site_resolve_operation_id(self) -> None:
+        case = self._load_golden_case()
+        case = copy.deepcopy(case)
+        case["scenario"]["siteResolve"].pop("operationId", None)
+
+        with self.assertRaisesRegex(ValueError, "scenario.siteResolve.operationId must be set"):
+            frontend_parity.evaluate_case(case, self._golden_case_path())
 
 
 if __name__ == "__main__":

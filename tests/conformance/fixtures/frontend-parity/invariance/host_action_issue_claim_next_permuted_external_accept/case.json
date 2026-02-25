@@ -7,6 +7,10 @@
   "scenario": {
     "equivalenceClassId": "host_action.issue_claim_next.v1",
     "hostActionId": "issue.claim_next",
+    "siteResolve": {
+      "operationId": "op/transport.issue_claim_next",
+      "routeFamilyHint": "route.issue_claim_lease"
+    },
     "kernelVerdict": "accepted",
     "requiredFrontends": [
       "steel",

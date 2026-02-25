@@ -135,30 +135,6 @@ def _resolve_site_resolve_command() -> List[str]:
     return command
 
 
-def _resolve_operation_id_for_host_action(
-    host_action_id: str,
-    control_plane_contract: Dict[str, Any],
-    case_path: Path,
-) -> str:
-    host_action_surface = control_plane_contract.get("hostActionSurface")
-    if not isinstance(host_action_surface, dict):
-        raise ValueError(f"{case_path}: control-plane hostActionSurface must be an object")
-    required_actions = host_action_surface.get("requiredActions")
-    if not isinstance(required_actions, dict):
-        raise ValueError(f"{case_path}: control-plane requiredActions must be an object")
-    action_row = required_actions.get(host_action_id)
-    if not isinstance(action_row, dict):
-        raise ValueError(
-            f"{case_path}: control-plane missing requiredActions row for hostActionId={host_action_id!r}"
-        )
-    operation_id = action_row.get("operationId")
-    if not isinstance(operation_id, str) or not operation_id.strip():
-        raise ValueError(
-            f"{case_path}: control-plane requiredActions.{host_action_id}.operationId must be a non-empty string"
-        )
-    return operation_id.strip()
-
-
 def _run_kernel_site_resolve(
     *,
     operation_id: str,
@@ -262,7 +238,6 @@ def _normalize_core_resolver_witness(payload: Dict[str, Any], case_path: Path) -
 def evaluate_case(
     case: Dict[str, Any],
     case_path: Path,
-    control_plane_contract: Dict[str, Any],
 ) -> Tuple[str, List[str]]:
     scenario = case.get("scenario")
     if not isinstance(scenario, dict):
@@ -329,16 +304,19 @@ def evaluate_case(
         # Missing required rows mean we cannot build a complete parity baseline.
         return "rejected", sorted(failure_classes)
 
-    operation_id = _resolve_operation_id_for_host_action(
-        host_action_id,
-        control_plane_contract,
-        case_path,
-    )
     site_resolve_cfg = scenario.get("siteResolve")
     if site_resolve_cfg is None:
         site_resolve_cfg = {}
     if not isinstance(site_resolve_cfg, dict):
         raise ValueError(f"{case_path}: scenario.siteResolve must be an object when provided")
+    operation_id = ensure_optional_string(
+        site_resolve_cfg.get("operationId"),
+        f"{case_path}: scenario.siteResolve.operationId",
+    )
+    if operation_id is None:
+        raise ValueError(
+            f"{case_path}: scenario.siteResolve.operationId must be set for hostActionId={host_action_id!r}"
+        )
     claimed_capabilities = ensure_string_list(
         site_resolve_cfg.get("claimedCapabilities", []),
         f"{case_path}: scenario.siteResolve.claimedCapabilities",
@@ -442,7 +420,6 @@ def evaluate_case(
 
 def run(fixtures: Path) -> int:
     vectors = validate_manifest(fixtures)
-    control_plane_contract = load_json(DEFAULT_CONTROL_PLANE_CONTRACT)
     errors: List[str] = []
     executed = 0
     invariance_rows: Dict[str, List[Tuple[str, str, str, Tuple[str, ...]]]] = {}
@@ -489,7 +466,6 @@ def run(fixtures: Path) -> int:
             got_result, got_failure_classes = evaluate_case(
                 case,
                 case_path,
-                control_plane_contract,
             )
             if got_result != expected_result or got_failure_classes != expected_failure_classes:
                 raise ValueError(
