@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "expectedFailureClasses": [],
+  "assertions": [
+    "transport dispatch route requirement is satisfied through world-route bindings"
+  ]
+}

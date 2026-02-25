@@ -3,7 +3,7 @@ slug: draft
 shortname: SPEC-INDEX
 title: workingdoge.com/premath/SPEC-INDEX
 name: Spec Index and Conformance Profiles
-status: draft
+status: informational
 category: Informational
 tags:
   - premath
@@ -45,21 +45,28 @@ Premath targets one self-hosted, fail-closed decision spine:
    witness-linked, digest-bound, and replay-stable.
 5. Coherence-before-convenience: docs/spec/contracts/checkers must stay
    synchronized under deterministic parity gates.
+6. Constructor-first worldization: route/world/evidence binding for
+   control-plane flows is derived from one deterministic constructor lane, not
+   from wrapper-local semantics.
 
 ### 0.3 Current phase and active epic IDs
 
-Current phase (as of 2026-02-24):
+Current phase (as of 2026-02-25):
 
-- KCIR self-hosting phase 3 closure is complete (`bd-287` closed), with active
-  follow-on closure for statement-ID/KCIR projection indexing (`bd-294`).
+- KCIR self-hosting phase 3 closure is complete (`bd-287` closed).
+- Follow-on closure for statement-ID/KCIR projection indexing is complete
+  (`bd-294` closed).
+- Doctrine-site resolver unification closure is complete (`bd-332` closed).
 
 Active epic IDs:
 
-- `bd-294`: Kernel Statement-ID + KCIR Projection Index v1.
+- none currently open/in-progress.
 
 Recently closed epic IDs:
 
 - `bd-287`: KCIR self-hosting phase 3.
+- `bd-294`: Kernel Statement-ID + KCIR Projection Index v1.
+- `bd-332`: Doctrine-Site Resolver Unification (INF/SITE/WORLD selection).
 
 Phase-3 dependency spine (ordered):
 
@@ -82,6 +89,31 @@ Active non-epic blocker:
 Live status authority:
 
 - `.premath/issues.jsonl` via `premath issue list|ready|blocked`.
+
+### 0.4 World Self-Hosting Boundary Map
+
+Control-plane worldization follows one authority lane with explicit
+non-authority wrappers:
+
+1. Semantic authority: `draft/PREMATH-KERNEL`, `draft/GATE`,
+   `draft/BIDIR-DESCENT`.
+2. Constructor authority: `draft/WORLD-REGISTRY`
+   (`premath.world_grothendieck_constructor.v1`) for route-to-world binding
+   decisions, with route-input material sourced from
+   `draft/DOCTRINE-SITE-INPUT.json` world-route bindings and profile bindings in
+   `draft/CONTROL-PLANE-CONTRACT.json`.
+3. Check-role authority: `draft/PREMATH-COHERENCE` for deterministic parity and
+   obligation discharge over declared control-plane surfaces.
+4. Wrapper/transport lane: CLI/CI wrappers, fixture runners, and adapter
+   frontends are orchestration-only and MUST NOT synthesize independent
+   semantic verdict classes.
+
+Failure-class ownership is lane-local by authority surface:
+
+- kernel/gate families: semantic admissibility only,
+- constructor families: route missing, route ambiguity, binding unbound,
+- coherence families: `coherence.*` parity/obligation failures,
+- wrappers: pass-through only; no independent semantic class authority.
 
 ## 1. Purpose
 
@@ -216,6 +248,13 @@ Worker-operation doctrine-site routing note:
   `op/mcp.dep_replace`,
   `op/harness.session_read`, `op/harness.session_write`,
   `op/harness.session_bootstrap`).
+- Operation rows in `draft/DOCTRINE-OP-REGISTRY.json` MUST carry explicit
+  `operationClass` as declared by
+  `draft/DOCTRINE-SITE-INPUT.json` policy rows
+  (`route_bound`, `read_only_projection`, `tooling_only`).
+- Only `route_bound` operations are resolver/world-route eligible and MUST bind
+  through declared `worldRouteBindings`; non-route classes MUST remain
+  resolver-ineligible non-authority surfaces.
 - Read-only dependency integrity projection route is also mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
   (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
@@ -241,7 +280,14 @@ Worker-operation doctrine-site routing note:
   `draft/DOCTRINE-OP-REGISTRY.json` operation nodes, enforcing routed
   operation path boundaries (`tools/ci/*`) and optional
   `controlPlaneKcirMappings` row-shape checks (when mapping rows are present),
-  with invariance vectors for profile-permuted route scenarios.
+  with invariance vectors for profile-permuted route scenarios. Canonical
+  semantic authority executes via `premath runtime-orchestration-check`;
+  `tools/conformance/check_runtime_orchestration.py` is a wrapper adapter.
+- World-route semantic closure is enforced through the core command lane
+  (`premath world-registry-check`) with dedicated executable vectors in
+  `tests/conformance/fixtures/world-core/` (`run_world_core_vectors.py`).
+  Runtime-orchestration vectors are adapter/runtime-route parity checks only;
+  they MUST NOT duplicate world semantic authority vectors.
 - For multithread worker orchestration, routed operation paths MUST be treated
   as operational cover/refinement execution surfaces only (no semantic
   authority transfer). Any acceptance/rejection consumed by runtime/control
@@ -258,9 +304,19 @@ The entries below are informative/default reading surfaces unless they are
 explicitly claimed under §5.4 or §5.6.
 
 - `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
-  (`draft/DOCTRINE-SITE-INPUT.json` -> generated
+  (`site-packages/<site-id>/SITE-PACKAGE.json` -> generated
+  `draft/DOCTRINE-SITE-INPUT.json` -> generated
   `draft/DOCTRINE-SITE.json` + generated `draft/DOCTRINE-OP-REGISTRY.json`,
-  including worker mutation and harness-session operation routes).
+  including worker mutation and harness-session operation routes, plus
+  operation-class policy (`route_bound`, `read_only_projection`,
+  `tooling_only`) and route-eligibility gating.
+- `draft/DOCTRINE-SITE-CUTOVER.json` — deterministic doctrine-site migration
+  contract declaring bounded compatibility window and generated-only cutoff
+  phase; checker/generator lanes MUST fail closed when legacy/manual authority
+  surfaces are disabled by the active phase.
+- `draft/DOCTRINE-SITE-GENERATION-DIGEST.json` — deterministic generation digest
+  contract for doctrine site source parity (`site-packages` -> generated input /
+  site map / operation registry).
 - `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
   explicit gap targets.
 - `draft/PREMATH-COHERENCE` — typed coherence-contract checker/witness model
@@ -270,6 +326,16 @@ explicitly claimed under §5.4 or §5.6.
 - `draft/KERNEL-STATEMENT-BINDINGS.json` — typed projection-only statement
   binding contract linking kernel statement IDs to obligations/checkers/vectors
   (indexing/query/evidence support only; no semantic admissibility authority).
+- `draft/WORLD-REGISTRY` — canonical world-profile and inter-world morphism
+  table contract (`world == premath`) for route-family to world binding
+  declarations, explicit Grothendieck constructor object contract for active
+  profiles, and CwF/descent authority boundaries with adapter/non-authority
+  constraints.
+- `draft/SITE-RESOLVE` — deterministic resolver/projection contract for
+  operation-site-world selection order
+  (`candidate gather -> capability/policy filter -> world-route validation ->
+  overlap/glue decision`) and fail-closed unbound/ambiguous outcomes, with
+  stable route/site/world refs for KCIR handoff.
 - `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
   `boot/step/stop` and the shared harness surface map
   (`draft/HARNESS-RUNTIME` §1.1) used by typestate and retry/escalation
@@ -293,9 +359,9 @@ explicitly claimed under §5.4 or §5.6.
   semantic-authority split (`PREMATH-KERNEL`/`GATE`/`BIDIR-DESCENT` remain
   authority; control-plane is projection/parity only), and canonical KCIR
   control-plane mapping table (`controlPlaneKcirMappings`) for instruction /
-  proposal / coherence / doctrine-route / required-decision surfaces, including
-  deterministic digest-lineage fields and legacy non-KCIR compatibility
-  deprecation policy)
+  proposal / coherence / doctrine-route / fiber-lifecycle / required-decision
+  surfaces, including deterministic digest-lineage fields and legacy non-KCIR
+  compatibility deprecation policy)
   consumed by
   CI/coherence adapter
   surfaces; lifecycle semantics follow `draft/UNIFICATION-DOCTRINE` §5.1
@@ -326,20 +392,29 @@ explicitly claimed under §5.4 or §5.6.
 - `raw/SHEAF-STACK` — informational presheaf/sheaf/stack rendering of
   transport/descent obligations.
 - `raw/TORSOR-EXT` — informational torsor/extension/twist-class model for
-  non-canonical split behavior.
+  non-canonical split behavior; overlay-only interpretation (not an authority
+  lane).
 - `raw/SEMANTICS-INFTOPOS` — presentation-free model sketch (informational).
 - `raw/HYPERDESCENT` — optional strengthening: hyperdescent.
 - `raw/UNIVERSE` — optional extension: universe + comprehension (Tarski-style).
 - `raw/SPLIT-PRESENTATION` — guidance: strict IR vs. semantic equality.
 - `raw/TUSK-CORE` — single-world operational runtime contracts (informational/raw).
 - `raw/SQUEAK-CORE` — inter-world transport/composition contracts (informational/raw).
+- `raw/FIBER-CONCURRENCY` — structured-concurrency transport profile over
+  worldized control lanes (`fiber.spawn|join|cancel`) (informational/raw).
+- `raw/WORLD-PROFILES-CONTROL` — raw control-world profile sketches for
+  `world.lease.v1`, `world.instruction.v1`, and `world.ci_witness.v1`,
+  including route-family/morphism-table candidates against `C_cp`/`E_cp`, plus
+  optional torsor/extension overlay posture (`overlay.torsor_ext.v1`) with
+  explicit non-authority constraints.
 - `raw/SQUEAK-SITE` — runtime-location site contracts for Squeak/Cheese
   (normative only when `capabilities.squeak_site` is claimed).
 - `raw/PREMATH-CI` — higher-order CI/CD control-loop contract (normative only
   when `capabilities.ci_witnesses` is claimed).
 - `raw/CI-TOPOS` — closure-style CI projection discipline (informational/raw).
 - `raw/BEAM-COORDINATION` — BEAM/OTP coordination + lease/sublease profile
-  bound to existing Premath authority/witness lanes (informational/raw).
+  bound to `world.lease.v1` route families (`route.issue_claim_lease`) and
+  existing Premath authority/witness lanes (informational/raw).
 - `docs/foundations/` — explanatory notes (non-normative).
 
 Raw capability-spec lifecycle policy:
@@ -454,16 +529,22 @@ If you are implementing change discipline:
 If you are implementing higher-order CI/CD:
 1) `draft/DOCTRINE-INF`
 2) `draft/DOCTRINE-SITE`
-   (`draft/DOCTRINE-SITE-INPUT.json` -> generated `draft/DOCTRINE-SITE.json`
-   + generated `draft/DOCTRINE-OP-REGISTRY.json`)
-3) `draft/LLM-INSTRUCTION-DOCTRINE`
-4) `draft/LLM-PROPOSAL-CHECKING`
-5) `raw/PREMATH-CI`
-6) `raw/CI-TOPOS`
-7) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-8) `draft/UNIFICATION-DOCTRINE` (especially §10 and §12)
-9) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
-10) `raw/SQUEAK-SITE`
+   (`site-packages/<site-id>/SITE-PACKAGE.json` ->
+   generated `draft/DOCTRINE-SITE-INPUT.json` ->
+   generated `draft/DOCTRINE-SITE.json` + generated
+   `draft/DOCTRINE-OP-REGISTRY.json`; migration/cutover authority in
+   `draft/DOCTRINE-SITE-CUTOVER.json`)
+3) `draft/WORLD-REGISTRY`
+4) `draft/SITE-RESOLVE`
+5) `draft/LLM-INSTRUCTION-DOCTRINE`
+6) `draft/LLM-PROPOSAL-CHECKING`
+7) `raw/PREMATH-CI`
+8) `raw/CI-TOPOS`
+9) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+10) `draft/UNIFICATION-DOCTRINE` (especially §10 and §12)
+11) `raw/WORLD-PROFILES-CONTROL`
+12) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
+13) `raw/SQUEAK-SITE`
 
 If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`
@@ -493,9 +574,10 @@ If you are implementing multithread worker orchestration:
 If you are implementing the Unified Evidence Plane:
 1) `draft/UNIFICATION-DOCTRINE` (§10, especially §10.6)
 2) `draft/CONTROL-PLANE-CONTRACT.json`
-3) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-4) `draft/SPAN-SQUARE-CHECKING`
-5) `profile/ADJOINTS-AND-SITES` + `raw/SQUEAK-SITE` (only when those capabilities are claimed)
+3) `draft/WORLD-REGISTRY`
+4) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
+5) `draft/SPAN-SQUARE-CHECKING`
+6) `profile/ADJOINTS-AND-SITES` + `raw/SQUEAK-SITE` (only when those capabilities are claimed)
 
 ## 7. Notes on restrictiveness
 

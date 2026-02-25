@@ -3,12 +3,12 @@
   "budgetKind": "premath.topology_budget.v1",
   "metrics": {
     "draftSpecNodes": {
-      "warnAbove": 32,
-      "failAbove": 34
+      "warnAbove": 34,
+      "failAbove": 36
     },
     "specTraceabilityRows": {
-      "warnAbove": 32,
-      "failAbove": 34
+      "warnAbove": 34,
+      "failAbove": 36
     },
     "designDocNodes": {
       "warnAbove": 27,

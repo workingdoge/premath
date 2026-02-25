@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -16,6 +17,25 @@ class RunFixtureSuitesTests(unittest.TestCase):
             if suite.suite_id == suite_id:
                 return suite
         self.fail(f"missing suite: {suite_id}")
+
+    def test_constructor_suites_route_through_rhai_eval(self) -> None:
+        expected_scripts = {
+            "runtime-orchestration": "tools/conformance/rhai/runtime_orchestration_vectors.rhai",
+            "frontend-parity": "tools/conformance/rhai/frontend_parity_vectors.rhai",
+            "world-core": "tools/conformance/rhai/world_core_vectors.rhai",
+        }
+        for suite_id, script in expected_scripts.items():
+            with self.subTest(suite_id=suite_id):
+                suite = self._suite_by_id(suite_id)
+                command = list(suite.command)
+                self.assertGreaterEqual(len(command), 9)
+                self.assertEqual(
+                    command[:6],
+                    ["cargo", "run", "--package", "premath-cli", "--", "rhai-eval"],
+                )
+                self.assertEqual(command[6:8], ["--script", script])
+                self.assertIn("--trajectory-path", command)
+                self.assertIn("--json", command)
 
     def test_coherence_contract_input_closure_includes_surface_and_operation_paths(self) -> None:
         paths = set(run_fixture_suites.load_coherence_contract_input_paths())
@@ -79,6 +99,41 @@ class RunFixtureSuitesTests(unittest.TestCase):
             self.assertEqual(original_plan.params_hash, mutated_plan.params_hash)
             self.assertNotEqual(original_plan.material_digest, mutated_plan.material_digest)
             self.assertNotEqual(original_plan.cache_ref, mutated_plan.cache_ref)
+
+    def _assert_manifest_vector_closure(self, suite_id: str) -> None:
+        fixture_root = (
+            run_fixture_suites.ROOT / "tests" / "conformance" / "fixtures" / suite_id
+        )
+        manifest = json.loads((fixture_root / "manifest.json").read_text(encoding="utf-8"))
+        listed = set(manifest.get("vectors", []))
+
+        actual: set[str] = set()
+        for case_path in fixture_root.glob("*/*/case.json"):
+            vector_id = case_path.parent.relative_to(fixture_root).as_posix()
+            expect_path = case_path.parent / "expect.json"
+            self.assertTrue(
+                expect_path.exists(),
+                f"{suite_id}: missing expect.json for {vector_id}",
+            )
+            actual.add(vector_id)
+
+        missing = sorted(listed - actual)
+        unexpected = sorted(actual - listed)
+        self.assertEqual(
+            [],
+            missing,
+            f"{suite_id}: manifest vectors missing fixture cases: {missing}",
+        )
+        self.assertEqual(
+            [],
+            unexpected,
+            f"{suite_id}: found unlisted fixture vectors: {unexpected}",
+        )
+
+    def test_constructor_vector_suites_have_manifest_closure(self) -> None:
+        for suite_id in ("runtime-orchestration", "frontend-parity", "world-core"):
+            with self.subTest(suite_id=suite_id):
+                self._assert_manifest_vector_closure(suite_id)
 
 
 if __name__ == "__main__":

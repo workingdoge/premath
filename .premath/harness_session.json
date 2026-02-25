@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "sessionKind": "premath.harness.session.v1",
+  "sessionId": "hs1_20260224T222312Z_bd-333",
+  "state": "stopped",
+  "issueId": "bd-338",
+  "summary": "Resolver K0 and K0.2 are closed: SITE-RESOLVE contract + operation-class policy are wired and verified.",
+  "nextStep": "Claim bd-338 and move SitePackage projection source into deterministic generator authority.",
+  "instructionRefs": [
+    "issues:bd-332->bd-343"
+  ],
+  "witnessRefs": [
+    "issue-memory:.premath/issues.jsonl",
+    "spec:specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+    "spec:specs/premath/draft/SITE-RESOLVE.md"
+  ],
+  "lineageRefs": [
+    "policy:operationClassPolicy",
+    "route:worldRouteBindings"
+  ],
+  "startedAt": "2026-02-24T22:23:12Z",
+  "updatedAt": "2026-02-24T22:55:15Z",
+  "stoppedAt": "2026-02-24T22:55:15Z",
+  "issuesPath": ".premath/issues.jsonl",
+  "issuesSnapshotRef": "iss1_d40f6912edaa60c312e4b4969239d2e52ad0d2d5999f01345f887ac2f98a5467"
+}

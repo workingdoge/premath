@@ -4,19 +4,27 @@
 from __future__ import annotations
 
 import argparse
+import functools
 import hashlib
 import json
 import os
 import shlex
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+CONTROL_PLANE_CONTRACT_PATH = REPO_ROOT / "specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
+MCP_ONLY_TRANSPORT_FAILURE_CLASS = "control_plane_host_action_mcp_transport_required"
+LEASE_ACTION_TO_HOST_ACTION_ID = {
+    "issue_lease_renew": "issue.lease_renew",
+    "issue_lease_release": "issue.lease_release",
+}
+DEFAULT_MCP_ONLY_HOST_ACTIONS = frozenset(LEASE_ACTION_TO_HOST_ACTION_ID.values())
 
 
 def parse_args() -> argparse.Namespace:
@@ -149,6 +157,15 @@ def add_common_worker_args(parser: argparse.ArgumentParser) -> None:
         default="",
         help="Required when mutation mode is a non-default override (for example human-override).",
     )
+    parser.add_argument(
+        "--host-action-transport",
+        choices=("mcp", "local-repl"),
+        default=resolve_default_host_action_transport(),
+        help=(
+            "Host-action transport profile for failure-recovery actions "
+            "(default: PREMATH_HOST_ACTION_TRANSPORT or mcp)."
+        ),
+    )
 
 
 @dataclass(frozen=True)
@@ -227,6 +244,65 @@ def parse_rfc3339(value: str) -> datetime | None:
     if parsed.tzinfo is None:
         return parsed.replace(tzinfo=timezone.utc)
     return parsed.astimezone(timezone.utc)
+
+
+def resolve_default_host_action_transport() -> str:
+    raw = os.environ.get("PREMATH_HOST_ACTION_TRANSPORT", "").strip().lower()
+    if raw == "local":
+        return "local-repl"
+    if raw in {"mcp", "local-repl"}:
+        return raw
+    return "mcp"
+
+
+@functools.lru_cache(maxsize=1)
+def load_mcp_only_host_actions() -> frozenset[str]:
+    try:
+        payload = json.loads(CONTROL_PLANE_CONTRACT_PATH.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return DEFAULT_MCP_ONLY_HOST_ACTIONS
+    if not isinstance(payload, dict):
+        return DEFAULT_MCP_ONLY_HOST_ACTIONS
+    host_action_surface = payload.get("hostActionSurface")
+    if not isinstance(host_action_surface, dict):
+        return DEFAULT_MCP_ONLY_HOST_ACTIONS
+    rows = host_action_surface.get("mcpOnlyHostActions")
+    if not isinstance(rows, list):
+        return DEFAULT_MCP_ONLY_HOST_ACTIONS
+    actions = []
+    for item in rows:
+        if isinstance(item, str) and item.strip():
+            actions.append(item.strip())
+    if not actions:
+        return DEFAULT_MCP_ONLY_HOST_ACTIONS
+    return frozenset(actions)
+
+
+def enforce_mcp_only_transport(
+    handoff: StopHandoff, *, host_action_transport: str
+) -> StopHandoff:
+    if host_action_transport == "mcp":
+        return handoff
+    host_action_id = LEASE_ACTION_TO_HOST_ACTION_ID.get(handoff.lease_action)
+    if host_action_id is None:
+        return handoff
+    mcp_only_actions = load_mcp_only_host_actions()
+    if host_action_id not in mcp_only_actions:
+        return handoff
+    return StopHandoff(
+        lease_state=handoff.lease_state,
+        lease_action=handoff.lease_action,
+        result_class=MCP_ONLY_TRANSPORT_FAILURE_CLASS,
+        summary=(
+            "mcp-only lease action cannot execute on local-repl transport "
+            f"(action={handoff.lease_action})"
+        ),
+        next_step=(
+            "switch to MCP transport for lease recovery "
+            f"(required host action: {host_action_id})"
+        ),
+        lease_ref=handoff.lease_ref,
+    )
 
 
 def read_issue_lease_snapshot(issues_path: Path, issue_id: str) -> IssueLeaseSnapshot:
@@ -356,17 +432,18 @@ def classify_failed_stop_handoff(
     snapshot: IssueLeaseSnapshot,
     worker_id: str,
     claimed_lease_id: str | None,
+    host_action_transport: str = "mcp",
 ) -> StopHandoff:
     if snapshot.lease_state == "active":
         lease_id = snapshot.lease_id or claimed_lease_id
         owner = snapshot.lease_owner or worker_id
-        return StopHandoff(
+        handoff = StopHandoff(
             lease_state=snapshot.lease_state,
             lease_action="issue_lease_renew",
             result_class="retry_needed_lease_active",
             summary=f"lease active for owner={owner} lease_id={lease_id or 'unknown'}",
             next_step=(
-                "recover lease via MCP issue_lease_renew "
+                "recover lease via transport-dispatch issue.lease_renew "
                 f"(id={snapshot.issue_id}, assignee={owner}, lease_id={lease_id or 'MISSING'})"
             ),
             lease_ref=build_lease_ref(
@@ -379,6 +456,9 @@ def classify_failed_stop_handoff(
                 status=snapshot.status,
                 assignee=snapshot.assignee,
             ),
+        )
+        return enforce_mcp_only_transport(
+            handoff, host_action_transport=host_action_transport
         )
 
     if snapshot.lease_state == "stale":
@@ -403,13 +483,13 @@ def classify_failed_stop_handoff(
         )
 
     if snapshot.lease_state == "contended":
-        return StopHandoff(
+        handoff = StopHandoff(
             lease_state=snapshot.lease_state,
             lease_action="issue_lease_release",
             result_class="retry_needed_lease_contended",
             summary="lease contention detected; release/rebind required before retry",
             next_step=(
-                "lease contended; reconcile via MCP issue_lease_release then reclaim/renew before retry"
+                "lease contended; reconcile via transport-dispatch issue.lease_release then reclaim/renew before retry"
             ),
             lease_ref=build_lease_ref(
                 issue_id=snapshot.issue_id,
@@ -421,6 +501,9 @@ def classify_failed_stop_handoff(
                 status=snapshot.status,
                 assignee=snapshot.assignee,
             ),
+        )
+        return enforce_mcp_only_transport(
+            handoff, host_action_transport=host_action_transport
         )
 
     if snapshot.lease_state == "released" and snapshot.status == "closed":
@@ -499,6 +582,113 @@ def classify_failed_stop_handoff(
     )
 
 
+def execute_transport_recovery_action(
+    *,
+    base_cmd: Sequence[str],
+    cwd: Path,
+    issues_path: Path,
+    snapshot: IssueLeaseSnapshot,
+    worker_id: str,
+    claimed_lease_id: str | None,
+    lease_ttl_seconds: int,
+    handoff: StopHandoff,
+    host_action_transport: str,
+) -> tuple[StopHandoff, list[str]]:
+    if host_action_transport != "mcp":
+        return handoff, []
+    if handoff.lease_action not in {"issue_lease_renew", "issue_lease_release"}:
+        return handoff, []
+
+    if handoff.lease_action == "issue_lease_renew":
+        lease_id = snapshot.lease_id or claimed_lease_id
+        assignee = snapshot.lease_owner or worker_id
+        if not lease_id:
+            updated = replace(
+                handoff,
+                result_class=f"{handoff.result_class}_transport_input_missing",
+                summary=f"{handoff.summary}; transport dispatch skipped (missing lease_id)",
+                next_step=(
+                    f"{handoff.next_step}; lease_id missing so issue.lease_renew was not dispatched"
+                ),
+            )
+            return updated, []
+        dispatch_action = "issue.lease_renew"
+        dispatch_payload: dict[str, Any] = {
+            "id": snapshot.issue_id,
+            "assignee": assignee,
+            "leaseId": lease_id,
+            "leaseTtlSeconds": lease_ttl_seconds,
+            "issuesPath": str(issues_path),
+        }
+    else:
+        dispatch_action = "issue.lease_release"
+        dispatch_payload = {
+            "id": snapshot.issue_id,
+            "issuesPath": str(issues_path),
+        }
+        if snapshot.lease_owner:
+            dispatch_payload["assignee"] = snapshot.lease_owner
+        if snapshot.lease_id:
+            dispatch_payload["leaseId"] = snapshot.lease_id
+
+    try:
+        response = run_transport_dispatch(
+            base_cmd,
+            cwd,
+            action=dispatch_action,
+            payload=dispatch_payload,
+        )
+    except RuntimeError as exc:
+        updated = replace(
+            handoff,
+            result_class=f"{handoff.result_class}_transport_error",
+            summary=f"{handoff.summary}; transport dispatch error: {exc}",
+            next_step=(
+                f"{handoff.next_step}; transport dispatch failed to execute ({dispatch_action})"
+            ),
+        )
+        return updated, []
+
+    refs: list[str] = []
+    transport_ref = transport_dispatch_ref(dispatch_action, response)
+    if transport_ref:
+        refs.append(transport_ref)
+
+    result = str(response.get("result", "")).strip()
+    if result == "accepted":
+        updated = replace(
+            handoff,
+            result_class=f"{handoff.result_class}_transport_dispatched",
+            summary=f"{handoff.summary}; transport dispatch accepted ({dispatch_action})",
+            next_step=(
+                f"{handoff.next_step}; recovery action dispatched via transport ({dispatch_action})"
+            ),
+        )
+        return updated, refs
+
+    failure_classes_raw = response.get("failureClasses")
+    failure_classes: list[str]
+    if isinstance(failure_classes_raw, list):
+        failure_classes = [
+            str(item).strip() for item in failure_classes_raw if str(item).strip()
+        ]
+    else:
+        failure_classes = []
+    failure_suffix = ",".join(failure_classes) if failure_classes else "unknown"
+    updated = replace(
+        handoff,
+        result_class=f"{handoff.result_class}_transport_rejected",
+        summary=(
+            f"{handoff.summary}; transport dispatch rejected "
+            f"({dispatch_action}; failures={failure_suffix})"
+        ),
+        next_step=(
+            f"{handoff.next_step}; inspect transport dispatch rejection and reconcile manually"
+        ),
+    )
+    return updated, refs
+
+
 def assert_success_stop_handoff(
     *,
     snapshot: IssueLeaseSnapshot,
@@ -571,6 +761,35 @@ def run_premath_json(base_cmd: Sequence[str], args: Sequence[str], cwd: Path) ->
             f"premath command returned non-object payload (cwd={cwd}): {' '.join([*base_cmd, *args])}"
         )
     return payload
+
+
+def run_transport_dispatch(
+    base_cmd: Sequence[str],
+    cwd: Path,
+    *,
+    action: str,
+    payload: Mapping[str, Any],
+) -> dict[str, Any]:
+    payload_arg = json.dumps(payload, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return run_premath_json(
+        base_cmd,
+        [
+            "transport-dispatch",
+            "--action",
+            action,
+            "--payload",
+            payload_arg,
+        ],
+        cwd,
+    )
+
+
+def transport_dispatch_ref(action: str, response: Mapping[str, Any]) -> str | None:
+    semantic_digest = str(response.get("semanticDigest", "")).strip()
+    if not semantic_digest:
+        return None
+    safe_action = action.strip().replace("/", "_")
+    return f"transport://dispatch/{safe_action}/{semantic_digest}"
 
 
 def load_worker_policy(repo_root: Path) -> WorkerPolicy:
@@ -1025,7 +1244,20 @@ def run_worker(args: argparse.Namespace) -> int:
             snapshot=snapshot,
             worker_id=worker_id,
             claimed_lease_id=claimed_lease_id,
+            host_action_transport=args.host_action_transport,
         )
+        handoff, transport_refs = execute_transport_recovery_action(
+            base_cmd=base_cmd,
+            cwd=worktree,
+            issues_path=issues_path,
+            snapshot=snapshot,
+            worker_id=worker_id,
+            claimed_lease_id=claimed_lease_id,
+            lease_ttl_seconds=args.lease_ttl_seconds,
+            handoff=handoff,
+            host_action_transport=args.host_action_transport,
+        )
+        failure_witness_refs = [witness_ref, policy_ref, handoff.lease_ref, *transport_refs]
         append_trajectory_projection(
             base_cmd,
             worktree,
@@ -1033,7 +1265,7 @@ def run_worker(args: argparse.Namespace) -> int:
             step_id=step_id,
             issue_id=issue_id,
             result_class=handoff.result_class,
-            witness_refs=[witness_ref, policy_ref, handoff.lease_ref],
+            witness_refs=failure_witness_refs,
             lineage_refs=lineage_refs,
         )
         write_feature_projection(
@@ -1048,7 +1280,7 @@ def run_worker(args: argparse.Namespace) -> int:
                 f"lease_state={handoff.lease_state}; action={handoff.lease_action}; "
                 f"{handoff.summary}"
             ),
-            verification_refs=[witness_ref, handoff.lease_ref],
+            verification_refs=[witness_ref, handoff.lease_ref, *transport_refs],
         )
         write_session_projection(
             base_cmd,
@@ -1062,7 +1294,7 @@ def run_worker(args: argparse.Namespace) -> int:
                 f"lease_state={handoff.lease_state}; action={handoff.lease_action}"
             ),
             next_step=handoff.next_step,
-            witness_refs=[policy_ref, handoff.lease_ref],
+            witness_refs=[policy_ref, handoff.lease_ref, *transport_refs],
             lineage_refs=lineage_refs,
         )
         print(
@@ -1142,6 +1374,8 @@ def run_coordinator(args: argparse.Namespace) -> int:
                 args.verify_cmd,
                 "--witness-ref-prefix",
                 args.witness_ref_prefix,
+                "--host-action-transport",
+                args.host_action_transport,
             ]
             if args.continue_on_failure:
                 cmd.append("--continue-on-failure")

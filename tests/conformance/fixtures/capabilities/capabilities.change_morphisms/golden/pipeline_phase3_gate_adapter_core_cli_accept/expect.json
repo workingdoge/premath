@@ -1,0 +1,9 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "accepted",
+  "assertions": [
+    "phase-3 wrapper gate hooks remain contract-bound",
+    "governance and KCIR mapping gates route through premath core CLI"
+  ]
+}

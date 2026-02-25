@@ -14,7 +14,11 @@ Use this directory for:
 Current raw tracks include:
 
 - kernel-oriented extensions (`DSL`, `OPCODES`, `HYPERDESCENT`, `UNIVERSE`),
-- operational runtime stack (`TUSK-CORE`, `SQUEAK-CORE`, `SQUEAK-SITE`, `PREMATH-CI`, `CI-TOPOS`),
+- operational runtime stack (`TUSK-CORE`, `SQUEAK-CORE`, `SQUEAK-SITE`,
+  `FIBER-CONCURRENCY`, `PREMATH-CI`, `CI-TOPOS`),
+- control world-profile sketches (`WORLD-PROFILES-CONTROL`, including optional
+  torsor/extension overlay posture),
+- coordination/lease profile (`BEAM-COORDINATION`),
 - site/semantic geometry notes (`CTX-SITE`, `SHEAF-STACK`, `TORSOR-EXT`),
 - explanatory semantics/presentation notes (`SEMANTICS-INFTOPOS`, `SPLIT-PRESENTATION`).
 

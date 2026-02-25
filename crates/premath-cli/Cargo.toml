@@ -5,6 +5,10 @@ edition.workspace = true
 license.workspace = true
 description = "CLI interface for premath"
 
+[features]
+default = ["rhai-frontend"]
+rhai-frontend = ["dep:rhai"]
+
 [[bin]]
 name = "premath"
 path = "src/main.rs"
@@ -13,6 +17,7 @@ path = "src/main.rs"
 premath-kernel = { workspace = true }
 premath-tusk = { workspace = true }
 premath-bd = { workspace = true }
+premath-transport = { workspace = true }
 premath-jj = { workspace = true }
 premath-coherence = { workspace = true }
 premath-surreal = { workspace = true }
@@ -25,3 +30,4 @@ chrono = { workspace = true }
 tokio = { workspace = true }
 async-trait = "0.1"
 rust-mcp-sdk = { version = "0.8.3", default-features = false, features = ["server", "stdio", "macros"] }
+rhai = { version = "1", optional = true }

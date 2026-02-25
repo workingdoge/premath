@@ -126,6 +126,22 @@ HARNESS_RECOVERY_ACTION_BY_LEASE_STATE: Dict[str, str] = {
     "released": "issue_claim",
     "unleased": "issue_claim",
 }
+PHASE3_REQUIRED_GATE_HOOKS: Dict[str, str] = {
+    "governance": "governance_failure_classes",
+    "kcirMapping": "evaluate_required_mapping",
+}
+PHASE3_INSTRUCTION_GATE_HOOKS: Dict[str, str] = {
+    "governance": "governance_failure_classes",
+    "kcirMapping": "evaluate_instruction_mapping",
+}
+PHASE3_REQUIRED_CORE_SUBCOMMANDS: Dict[str, str] = {
+    "governance": "governance-promotion-check",
+    "kcirMapping": "kcir-mapping-check",
+}
+PHASE3_INSTRUCTION_CORE_SUBCOMMANDS: Dict[str, str] = {
+    "governance": "governance-promotion-check",
+    "kcirMapping": "kcir-mapping-check",
+}
 
 
 @dataclass(frozen=True)
@@ -3096,6 +3112,55 @@ def evaluate_change_projection_provider_wrapper_invariance(case: Dict[str, Any])
     return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
 
 
+def evaluate_change_projection_phase3_gate_adapter(case: Dict[str, Any]) -> VectorOutcome:
+    artifacts = case.get("artifacts")
+    if not isinstance(artifacts, dict):
+        raise ValueError("artifacts must be an object")
+
+    profile = case.get("profile")
+    if profile is None:
+        profile = "local"
+    profile = ensure_string(profile, "profile")
+    if profile not in {"local", "external"}:
+        raise ValueError("profile must be 'local' or 'external'")
+    if profile == "external":
+        claimed = set(ensure_string_list(artifacts.get("claimedCapabilities", []), "claimedCapabilities"))
+        if CAPABILITY_CHANGE_MORPHISMS not in claimed:
+            return VectorOutcome("rejected", "rejected", ["capability_not_claimed"])
+
+    required_hooks = ensure_string_mapping(artifacts.get("requiredGateHooks"), "artifacts.requiredGateHooks")
+    instruction_hooks = ensure_string_mapping(
+        artifacts.get("instructionGateHooks"), "artifacts.instructionGateHooks"
+    )
+    required_core_subcommands = ensure_string_mapping(
+        artifacts.get("requiredCoreSubcommands"), "artifacts.requiredCoreSubcommands"
+    )
+    instruction_core_subcommands = ensure_string_mapping(
+        artifacts.get("instructionCoreSubcommands"),
+        "artifacts.instructionCoreSubcommands",
+    )
+
+    if required_hooks != PHASE3_REQUIRED_GATE_HOOKS:
+        return VectorOutcome("rejected", "rejected", ["control_plane_phase3_gate_adapter_mismatch"])
+    if instruction_hooks != PHASE3_INSTRUCTION_GATE_HOOKS:
+        return VectorOutcome("rejected", "rejected", ["control_plane_phase3_gate_adapter_mismatch"])
+    if required_core_subcommands != PHASE3_REQUIRED_CORE_SUBCOMMANDS:
+        return VectorOutcome("rejected", "rejected", ["control_plane_phase3_gate_adapter_mismatch"])
+    if instruction_core_subcommands != PHASE3_INSTRUCTION_CORE_SUBCOMMANDS:
+        return VectorOutcome("rejected", "rejected", ["control_plane_phase3_gate_adapter_mismatch"])
+
+    input_data = artifacts.get("input")
+    if not isinstance(input_data, dict):
+        raise ValueError("artifacts.input must be an object")
+    kernel_verdict = ensure_string(input_data.get("kernelVerdict"), "artifacts.input.kernelVerdict")
+    if kernel_verdict not in {"accepted", "rejected"}:
+        raise ValueError("artifacts.input.kernelVerdict must be 'accepted' or 'rejected'")
+    gate_failure_classes = ensure_string_list(
+        input_data.get("gateFailureClasses", []), "artifacts.input.gateFailureClasses"
+    )
+    return VectorOutcome(kernel_verdict, kernel_verdict, gate_failure_classes)
+
+
 def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> VectorOutcome:
     if vector_id in {
         "golden/docs_only_raw_runs_conformance_check",
@@ -3131,6 +3196,13 @@ def evaluate_change_projection_vector(vector_id: str, case: Dict[str, Any]) -> V
         return evaluate_change_projection_issue_event_replay_cache(case)
     if vector_id == "golden/provider_env_mapping_github_equiv":
         return evaluate_change_projection_provider_env_mapping(case)
+    if vector_id in {
+        "golden/pipeline_phase3_gate_adapter_core_cli_accept",
+        "adversarial/pipeline_phase3_gate_adapter_missing_core_cli_reject",
+        "invariance/same_pipeline_phase3_gate_adapter_local",
+        "invariance/same_pipeline_phase3_gate_adapter_external",
+    }:
+        return evaluate_change_projection_phase3_gate_adapter(case)
     if vector_id in {
         "invariance/same_provider_wrapper_local_env",
         "invariance/same_provider_wrapper_github_env",

@@ -1,17 +1,25 @@
 use crate::cli::IssueCommands;
 use crate::support::{backend_status_payload, collect_backend_status};
-use premath_bd::issue::{IssueLeaseState, issue_type_variants, parse_issue_type};
+use premath_bd::issue::{issue_type_variants, parse_issue_type};
 use premath_bd::{
-    AtomicStoreMutationError, ClaimNextRequest, DEFAULT_LEASE_TTL_SECONDS, DepType, Issue,
-    IssueLease, MemoryStore, claim_next_issue_jsonl, event_stream_ref, migrate_store_to_events,
-    mutate_store_jsonl, read_events_from_path, replay_events, replay_events_from_path,
-    store_snapshot_ref, stores_equivalent, write_events_to_path,
+    AtomicStoreMutationError, DepType, Issue, MemoryStore, event_stream_ref,
+    migrate_store_to_events, mutate_store_jsonl, read_events_from_path, replay_events,
+    replay_events_from_path, store_snapshot_ref, stores_equivalent, write_events_to_path,
 };
 use premath_surreal::QueryCache;
+use premath_transport::{
+    IssueClaimNextRequest as TransportIssueClaimNextRequest,
+    IssueClaimRequest as TransportIssueClaimRequest, IssueSummary as TransportIssueSummary,
+    LeaseActionEnvelope, issue_claim as transport_issue_claim,
+    issue_claim_next as transport_issue_claim_next,
+};
 use serde::{Deserialize, Serialize};
-use serde_json::json;
+use serde_json::{Value, json};
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
+use std::thread;
+use std::time::Duration;
 
 pub fn run(command: IssueCommands) {
     match command {
@@ -68,6 +76,7 @@ pub fn run(command: IssueCommands) {
             title,
             description,
             notes,
+            notes_file,
             status,
             priority,
             assignee,
@@ -79,6 +88,7 @@ pub fn run(command: IssueCommands) {
             title,
             description,
             notes,
+            notes_file,
             status,
             priority,
             assignee,
@@ -515,6 +525,7 @@ fn run_update(
     title: Option<String>,
     description: Option<String>,
     notes: Option<String>,
+    notes_file: Option<String>,
     status: Option<String>,
     priority: Option<i32>,
     assignee: Option<String>,
@@ -527,6 +538,10 @@ fn run_update(
         eprintln!("error: issues file not found: {}", path.display());
         std::process::exit(1);
     }
+    let resolved_notes = resolve_update_notes(notes, notes_file).unwrap_or_else(|message| {
+        eprintln!("error: {message}");
+        std::process::exit(1);
+    });
     let updated = mutate_store_jsonl(&path, |store| {
         let issue = store
             .issue_mut(&id)
@@ -543,7 +558,7 @@ fn run_update(
             issue.description = next;
             changed = true;
         }
-        if let Some(next) = notes {
+        if let Some(next) = resolved_notes.clone() {
             issue.notes = next;
             changed = true;
         }
@@ -611,134 +626,53 @@ fn run_update(
     }
 }
 
+fn resolve_update_notes(
+    notes: Option<String>,
+    notes_file: Option<String>,
+) -> Result<Option<String>, String> {
+    match (notes, notes_file) {
+        (Some(_), Some(_)) => {
+            Err("`--notes` and `--notes-file` are mutually exclusive".to_string())
+        }
+        (Some(value), None) => Ok(Some(value)),
+        (None, Some(path)) => {
+            if path == "-" {
+                let mut buffer = String::new();
+                std::io::stdin()
+                    .read_to_string(&mut buffer)
+                    .map_err(|error| format!("failed to read notes from stdin: {error}"))?;
+                return Ok(Some(buffer));
+            }
+            let content = fs::read_to_string(&path)
+                .map_err(|error| format!("failed to read notes file `{path}`: {error}"))?;
+            Ok(Some(content))
+        }
+        (None, None) => Ok(None),
+    }
+}
+
 fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
     let assignee = assignee.trim().to_string();
     if assignee.is_empty() {
         eprintln!("error: assignee is required");
         std::process::exit(1);
     }
-    let now = chrono::Utc::now();
-    let lease_expires_at = now
-        .checked_add_signed(chrono::Duration::seconds(DEFAULT_LEASE_TTL_SECONDS))
-        .expect("default lease ttl should be in range");
-
     let path = PathBuf::from(issues);
-    let updated = mutate_store_jsonl(&path, |store| {
-        let issue = store
-            .issue_mut(&id)
-            .ok_or_else(|| format!("issue not found: {id}"))?;
-
-        if issue.status == "closed" {
-            return Err(format!("cannot claim closed issue: {id}"));
-        }
-
-        let mut changed = false;
-        let mut status_changed = false;
-
-        if issue.lease_state_at(now) == IssueLeaseState::Stale {
-            issue.lease = None;
-            changed = true;
-
-            if issue.status == "in_progress" {
-                issue.set_status("open".to_string());
-                status_changed = true;
-            }
-            if !issue.assignee.is_empty() && issue.assignee != assignee {
-                issue.assignee.clear();
-                changed = true;
-            }
-        }
-
-        if let Some(active_lease) = issue.lease.as_ref().filter(|lease| lease.expires_at > now)
-            && active_lease.owner != assignee
-        {
-            return Err(format!(
-                "issue already leased: {id} (owner={}, lease_id={})",
-                active_lease.owner, active_lease.lease_id
-            ));
-        }
-        if issue.lease.is_none() && !issue.assignee.is_empty() && issue.assignee != assignee {
-            return Err(format!(
-                "issue already claimed: {id} (assignee={})",
-                issue.assignee
-            ));
-        }
-
-        if issue.assignee != assignee {
-            issue.assignee = assignee.clone();
-            changed = true;
-        }
-        if issue.status != "in_progress" {
-            issue.set_status("in_progress".to_string());
-            changed = true;
-            status_changed = true;
-        }
-
-        let lease_id = issue
-            .lease
-            .as_ref()
-            .filter(|existing| existing.owner == assignee)
-            .map(|existing| existing.lease_id.clone())
-            .unwrap_or_else(|| resolve_default_lease_id(&id, &assignee));
-
-        let next_lease = match issue.lease.as_ref() {
-            Some(existing) if existing.owner == assignee && existing.lease_id == lease_id => {
-                IssueLease {
-                    lease_id: lease_id.clone(),
-                    owner: assignee.clone(),
-                    acquired_at: existing.acquired_at,
-                    expires_at: lease_expires_at,
-                    renewed_at: Some(now),
-                }
-            }
-            _ => IssueLease {
-                lease_id,
-                owner: assignee.clone(),
-                acquired_at: now,
-                expires_at: lease_expires_at,
-                renewed_at: None,
-            },
-        };
-        if issue.lease.as_ref() != Some(&next_lease) {
-            issue.lease = Some(next_lease);
-            changed = true;
-        }
-
-        if changed && !status_changed {
-            issue.touch_updated_at();
-        }
-        Ok((issue.clone(), changed))
-    })
-    .unwrap_or_else(|e| {
-        match e {
-            AtomicStoreMutationError::Mutation(message) => eprintln!("error: {message}"),
-            other => eprintln!("error: {other}"),
-        }
-        std::process::exit(1);
+    let envelope = transport_issue_claim(TransportIssueClaimRequest {
+        id: id.clone(),
+        assignee,
+        lease_id: None,
+        lease_ttl_seconds: None,
+        lease_expires_at: None,
+        issues_path: Some(path.display().to_string()),
     });
+    let updated = require_transport_claim_success(envelope);
 
     if json_output {
         let payload = json!({
             "action": "issue.claim",
             "issuesPath": path.display().to_string(),
-            "issue": {
-                "id": updated.id,
-                "title": updated.title,
-                "status": updated.status,
-                "priority": updated.priority,
-                "issueType": updated.issue_type,
-                "assignee": updated.assignee,
-                "owner": updated.owner,
-                "lease": updated.lease.as_ref().map(|lease| {
-                    json!({
-                        "leaseId": lease.lease_id,
-                        "owner": lease.owner,
-                        "acquiredAt": lease.acquired_at.to_rfc3339(),
-                        "expiresAt": lease.expires_at.to_rfc3339(),
-                        "renewedAt": lease.renewed_at.map(|item| item.to_rfc3339()),
-                    })
-                })
-            }
+            "issue": transport_issue_summary_json(&updated)
         });
         println!(
             "{}",
@@ -755,29 +689,6 @@ fn run_claim(id: String, assignee: String, issues: String, json_output: bool) {
     }
 }
 
-fn resolve_default_lease_id(issue_id: &str, assignee: &str) -> String {
-    format!("lease1_{}_{}", lease_token(issue_id), lease_token(assignee))
-}
-
-fn lease_token(value: &str) -> String {
-    let mut out = String::new();
-    for ch in value.chars() {
-        if ch.is_ascii_alphanumeric() {
-            out.push(ch.to_ascii_lowercase());
-        } else if ch == '-' || ch == '_' {
-            out.push(ch);
-        } else {
-            out.push('_');
-        }
-    }
-    let trimmed = out.trim_matches('_');
-    if trimmed.is_empty() {
-        "anon".to_string()
-    } else {
-        trimmed.to_string()
-    }
-}
-
 fn run_claim_next(
     assignee: String,
     lease_id: Option<String>,
@@ -785,45 +696,43 @@ fn run_claim_next(
     issues: String,
     json_output: bool,
 ) {
-    let path = PathBuf::from(issues);
-    let claim = claim_next_issue_jsonl(
-        &path,
-        ClaimNextRequest {
-            assignee,
-            lease_id,
-            lease_ttl_seconds,
-            now: chrono::Utc::now(),
-        },
-    )
-    .unwrap_or_else(|e| {
-        eprintln!("error: {e}");
+    let assignee = assignee.trim().to_string();
+    if assignee.is_empty() {
+        eprintln!("error: assignee is required");
         std::process::exit(1);
-    });
+    }
+    let path = PathBuf::from(issues);
+    let issues_path = path.display().to_string();
+    const MAX_ATTEMPTS: usize = 64;
+    let mut claimed_issue: Option<TransportIssueSummary> = None;
+    let mut terminal_error: Option<LeaseActionEnvelope> = None;
+    for _ in 0..MAX_ATTEMPTS {
+        let envelope = transport_issue_claim_next(TransportIssueClaimNextRequest {
+            assignee: assignee.clone(),
+            lease_id: lease_id.clone(),
+            lease_ttl_seconds,
+            issues_path: Some(issues_path.clone()),
+        });
+        if envelope.result == "accepted" {
+            claimed_issue = envelope.issue;
+            break;
+        }
+        if is_retryable_claim_next_rejection(&envelope) {
+            thread::sleep(Duration::from_millis(5));
+            continue;
+        }
+        terminal_error = Some(envelope);
+        break;
+    }
+    if let Some(envelope) = terminal_error {
+        fail_transport_claim(envelope);
+    }
 
     if json_output {
-        let issue = claim.issue.as_ref().map(|updated| {
-            json!({
-                "id": updated.id,
-                "title": updated.title,
-                "status": updated.status,
-                "priority": updated.priority,
-                "issueType": updated.issue_type,
-                "assignee": updated.assignee,
-                "owner": updated.owner,
-                "lease": updated.lease.as_ref().map(|lease| {
-                    json!({
-                        "leaseId": lease.lease_id,
-                        "owner": lease.owner,
-                        "acquiredAt": lease.acquired_at.to_rfc3339(),
-                        "expiresAt": lease.expires_at.to_rfc3339(),
-                        "renewedAt": lease.renewed_at.map(|item| item.to_rfc3339()),
-                    })
-                })
-            })
-        });
+        let issue = claimed_issue.as_ref().map(transport_issue_summary_json);
         let payload = json!({
             "action": "issue.claim_next",
-            "issuesPath": path.display().to_string(),
+            "issuesPath": issues_path,
             "claimed": issue.is_some(),
             "issue": issue
         });
@@ -831,7 +740,7 @@ fn run_claim_next(
             "{}",
             serde_json::to_string_pretty(&payload).expect("json serialization")
         );
-    } else if let Some(updated) = claim.issue {
+    } else if let Some(updated) = claimed_issue {
         println!(
             "premath issue claim-next\n  Claimed: {} -> {} [{}]\n  Path: {}",
             updated.id,
@@ -845,6 +754,62 @@ fn run_claim_next(
             path.display()
         );
     }
+}
+
+fn transport_issue_summary_json(issue: &TransportIssueSummary) -> Value {
+    json!({
+        "id": issue.id,
+        "title": issue.title,
+        "status": issue.status,
+        "priority": issue.priority,
+        "issueType": issue.issue_type,
+        "assignee": issue.assignee,
+        "owner": issue.owner,
+        "lease": issue.lease.as_ref().map(|lease| {
+            json!({
+                "leaseId": lease.lease_id,
+                "owner": lease.owner,
+                "acquiredAt": lease.acquired_at,
+                "expiresAt": lease.expires_at,
+                "renewedAt": lease.renewed_at,
+            })
+        })
+    })
+}
+
+fn first_failure_class(envelope: &LeaseActionEnvelope) -> String {
+    envelope
+        .failure_classes
+        .first()
+        .cloned()
+        .unwrap_or_else(|| "transport_claim_rejected".to_string())
+}
+
+fn fail_transport_claim(envelope: LeaseActionEnvelope) -> ! {
+    let failure_class = first_failure_class(&envelope);
+    let diagnostic = envelope
+        .diagnostic
+        .as_deref()
+        .unwrap_or("transport claim rejected");
+    eprintln!("error: {diagnostic} ({failure_class})");
+    std::process::exit(1);
+}
+
+fn require_transport_claim_success(envelope: LeaseActionEnvelope) -> TransportIssueSummary {
+    if envelope.result == "accepted" {
+        return envelope.issue.unwrap_or_else(|| {
+            eprintln!("error: transport claim accepted without issue payload");
+            std::process::exit(1);
+        });
+    }
+    fail_transport_claim(envelope);
+}
+
+fn is_retryable_claim_next_rejection(envelope: &LeaseActionEnvelope) -> bool {
+    envelope
+        .failure_classes
+        .iter()
+        .any(|class| class == "lease_mutation_lock_busy")
 }
 
 #[allow(clippy::too_many_arguments)]
@@ -1250,5 +1215,53 @@ fn next_issue_id(store: &MemoryStore) -> String {
             return candidate;
         }
         seq += 1;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::resolve_update_notes;
+    use std::fs;
+    use std::path::PathBuf;
+
+    #[test]
+    fn resolve_update_notes_uses_literal_notes_when_provided() {
+        let notes = resolve_update_notes(Some("hello".to_string()), None)
+            .expect("notes should resolve")
+            .expect("notes value");
+        assert_eq!(notes, "hello");
+    }
+
+    #[test]
+    fn resolve_update_notes_reads_notes_file() {
+        let mut path = std::env::temp_dir();
+        let unique = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("unix epoch should be valid")
+            .as_nanos();
+        path.push(format!(
+            "premath-issue-notes-test-{}-{}.txt",
+            std::process::id(),
+            unique
+        ));
+        write_file(&path, "line 1\nline 2\n");
+
+        let notes = resolve_update_notes(None, Some(path.display().to_string()))
+            .expect("notes file should resolve")
+            .expect("notes value");
+        assert_eq!(notes, "line 1\nline 2\n");
+
+        let _ = fs::remove_file(path);
+    }
+
+    #[test]
+    fn resolve_update_notes_rejects_dual_sources() {
+        let error = resolve_update_notes(Some("inline".to_string()), Some("notes.txt".to_string()))
+            .expect_err("dual source must fail");
+        assert!(error.contains("mutually exclusive"));
+    }
+
+    fn write_file(path: &PathBuf, content: &str) {
+        fs::write(path, content).expect("failed to write test notes file");
     }
 }

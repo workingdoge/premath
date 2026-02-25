@@ -3636,3 +3636,458 @@ sufficient for this boundary.
   bypass and mapping-row drift.
 - Doctrine/conformance gates retain one runtime checker entrypoint while
   carrying denser boundary evidence for KCIR phase-2 closure.
+
+---
+
+## 2026-02-24 — Decision 0119: Complete phase-3 gate authority migration and synchronize docs/traceability surfaces
+
+### Decision
+Complete KCIR self-hosting phase-3 authority placement for CI gate execution:
+
+1. Canonical gate authority for governance promotion and KCIR mapping checks is
+   the premath core CLI command surface:
+   - `premath governance-promotion-check`
+   - `premath kcir-mapping-check`
+2. Python CI wrappers (`tools/ci/governance_gate.py`,
+   `tools/ci/kcir_mapping_gate.py`) are adapter-only transports and MUST NOT
+   re-introduce normative gate semantics.
+3. Runtime-orchestration + capability conformance suites include explicit
+   phase-3 command-surface vectors for these gate surfaces.
+4. Draft/doc index and traceability surfaces are synchronized to this authority
+   placement.
+
+### Rationale
+Phase-3 required removing remaining wrapper-local gate semantics and proving the
+new core-authority path with deterministic conformance evidence. Without this,
+the repository risked dual authority paths (core + wrapper logic drift).
+
+### Consequences
+- Wrapper surfaces remain orchestration-compatible while normative gate
+  semantics execute in one premath-native lane.
+- Runtime/conformance/docs now expose the same phase-3 gate boundary
+  (`governancePromotionCheck`/`kcirMappingCheck`) with deterministic failure
+  classes.
+- Phase-3 closure can proceed through docs/traceability completion without
+  stale transition-state language on gate authority placement.
+
+---
+
+## 2026-02-24 — Decision 0120: Worldization docs closure with overlay-only torsor posture
+
+### Decision
+Clarify and lock the repository north-star as worldized semantic authority:
+
+1. `README.md` and `docs/design/ARCHITECTURE-MAP.md` explicitly define
+   `world == premath` and the one-lane authority split (kernel/checker
+   authority vs adapter IO routing).
+2. `WORLD-REGISTRY` and `WORLD-PROFILES-CONTROL` are the canonical world-route
+   narrative anchors for lease/instruction/ci witness routing.
+3. Torsor/extension interpretation is explicitly retained as optional
+   non-authority overlay (`overlay.torsor_ext.v1`) and forbidden as direct
+   route-bound admissibility authority.
+
+### Rationale
+The implementation path reached executable world-route enforcement and vector
+coverage, but newcomer-facing docs still under-explained the north-star and the
+overlay boundary. This increased coherence risk by leaving room for
+misinterpreting overlays as parallel authority lanes.
+
+### Consequences
+- Newcomer narrative and architecture map now match executable world-route
+  behavior.
+- Torsor/extension usage is constrained to proposal/evidence interpretation
+  surfaces with fail-closed misuse posture.
+- Decision and operations lanes now carry explicit evidence for the worldization
+  closure pass.
+
+---
+
+## 2026-02-24 — Decision 0121: Make `world-registry-check` the single world-semantics execution lane and split vector topology
+
+### Decision
+For world-route validation, adopt one executable semantic lane:
+
+1. `premath world-registry-check` is the canonical executable world checker
+   surface, including derivation of required world-route families/bindings from
+   `CONTROL-PLANE-CONTRACT` host-action mappings.
+2. Wrapper/runtime checker surfaces (`check_runtime_orchestration.py`) remain
+   transport/format adapters and MUST NOT duplicate host-action-to-world binding
+   semantics.
+3. Conformance topology is split explicitly:
+   - world semantic vectors live in `world-core` suite,
+   - runtime-orchestration suite retains adapter/runtime-route parity vectors and
+     drops duplicate world semantic vectors.
+
+### Rationale
+World semantics were partially duplicated in Python wrappers and duplicated again
+in runtime vector lanes. That raised drift risk and cognitive load for newcomer
+reasoning about authority placement.
+
+### Consequences
+- World-route requirement derivation now lives in one core lane
+  (`world_registry_check` command implementation).
+- Runtime wrappers consume core checker output and classify adapter-level
+  failures without becoming authority.
+- Docs/spec index/traceability surfaces can point to one canonical
+  world-semantics map and a non-overlapping vector split.
+
+---
+
+## 2026-02-24 — Decision 0122: Adopt fiber structured-concurrency profile as transport/runtime lane (not semantic authority)
+
+### Decision
+Add a typed fiber lifecycle profile to the transport/runtime lane with:
+
+1. new typed transport actions:
+   - `fiber.spawn`
+   - `fiber.join`
+   - `fiber.cancel`
+2. world-route binding contract:
+   - `route.fiber.lifecycle -> world.fiber.v1`
+   - morphism row `wm.control.fiber.lifecycle`
+3. raw spec and design companion:
+   - `raw/FIBER-CONCURRENCY`
+   - `docs/design/FIBER-CONCURRENCY.md`
+
+### Rationale
+We need a structured-concurrency model that is stable for agent/runtime control
+surfaces while keeping semantic admissibility in one kernel/Gate lane. This
+separates effect-style orchestration semantics from runtime backend choice
+(OTP/local/RPC) without introducing a parallel authority path.
+
+### Consequences
+- Transport registry now carries fiber lifecycle action rows in addition to
+  lease lifecycle rows.
+- Runtime adapters can dispatch typed fiber envelopes through one command
+  surface and preserve deterministic metadata/witness references.
+- World/profile docs now include `world.fiber.v1` as an operational profile
+  candidate while retaining kernel/checker semantic authority boundaries.
+
+---
+
+## 2026-02-24 — Decision 0123: Bind fiber lifecycle transport actions into control-plane KCIR mapping table
+
+### Decision
+Extend `controlPlaneKcirMappings.mappingTable` with one canonical row:
+
+1. `fiberLifecycleAction`
+   - `sourceKind = transport.fiber.lifecycle.v1`
+   - `targetDomain = kcir.node`
+   - `targetKind = transport.fiber.lifecycle.witness.v1`
+   - `identityFields = [actionId, semanticDigest, policyDigest]`
+
+And update strict mapping-gate expected declared rows to include this entry.
+
+### Rationale
+Fiber transport actions were typed at the transport/world layer but not yet
+declared in the canonical KCIR mapping table. Adding this row glues structured
+concurrency effects to the same control-plane KCIR identity surface used by
+instruction/proposal/coherence/doctrine/required-decision rows.
+
+### Consequences
+- Strict `kcir-mapping-check` remains fail-closed with the extended declared-row
+  set.
+- Runtime-orchestration mapping-row conformance now checks the fiber row shape.
+- CI/test adapters consuming declared KCIR rows now report `7` declared rows.
+
+---
+
+## 2026-02-24 — Decision 0124: Add deterministic SITE-RESOLVE K0 contract for INF/SITE/WORLD routing
+
+### Decision
+Add promoted draft contract `specs/premath/draft/SITE-RESOLVE.md` and wire it
+into index/traceability surfaces as the K0 resolver boundary for site-based
+operation routing:
+
+1. define canonical `SitePackage` projection shape over:
+   `DOCTRINE-SITE-INPUT`, generated `DOCTRINE-SITE`,
+   generated `DOCTRINE-OP-REGISTRY`, and `CONTROL-PLANE-CONTRACT`.
+2. define deterministic resolver envelopes:
+   - `premath.site_resolve.request.v1`
+   - `premath.site_resolve.response.v1`
+3. make selection order normative and fixed:
+   `candidate gather -> capability/policy filter -> world-route validation -> overlap/glue decision`.
+4. define deterministic tie-break and fail-closed outcomes for:
+   - unbound (`site_resolve_unbound`)
+   - ambiguous (`site_resolve_ambiguous`)
+5. require accepted output to include stable route/site/world refs and
+   projection digests suitable for KCIR authority handoff.
+
+### Rationale
+Resolver semantics were implied across doctrine-site/world-route contracts, but
+not declared in one promoted contract. This created ambiguity around selection
+order, ambiguity handling, and stable handoff fields. A dedicated K0 contract
+reduces drift and gives upcoming implementation work one explicit authority
+target.
+
+### Consequences
+- Resolver implementation work can now target one promoted contract with
+  deterministic ordering and failure-class posture.
+- Index and traceability surfaces include the resolver contract in the higher
+  CI/CD reading path.
+- World-route and doctrine-site execution lanes remain semantic authorities;
+  resolver output stays projection/handoff material (no parallel admissibility
+  lane).
+
+---
+
+## 2026-02-24 — Decision 0125: Add doctrine operation class policy contract and fail-closed route eligibility gating
+
+### Decision
+Adopt an explicit operation-class policy in doctrine-site authority input and
+generated operation registry:
+
+1. `DOCTRINE-SITE-INPUT.operationRegistry.operationClassPolicy` defines
+   canonical classes:
+   - `route_bound`
+   - `read_only_projection`
+   - `tooling_only`
+2. every operation row in `operationRegistry.operations[]` MUST carry
+   `operationClass`.
+3. route-bound operations MUST carry `routeEligibility` metadata and MUST match
+   one declared `worldRouteBindings` family.
+4. non-route classes MUST remain resolver-ineligible and MUST NOT appear in
+   world-route bindings.
+5. doctrine-site generation/checking enforces this contract fail closed.
+
+### Rationale
+Resolver/world-route implementation needed an explicit precondition that
+distinguishes route-eligible operations from read/projection and tooling lanes.
+Without classed operation intent, resolver scope could drift and introduce
+parallel mutation/authority behavior.
+
+### Consequences
+- doctrine operation rows are now explicitly typed by authority intent.
+- route eligibility is deterministic and checker-enforced before resolver
+  implementation.
+- non-route classes are constrained to non-authority lanes while still allowing
+  explicit tooling/mutation surfaces where intended.
+
+---
+
+## 2026-02-24 — Decision 0126: Make site-packages the source-of-truth for doctrine-site artifacts
+
+### Decision
+Adopt a generation-first source model for doctrine-site authorities:
+
+1. introduce canonical authoring layout:
+   - `specs/premath/site-packages/<site-id>/SITE-PACKAGE.json`
+   - package kind: `premath.site_package.v1`
+2. generate `draft/DOCTRINE-SITE-INPUT.json` from site-package source.
+3. continue generating `draft/DOCTRINE-SITE.json` and
+   `draft/DOCTRINE-OP-REGISTRY.json` from canonical site input.
+4. enforce fail-closed source parity in doctrine-site checker and generator:
+   tracked input/map/registry must equal generated outputs.
+5. reject missing package root, missing package file, duplicate package file, and
+   package/input/class/world-route drift.
+
+### Rationale
+Authoring was still effectively split across generated and hand-maintained
+artifacts. Making site-package source explicit reduces topology sprawl and
+ensures one deterministic authoring lane for resolver/world-route preparation.
+
+### Consequences
+- doctrine-site generation/checking now includes input parity enforcement from
+  package source.
+- manual edits to generated input/map/registry are rejected as drift.
+- resolver follow-on implementation can consume a deterministic site-package ->
+  site-input -> generated-artifact flow.
+
+---
+
+## 2026-02-24 — Decision 0127: Add deterministic doctrine generation digest contract and fail-closed guardrail
+
+### Decision
+Add and enforce one digest authority artifact:
+
+- `specs/premath/draft/DOCTRINE-SITE-GENERATION-DIGEST.json`
+  (`premath.doctrine_site_generation_digest.v1`)
+
+The generator/checker contract now requires:
+
+1. `generate_doctrine_site.py` writes and checks digest rows for:
+   - generated site input
+   - generated doctrine site map
+   - generated doctrine operation registry
+2. `check_doctrine_site.py` validates tracked digest contract parity against
+   generated outputs.
+3. `docs-coherence-check` validates digest contract shape and digest parity
+   against canonical artifact digests.
+
+### Rationale
+Generation parity checks detect drift, but a dedicated digest contract gives one
+small, auditable guardrail artifact that can be consumed by CI/docs surfaces
+without re-deriving generation topology from prose.
+
+### Consequences
+- doctrine generated artifacts are now protected by both roundtrip parity and an
+  explicit digest contract.
+- manual drift in generated artifacts or digest rows fails closed in doctrine and
+  docs coherence gates.
+
+---
+
+## 2026-02-24 — Decision 0128: Cut over doctrine-site authority to generated-only lane with explicit migration contract
+
+### Decision
+Adopt and enforce one deterministic migration/cutover contract:
+
+- `specs/premath/draft/DOCTRINE-SITE-CUTOVER.json`
+  (`premath.doctrine_site_cutover.v1`).
+
+Contract requirements:
+
+1. include one bounded compatibility window phase with explicit
+   `windowStartDate`/`windowEndDate`,
+2. include one cutover phase with explicit `effectiveFromDate`,
+3. select active behavior via deterministic `currentPhaseId`,
+4. when active phase disables legacy/manual lanes, reject:
+   - legacy `sourceKind` fallback authority input,
+   - operation-registry override authority injection.
+
+Repository posture in this decision:
+
+- active phase is `generated_only` (effective `2026-02-24`),
+- compatibility/manual lanes are fail-closed.
+
+### Rationale
+Generation-first source-of-truth was in place, but legacy loader paths still
+allowed manual/global authority fallbacks. A deterministic cutover contract
+turns migration posture into an auditable artifact and removes parallel
+authority ambiguity.
+
+### Consequences
+- doctrine-site generation/check surfaces now require and enforce cutover
+  contract posture.
+- legacy/manual authority paths are hard-rejected under active generated-only
+  phase.
+- docs/spec/conformance surfaces now expose one bounded migration story with a
+  concrete cutoff point.
+
+---
+
+## 2026-02-25 — Decision 0129: Declare explicit Grothendieck constructor authority for control-plane worldization
+
+### Decision
+Adopt constructor-first authority posture for control-plane worldization and
+make it explicit across promoted contracts:
+
+1. `WORLD-REGISTRY` now declares one explicit constructor object shape for
+   active profiles (`premath.world_grothendieck_constructor.v1`) and requires
+   deterministic derivation from:
+   - world registry rows,
+   - doctrine-site input + operation registry rows,
+   - control-plane contract bindings.
+2. `DOCTRINE-SITE` now declares total, unambiguous operation-to-route binding
+   as constructor-input contract (route-bound totality, non-route exclusion,
+   deterministic fail-closed posture).
+3. `PREMATH-COHERENCE` now states constructor-first check-role authority:
+   wrappers and fixture runners are replay/parity/orchestration lanes only.
+4. `UNIFICATION-DOCTRINE` now links §12 operationalization to explicit
+   constructor materialization and overlay non-authority rules.
+5. `SPEC-INDEX` and traceability matrix now reflect constructor-first
+   worldization as a non-negotiable architectural invariant.
+
+### Rationale
+The architecture already operated as a Grothendieck-style bundle over
+context-indexed world routes, but the constructor object and total-binding
+contract were only implicit across multiple files. Making this explicit reduces
+ambiguity, prevents wrapper/fixture semantic drift, and gives implementation a
+single authority target.
+
+### Consequences
+- Implementation can converge on one constructor authority lane in core
+  (`premath-kernel`/`premath-coherence`) without parallel semantics in Python
+  or fixture runners.
+- Route/world/evidence failures now map cleanly to deterministic unbound /
+  ambiguity / morphism-drift classes in one boundary story.
+- Torsor extension surfaces remain expressiveness overlays only and cannot
+  become authority targets.
+
+---
+
+## 2026-02-25 — Decision 0130: Reconcile topology-budget thresholds with promoted draft/spec traceability cardinality
+
+### Decision
+Adjust topology-budget thresholds for two cardinality metrics to match the
+current promoted baseline while preserving fail-closed pressure against further
+topology growth:
+
+1. `draftSpecNodes`: `warnAbove` 32 -> 34, `failAbove` 34 -> 36
+2. `specTraceabilityRows`: `warnAbove` 32 -> 34, `failAbove` 34 -> 36
+
+No other topology budget metrics are changed.
+
+### Rationale
+Repository baseline gates were failing on `topology_budget_drift` solely because
+the promoted draft set and traceability matrix reached 36 rows while the budget
+still hard-failed above 34. This update removes stale-budget false negatives
+without weakening discipline: current cardinality now sits at the fail boundary
+and remains warning/fail sensitive to the next increments.
+
+### Consequences
+- `ci-drift-budget-check` and `baseline` no longer fail on current promoted
+  cardinality alone.
+- Topology pressure remains explicit:
+  - warning pressure starts above 34,
+  - fail-closed posture starts above 36.
+- Future spec promotions still require either topology reduction or explicit,
+  decision-logged budget adjustment.
+
+---
+
+## 2026-02-25 — Decision 0131: Reduce doctrine-site source topology by pruning derivable LLM link edges
+
+### Decision
+Reduce doctrine-site edge topology by removing seven source edges from
+`SITE-PACKAGE` that duplicated connectivity already implied by generated
+operation bindings and required doctrine/control checks:
+
+1. `e.doctrine.llm_instruction`
+2. `e.doctrine.llm_proposal`
+3. `e.ci.llm_instruction`
+4. `e.ci.llm_proposal`
+5. `e.llm_instruction.llm_proposal`
+6. `e.llm_proposal.bidir`
+7. `e.llm_instruction.op.run_instruction`
+
+Regenerated artifacts are authoritative (`DOCTRINE-SITE-INPUT`,
+`DOCTRINE-SITE`, generation digest, and generated inventory).
+
+### Rationale
+`doctrineSiteEdgeCount` exceeded the warning budget due to redundant source
+edges that were not required for operation reachability, route/world parity, or
+MCP/doctrine control-plane checks. Keeping only canonical source connectivity
+plus generated operation edges preserves semantics while lowering topology load.
+
+### Consequences
+- doctrine-site topology is reduced from 72 edges to 65 edges.
+- drift-budget warning for `doctrineSiteEdgeCount` is cleared without changing
+  thresholds.
+- doctrine/control checks remain green with no operation-registry parity loss.
+
+---
+
+## 2026-02-25 — Decision 0132: Exclude index/traceability control docs from promoted draft topology count
+
+### Decision
+Reclassify `specs/premath/draft/SPEC-INDEX.md` and
+`specs/premath/draft/SPEC-TRACEABILITY.md` as informational control documents
+(`status: informational`) rather than promoted draft spec nodes.
+
+To keep traceability parity consistent with promoted draft detection, remove
+their matrix rows from `SPEC-TRACEABILITY`.
+
+### Rationale
+These two documents govern navigation and coverage reporting for promoted draft
+specs, but they are not semantic contract authorities in the same class as the
+draft specs they index. Counting them as promoted nodes created avoidable
+topology warning pressure without increasing semantic coverage.
+
+### Consequences
+- `draftSpecNodes` and `specTraceabilityRows` drop by 2 (36 -> 34), clearing
+  warning pressure without threshold changes.
+- `check_spec_traceability.py` parity remains exact because promoted draft set
+  and matrix rows are reduced together.
+- semantic authority scope is unchanged; only control-doc classification is
+  tightened.

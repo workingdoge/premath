@@ -1,0 +1,24 @@
+{
+  "schema": 1,
+  "digestKind": "premath.doctrine_site_generation_digest.v1",
+  "source": {
+    "packagesRoot": "specs/premath/site-packages",
+    "packageGlob": "**/SITE-PACKAGE.json",
+    "generator": "tools/conformance/generate_doctrine_site.py",
+    "cutoverContract": "specs/premath/draft/DOCTRINE-SITE-CUTOVER.json"
+  },
+  "artifacts": {
+    "siteInput": {
+      "path": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+      "sha256": "42b8d751ed572a14c45918a8b7b477f565c26330b1b3d49a445ff7ea4deb4edd"
+    },
+    "siteMap": {
+      "path": "specs/premath/draft/DOCTRINE-SITE.json",
+      "sha256": "e84506e8d34ecd1657933d7a1328049587977b013d93105c254de4676bf4e282"
+    },
+    "operationRegistry": {
+      "path": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
+      "sha256": "b6ee97bec3f20cbf88d38d5c20e4895421086cd15e1618e90c0984b23123f375"
+    }
+  }
+}

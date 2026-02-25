@@ -107,6 +107,9 @@ def run(fixtures: Path) -> int:
             doctrine_op_registry = case.get("doctrineOpRegistry")
             if not isinstance(doctrine_op_registry, dict):
                 raise ValueError(f"{case_path}: doctrineOpRegistry must be an object")
+            doctrine_site_input = case.get("doctrineSiteInput")
+            if doctrine_site_input is not None and not isinstance(doctrine_site_input, dict):
+                raise ValueError(f"{case_path}: doctrineSiteInput must be an object when provided")
             harness_runtime_text = ensure_string(
                 case.get("harnessRuntimeText"),
                 f"{case_path}: harnessRuntimeText",
@@ -126,6 +129,7 @@ def run(fixtures: Path) -> int:
                 control_plane_contract=control_plane_contract,
                 operation_registry=doctrine_op_registry,
                 harness_runtime_text=harness_runtime_text,
+                doctrine_site_input=doctrine_site_input,
             )
             got_result = ensure_string(output.get("result"), f"{vector_id}: output.result")
             got_failure_classes = canonical_set(

@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "suiteId": "frontend-parity",
+  "vectors": [
+    "golden/host_action_issue_claim_next_parity_accept",
+    "adversarial/failure_class_drift_reject",
+    "adversarial/world_route_drift_reject",
+    "adversarial/transport_profile_mismatch_reject",
+    "invariance/host_action_issue_claim_next_permuted_local_accept",
+    "invariance/host_action_issue_claim_next_permuted_external_accept"
+  ]
+}

@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
-"""
-Execute doctrine-inf semantic boundary vectors.
-
-These vectors validate law-level preserved/not-preserved boundary behavior and
-claim-gated governance-profile fail-closed semantics.
-"""
+"""Run doctrine-inf fixture vectors via core CLI semantics."""
 
 from __future__ import annotations
 
 import argparse
 import json
+import os
+import shlex
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Set
@@ -29,16 +27,16 @@ CAPABILITY_REGISTRY_PATH = (
     / "CAPABILITY-REGISTRY.json"
 )
 CAPABILITY_REGISTRY_KIND = "premath.capability_registry.v1"
+DOCTRINE_INF_CHECK_COMMAND_PREFIX = (
+    "cargo",
+    "run",
+    "--package",
+    "premath-cli",
+    "--",
+    "doctrine-inf-check",
+)
 
 GOVERNANCE_PROFILE_CLAIM_ID = "profile.doctrine_inf_governance.v0"
-REQUIRED_GUARDRAIL_STAGES = ("pre_flight", "input", "output")
-VALID_OBSERVABILITY_MODES = {"dashboard", "internal_processor", "disabled"}
-VALID_RISK_TIERS = {"low", "moderate", "high"}
-REQUIRED_EVAL_LINEAGE_FIELDS = (
-    "datasetLineageRef",
-    "graderConfigLineageRef",
-    "metricThresholdsRef",
-)
 
 
 def load_json(path: Path) -> Dict[str, Any]:
@@ -89,7 +87,9 @@ def load_profile_overlay_claims(registry_path: Path) -> Set[str]:
     out: Set[str] = set()
     for idx, claim in enumerate(claims):
         if not isinstance(claim, str) or not claim:
-            raise ValueError(f"{registry_path}: profileOverlayClaims[{idx}] must be a non-empty string")
+            raise ValueError(
+                f"{registry_path}: profileOverlayClaims[{idx}] must be a non-empty string"
+            )
         out.add(claim)
     return out
 
@@ -105,170 +105,58 @@ def validate_manifest(fixtures: Path) -> List[str]:
     return vectors
 
 
-def evaluate_governance_profile(profile: Dict[str, Any]) -> Set[str]:
-    claim_id = ensure_string(profile.get("claimId"), "governanceProfile.claimId")
-    if claim_id != GOVERNANCE_PROFILE_CLAIM_ID:
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _validate_doctrine_inf_check_command(cmd: List[str]) -> None:
+    prefix = DOCTRINE_INF_CHECK_COMMAND_PREFIX
+    if tuple(cmd[: len(prefix)]) != prefix:
         raise ValueError(
-            "governanceProfile.claimId must be "
-            f"{GOVERNANCE_PROFILE_CLAIM_ID!r}"
+            "doctrine-inf-check command surface drift: expected prefix "
+            f"{list(prefix)!r}, got {cmd!r}"
         )
 
-    claimed = profile.get("claimed")
-    if not isinstance(claimed, bool):
-        raise ValueError("governanceProfile.claimed must be a boolean")
-    if not claimed:
-        return set()
 
-    failures: Set[str] = set()
-
-    policy = profile.get("policyProvenance")
-    if not isinstance(policy, dict):
-        raise ValueError("governanceProfile.policyProvenance must be an object")
-    pinned = policy.get("pinned")
-    if not isinstance(pinned, bool):
-        raise ValueError("governanceProfile.policyProvenance.pinned must be a boolean")
-    package_ref = policy.get("packageRef")
-    expected_digest = policy.get("expectedDigest")
-    bound_digest = policy.get("boundDigest")
-    if not pinned:
-        failures.add("governance.policy_package_unpinned")
+def _resolve_doctrine_inf_check_command() -> List[str]:
+    override = os.environ.get("PREMATH_DOCTRINE_INF_CHECK_CMD", "").strip()
+    if override:
+        command = shlex.split(override)
     else:
-        if not isinstance(package_ref, str) or not package_ref:
-            failures.add("governance.policy_package_unpinned")
-        if not isinstance(expected_digest, str) or not expected_digest:
-            failures.add("governance.policy_package_unpinned")
-        if not isinstance(bound_digest, str) or not bound_digest:
-            failures.add("governance.policy_package_unpinned")
-        if (
-            isinstance(expected_digest, str)
-            and expected_digest
-            and isinstance(bound_digest, str)
-            and bound_digest
-            and expected_digest != bound_digest
-        ):
-            failures.add("governance.policy_package_mismatch")
+        command = list(DOCTRINE_INF_CHECK_COMMAND_PREFIX)
+    _validate_doctrine_inf_check_command(command)
+    return command
 
-    guardrail_stages = ensure_string_list(
-        profile.get("guardrailStages"),
-        "governanceProfile.guardrailStages",
+
+def _run_kernel_doctrine_inf_check(case_path: Path) -> Dict[str, Any]:
+    command = _resolve_doctrine_inf_check_command()
+    completed = subprocess.run(
+        [*command, "--input", str(case_path), "--json"],
+        cwd=_repo_root(),
+        capture_output=True,
+        text=True,
+        check=False,
     )
-    missing_stage = any(stage not in guardrail_stages for stage in REQUIRED_GUARDRAIL_STAGES)
-    if missing_stage:
-        failures.add("governance.guardrail_stage_missing")
-    elif tuple(guardrail_stages) != REQUIRED_GUARDRAIL_STAGES:
-        failures.add("governance.guardrail_stage_order_invalid")
-
-    eval_gate = profile.get("evalGate")
-    if not isinstance(eval_gate, dict):
-        raise ValueError("governanceProfile.evalGate must be an object")
-    eval_passed = eval_gate.get("passed")
-    if not isinstance(eval_passed, bool):
-        raise ValueError("governanceProfile.evalGate.passed must be a boolean")
-    if not eval_passed:
-        failures.add("governance.eval_gate_unmet")
-
-    eval_evidence = profile.get("evalEvidence")
-    if not isinstance(eval_evidence, dict):
-        failures.add("governance.eval_lineage_missing")
-    else:
-        for field in REQUIRED_EVAL_LINEAGE_FIELDS:
-            value = eval_evidence.get(field)
-            if not isinstance(value, str) or not value:
-                failures.add("governance.eval_lineage_missing")
-
-    observability_mode = ensure_string(
-        profile.get("observabilityMode"),
-        "governanceProfile.observabilityMode",
-    )
-    if observability_mode not in VALID_OBSERVABILITY_MODES:
-        failures.add("governance.trace_mode_violation")
-
-    risk_tier = profile.get("riskTier")
-    if not isinstance(risk_tier, dict):
-        raise ValueError("governanceProfile.riskTier must be an object")
-    risk_tier_name = ensure_string(
-        risk_tier.get("tier"),
-        "governanceProfile.riskTier.tier",
-    )
-    control_bound = risk_tier.get("controlProfileBound")
-    if not isinstance(control_bound, bool):
-        raise ValueError("governanceProfile.riskTier.controlProfileBound must be a boolean")
-    if risk_tier_name not in VALID_RISK_TIERS or not control_bound:
-        failures.add("governance.risk_tier_profile_missing")
-
-    self_evolution = profile.get("selfEvolution")
-    if not isinstance(self_evolution, dict):
-        failures.add("governance.self_evolution_retry_missing")
-        failures.add("governance.self_evolution_escalation_missing")
-        failures.add("governance.self_evolution_rollback_missing")
-    else:
-        max_attempts = self_evolution.get("maxAttempts")
-        terminal_escalation = self_evolution.get("terminalEscalation")
-        rollback_ref = self_evolution.get("rollbackRef")
-        if not isinstance(max_attempts, int) or max_attempts < 1:
-            failures.add("governance.self_evolution_retry_missing")
-        if not isinstance(terminal_escalation, str) or not terminal_escalation:
-            failures.add("governance.self_evolution_escalation_missing")
-        if not isinstance(rollback_ref, str) or not rollback_ref:
-            failures.add("governance.self_evolution_rollback_missing")
-
-    return failures
-
-
-def evaluate_boundary_case(case: Dict[str, Any]) -> Dict[str, Any]:
-    artifacts = case.get("artifacts")
-    if not isinstance(artifacts, dict):
-        raise ValueError("artifacts must be an object")
-
-    registry = set(ensure_string_list(artifacts.get("doctrineRegistry", []), "artifacts.doctrineRegistry"))
-    if not registry:
-        raise ValueError("artifacts.doctrineRegistry must be non-empty")
-
-    declares = artifacts.get("destinationDeclares")
-    if not isinstance(declares, dict):
-        raise ValueError("artifacts.destinationDeclares must be an object")
-
-    preserved = set(ensure_string_list(declares.get("preserved", []), "artifacts.destinationDeclares.preserved"))
-    not_preserved = set(
-        ensure_string_list(declares.get("notPreserved", []), "artifacts.destinationDeclares.notPreserved")
-    )
-    edge_morphisms = ensure_string_list(artifacts.get("edgeMorphisms", []), "artifacts.edgeMorphisms")
-
-    failure_classes: Set[str] = set()
-
-    if preserved & not_preserved:
-        failure_classes.add("doctrine_declaration_overlap")
-
-    unknown_declaration = sorted((preserved | not_preserved).difference(registry))
-    if unknown_declaration:
-        failure_classes.add("doctrine_unknown_morphism")
-
-    unknown_edge = sorted(set(edge_morphisms).difference(registry))
-    if unknown_edge:
-        failure_classes.add("doctrine_unknown_morphism")
-
-    for morphism in edge_morphisms:
-        if morphism in not_preserved:
-            failure_classes.add("doctrine_boundary_not_preserved")
-            continue
-        if morphism not in preserved:
-            failure_classes.add("doctrine_boundary_not_declared_preserved")
-
-    governance_profile = case.get("governanceProfile")
-    if governance_profile is not None:
-        if not isinstance(governance_profile, dict):
-            raise ValueError("governanceProfile must be an object when provided")
-        failure_classes.update(evaluate_governance_profile(governance_profile))
-
-    if failure_classes:
-        return {
-            "result": "rejected",
-            "failureClasses": sorted(failure_classes),
-        }
-    return {
-        "result": "accepted",
-        "failureClasses": [],
-    }
+    if completed.returncode not in {0, 1}:
+        raise ValueError(
+            "kernel doctrine-inf-check command failed: "
+            f"exit={completed.returncode}, stderr={completed.stderr.strip()!r}"
+        )
+    stdout = completed.stdout.strip()
+    if not stdout:
+        raise ValueError("kernel doctrine-inf-check produced empty stdout")
+    try:
+        payload = json.loads(stdout)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            "kernel doctrine-inf-check emitted invalid json: "
+            f"{exc}"
+        ) from exc
+    if not isinstance(payload, dict):
+        raise ValueError("kernel doctrine-inf-check payload must be an object")
+    if "result" not in payload or "failureClasses" not in payload:
+        raise ValueError("kernel doctrine-inf-check payload missing result/failureClasses")
+    return payload
 
 
 def run(fixtures: Path, registry_path: Path, enforce_repo_claims: bool) -> int:
@@ -317,20 +205,30 @@ def run(fixtures: Path, registry_path: Path, enforce_repo_claims: bool) -> int:
                 if governance_case_claimed:
                     executed_governance_claimed += 1
 
-            got = evaluate_boundary_case(case)
+            got = _run_kernel_doctrine_inf_check(case_path)
+
             expected_result = ensure_string(expect.get("result"), f"{expect_path}: result")
             if expected_result not in {"accepted", "rejected"}:
                 raise ValueError(f"{expect_path}: result must be 'accepted' or 'rejected'")
             expected_failure_classes = canonical_set(
-                ensure_string_list(expect.get("expectedFailureClasses", []), f"{expect_path}: expectedFailureClasses")
+                ensure_string_list(
+                    expect.get("expectedFailureClasses", []),
+                    f"{expect_path}: expectedFailureClasses",
+                )
             )
 
-            got_failure_classes = canonical_set(got.get("failureClasses", []))
-            if got.get("result") != expected_result or got_failure_classes != expected_failure_classes:
+            got_result = ensure_string(got.get("result"), f"{case_path}: got.result")
+            got_failure_classes = canonical_set(
+                ensure_string_list(
+                    got.get("failureClasses", []),
+                    f"{case_path}: got.failureClasses",
+                )
+            )
+            if got_result != expected_result or got_failure_classes != expected_failure_classes:
                 raise ValueError(
                     f"expect/got mismatch for {vector_id}\n"
                     f"expect={{'result': {expected_result!r}, 'failureClasses': {expected_failure_classes!r}}}\n"
-                    f"got={got!r}"
+                    f"got={{'result': {got_result!r}, 'failureClasses': {got_failure_classes!r}}}"
                 )
 
             print(f"[ok] doctrine-inf/{vector_id}")

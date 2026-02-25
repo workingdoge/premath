@@ -16,6 +16,125 @@ Design goals:
 - **Operational runtime**: harness contracts govern typed runtime loops, typestate closure, and retry/escalation behavior without adding semantic authority.
 - **Regression discipline**: claim-gated conformance vectors and doctrine/coherence checks keep behavior stable as capabilities evolve.
 
+## What We Are Building
+
+Premath is a worldized semantic control plane:
+
+- repository/control states are contexts,
+- specs/contracts/witnesses are definables indexed by those contexts,
+- route families are bound to explicit world profiles with deterministic
+  morphism rows,
+- BEAM lease orchestration is bound to `world.lease.v1` (`route.issue_claim_lease`)
+  and checked through the core `premath world-registry-check` surface.
+
+North-star rule:
+
+- one admissibility authority lane (kernel/Gate + checker contracts),
+- adapters/wrappers are transport and execution IO only,
+- optional overlays (for example torsor/extension interpretation) stay
+  evidence-only and never become direct acceptance authority.
+
+## Canonical Frontend Flow (One Authority Lane)
+
+All frontend/runtime entrypoints follow the same path:
+
+```text
+Frontend adapter (Steel | Rhai | CLI | MCP | optional NIF)
+  -> host action
+  -> site resolver decision (INF -> SITE -> WORLD)
+  -> typed transport envelope
+  -> world-route kernel check
+  -> mutation/evidence projection
+```
+
+Boundary command surfaces:
+
+| Boundary | Canonical surface |
+| --- | --- |
+| Frontend host-action execution | `premath scheme-eval`; `premath rhai-eval`; `premath mcp-serve` |
+| Site resolver decision | `premath site-resolve` |
+| Typed transport dispatch | `premath transport-dispatch`; `premath transport-check` |
+| World-route admissibility | `premath world-registry-check`; `premath world-gate-check` |
+| Mutation/evidence emission | `premath issue ...`; `premath instruction-*`; `premath required-*` |
+
+Rhai/Steel/MCP/NIF are adapter-only frontends over this lane. They do not
+introduce independent mutation authority.
+
+## INF/SITE/WORLD Resolver Map
+
+Primary newcomer mental model:
+
+- `INF`: semantic obligations and preservation classes
+  (`specs/premath/draft/DOCTRINE-INF.md`).
+- `SITE`: operation topology and route eligibility
+  (`specs/premath/draft/DOCTRINE-SITE-INPUT.json`,
+  `specs/premath/draft/DOCTRINE-OP-REGISTRY.json`).
+- `WORLD`: route-family to world/morphism bindings
+  (`specs/premath/draft/WORLD-REGISTRY.md`).
+- `RESOLVER`: deterministic selection over INF/SITE/WORLD
+  (`premath site-resolve`, `specs/premath/draft/SITE-RESOLVE.md`).
+
+Generated entrypoint for this map:
+
+- `docs/design/generated/DOCTRINE-SITE-INVENTORY.md`
+  (`site -> operations -> route families -> world bindings -> command surfaces`).
+
+Why this exists:
+
+- keep multi-agent runtime evolution expressive without adding parallel
+  semantics,
+- keep CI/control behavior auditable through typed route and witness bindings,
+- keep refactors safe via executable golden/adversarial/invariance closure.
+
+## Newcomer Path (20 Minutes)
+
+Read these in order:
+
+1. `README.md` (this page) for boundary shape and command surface.
+2. `docs/design/generated/DOCTRINE-SITE-INVENTORY.md` for the generated
+   INF/SITE/WORLD navigation index.
+3. `specs/premath/draft/SPEC-INDEX.md` for what is normative vs optional.
+4. `specs/premath/draft/WORLD-REGISTRY.md` for world/morphism/route binding.
+5. `specs/premath/draft/PREMATH-KERNEL.md` and `specs/premath/draft/GATE.md`
+   for admissibility authority.
+6. `docs/design/ARCHITECTURE-MAP.md` for implementation placement.
+
+Then run:
+
+- `mise run doctrine-check`
+- `mise run coherence-check`
+
+## Authority Map
+
+| Concern | Authoritative spec(s) | Executable checker/runner | Command |
+| --- | --- | --- | --- |
+| Semantic admissibility | `specs/premath/draft/PREMATH-KERNEL.md`, `specs/premath/draft/GATE.md`, `specs/premath/draft/BIDIR-DESCENT.md` | Coherence + gate/toy vectors | `mise run coherence-check` |
+| World/route bindings | `specs/premath/draft/WORLD-REGISTRY.md`, `specs/premath/draft/DOCTRINE-SITE-INPUT.json`, `specs/premath/draft/CONTROL-PLANE-CONTRACT.json` | Core world-registry command + world-core conformance parity + runtime adapter parity checker | `cargo run --package premath-cli -- world-registry-check ... --json`; `python3 tools/conformance/run_world_core_vectors.py`; `python3 tools/conformance/check_runtime_orchestration.py --json` |
+| Control-plane parity | `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`, `specs/premath/draft/PREMATH-COHERENCE.md` | Premath coherence checker | `mise run coherence-check` |
+| Docs/spec linkage | `specs/premath/draft/SPEC-INDEX.md`, `specs/premath/draft/SPEC-TRACEABILITY.md` | Docs + traceability checks | `mise run docs-coherence-check` |
+| Regression vectors | `specs/premath/draft/CONFORMANCE.md`, `specs/premath/draft/CAPABILITY-VECTORS.md` | Fixture-suite + capability vector runners | `mise run conformance-run` |
+
+### Canonical World Semantics Map
+
+World semantics live in one executable lane:
+
+1. `crates/premath-kernel/src/world_registry.rs`:
+   route-family/world/morphism validation semantics + canonical failure classes.
+2. `crates/premath-cli/src/commands/world_registry_check.rs`:
+   core command surface (`premath world-registry-check`) and control-plane-derived
+   required world-route bindings.
+3. `tools/conformance/run_world_core_vectors.py`:
+   semantic conformance lane (golden/adversarial/invariance) that replays
+   fixture expectations against core command outputs.
+
+Wrapper surfaces are non-authority adapters:
+
+- `tools/conformance/check_runtime_orchestration.py` aggregates contract/runtime
+  checks and invokes the core world command.
+- `tests/conformance/fixtures/runtime-orchestration/` now carries runtime-route
+  adapter parity vectors (world semantics are centralized in
+  `tests/conformance/fixtures/world-core/`).
+
 ## Layout
 
 - `specs/premath/draft/` — promoted draft contracts (normative for active claims)
@@ -30,6 +149,8 @@ Design goals:
 - `specs/premath/draft/DOCTRINE-INF.md` — doctrine/infinity-layer preservation contract.
 - `specs/premath/draft/DOCTRINE-SITE.md` — doctrine-to-operation site map
   (`specs/premath/draft/DOCTRINE-SITE.json`).
+- `specs/premath/draft/WORLD-REGISTRY.md` — canonical world/morphism/route
+  binding contract (`world == premath`).
 - `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md` — typed instruction
   doctrine for LLM-driven control loops.
 - `specs/premath/draft/PREMATH-KERNEL.md` — definability kernel (contractible descent).
@@ -123,6 +244,23 @@ Runtime crates are split by responsibility:
   - Projection-only spec-IR lane (`spec_ir`) for typed statement entity/edge
     indexing from draft artifacts.
   - No orchestration with VCS or query backends.
+- `crates/premath-transport`:
+  - transport-facing lease bridge over canonical issue-memory semantics.
+  - Optional `rustler_nif` feature exports a generic NIF dispatcher
+    (`dispatch`) over canonical `action + payload` transport envelopes while
+    preserving world-route binding metadata
+    (`route.issue_claim_lease` -> `world.lease.v1`,
+    `route.fiber.lifecycle` -> `world.fiber.v1`).
+  - `premath transport-check` validates typed transport action registry closure
+    (`action`/`actionId`/route/world/morphism + semantic digest).
+  - `premath transport-dispatch` executes typed transport envelopes and emits
+    deterministic dispatch metadata (`dispatchKind`, `profileId`, `actionId`,
+    `semanticDigest`) for lease actions plus structured-concurrency actions
+    (`fiber.spawn|join|cancel`).
+  - Additional transports (for example gRPC request/response wrappers) should
+    reuse the same dispatcher contract and remain adapter-only.
+  - Default build remains Erlang-free; BEAM runtime is required only when
+    loading the produced NIF into Elixir/Erlang.
 - `crates/premath-surreal`:
   - Query/index adapters (issue graph cache + observation-surface indexing).
 - `crates/premath-ux`:
@@ -432,8 +570,8 @@ surface.
 `premath-cli` now includes runtime-facing commands for `premath-tusk` and
 `premath-ux`, plus Beads-style issue-memory operations:
 
-- `premath init [path]`
-  - initializes `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present).
+- `premath init [path] [--json]`
+  - initializes `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present) with text or deterministic JSON output.
 - `premath mock-gate --json`
   - emits a deterministic Gate witness envelope from synthetic failures.
 - `premath tusk-eval --identity <run_identity.json> --descent-pack <descent_pack.json> --json`
@@ -492,6 +630,17 @@ surface.
   - replaces one dependency edge type without manual JSONL edits.
 - `premath dep diagnostics --issues .premath/issues.jsonl --graph-scope active|full --json`
   - reports scoped dependency graph integrity diagnostics (`graphScope`, `hasCycle`, `cyclePath`), defaulting to `active`.
+
+### Evaluator Metadata Precedence
+
+`premath scheme-eval` and `premath rhai-eval` share one metadata model:
+
+- scalar defaults (`issueId`, `policyDigest`, `instructionRef`) resolve by
+  precedence: `call-level > CLI flags > program defaults`.
+- capability claims resolve by deterministic union + dedupe across
+  `program-level`, `CLI --capability-claim`, and `call-level` claims.
+- mutation-capable actions still require the same evidence/capability checks
+  (`policyDigest`, `instructionRef`, and action claims) regardless of frontend.
 
 ### MCP Client Config Snippets
 

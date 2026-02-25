@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "suiteId": "world-core",
+  "vectorId": "adversarial/site_resolve_unbound_reject",
+  "mode": "site-resolve",
+  "request": {
+    "schema": 1,
+    "requestKind": "premath.site_resolve.request.v1",
+    "operationId": "op/ci.missing",
+    "claimedCapabilities": [
+      "capabilities.ci_witnesses"
+    ],
+    "policyDigest": "pol1_test",
+    "profileId": "cp.bundle.v0",
+    "contextRef": "ctx.main"
+  },
+  "controlPlaneContract": {
+    "controlPlaneBundleProfile": {
+      "profileId": "cp.bundle.v0"
+    },
+    "controlPlaneKcirMappings": {
+      "profileId": "cp.kcir.mapping.v0",
+      "mappingTable": {
+        "doctrineRouteBinding": {
+          "sourceKind": "doctrine.route.binding.v1",
+          "targetDomain": "kcir.node",
+          "targetKind": "doctrine.route.witness.v1",
+          "identityFields": [
+            "operationId",
+            "siteDigest",
+            "policyDigest"
+          ]
+        }
+      }
+    },
+    "ciInstructionPolicy": {
+      "policyDigestPrefix": "pol1_"
+    }
+  },
+  "doctrineOpRegistry": {
+    "schema": 1,
+    "registryKind": "premath.doctrine_operation_registry.v1",
+    "parentNodeId": "raw/PREMATH-CI",
+    "coverId": "cover.ci",
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "edgeId": "e.ci.op.run_gate",
+        "operationClass": "route_bound",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution"
+        ],
+        "routeEligibility": {
+          "resolverEligible": true,
+          "worldRouteRequired": true,
+          "routeFamilyId": "route.gate_execution"
+        }
+      }
+    ]
+  },
+  "doctrineSiteInput": {
+    "schema": 1,
+    "inputKind": "premath.doctrine_operation_site.input.v1",
+    "worldRouteBindings": {
+      "schema": 1,
+      "bindingKind": "premath.world_route_bindings.v1",
+      "rows": [
+        {
+          "routeFamilyId": "route.gate_execution",
+          "operationIds": [
+            "op/ci.run_gate"
+          ],
+          "worldId": "world.kernel.semantic.v1",
+          "morphismRowId": "wm.kernel.semantic.runtime_gate",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        }
+      ]
+    }
+  },
+  "doctrineSite": {
+    "siteId": "premath.doctrine_operation_site.v0",
+    "nodes": [
+      {
+        "id": "raw/PREMATH-CI"
+      }
+    ],
+    "covers": [
+      {
+        "id": "cover.ci",
+        "parts": [
+          "raw/CI-TOPOS"
+        ]
+      }
+    ],
+    "edges": [
+      {
+        "id": "e.ci.op.run_gate"
+      }
+    ]
+  },
+  "capabilityRegistry": {
+    "schema": 1,
+    "registryKind": "premath.capability_registry.v1",
+    "executableCapabilities": [
+      "capabilities.ci_witnesses"
+    ]
+  }
+}

@@ -82,7 +82,9 @@ fn main() {
             json,
         ),
 
-        Commands::Init { path } => commands::init::run(path),
+        Commands::Init { path, json } => commands::init::run(path, json),
+
+        Commands::EvaluatorScaffold { path, json } => commands::evaluator_scaffold::run(path, json),
 
         Commands::Observe {
             surface,
@@ -192,7 +194,133 @@ fn main() {
             commands::required_decision_verify::run(input, json)
         }
 
+        Commands::GovernancePromotionCheck { input, json } => {
+            commands::control_plane_gate::run_governance(input, json)
+        }
+
+        Commands::KcirMappingCheck { input, json } => {
+            commands::control_plane_gate::run_kcir_mapping(input, json)
+        }
+
+        Commands::DoctrineInfCheck { input, json } => {
+            commands::doctrine_inf_check::run(input, json)
+        }
+
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
+
+        Commands::TransportCheck { json } => commands::transport_check::run(json),
+
+        Commands::TransportDispatch {
+            action,
+            payload,
+            json,
+        } => commands::transport_dispatch::run(action, payload, json),
+
+        Commands::SchemeEval {
+            program,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        } => commands::scheme_eval::run(commands::scheme_eval::Args {
+            program,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        }),
+
+        #[cfg(feature = "rhai-frontend")]
+        Commands::RhaiEval {
+            script,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        } => commands::rhai_eval::run(commands::rhai_eval::Args {
+            script,
+            control_plane_contract,
+            trajectory_path,
+            step_prefix,
+            max_calls,
+            issue_id,
+            policy_digest,
+            instruction_ref,
+            capability_claims,
+            json,
+        }),
+
+        Commands::WorldRegistryCheck {
+            registry,
+            site_input,
+            operations,
+            control_plane_contract,
+            required_route_families,
+            required_route_bindings,
+            json,
+        } => commands::world_registry_check::run(
+            registry,
+            site_input,
+            operations,
+            control_plane_contract,
+            required_route_families,
+            required_route_bindings,
+            json,
+        ),
+
+        Commands::SiteResolve {
+            request,
+            doctrine_site_input,
+            doctrine_site,
+            doctrine_op_registry,
+            control_plane_contract,
+            capability_registry,
+            json,
+        } => commands::site_resolve::run(
+            request,
+            doctrine_site_input,
+            doctrine_site,
+            doctrine_op_registry,
+            control_plane_contract,
+            capability_registry,
+            json,
+        ),
+
+        Commands::RuntimeOrchestrationCheck {
+            control_plane_contract,
+            doctrine_op_registry,
+            harness_runtime,
+            doctrine_site_input,
+            json,
+        } => commands::runtime_orchestration_check::run(
+            control_plane_contract,
+            doctrine_op_registry,
+            harness_runtime,
+            doctrine_site_input,
+            json,
+        ),
+
+        Commands::WorldGateCheck {
+            operations,
+            check,
+            profile,
+            json,
+        } => commands::world_gate_check::run(operations, check, profile, json),
 
         Commands::Ref { command } => match command {
             RefCommands::Project {

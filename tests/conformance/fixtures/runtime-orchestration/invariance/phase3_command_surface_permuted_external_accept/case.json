@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "suiteId": "runtime-orchestration",
+  "vectorId": "invariance/phase3_command_surface_permuted_external_accept",
+  "semanticScenarioId": "phase3_command_surface_permuted",
+  "profile": "external",
+  "controlPlaneContract": {
+    "runtimeRouteBindings": {
+      "requiredOperationRoutes": {
+        "runGate": {
+          "operationId": "op/ci.run_gate",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ]
+        }
+      }
+    },
+    "commandSurface": {
+      "governancePromotionCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "governance-promotion-check"
+        ]
+      },
+      "kcirMappingCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "kcir-mapping-check"
+        ]
+      }
+    }
+  },
+  "doctrineOpRegistry": {
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "path": "tools/ci/run_gate.sh",
+        "morphisms": [
+          "dm.transport.world",
+          "dm.transport.location",
+          "dm.profile.execution",
+          "dm.identity"
+        ]
+      }
+    ]
+  },
+  "harnessRuntimeText": "## 1.2 Harness-Squeak composition boundary (required)\nHarness computes deterministic work context and witness lineage refs.\nSqueak performs transport/runtime-placement mapping and emits transport-class witness outcomes.\nDestination Tusk/Gate performs destination-local admissibility checks and emits Gate-class outcomes.\nHarness records the resulting references in session/trajectory projections."
+}

@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "suiteId": "frontend-parity",
+  "vectorId": "adversarial/failure_class_drift_reject",
+  "scenario": {
+    "equivalenceClassId": "host_action.issue_claim_next.v1",
+    "hostActionId": "issue.claim_next",
+    "siteResolve": {
+      "operationId": "op/transport.issue_claim_next",
+      "routeFamilyHint": "route.issue_claim_lease"
+    },
+    "kernelVerdict": "rejected",
+    "requiredFrontends": [
+      "steel",
+      "rhai",
+      "mcp",
+      "cli"
+    ],
+    "optionalFrontends": [
+      "nif"
+    ],
+    "frontends": {
+      "steel": {
+        "result": "rejected",
+        "failureClasses": [
+          "mutation.use_evidence_missing"
+        ],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_reject"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_reject",
+          "failureClasses": []
+        }
+      },
+      "rhai": {
+        "result": "rejected",
+        "failureClasses": [
+          "mutation.use_evidence_missing"
+        ],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_reject"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_reject",
+          "failureClasses": []
+        }
+      },
+      "mcp": {
+        "result": "rejected",
+        "failureClasses": [
+          "mutation.capability_claim_missing"
+        ],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_reject"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_reject",
+          "failureClasses": []
+        }
+      },
+      "cli": {
+        "result": "rejected",
+        "failureClasses": [
+          "mutation.use_evidence_missing"
+        ],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_reject"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_reject",
+          "failureClasses": []
+        }
+      },
+      "nif": {
+        "result": "rejected",
+        "failureClasses": [
+          "mutation.use_evidence_missing"
+        ],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_reject"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_reject",
+          "failureClasses": []
+        }
+      }
+    }
+  }
+}

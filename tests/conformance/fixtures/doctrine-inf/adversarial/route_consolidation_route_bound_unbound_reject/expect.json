@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "result": "rejected",
+  "expectedFailureClasses": [
+    "world_route_unbound"
+  ],
+  "assertions": [
+    "required transport operation binding must exist in route.transport.dispatch family"
+  ]
+}

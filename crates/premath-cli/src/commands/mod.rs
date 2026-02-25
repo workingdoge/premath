@@ -1,6 +1,9 @@
 pub mod check;
 pub mod coherence_check;
+pub mod control_plane_gate;
 pub mod dep;
+pub mod doctrine_inf_check;
+pub mod evaluator_scaffold;
 pub mod harness_feature;
 pub mod harness_join_check;
 pub mod harness_session;
@@ -24,5 +27,14 @@ pub mod required_projection;
 pub mod required_witness;
 pub mod required_witness_decide;
 pub mod required_witness_verify;
+#[cfg(feature = "rhai-frontend")]
+pub mod rhai_eval;
+pub mod runtime_orchestration_check;
+pub mod scheme_eval;
+pub mod site_resolve;
+pub mod transport_check;
+pub mod transport_dispatch;
 pub mod tusk_eval;
 pub mod verify;
+pub mod world_gate_check;
+pub mod world_registry_check;

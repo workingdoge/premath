@@ -66,20 +66,144 @@ where:
 
 The canonical machine-readable artifacts for this site are:
 
+- `site-packages/<site-id>/SITE-PACKAGE.json` (authoritative package source),
 - `draft/DOCTRINE-SITE-INPUT.json` (single authoritative input contract),
 - `draft/DOCTRINE-SITE.json` (generated canonical map),
-- `draft/DOCTRINE-OP-REGISTRY.json` (generated operation-node + CI edge view).
+- `draft/DOCTRINE-OP-REGISTRY.json` (generated operation-node + CI edge view),
+- `draft/DOCTRINE-SITE-CUTOVER.json` (deterministic migration/cutover contract),
+- `draft/DOCTRINE-SITE-GENERATION-DIGEST.json`
+  (deterministic digest guardrail for generated artifacts).
+
+Inside `draft/DOCTRINE-SITE-INPUT.json`, operation authority intent is
+classified through:
+
+- `operationRegistry.operationClassPolicy`
+  (`premath.doctrine_operation_class_policy.v1`),
+- `operationRegistry.operations[*].operationClass`,
+- optional route eligibility rows on route-bound operations
+  (`operations[*].routeEligibility`).
 
 Conforming repositories MUST generate `draft/DOCTRINE-SITE.json` and
 `draft/DOCTRINE-OP-REGISTRY.json`
 deterministically from:
 
-- `draft/DOCTRINE-SITE-INPUT.json`,
+- `site-packages/<site-id>/SITE-PACKAGE.json` (source of truth),
+- generated `draft/DOCTRINE-SITE-INPUT.json`,
 - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`).
 
 Generated views (`draft/DOCTRINE-SITE.json`,
 `draft/DOCTRINE-OP-REGISTRY.json`) MUST roundtrip to exactly the same generated
 output under deterministic canonicalization.
+
+### 3.2 Site package source layout (v0)
+
+Conforming repositories MUST keep doctrine-site authoring under:
+
+- `specs/premath/site-packages/<site-id>/SITE-PACKAGE.json`
+
+with package kind:
+
+- `premath.site_package.v1`
+
+Generation flow is:
+
+1. site package source -> `draft/DOCTRINE-SITE-INPUT.json`,
+2. site input -> generated `draft/DOCTRINE-SITE.json`,
+3. site input -> generated `draft/DOCTRINE-OP-REGISTRY.json`.
+
+Manual edits to generated artifacts MUST be treated as drift and rejected by
+checker surfaces.
+
+### 3.3 Migration cutover contract (v1)
+
+Conforming repositories MUST bind doctrine-site migration policy through:
+
+- `draft/DOCTRINE-SITE-CUTOVER.json`
+  (`premath.doctrine_site_cutover.v1`).
+
+The contract MUST include:
+
+- one bounded compatibility window phase with explicit
+  `windowStartDate` / `windowEndDate`,
+- one cutover phase with explicit `effectiveFromDate`,
+- deterministic active phase selection through `currentPhaseId`.
+
+When `currentPhaseId` resolves to a phase where:
+
+- `allowLegacySourceKind=false`, and
+- `allowOperationRegistryOverride=false`,
+
+checkers/generators MUST reject legacy/manual authority lanes fail closed,
+including:
+
+- source-only fallback (`sourceKind` input without
+  `inputKind=premath.doctrine_operation_site.input.v1`),
+- override-authority operation-registry injection surfaces.
+
+Repository v1 cutover posture:
+
+- compatibility window ended on `2026-02-24`,
+- active phase is `generated_only` as declared in
+  `draft/DOCTRINE-SITE-CUTOVER.json`.
+
+### 3.4 Operation class policy (v1)
+
+Operation rows MUST be explicitly classified into one of:
+
+- `route_bound`
+- `read_only_projection`
+- `tooling_only`
+
+Class policy is normative and MUST declare allowed authority behavior per class.
+
+Rules:
+
+- every operation in the generated operation registry MUST include exactly one
+  `operationClass`,
+- `route_bound` operations MUST include explicit resolver/world-route
+  eligibility metadata and MUST bind to one declared world-route family,
+- `read_only_projection` operations MUST remain non-mutation and
+  resolver-ineligible,
+- `tooling_only` operations MUST remain non-authority surfaces and
+  resolver-ineligible.
+
+Resolver eligibility is class-gated, fail-closed, and auditable from one
+operation registry lane.
+
+### 3.5 Constructor total-binding contract (GC1)
+
+`DOCTRINE-SITE-INPUT` MUST provide a total, unambiguous constructor-input
+binding from route-eligible operations to world-route families.
+
+Minimum rules:
+
+- every operation with `operationClass=route_bound` and
+  `routeEligibility.worldRouteRequired=true` MUST appear in exactly one
+  `worldRouteBindings.rows[*].operationIds` set.
+- `routeEligibility.routeFamilyId` on each route-bound operation MUST equal the
+  unique route-family membership derived from `worldRouteBindings`.
+- operations with `operationClass` in
+  `{read_only_projection, tooling_only}` MUST NOT appear in
+  `worldRouteBindings.rows[*].operationIds`.
+- each `worldRouteBindings` row MUST reference known `worldId`/`morphismRowId`
+  declarations and deterministic `requiredMorphisms`.
+- each `worldRouteBindings.rows[*].routeFamilyId` row in this artifact MUST
+  have one corresponding route row in
+  `draft/CONTROL-PLANE-CONTRACT.json` world-route bindings for the active
+  profile.
+- each bound `(worldId, morphismRowId)` pair MUST match the constructor-lane
+  declarations in `draft/WORLD-REGISTRY` for the same route family.
+
+Fail-closed posture:
+
+- missing binding -> reject with unbound route class
+  (for example `world_route_unbound` / `site_resolve_unbound`),
+- multiply-bound operation -> reject with ambiguity class
+  (`site_resolve_ambiguous`),
+- morphism mismatch -> reject with morphism drift class
+  (`world_route_morphism_drift`),
+- cross-surface route/world mismatch against control-plane or world-registry
+  bindings -> reject with constructor binding drift class.
 
 ## 4. Required node classes
 
@@ -137,7 +261,9 @@ Repository v0 note:
   `tools/conformance/check_runtime_orchestration.py`,
   `tools/conformance/check_doctrine_mcp_parity.py`, and
   `tools/conformance/run_doctrine_inf_vectors.py` (including claim-gated
-  governance-profile vectors).
+  governance-profile vectors). Runtime-orchestration semantic authority for
+  this node is the core command `premath runtime-orchestration-check`; the
+  Python path remains an adapter wrapper.
 
 ## 5. Edge discipline
 
@@ -166,7 +292,8 @@ For routed worker-memory and harness operation paths
 1. decomposition/routing MUST remain operational projection material only,
 2. semantic admissibility MUST remain checker/Gate-owned,
 3. control-plane acceptance/rejection outputs MUST remain bound to one
-   deterministic evidence route (no parallel authority path).
+   deterministic evidence route (no parallel authority path),
+4. constructor-input route bindings MUST remain total and unambiguous per §3.5.
 
 Cross-lane pullback/base-change commutation claims SHOULD be routed through the
 typed span/square witness surface (`draft/SPAN-SQUARE-CHECKING`) when surfaced
@@ -180,12 +307,16 @@ Repositories SHOULD provide a deterministic checker that validates:
 - declaration presence and morphism ID validity,
 - declaration set coherence with `draft/DOCTRINE-SITE.json`,
 - edge and cover coherence,
-- doctrine-to-operation reachability.
+- doctrine-to-operation reachability,
+- operation-class coverage and route eligibility coherence against declared
+  world-route bindings.
 
 In this repository, that checker is:
 
 - `tools/conformance/check_doctrine_site.py`
-- `tools/conformance/check_runtime_orchestration.py`
+- `premath runtime-orchestration-check` (canonical semantic authority lane)
+- `tools/conformance/check_runtime_orchestration.py` (adapter wrapper over the
+  canonical command lane)
 - `tools/conformance/check_doctrine_mcp_parity.py` (MCP operation parity
   against `draft/DOCTRINE-OP-REGISTRY.json`)
 - `tools/conformance/run_doctrine_inf_vectors.py` (semantic-boundary +

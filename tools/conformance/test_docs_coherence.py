@@ -156,6 +156,81 @@ members = [
             checks = check_docs_coherence.parse_control_plane_projection_checks(path)
             self.assertEqual(checks, ["baseline", "build"])
 
+    def test_parse_control_plane_host_action_contract(self) -> None:
+        payload = {
+            "schema": 1,
+            "contractKind": "premath.control_plane.contract.v1",
+            "hostActionSurface": {
+                "requiredActions": {
+                    "issue.ready": {
+                        "canonicalCli": "premath issue ready --issues <path> --json",
+                        "mcpTool": "issue_ready",
+                        "operationId": "op/mcp.issue_ready",
+                    },
+                    "issue.lease_renew": {
+                        "canonicalCli": None,
+                        "mcpTool": "issue_lease_renew",
+                        "operationId": "op/mcp.issue_lease_renew",
+                    },
+                    "issue.lease_release": {
+                        "canonicalCli": None,
+                        "mcpTool": "issue_lease_release",
+                        "operationId": "op/mcp.issue_lease_release",
+                    },
+                    "coherence.check": {
+                        "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
+                        "mcpTool": None,
+                    },
+                },
+                "mcpOnlyHostActions": [
+                    "issue.lease_renew",
+                    "issue.lease_release",
+                ],
+                "failureClasses": {
+                    "unregisteredHostId": "control_plane_host_action_unregistered",
+                    "bindingMismatch": "control_plane_host_action_binding_mismatch",
+                    "duplicateBinding": "control_plane_host_action_duplicate_binding",
+                    "contractUnbound": "control_plane_host_action_contract_unbound",
+                },
+            },
+        }
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-control-plane-host-actions-") as tmp:
+            path = Path(tmp) / "CONTROL-PLANE-CONTRACT.json"
+            path.write_text(json.dumps(payload), encoding="utf-8")
+            parsed = check_docs_coherence.parse_control_plane_host_action_contract(path)
+            self.assertEqual(
+                parsed["issue.ready"],
+                ("premath issue ready --issues <path> --json", "issue_ready", "op/mcp.issue_ready"),
+            )
+            self.assertEqual(
+                parsed["coherence.check"],
+                ("premath coherence-check --contract <path> --repo-root <repo> --json", None, None),
+            )
+
+    def test_parse_steel_host_action_mapping_table(self) -> None:
+        doc = """
+### 5.1 Exact command/tool mapping (host id -> CLI/MCP)
+
+| Host function id | Canonical CLI surface | MCP tool | Doctrine operation id |
+|---|---|---|---|
+| `issue.ready` | `premath issue ready --issues <path> --json` | `issue_ready` | `op/mcp.issue_ready` |
+| `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a | n/a |
+
+## 6. Deterministic Effect Row Contract
+"""
+        with tempfile.TemporaryDirectory(prefix="docs-coherence-steel-mapping-") as tmp:
+            path = Path(tmp) / "STEEL-REPL-DESCENT-CONTROL.md"
+            path.write_text(doc, encoding="utf-8")
+            parsed = check_docs_coherence.parse_steel_host_action_mapping_table(path)
+            self.assertEqual(
+                parsed["issue.ready"],
+                ("premath issue ready --issues <path> --json", "issue_ready", "op/mcp.issue_ready"),
+            )
+            self.assertEqual(
+                parsed["coherence.check"],
+                ("premath coherence-check --contract <path> --repo-root <repo> --json", None, None),
+            )
+
     def test_parse_control_plane_stage1_contract(self) -> None:
         payload = {
             "schema": 1,
@@ -512,7 +587,7 @@ members = [
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
-  "python3 tools/conformance/check_runtime_orchestration.py",
+  "cargo run --package premath-cli -- runtime-orchestration-check --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json --doctrine-op-registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --harness-runtime specs/premath/draft/HARNESS-RUNTIME.md --doctrine-site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json --json",
   "python3 tools/conformance/check_doctrine_mcp_parity.py",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]

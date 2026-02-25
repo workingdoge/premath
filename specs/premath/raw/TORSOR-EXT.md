@@ -95,3 +95,41 @@ If torsor/extension artifacts are used in runtime:
   surfaces.
 
 This keeps maximum expressiveness without increasing authority encodings.
+
+### 6.1 Suggested overlay row shape
+
+When projects encode torsor attachments explicitly, a minimal deterministic row
+shape is:
+
+```text
+TorsorOverlayRow {
+  overlayId: "overlay.torsor_ext.v1"
+  baseWorldId: string
+  baseRef: string
+  extClassRef: string
+  transportClass: string
+}
+```
+
+Interpretation rule:
+
+- `baseRef` MUST point to existing worldized evidence/witness material.
+- this row is attachment metadata only and carries no direct admissibility
+  authority.
+
+## 7. Worldized overlay compatibility
+
+When combined with world profiles (`world.lease.v1`, `world.instruction.v1`,
+`world.ci_witness.v1`):
+
+- torsor artifacts MUST be attached to existing worldized evidence as
+  interpretation overlays,
+- torsor artifacts MUST NOT be used as direct route binding targets in
+  `worldRouteBindings`,
+- torsor artifacts MUST NOT independently discharge admissibility.
+
+Fail-closed posture for misuse (candidate mapping):
+
+- direct torsor authority attempt -> `torsor_overlay_authority_violation`,
+- missing linkage to base world evidence -> `torsor_overlay_unbound`,
+- transport drift under context refinement -> `torsor_overlay_transport_drift`.

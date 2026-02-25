@@ -47,10 +47,13 @@ run = "cargo run --package premath-cli -- coherence-check --contract specs/prema
 [tasks.doctrine-check]
 run = [
   "python3 tools/conformance/check_doctrine_site.py",
-  "python3 tools/conformance/check_runtime_orchestration.py",
+  "cargo run --package premath-cli -- runtime-orchestration-check --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json --doctrine-op-registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --harness-runtime specs/premath/draft/HARNESS-RUNTIME.md --doctrine-site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json --json",
   "python3 tools/conformance/check_doctrine_mcp_parity.py",
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
+
+[tasks.doctrine-site-inventory-check]
+run = "python3 tools/conformance/generate_doctrine_site_inventory.py --check"
 
 [tasks.conformance-run]
 run = "python3 tools/conformance/run_fixture_suites.py"
@@ -108,6 +111,7 @@ run = "python3 tools/ci/check_command_surface.py"
 [tasks.ci-hygiene-check]
 run = [
   "python3 tools/ci/check_repo_hygiene.py",
+  "python3 tools/ci/compact_issue_graph.py --mode check",
   "python3 tools/ci/check_issue_graph.py",
 ]
 
@@ -144,6 +148,7 @@ run = [
   "python3 tools/ci/test_harness_retry_policy.py",
   "python3 tools/ci/test_harness_escalation.py",
   "python3 tools/ci/test_harness_multithread_loop.py",
+  "python3 tools/ci/test_pipeline_wiring.py",
   "python3 tools/ci/test_pipeline_instruction.py",
   "python3 tools/ci/test_instruction_envelope_check.py",
   "python3 tools/ci/test_instruction_proposal.py",
@@ -162,6 +167,8 @@ run = [
   "python3 tools/conformance/test_doctrine_site_contract.py",
   "python3 tools/conformance/test_doctrine_mcp_parity.py",
   "python3 tools/conformance/test_runtime_orchestration.py",
+  "python3 tools/conformance/test_world_core_vectors.py",
+  "python3 tools/conformance/test_frontend_parity_vectors.py",
 ]
 
 [tasks.ci-observation-build]

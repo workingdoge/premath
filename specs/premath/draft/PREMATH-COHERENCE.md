@@ -46,6 +46,17 @@ Within the control-plane layer, this checker is the **check role**. Execution
 and attestation transport roles are defined by `raw/PREMATH-CI` and
 `raw/CI-TOPOS`.
 
+Constructor authority stance:
+
+- `premath-coherence` is the constructor/check-role authority for coherence
+  obligation compilation/discharge in this layer.
+- Python wrappers and fixture runners are replay/parity/transport surfaces
+  only; they MUST NOT implement independent semantic verdict logic.
+- world route semantic admissibility and route-to-world binding ownership remain
+  in constructor-lane surfaces declared by `draft/WORLD-REGISTRY`; this checker
+  verifies parity of declared bindings and MUST NOT redefine constructor
+  verdict semantics.
+
 ## 2. Coherence Contract Artifact
 
 The machine artifact is `draft/COHERENCE-CONTRACT.json`.
@@ -406,10 +417,15 @@ During and after migration:
   `draft/PREMATH-KERNEL` + `draft/GATE` + `draft/BIDIR-DESCENT`,
 - control-plane checker semantics MAY live in `premath-coherence` (or successor
   checker crates),
+- coherence obligation construction/discharge MUST resolve through one
+  constructor-authority lane in checker core,
 - CI execution/attestation semantics MUST remain in
   `raw/PREMATH-CI` + `raw/CI-TOPOS` and their operational command surfaces,
 - Python surfaces under `tools/ci/` MUST remain orchestration adapters
   (argument/env binding, command dispatch, summary shaping),
+- fixture surfaces under `tests/conformance/fixtures/*` + runner wrappers MUST
+  remain replay/parity corpora and MUST NOT become independent semantic
+  constructors,
 - adapters MUST NOT define parallel canonicalization/typing/discharge logic.
 
 ### 10.2 Parity contract

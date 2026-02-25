@@ -1,5 +1,13 @@
 # Conformance Fixture Layout
 
+Authority posture:
+
+- Fixture rows are regression corpus only.
+- Semantic verdict authority comes from core command surfaces (for example
+  `premath coherence-check`, `premath world-registry-check`,
+  `premath site-resolve`, `premath doctrine-inf-check`).
+- Runner code must fail closed when core payloads are missing or malformed.
+
 Suggested layout (from `draft/CONFORMANCE.md`):
 
 - `interop-core/{golden,adversarial}`
@@ -9,6 +17,8 @@ Suggested layout (from `draft/CONFORMANCE.md`):
 - `doctrine-inf/{golden,adversarial}`
 - `harness-typestate/{golden,adversarial}`
 - `runtime-orchestration/{golden,adversarial,invariance}`
+- `frontend-parity/{golden,adversarial,invariance}`
+- `world-core/{golden,adversarial,invariance}`
 - `coherence-transport/{golden,adversarial,invariance}`
 - `coherence-site/{golden,adversarial,invariance}`
 - `capabilities/<capability-id>/{golden,adversarial,invariance}`
@@ -23,6 +33,13 @@ Executable suite entrypoints include:
 - `runtime-orchestration`: `python3 tools/conformance/run_runtime_orchestration_vectors.py`
   (route/morphism/path-boundary checks + optional KCIR mapping row checks +
   invariance scenario parity)
+- `frontend-parity`: `python3 tools/conformance/run_frontend_parity_vectors.py`
+  (cross-frontend host-action verdict/failure/witness parity checks +
+  adversarial world-route/transport mismatch checks + invariance scenario
+  parity)
+- `world-core`: `python3 tools/conformance/run_world_core_vectors.py`
+  (world-registry core-vs-adapter parity + site-resolve overlap/glue/ambiguity
+  fail-closed vectors + projection invariance scenarios)
 - `coherence-contract`: `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json`
 - cached multi-suite surface: `python3 tools/conformance/run_fixture_suites.py`
 

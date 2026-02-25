@@ -430,8 +430,94 @@ def _base_payload() -> dict:
                     ]
                 ],
             },
+            "governancePromotionCheck": {
+                "canonicalEntrypoint": [
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "governance-promotion-check",
+                ],
+                "compatibilityAliases": [],
+            },
+            "kcirMappingCheck": {
+                "canonicalEntrypoint": [
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "kcir-mapping-check",
+                ],
+                "compatibilityAliases": [],
+            },
             "failureClasses": {
                 "unbound": "control_plane_command_surface_unbound",
+            },
+        },
+        "pipelineWrapperSurface": {
+            "requiredPipelineEntrypoint": [
+                "python3",
+                "tools/ci/pipeline_required.py",
+            ],
+            "instructionPipelineEntrypoint": [
+                "python3",
+                "tools/ci/pipeline_instruction.py",
+                "--instruction",
+                "$INSTRUCTION_PATH",
+            ],
+            "requiredGateHooks": {
+                "governance": "governance_failure_classes",
+                "kcirMapping": "evaluate_required_mapping",
+            },
+            "instructionGateHooks": {
+                "governance": "governance_failure_classes",
+                "kcirMapping": "evaluate_instruction_mapping",
+            },
+            "failureClasses": {
+                "unbound": "control_plane_pipeline_wrapper_unbound",
+                "parityDrift": "control_plane_pipeline_wrapper_parity_drift",
+                "governanceGateMissing": "control_plane_pipeline_governance_gate_missing",
+                "kcirMappingGateMissing": "control_plane_pipeline_kcir_mapping_gate_missing",
+            },
+        },
+        "hostActionSurface": {
+            "requiredActions": {
+                "issue.ready": {
+                    "canonicalCli": "premath issue ready --issues <path> --json",
+                    "mcpTool": "issue_ready",
+                    "operationId": "op/mcp.issue_ready",
+                },
+                "issue.claim": {
+                    "canonicalCli": "premath issue claim <issue-id> --assignee <name> --issues <path> --json",
+                    "mcpTool": "issue_claim",
+                    "operationId": "op/mcp.issue_claim",
+                },
+                "coherence.check": {
+                    "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
+                    "mcpTool": None,
+                },
+                "issue.lease_renew": {
+                    "canonicalCli": None,
+                    "mcpTool": "issue_lease_renew",
+                    "operationId": "op/mcp.issue_lease_renew",
+                },
+                "issue.lease_release": {
+                    "canonicalCli": None,
+                    "mcpTool": "issue_lease_release",
+                    "operationId": "op/mcp.issue_lease_release",
+                },
+            },
+            "mcpOnlyHostActions": [
+                "issue.lease_renew",
+                "issue.lease_release",
+            ],
+            "failureClasses": {
+                "unregisteredHostId": "control_plane_host_action_unregistered",
+                "bindingMismatch": "control_plane_host_action_binding_mismatch",
+                "duplicateBinding": "control_plane_host_action_duplicate_binding",
+                "contractUnbound": "control_plane_host_action_contract_unbound",
             },
         },
         "harnessRetry": {
@@ -577,6 +663,81 @@ class ControlPlaneContractTests(unittest.TestCase):
             [["sh", "tools/ci/run_instruction.sh"]],
         )
         self.assertEqual(
+            loaded["commandSurface"]["governancePromotionCheck"]["canonicalEntrypoint"],
+            [
+                "cargo",
+                "run",
+                "--package",
+                "premath-cli",
+                "--",
+                "governance-promotion-check",
+            ],
+        )
+        self.assertEqual(
+            loaded["commandSurface"]["kcirMappingCheck"]["canonicalEntrypoint"],
+            [
+                "cargo",
+                "run",
+                "--package",
+                "premath-cli",
+                "--",
+                "kcir-mapping-check",
+            ],
+        )
+        self.assertEqual(
+            loaded["pipelineWrapperSurface"]["requiredPipelineEntrypoint"],
+            ["python3", "tools/ci/pipeline_required.py"],
+        )
+        self.assertEqual(
+            loaded["pipelineWrapperSurface"]["instructionPipelineEntrypoint"],
+            [
+                "python3",
+                "tools/ci/pipeline_instruction.py",
+                "--instruction",
+                "$INSTRUCTION_PATH",
+            ],
+        )
+        self.assertEqual(
+            loaded["pipelineWrapperSurface"]["requiredGateHooks"]["governance"],
+            "governance_failure_classes",
+        )
+        self.assertEqual(
+            loaded["pipelineWrapperSurface"]["instructionGateHooks"]["kcirMapping"],
+            "evaluate_instruction_mapping",
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.ready"][
+                "canonicalCli"
+            ],
+            "premath issue ready --issues <path> --json",
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+                "canonicalCli"
+            ],
+            None,
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+                "mcpTool"
+            ],
+            "issue_lease_renew",
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+                "operationId"
+            ],
+            "op/mcp.issue_lease_renew",
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["mcpOnlyHostActions"],
+            ["issue.lease_renew", "issue.lease_release"],
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["failureClasses"]["duplicateBinding"],
+            "control_plane_host_action_duplicate_binding",
+        )
+        self.assertEqual(
             loaded["controlPlaneBundleProfile"]["profileId"],
             "cp.bundle.v0",
         )
@@ -651,6 +812,84 @@ class ControlPlaneContractTests(unittest.TestCase):
             ["python3", "tools/ci/run_instruction.py"]
         ]
         with self.assertRaisesRegex(ValueError, "must not include canonicalEntrypoint"):
+            self._load(payload)
+
+    def test_load_rejects_pipeline_wrapper_missing_gate_hook(self) -> None:
+        payload = _base_payload()
+        payload["pipelineWrapperSurface"]["requiredGateHooks"].pop("governance")
+        with self.assertRaisesRegex(ValueError, "requiredGateHooks missing required keys"):
+            self._load(payload)
+
+    def test_load_rejects_pipeline_wrapper_failure_class_key_drift(self) -> None:
+        payload = _base_payload()
+        payload["pipelineWrapperSurface"]["failureClasses"].pop("parityDrift")
+        with self.assertRaisesRegex(ValueError, "failureClasses missing required keys"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_with_no_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.ready"] = {
+            "canonicalCli": None,
+            "mcpTool": None,
+        }
+        with self.assertRaisesRegex(ValueError, "must bind at least one"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_duplicate_cli_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.list"] = {
+            "canonicalCli": "premath issue ready --issues <path> --json",
+            "mcpTool": "issue_list",
+            "operationId": "op/mcp.issue_list",
+        }
+        with self.assertRaisesRegex(ValueError, "canonicalCli binding is ambiguous"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_duplicate_mcp_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.list"] = {
+            "canonicalCli": "premath issue list --issues <path> --json",
+            "mcpTool": "issue_ready",
+            "operationId": "op/mcp.issue_ready",
+        }
+        with self.assertRaisesRegex(ValueError, "mcpTool binding is ambiguous"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_failure_class_key_drift(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["failureClasses"].pop("contractUnbound")
+        with self.assertRaisesRegex(ValueError, "missing required keys"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_mcp_only_unknown_action(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["mcpOnlyHostActions"] = [
+            "issue.lease_renew",
+            "issue.not_real",
+        ]
+        with self.assertRaisesRegex(ValueError, "references unknown host action"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_missing_mcp_operation_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.claim"].pop("operationId")
+        with self.assertRaisesRegex(ValueError, "must match mcpTool binding"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_unknown_operation_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.claim"][
+            "operationId"
+        ] = "op/mcp.issue_claim_shadow"
+        with self.assertRaisesRegex(ValueError, "must exist in doctrine op registry"):
+            self._load(payload)
+
+    def test_load_rejects_host_action_mcp_only_cli_binding(self) -> None:
+        payload = _base_payload()
+        payload["hostActionSurface"]["requiredActions"]["issue.lease_renew"][
+            "canonicalCli"
+        ] = "premath issue lease-renew <issue-id>"
+        with self.assertRaisesRegex(ValueError, "requires null canonicalCli"):
             self._load(payload)
 
     def test_load_rejects_control_plane_bundle_context_family_id_mismatch(self) -> None:
