@@ -5,7 +5,12 @@ from __future__ import annotations
 
 import unittest
 from pathlib import Path
+import sys
 from unittest.mock import patch
+
+THIS_DIR = Path(__file__).resolve().parent
+if str(THIS_DIR) not in sys.path:
+    sys.path.insert(0, str(THIS_DIR))
 
 import run_world_core_vectors as world_core
 
@@ -26,16 +31,11 @@ class WorldCoreVectorTests(unittest.TestCase):
         case = self._load_world_registry_case()
 
         with patch.object(
-            world_core.check_runtime_orchestration,
-            "_run_kernel_world_registry_check",
+            world_core.core_command_client,
+            "run_world_registry_check",
             return_value={"result": "accepted", "failureClasses": []},
         ):
-            with patch.object(
-                world_core.check_runtime_orchestration,
-                "evaluate_runtime_orchestration",
-                side_effect=AssertionError("adapter semantics must not be invoked"),
-            ):
-                evaluated = world_core.evaluate_world_registry_vector(case)
+            evaluated = world_core.evaluate_world_registry_vector(case)
 
         self.assertEqual(evaluated.result, "accepted")
         self.assertEqual(evaluated.failure_classes, [])
@@ -44,8 +44,8 @@ class WorldCoreVectorTests(unittest.TestCase):
         case = self._load_world_registry_case()
 
         with patch.object(
-            world_core.check_runtime_orchestration,
-            "_run_kernel_world_registry_check",
+            world_core.core_command_client,
+            "run_world_registry_check",
             return_value={"failureClasses": []},
         ):
             with self.assertRaisesRegex(ValueError, "core.result"):

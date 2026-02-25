@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
 
-import check_runtime_orchestration
+import core_command_client
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "world-core"
@@ -278,7 +278,7 @@ def evaluate_world_registry_vector(case: Dict[str, Any]) -> EvaluationResult:
         "case.requiredRouteBindings",
     )
 
-    core_payload = check_runtime_orchestration._run_kernel_world_registry_check(  # noqa: SLF001
+    core_payload = core_command_client.run_world_registry_check(
         doctrine_site_input=doctrine_site_input,
         doctrine_operation_registry=doctrine_op_registry,
         control_plane_contract=control_plane_contract,
