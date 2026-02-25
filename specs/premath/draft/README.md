@@ -20,9 +20,16 @@ Minimal authority path (read first):
 Additive control-plane overlays (only when needed):
 
 - `DOCTRINE-SITE.md` — doctrine-to-operation site map contract
-  (`DOCTRINE-SITE-INPUT.json` -> generated `DOCTRINE-SITE.json` +
+  (`site-packages/<site-id>/SITE-PACKAGE.json` -> generated
+  `DOCTRINE-SITE-INPUT.json` -> generated `DOCTRINE-SITE.json` +
   generated `DOCTRINE-OP-REGISTRY.json`), including explicit runtime
-  orchestration route bindings (`op/conformance.runtime_orchestration`).
+  orchestration route bindings (`op/conformance.runtime_orchestration`) and
+  operation class policy rows (`route_bound`, `read_only_projection`,
+  `tooling_only`).
+- `DOCTRINE-SITE-CUTOVER.json` — deterministic migration/cutover contract
+  declaring bounded compatibility window and generated-only cutoff phase.
+- `DOCTRINE-SITE-GENERATION-DIGEST.json` — deterministic generation digest
+  contract for doctrine site input/map/operation-registry artifacts.
 - `LLM-INSTRUCTION-DOCTRINE.md` — instruction typing/binding doctrine for
   LLM-driven control loops.
 - `LLM-PROPOSAL-CHECKING.md` — proposal ingestion contract binding LLM outputs
@@ -34,6 +41,13 @@ Additive control-plane overlays (only when needed):
 - `KERNEL-STATEMENT-BINDINGS.json` — projection-only statement binding contract
   from kernel statement IDs to obligations/checkers/vectors (index/query lane;
   not a semantic authority surface).
+- `WORLD-REGISTRY.md` — canonical world-profile and inter-world morphism table
+  contract (`world == premath`) for route-to-world binding discipline with
+  explicit adapter/non-authority boundaries.
+- `SITE-RESOLVE.md` — deterministic resolver/projection contract for
+  operation-site-world selection (`candidate gather -> capability/policy filter
+  -> world-route validation -> overlap/glue decision`) and stable KCIR handoff
+  refs.
 - `HARNESS-RUNTIME.md` — promoted harness runtime contract for
   `boot/step/stop` plus the shared harness surface map used by typestate and
   retry/escalation contracts.
@@ -51,8 +65,9 @@ Additive control-plane overlays (only when needed):
   `controlPlaneBundleProfile` (`C_cp`/`E_cp`, reindex/cover-glue obligations,
   and authority split boundaries), plus canonical KCIR control-plane mapping
   fields under `controlPlaneKcirMappings` (instruction/proposal/coherence/
-  doctrine-route/required-decision mappings, digest-lineage bindings, and
-  non-KCIR compatibility deprecation policy). Phase-3 authority boundary:
+  doctrine-route/fiber-lifecycle/required-decision mappings, digest-lineage
+  bindings, and non-KCIR compatibility deprecation policy). Phase-3 authority
+  boundary:
   governance/KCIR mapping CI gates execute through premath core CLI
   (`governance-promotion-check`, `kcir-mapping-check`) while wrappers remain
   adapter-only transports; evaluator/REPL host-action surfaces remain

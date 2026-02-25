@@ -19,6 +19,8 @@ Runs the executable conformance fixture suites through one command surface:
 - `tusk-core` (`run_tusk_core_vectors.py`)
 - `harness-typestate` (`run_harness_typestate_vectors.py`)
 - `runtime-orchestration` (`run_runtime_orchestration_vectors.py`)
+- `frontend-parity` (`run_frontend_parity_vectors.py`)
+- `world-core` (`run_world_core_vectors.py`)
 - `capabilities` (`run_capability_vectors.py`)
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
@@ -342,12 +344,59 @@ Run:
 python3 tools/conformance/run_runtime_orchestration_vectors.py
 ```
 
+## `run_frontend_parity_vectors.py`
+
+Runs cross-frontend host-action parity vectors in:
+
+- `tests/conformance/fixtures/frontend-parity/`
+
+Checks include deterministic accept/reject behavior for:
+
+- required frontend coverage for Steel/Rhai/MCP/CLI rows,
+- core verdict/failure authority from `premath site-resolve --json`,
+- kernel verdict parity across required frontend rows relative to core outputs,
+- failure-class and witness-ref parity across equivalent host-action scenarios,
+- adversarial world-route drift and transport-profile mismatch detection,
+- invariance parity across profile-permuted vectors.
+
+Run:
+
+```bash
+python3 tools/conformance/run_frontend_parity_vectors.py
+```
+
+## `run_world_core_vectors.py`
+
+Runs deterministic world-core vectors in:
+
+- `tests/conformance/fixtures/world-core/`
+
+Checks include deterministic accept/reject behavior for:
+
+- world-route family coverage and operation binding completeness,
+- morphism-drift reject behavior on bound world routes,
+- control-plane host-action to world-route binding closure through
+  `premath world-registry-check --control-plane-contract ...`,
+- resolver overlap/glue/ambiguity fail-closed behavior through
+  `premath site-resolve --json`,
+- KCIR projection invariance on equivalent site-package inputs
+  (`sitePackageDigest` / `worldRouteDigest` / resolver witness semantic digest),
+- invariance parity across profile-permuted vectors.
+
+Run:
+
+```bash
+python3 tools/conformance/run_world_core_vectors.py
+```
+
 ## `check_doctrine_site.py`
 
 Validates doctrine-to-operation site coherence using:
 
 - `specs/premath/draft/DOCTRINE-INF.md` (morphism registry),
 - `specs/premath/draft/DOCTRINE-SITE-INPUT.json` (single input authority),
+- `specs/premath/draft/DOCTRINE-SITE-CUTOVER.json` (migration/cutover phase
+  authority),
 - generated `specs/premath/draft/DOCTRINE-SITE.json` (canonical site map),
 - generated `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (operation-node view),
 - declaration-bearing spec sections (`Doctrine Preservation Declaration (v0)`),
@@ -356,6 +405,8 @@ Validates doctrine-to-operation site coherence using:
 Checks include:
 
 - generation roundtrip (`generated == tracked`),
+- cutover contract validity and fail-closed generated-only posture
+  (legacy source fallback/override disabled in active phase),
 - declaration presence and exact set coherence (`preserved`/`notPreserved`),
 - edge morphism validity against doctrine registry,
 - cover/node references,
@@ -376,6 +427,36 @@ Run:
 
 ```bash
 python3 tools/conformance/generate_doctrine_site.py
+```
+
+## `generate_doctrine_site_inventory.py`
+
+Generates one canonical doctrine-site navigation index from site-package source
+and tracked doctrine artifacts.
+
+Outputs:
+
+- `docs/design/generated/DOCTRINE-SITE-INVENTORY.json`
+- `docs/design/generated/DOCTRINE-SITE-INVENTORY.md`
+
+Inventory shape includes deterministic:
+
+- site summary (`siteId`, topology counts),
+- route-family -> world/morphism bindings,
+- operation rows with route/world binding and command-surface refs
+  (`path:*`, `hostAction:*`, `runtimeRoute:*`),
+- cutover posture from `DOCTRINE-SITE-CUTOVER.json`.
+
+Run (write):
+
+```bash
+python3 tools/conformance/generate_doctrine_site_inventory.py
+```
+
+Run (drift check):
+
+```bash
+python3 tools/conformance/generate_doctrine_site_inventory.py --check
 ```
 
 Drift check (no write):
@@ -399,7 +480,9 @@ Checks include:
 - routed operation path boundary enforcement (`tools/ci/*`),
 - required Harness/Squeak handoff-section shape markers in runtime contract,
 - optional `controlPlaneKcirMappings` row-shape validation when mapping rows are
-  provided.
+  provided,
+- world-route checks delegated to the core command lane
+  (`premath world-registry-check`) rather than duplicated wrapper semantics.
 
 Run:
 
@@ -419,6 +502,8 @@ Checks include deterministic reject/accept behavior for:
 - edge morphisms outside destination `preserved` declarations,
 - edge morphisms explicitly listed under destination `notPreserved`,
 - overlap violations between `preserved` and `notPreserved`,
+- route-consolidation closure through kernel world-route checks
+  (`premath doctrine-inf-check` -> `world_route_*` fail-closed classes),
 - claim-gated governance-profile (`profile.doctrine_inf_governance.v0`) checks
   for policy provenance pinning + digest mismatch, guardrail stage
   presence/order, eval gate threshold success, eval lineage evidence fields,

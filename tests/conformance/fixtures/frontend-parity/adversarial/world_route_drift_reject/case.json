@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "suiteId": "frontend-parity",
+  "vectorId": "adversarial/world_route_drift_reject",
+  "scenario": {
+    "equivalenceClassId": "host_action.issue_claim_next.v1",
+    "hostActionId": "issue.claim_next",
+    "kernelVerdict": "accepted",
+    "requiredFrontends": [
+      "steel",
+      "rhai",
+      "mcp",
+      "cli"
+    ],
+    "optionalFrontends": [
+      "nif"
+    ],
+    "frontends": {
+      "steel": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_parity"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_parity",
+          "failureClasses": []
+        }
+      },
+      "rhai": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_parity"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_parity",
+          "failureClasses": []
+        }
+      },
+      "mcp": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_parity"
+        ],
+        "worldRouteId": "route.transport.dispatch",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_parity",
+          "failureClasses": []
+        }
+      },
+      "cli": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_parity"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_parity",
+          "failureClasses": []
+        }
+      },
+      "nif": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_parity"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_parity",
+          "failureClasses": []
+        }
+      }
+    }
+  }
+}

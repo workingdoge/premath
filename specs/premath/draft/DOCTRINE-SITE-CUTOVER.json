@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "cutoverKind": "premath.doctrine_site_cutover.v1",
+  "cutoverId": "doctrine-site-generated-source-cutover.v1",
+  "currentPhaseId": "generated_only",
+  "phases": [
+    {
+      "phaseId": "compatibility_window",
+      "phaseMode": "compatibility_window",
+      "allowLegacySourceKind": true,
+      "allowOperationRegistryOverride": true,
+      "windowStartDate": "2026-02-24",
+      "windowEndDate": "2026-02-24",
+      "effectiveFromDate": ""
+    },
+    {
+      "phaseId": "generated_only",
+      "phaseMode": "generated_only",
+      "allowLegacySourceKind": false,
+      "allowOperationRegistryOverride": false,
+      "windowStartDate": "",
+      "windowEndDate": "",
+      "effectiveFromDate": "2026-02-24"
+    }
+  ]
+}

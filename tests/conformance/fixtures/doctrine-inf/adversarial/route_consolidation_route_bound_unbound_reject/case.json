@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "doctrine-inf",
+  "vectorId": "adversarial/route_consolidation_route_bound_unbound_reject",
+  "description": "Route consolidation rejects when required transport operation binding is missing.",
+  "artifacts": {
+    "doctrineRegistry": [
+      "dm.identity",
+      "dm.transport.world"
+    ],
+    "destinationDeclares": {
+      "preserved": [
+        "dm.identity",
+        "dm.transport.world"
+      ],
+      "notPreserved": []
+    },
+    "edgeMorphisms": [
+      "dm.identity"
+    ]
+  },
+  "routeConsolidation": {
+    "siteInput": {
+      "worldRouteBindings": {
+        "schema": 1,
+        "bindingKind": "premath.world_route_bindings.v1",
+        "rows": [
+          {
+            "routeFamilyId": "route.transport.dispatch",
+            "operationIds": [
+              "op/transport.other"
+            ],
+            "worldId": "world.transport.v1",
+            "morphismRowId": "wm.control.transport.dispatch",
+            "requiredMorphisms": [
+              "dm.transport.world"
+            ],
+            "failureClassUnbound": "world_route_unbound"
+          }
+        ]
+      }
+    },
+    "operations": [
+      {
+        "operationId": "op/transport.world_route_binding",
+        "morphisms": [
+          "dm.transport.world"
+        ]
+      }
+    ],
+    "requiredRouteBindings": [
+      {
+        "routeFamilyId": "route.transport.dispatch",
+        "operationIds": [
+          "op/transport.world_route_binding"
+        ]
+      }
+    ]
+  }
+}

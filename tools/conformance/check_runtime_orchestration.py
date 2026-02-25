@@ -5,7 +5,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import shlex
+import subprocess
+import tempfile
 from typing import Any, Dict, List, Tuple
 
 
@@ -15,6 +19,16 @@ FAILURE_CLASS_ROUTE_MISSING = "runtime_route_missing"
 FAILURE_CLASS_MORPHISM_DRIFT = "runtime_route_morphism_drift"
 FAILURE_CLASS_CONTRACT_UNBOUND = "runtime_route_contract_unbound"
 FAILURE_CLASS_KCIR_MAPPING_CONTRACT_VIOLATION = "kcir_mapping_contract_violation"
+FAILURE_CLASS_WORLD_ROUTE_UNBOUND = "world_route_unbound"
+FAILURE_CLASS_WORLD_ROUTE_MORPHISM_DRIFT = "world_route_morphism_drift"
+WORLD_REGISTRY_CHECK_COMMAND_PREFIX = (
+    "cargo",
+    "run",
+    "--package",
+    "premath-cli",
+    "--",
+    "world-registry-check",
+)
 REQUIRED_HANDOFF_HEADING = "## 1.2 Harness-Squeak composition boundary (required)"
 REQUIRED_HANDOFF_TOKENS = (
     "Harness computes deterministic work context and witness lineage refs.",
@@ -29,6 +43,7 @@ REQUIRED_KCIR_MAPPING_ROWS = (
     "requiredDecisionInput",
     "coherenceObligations",
     "doctrineRouteBinding",
+    "fiberLifecycleAction",
 )
 REQUIRED_KCIR_MAPPING_ROW_FIELDS = (
     "sourceKind",
@@ -79,6 +94,12 @@ def parse_args(root: Path) -> argparse.Namespace:
         type=Path,
         default=root / "specs" / "premath" / "draft" / "HARNESS-RUNTIME.md",
         help="Harness runtime contract markdown path",
+    )
+    parser.add_argument(
+        "--doctrine-site-input",
+        type=Path,
+        default=root / "specs" / "premath" / "draft" / "DOCTRINE-SITE-INPUT.json",
+        help="Doctrine site input JSON path (worldRouteBindings declaration source)",
     )
     parser.add_argument(
         "--json",
@@ -235,9 +256,11 @@ def _check_phase3_command_surfaces(
 
     command_surface = control_plane_contract.get("commandSurface")
     if command_surface is None:
-        return errors, command_rows
-    if not isinstance(command_surface, dict):
-        return ["commandSurface must be an object when provided"], command_rows
+        errors.append("commandSurface is required for phase-3 command-surface parity checks")
+        command_surface = {}
+    elif not isinstance(command_surface, dict):
+        errors.append("commandSurface must be an object")
+        command_surface = {}
 
     for surface_id, expected_tokens in REQUIRED_PHASE3_COMMAND_SURFACES.items():
         row = command_surface.get(surface_id)
@@ -280,17 +303,165 @@ def _check_phase3_command_surfaces(
     return errors, command_rows
 
 
+def _repo_root() -> Path:
+    return Path(__file__).resolve().parents[2]
+
+
+def _validate_world_registry_check_command(cmd: List[str]) -> None:
+    prefix = WORLD_REGISTRY_CHECK_COMMAND_PREFIX
+    if tuple(cmd[: len(prefix)]) != prefix:
+        raise ValueError(
+            "world-registry-check command surface drift: expected prefix "
+            f"{list(prefix)!r}, got {cmd!r}"
+        )
+
+
+def _resolve_world_registry_check_command() -> List[str]:
+    override = os.environ.get("PREMATH_WORLD_REGISTRY_CHECK_CMD", "").strip()
+    if override:
+        command = shlex.split(override)
+    else:
+        command = list(WORLD_REGISTRY_CHECK_COMMAND_PREFIX)
+    _validate_world_registry_check_command(command)
+    return command
+
+
+def _run_kernel_world_registry_check(
+    *,
+    doctrine_site_input: Dict[str, Any],
+    doctrine_operation_registry: Dict[str, Any],
+    control_plane_contract: Dict[str, Any] | None = None,
+    required_route_families: Tuple[str, ...] | None = None,
+    required_route_bindings: Dict[str, List[str]] | None = None,
+) -> Dict[str, Any]:
+    root = _repo_root()
+    command = _resolve_world_registry_check_command()
+
+    with tempfile.TemporaryDirectory(prefix="premath-world-registry-check-") as tmp:
+        tmp_root = Path(tmp)
+        site_input_path = tmp_root / "doctrine_site_input.json"
+        operations_path = tmp_root / "doctrine_operation_registry.json"
+        site_input_path.write_text(
+            json.dumps(doctrine_site_input, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        operations_path.write_text(
+            json.dumps(doctrine_operation_registry, indent=2, sort_keys=True),
+            encoding="utf-8",
+        )
+        cmd = [
+            *command,
+            "--site-input",
+            str(site_input_path),
+            "--operations",
+            str(operations_path),
+            "--json",
+        ]
+        if control_plane_contract is not None:
+            control_plane_contract_path = tmp_root / "control_plane_contract.json"
+            control_plane_contract_path.write_text(
+                json.dumps(control_plane_contract, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+            cmd.extend(
+                [
+                    "--control-plane-contract",
+                    str(control_plane_contract_path),
+                ]
+            )
+        if required_route_families:
+            for family in required_route_families:
+                cmd.extend(["--required-route-family", family])
+        if required_route_bindings:
+            for family in sorted(required_route_bindings):
+                for operation_id in sorted(set(required_route_bindings[family])):
+                    cmd.extend(
+                        [
+                            "--required-route-binding",
+                            f"{family}={operation_id}",
+                        ]
+                    )
+        completed = subprocess.run(
+            cmd,
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        if completed.returncode != 0:
+            raise ValueError(
+                "kernel world-registry-check command failed: "
+                f"exit={completed.returncode}, stderr={completed.stderr.strip()!r}"
+            )
+        stdout = completed.stdout.strip()
+        if not stdout:
+            raise ValueError("kernel world-registry-check produced empty stdout")
+        payload = json.loads(stdout)
+        if not isinstance(payload, dict):
+            raise ValueError("kernel world-registry-check payload must be an object")
+        return payload
+
+
+def _check_world_route_bindings(
+    doctrine_site_input: Dict[str, Any],
+    doctrine_operation_registry: Dict[str, Any],
+    control_plane_contract: Dict[str, Any],
+) -> Tuple[List[str], List[Dict[str, Any]], List[str]]:
+    errors: List[str] = []
+    rows: List[Dict[str, Any]] = []
+    failure_classes: set[str] = set()
+
+    try:
+        kernel_payload = _run_kernel_world_registry_check(
+            doctrine_site_input=doctrine_site_input,
+            doctrine_operation_registry=doctrine_operation_registry,
+            control_plane_contract=control_plane_contract,
+        )
+        kernel_failure_classes = _as_sorted_strings(kernel_payload.get("failureClasses"))
+        failure_classes.update(kernel_failure_classes)
+
+        issues = kernel_payload.get("issues")
+        if not isinstance(issues, list):
+            raise ValueError("kernel payload `issues` must be a list")
+        for issue in issues:
+            if not isinstance(issue, dict):
+                continue
+            path = str(issue.get("path", "")).strip()
+            message = str(issue.get("message", "")).strip()
+            if not path or not message:
+                continue
+            errors.append(f"{path}: {message}")
+            if path.startswith("controlPlaneContract."):
+                failure_classes.add(FAILURE_CLASS_CONTRACT_UNBOUND)
+
+        kernel_rows = kernel_payload.get("worldRouteBindings")
+        if isinstance(kernel_rows, list):
+            for row in kernel_rows:
+                if isinstance(row, dict):
+                    rows.append(row)
+        else:
+            errors.append("worldRouteBindings kernel payload missing `worldRouteBindings` list")
+            failure_classes.add(FAILURE_CLASS_WORLD_ROUTE_UNBOUND)
+    except Exception as exc:  # noqa: BLE001
+        errors.append(f"worldRouteBindings kernel check failed: {exc}")
+        failure_classes.add(FAILURE_CLASS_WORLD_ROUTE_UNBOUND)
+
+    return errors, rows, sorted(failure_classes)
+
+
 def evaluate_runtime_orchestration(
     *,
     control_plane_contract: Dict[str, Any],
     operation_registry: Dict[str, Any],
     harness_runtime_text: str,
+    doctrine_site_input: Dict[str, Any] | None = None,
 ) -> Dict[str, Any]:
     errors: List[str] = []
     failure_classes: set[str] = set()
     route_rows: List[Dict[str, Any]] = []
     mapping_rows: List[Dict[str, Any]] = []
     command_rows: List[Dict[str, Any]] = []
+    world_rows: List[Dict[str, Any]] = []
 
     try:
         runtime_routes = _extract_runtime_routes(control_plane_contract)
@@ -320,6 +491,20 @@ def evaluate_runtime_orchestration(
     if command_errors:
         errors.extend(command_errors)
         failure_classes.add(FAILURE_CLASS_CONTRACT_UNBOUND)
+
+    if doctrine_site_input is not None:
+        try:
+            world_errors, world_rows, world_failure_classes = _check_world_route_bindings(
+                doctrine_site_input,
+                operation_registry,
+                control_plane_contract,
+            )
+            if world_errors:
+                errors.extend(world_errors)
+                failure_classes.update(world_failure_classes)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(str(exc))
+            failure_classes.add(FAILURE_CLASS_WORLD_ROUTE_UNBOUND)
 
     for route_id in sorted(runtime_routes):
         route = runtime_routes[route_id]
@@ -385,11 +570,13 @@ def evaluate_runtime_orchestration(
             "checkedRoutes": len(route_rows),
             "checkedKcirMappingRows": len(mapping_rows),
             "checkedPhase3CommandSurfaces": len(command_rows),
+            "checkedWorldRouteFamilies": len(world_rows),
             "errors": len(errors),
         },
         "routes": route_rows,
         "kcirMappingRows": mapping_rows,
         "phase3CommandSurfaces": command_rows,
+        "worldRouteBindings": world_rows,
         "errors": errors,
     }
 
@@ -401,11 +588,13 @@ def main() -> int:
     try:
         control_plane_contract = _load_json(args.control_plane_contract.resolve())
         operation_registry = _load_json(args.doctrine_op_registry.resolve())
+        doctrine_site_input = _load_json(args.doctrine_site_input.resolve())
         harness_runtime_text = args.harness_runtime.resolve().read_text(encoding="utf-8")
         payload = evaluate_runtime_orchestration(
             control_plane_contract=control_plane_contract,
             operation_registry=operation_registry,
             harness_runtime_text=harness_runtime_text,
+            doctrine_site_input=doctrine_site_input,
         )
     except Exception as exc:  # noqa: BLE001
         payload = {
@@ -418,11 +607,13 @@ def main() -> int:
                 "checkedRoutes": 0,
                 "checkedKcirMappingRows": 0,
                 "checkedPhase3CommandSurfaces": 0,
+                "checkedWorldRouteFamilies": 0,
                 "errors": 1,
             },
             "routes": [],
             "kcirMappingRows": [],
             "phase3CommandSurfaces": [],
+            "worldRouteBindings": [],
             "errors": [str(exc)],
         }
 

@@ -1,0 +1,373 @@
+{
+  "schema": 1,
+  "suiteId": "world-core",
+  "vectorId": "adversarial/world_core_morphism_drift_reject",
+  "controlPlaneContract": {
+    "runtimeRouteBindings": {
+      "requiredOperationRoutes": {
+        "runGate": {
+          "operationId": "op/ci.run_gate",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ]
+        },
+        "runGateTerraform": {
+          "operationId": "op/ci.run_gate_terraform",
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ]
+        }
+      }
+    },
+    "hostActionSurface": {
+      "requiredActions": {
+        "issue.claim": {
+          "operationId": "op/mcp.issue_claim"
+        },
+        "issue.lease_renew": {
+          "operationId": "op/mcp.issue_lease_renew"
+        },
+        "issue.lease_release": {
+          "operationId": "op/mcp.issue_lease_release"
+        },
+        "issue.discover": {
+          "operationId": "op/mcp.issue_discover"
+        },
+        "instruction.run": {
+          "operationId": "op/mcp.instruction_run"
+        },
+        "required.witness_verify": {
+          "operationId": "op/ci.verify_required_witness"
+        },
+        "required.witness_decide": {
+          "operationId": "op/ci.decide_required"
+        },
+        "fiber.spawn": {
+          "operationId": "op/transport.fiber_spawn"
+        },
+        "fiber.join": {
+          "operationId": "op/transport.fiber_join"
+        },
+        "fiber.cancel": {
+          "operationId": "op/transport.fiber_cancel"
+        },
+        "issue.claim_next": {
+          "operationId": "op/transport.issue_claim_next"
+        }
+      }
+    },
+    "commandSurface": {
+      "governancePromotionCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "governance-promotion-check"
+        ]
+      },
+      "kcirMappingCheck": {
+        "canonicalEntrypoint": [
+          "cargo",
+          "run",
+          "--package",
+          "premath-cli",
+          "--",
+          "kcir-mapping-check"
+        ]
+      }
+    }
+  },
+  "doctrineOpRegistry": {
+    "operations": [
+      {
+        "id": "op/ci.run_gate",
+        "path": "tools/ci/run_gate.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      },
+      {
+        "id": "op/ci.run_gate_terraform",
+        "path": "tools/ci/run_gate_terraform.sh",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      },
+      {
+        "id": "op/ci.run_instruction",
+        "path": "tools/ci/run_instruction.sh",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
+        ]
+      },
+      {
+        "id": "op/mcp.instruction_run",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_claim",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_discover",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_lease_release",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
+        ]
+      },
+      {
+        "id": "op/mcp.issue_lease_renew",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
+        ]
+      },
+      {
+        "id": "op/ci.decide_required",
+        "path": "tools/ci/pipeline_required.py",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.presentation.projection"
+        ]
+      },
+      {
+        "id": "op/ci.verify_required_witness",
+        "path": "tools/ci/pipeline_required.py",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity"
+        ]
+      },
+      {
+        "id": "op/harness.session_bootstrap",
+        "path": "tools/harness/session.py",
+        "morphisms": [
+          "dm.identity",
+          "dm.presentation.projection"
+        ]
+      },
+      {
+        "id": "op/harness.session_read",
+        "path": "tools/harness/session.py",
+        "morphisms": [
+          "dm.identity",
+          "dm.presentation.projection"
+        ]
+      },
+      {
+        "id": "op/mcp.observe_instruction",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.identity",
+          "dm.presentation.projection"
+        ]
+      },
+      {
+        "id": "op/mcp.observe_latest",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.identity",
+          "dm.presentation.projection"
+        ]
+      },
+      {
+        "id": "op/mcp.observe_needs_attention",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.identity",
+          "dm.presentation.projection"
+        ]
+      },
+      {
+        "id": "op/mcp.observe_projection",
+        "path": "tools/mcp/server.py",
+        "morphisms": [
+          "dm.identity",
+          "dm.presentation.projection"
+        ]
+      },
+      {
+        "id": "op/transport.fiber_spawn",
+        "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.world"
+        ]
+      },
+      {
+        "id": "op/transport.fiber_join",
+        "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.world"
+        ]
+      },
+      {
+        "id": "op/transport.fiber_cancel",
+        "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+        "morphisms": [
+          "dm.identity",
+          "dm.profile.execution",
+          "dm.transport.world"
+        ]
+      },
+      {
+        "id": "op/transport.issue_claim_next",
+        "path": "crates/premath-cli/src/commands/issue.rs",
+        "morphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
+        ]
+      }
+    ]
+  },
+  "doctrineSiteInput": {
+    "worldRouteBindings": {
+      "bindingKind": "premath.world_route_bindings.v1",
+      "rows": [
+        {
+          "routeFamilyId": "route.gate_execution",
+          "worldId": "world.kernel.semantic.v1",
+          "morphismRowId": "wm.kernel.semantic.runtime_gate",
+          "operationIds": [
+            "op/ci.run_gate",
+            "op/ci.run_gate_terraform"
+          ],
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.location",
+            "dm.transport.world"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.instruction_execution",
+          "worldId": "world.instruction.v1",
+          "morphismRowId": "wm.control.instruction.execution",
+          "operationIds": [
+            "op/ci.run_instruction",
+            "op/mcp.instruction_run"
+          ],
+          "requiredMorphisms": [
+            "dm.commitment.attest",
+            "dm.identity",
+            "dm.profile.execution"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "operationIds": [
+            "op/mcp.issue_claim",
+            "op/mcp.issue_discover",
+            "op/mcp.issue_lease_release",
+            "op/mcp.issue_lease_renew",
+            "op/transport.issue_claim_next"
+          ],
+          "requiredMorphisms": [
+            "dm.commitment.attest",
+            "dm.identity",
+            "dm.profile.execution"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.required_decision_attestation",
+          "worldId": "world.ci_witness.v1",
+          "morphismRowId": "wm.control.ci_witness.attest",
+          "operationIds": [
+            "op/ci.decide_required",
+            "op/ci.verify_required_witness"
+          ],
+          "requiredMorphisms": [
+            "dm.commitment.attest",
+            "dm.identity",
+            "dm.presentation.projection"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.session_projection",
+          "worldId": "world.control_plane.bundle.v0",
+          "morphismRowId": "wm.control.bundle.projection",
+          "operationIds": [
+            "op/harness.session_bootstrap",
+            "op/harness.session_read",
+            "op/mcp.observe_instruction",
+            "op/mcp.observe_latest",
+            "op/mcp.observe_needs_attention",
+            "op/mcp.observe_projection"
+          ],
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.presentation.projection"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        },
+        {
+          "routeFamilyId": "route.fiber.lifecycle",
+          "worldId": "world.fiber.v1",
+          "morphismRowId": "wm.control.fiber.lifecycle",
+          "operationIds": [
+            "op/transport.fiber_spawn",
+            "op/transport.fiber_join",
+            "op/transport.fiber_cancel"
+          ],
+          "requiredMorphisms": [
+            "dm.identity",
+            "dm.profile.execution",
+            "dm.transport.world"
+          ],
+          "failureClassUnbound": "world_route_unbound"
+        }
+      ]
+    }
+  },
+  "harnessRuntimeText": "## 1.2 Harness-Squeak composition boundary (required)\nHarness computes deterministic work context and witness lineage refs.\nSqueak performs transport/runtime-placement mapping and emits transport-class witness outcomes.\nDestination Tusk/Gate performs destination-local admissibility checks and emits Gate-class outcomes.\nHarness records the resulting references in session/trajectory projections."
+}

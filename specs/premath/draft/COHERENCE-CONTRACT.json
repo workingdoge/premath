@@ -124,6 +124,8 @@
     "miseBaselineTask": "baseline",
     "controlPlaneContractPath": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
     "doctrineSitePath": "specs/premath/draft/DOCTRINE-SITE.json",
+    "doctrineSiteInputPath": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
+    "doctrineOperationRegistryPath": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
     "doctrineRootNodeId": "draft/DOCTRINE-INF",
     "profileReadmePath": "specs/premath/profile/README.md",
     "bidirSpecPath": "specs/premath/draft/BIDIR-DESCENT.md",

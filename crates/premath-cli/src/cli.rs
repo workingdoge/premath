@@ -157,6 +157,21 @@ pub enum Commands {
         /// Directory to initialize
         #[arg(default_value = ".")]
         path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Generate first-run evaluator artifacts (scheme + rhai + contract stub)
+    EvaluatorScaffold {
+        /// Directory where scaffold files are generated
+        #[arg(long, default_value = ".premath/evaluator_scaffold")]
+        path: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
     },
 
     /// Query Observation Surface v0 for frontend/user judgement views
@@ -426,8 +441,218 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Evaluate one doctrine-inf vector case through core command semantics
+    DoctrineInfCheck {
+        /// Doctrine-inf case JSON path
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Emit canonical obligation->Gate mapping registry
     ObligationRegistry {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate typed transport action registry contract
+    TransportCheck {
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Execute one typed transport dispatch envelope
+    TransportDispatch {
+        /// Transport action ID (for example: issue.claim)
+        #[arg(long)]
+        action: String,
+
+        /// JSON payload string for the action envelope
+        #[arg(long, default_value = "{}")]
+        payload: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Execute one bounded scheme-eval host-action program
+    SchemeEval {
+        /// Program JSON path
+        #[arg(long)]
+        program: String,
+
+        /// Control-plane contract JSON path used to derive host-action allowlist
+        #[arg(
+            long,
+            default_value = "specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Harness trajectory JSONL path where host effects are bound
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        trajectory_path: String,
+
+        /// Step-id prefix for emitted trajectory rows
+        #[arg(long, default_value = "scheme_eval")]
+        step_prefix: String,
+
+        /// Maximum host calls per program
+        #[arg(long, default_value_t = 32)]
+        max_calls: usize,
+
+        /// Optional default issue ID for emitted rows
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Optional default policy digest (required for mutation actions)
+        #[arg(long)]
+        policy_digest: Option<String>,
+
+        /// Optional default instruction ref (required for mutation actions)
+        #[arg(long)]
+        instruction_ref: Option<String>,
+
+        /// Capability claim row (repeatable)
+        #[arg(long = "capability-claim")]
+        capability_claims: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Execute one bounded Rhai script over the canonical host-action ABI
+    #[cfg(feature = "rhai-frontend")]
+    RhaiEval {
+        /// Rhai script path
+        #[arg(long)]
+        script: String,
+
+        /// Control-plane contract JSON path used to derive host-action allowlist
+        #[arg(
+            long,
+            default_value = "specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Harness trajectory JSONL path where host effects are bound
+        #[arg(long, default_value = ".premath/harness_trajectory.jsonl")]
+        trajectory_path: String,
+
+        /// Step-id prefix for emitted trajectory rows
+        #[arg(long, default_value = "rhai_eval")]
+        step_prefix: String,
+
+        /// Maximum host calls per program
+        #[arg(long, default_value_t = 32)]
+        max_calls: usize,
+
+        /// Optional default issue ID for emitted rows
+        #[arg(long)]
+        issue_id: Option<String>,
+
+        /// Optional default policy digest (required for mutation actions)
+        #[arg(long)]
+        policy_digest: Option<String>,
+
+        /// Optional default instruction ref (required for mutation actions)
+        #[arg(long)]
+        instruction_ref: Option<String>,
+
+        /// Capability claim row (repeatable)
+        #[arg(long = "capability-claim")]
+        capability_claims: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate world registry + route binding consistency through kernel semantics
+    WorldRegistryCheck {
+        /// World registry JSON path
+        #[arg(long)]
+        registry: Option<String>,
+
+        /// Doctrine site input JSON path containing worldRouteBindings declaration
+        #[arg(long)]
+        site_input: Option<String>,
+
+        /// Optional operation registry/row JSON path used for morphism drift checks
+        #[arg(long)]
+        operations: Option<String>,
+
+        /// Optional control-plane contract JSON used to derive required world-route families/bindings
+        #[arg(long)]
+        control_plane_contract: Option<String>,
+
+        /// Required route family ID (repeatable; only used with --site-input)
+        #[arg(long = "required-route-family")]
+        required_route_families: Vec<String>,
+
+        /// Required route-operation binding (repeatable; `route-family-id=operation-id`)
+        #[arg(long = "required-route-binding")]
+        required_route_bindings: Vec<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Resolve one operation to a deterministic site/route/world binding
+    SiteResolve {
+        /// Site resolve request JSON path
+        #[arg(long)]
+        request: String,
+
+        /// Doctrine site input JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-SITE-INPUT.json")]
+        doctrine_site_input: String,
+
+        /// Doctrine site JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-SITE.json")]
+        doctrine_site: String,
+
+        /// Doctrine operation registry JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-OP-REGISTRY.json")]
+        doctrine_op_registry: String,
+
+        /// Control-plane contract JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Capability registry JSON path
+        #[arg(long, default_value = "specs/premath/draft/CAPABILITY-REGISTRY.json")]
+        capability_registry: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Run Gate checks against a real control-plane operation world
+    WorldGateCheck {
+        /// Operation registry/row JSON path
+        #[arg(long)]
+        operations: String,
+
+        /// Gate check fixture JSON path (either `{check:{...}}` or direct check object)
+        #[arg(long)]
+        check: String,
+
+        /// Gate profile label
+        #[arg(long, default_value = "control-plane")]
+        profile: String,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -650,8 +875,12 @@ pub enum IssueCommands {
         description: Option<String>,
 
         /// New notes
-        #[arg(long)]
+        #[arg(long, conflicts_with = "notes_file")]
         notes: Option<String>,
+
+        /// Read notes from file path (`-` reads stdin)
+        #[arg(long, conflicts_with = "notes")]
+        notes_file: Option<String>,
 
         /// New status
         #[arg(long)]

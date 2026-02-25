@@ -10,10 +10,14 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, List, Sequence, Tuple
 
+import doctrine_site_contract
+import generate_doctrine_site_inventory
+
 
 BACKTICK_CAP_RE = re.compile(r"`(capabilities\.[a-z0-9_]+)`")
 BACKTICK_TASK_RE = re.compile(r"`([a-z][a-z0-9-]*)`")
 CAPABILITY_REGISTRY_KIND = "premath.capability_registry.v1"
+DOCTRINE_SITE_GENERATION_DIGEST_KIND = "premath.doctrine_site_generation_digest.v1"
 PROFILE_CLAIM_RE = re.compile(r"`(profile\.[a-z0-9_.]+)`")
 README_WORKSPACE_CRATE_RE = re.compile(r"`(crates/premath-[a-z0-9_-]+)`")
 TRACKED_ISSUE_RE = re.compile(r"tracked by issue\s+`?(bd-\d+)`?", re.IGNORECASE)
@@ -43,6 +47,18 @@ ROADMAP_AUTHORITY_MARKERS: Tuple[str, ...] = (
     "If this file conflicts with those surfaces",
     "`.premath/issues.jsonl`",
     "`specs/process/decision-log.md`",
+)
+README_FOUNDATIONS_MARKERS: Tuple[str, ...] = (
+    "`docs/foundations/` — explanatory foundations notes (non-normative)",
+)
+SPEC_INDEX_FOUNDATIONS_MARKERS: Tuple[str, ...] = (
+    "`docs/foundations/` — explanatory notes (non-normative).",
+)
+FOUNDATIONS_README_MARKERS: Tuple[str, ...] = (
+    "# Foundations Notes (Non-Normative)",
+    "These notes are explanatory and non-normative.",
+    "## Foundations to Spec Mapping",
+    "| Foundations note | Normative anchor(s) |",
 )
 README_DOCTRINE_MARKERS: Tuple[str, ...] = (
     "doctrine-to-operation site coherence validation (including MCP",
@@ -1019,6 +1035,173 @@ def find_missing_markers(text: str, markers: Sequence[str]) -> List[str]:
     return [marker for marker in markers if marker not in text]
 
 
+def check_doctrine_generation_digest_contract(path: Path, repo_root: Path) -> List[str]:
+    errors: List[str] = []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # noqa: BLE001
+        return [f"{path.relative_to(repo_root).as_posix()}: unreadable JSON ({exc})"]
+    if not isinstance(payload, dict):
+        return [f"{path.relative_to(repo_root).as_posix()}: top-level object required"]
+    if payload.get("schema") != 1:
+        errors.append(f"{path.relative_to(repo_root).as_posix()}: schema must equal 1")
+    digest_kind = payload.get("digestKind")
+    if digest_kind != DOCTRINE_SITE_GENERATION_DIGEST_KIND:
+        errors.append(
+            f"{path.relative_to(repo_root).as_posix()}: digestKind must equal {DOCTRINE_SITE_GENERATION_DIGEST_KIND!r}"
+        )
+    source = payload.get("source")
+    if not isinstance(source, dict):
+        errors.append(f"{path.relative_to(repo_root).as_posix()}: source object required")
+    else:
+        for key in ("packagesRoot", "packageGlob", "generator", "cutoverContract"):
+            value = source.get(key)
+            if not isinstance(value, str) or not value.strip():
+                errors.append(
+                    f"{path.relative_to(repo_root).as_posix()}: source.{key} must be a non-empty string"
+                )
+        cutover_path_raw = source.get("cutoverContract")
+        if isinstance(cutover_path_raw, str) and cutover_path_raw.strip():
+            cutover_path = (repo_root / cutover_path_raw).resolve()
+            if not cutover_path.exists():
+                errors.append(
+                    f"{path.relative_to(repo_root).as_posix()}: source.cutoverContract path missing: {cutover_path_raw}"
+                )
+    artifacts = payload.get("artifacts")
+    if not isinstance(artifacts, dict):
+        errors.append(f"{path.relative_to(repo_root).as_posix()}: artifacts object required")
+        return errors
+
+    expected_keys = ("siteInput", "siteMap", "operationRegistry")
+    missing = sorted(set(expected_keys).difference(artifacts))
+    if missing:
+        errors.append(
+            f"{path.relative_to(repo_root).as_posix()}: artifacts missing required keys {missing}"
+        )
+    for key in expected_keys:
+        row = artifacts.get(key)
+        if not isinstance(row, dict):
+            continue
+        artifact_path_raw = row.get("path")
+        artifact_sha_raw = row.get("sha256")
+        if not isinstance(artifact_path_raw, str) or not artifact_path_raw.strip():
+            errors.append(
+                f"{path.relative_to(repo_root).as_posix()}: artifacts.{key}.path must be a non-empty string"
+            )
+            continue
+        if not isinstance(artifact_sha_raw, str) or not artifact_sha_raw.strip():
+            errors.append(
+                f"{path.relative_to(repo_root).as_posix()}: artifacts.{key}.sha256 must be a non-empty string"
+            )
+            continue
+        artifact_path = (repo_root / artifact_path_raw).resolve()
+        if not artifact_path.exists():
+            errors.append(
+                f"{path.relative_to(repo_root).as_posix()}: artifacts.{key}.path missing: {artifact_path_raw}"
+            )
+            continue
+        try:
+            artifact_payload = doctrine_site_contract.load_json_object(artifact_path)
+            if key == "siteInput":
+                digest = doctrine_site_contract.site_input_digest(artifact_payload)
+            elif key == "siteMap":
+                digest = doctrine_site_contract.site_map_digest(artifact_payload)
+            else:
+                digest = doctrine_site_contract.operation_registry_digest(artifact_payload)
+        except Exception as exc:  # noqa: BLE001
+            errors.append(
+                f"{path.relative_to(repo_root).as_posix()}: failed to digest artifacts.{key} ({artifact_path_raw}): {exc}"
+            )
+            continue
+        if digest != artifact_sha_raw:
+            errors.append(
+                f"{path.relative_to(repo_root).as_posix()}: artifacts.{key}.sha256 mismatch (expected {digest}, got {artifact_sha_raw})"
+            )
+
+    return errors
+
+
+def check_doctrine_site_cutover_contract(path: Path, repo_root: Path) -> List[str]:
+    errors: List[str] = []
+    rel = path.relative_to(repo_root).as_posix()
+    if not path.exists():
+        return [f"{rel}: missing doctrine site cutover contract"]
+    try:
+        payload = doctrine_site_contract.load_json_object(path)
+        canonical = doctrine_site_contract.canonicalize_cutover_contract(
+            payload,
+            label=rel,
+        )
+        phase = doctrine_site_contract.current_cutover_phase_policy(canonical)
+    except Exception as exc:  # noqa: BLE001
+        return [f"{rel}: invalid doctrine site cutover contract ({exc})"]
+
+    if bool(phase.get("allowLegacySourceKind")):
+        errors.append(
+            f"{rel}: current cutover phase must disable legacy sourceKind fallback"
+        )
+    if bool(phase.get("allowOperationRegistryOverride")):
+        errors.append(
+            f"{rel}: current cutover phase must disable operation-registry override"
+        )
+    return errors
+
+
+def check_doctrine_site_inventory(
+    *,
+    repo_root: Path,
+    packages_root: Path,
+    site_input_path: Path,
+    site_map_path: Path,
+    operation_registry_path: Path,
+    control_plane_contract_path: Path,
+    cutover_contract_path: Path,
+    inventory_json_path: Path,
+    inventory_docs_path: Path,
+) -> List[str]:
+    errors: List[str] = []
+    try:
+        inventory = generate_doctrine_site_inventory.build_inventory(
+            repo_root=repo_root,
+            packages_root=packages_root,
+            site_input_path=site_input_path,
+            site_map_path=site_map_path,
+            operation_registry_path=operation_registry_path,
+            control_plane_contract_path=control_plane_contract_path,
+            cutover_contract_path=cutover_contract_path,
+        )
+        expected_json = json.dumps(inventory, indent=2, sort_keys=False) + "\n"
+        expected_docs = generate_doctrine_site_inventory.render_markdown(inventory)
+    except Exception as exc:  # noqa: BLE001
+        return [f"doctrine site inventory generation failed: {exc}"]
+
+    if not inventory_json_path.exists():
+        errors.append(
+            "missing doctrine site inventory JSON: "
+            f"{inventory_json_path.relative_to(repo_root).as_posix()}"
+        )
+    else:
+        current = inventory_json_path.read_text(encoding="utf-8")
+        if current != expected_json:
+            errors.append(
+                "doctrine site inventory JSON drifted from generated output: "
+                f"{inventory_json_path.relative_to(repo_root).as_posix()}"
+            )
+    if not inventory_docs_path.exists():
+        errors.append(
+            "missing doctrine site inventory docs index: "
+            f"{inventory_docs_path.relative_to(repo_root).as_posix()}"
+        )
+    else:
+        current = inventory_docs_path.read_text(encoding="utf-8")
+        if current != expected_docs:
+            errors.append(
+                "doctrine site inventory docs index drifted from generated output: "
+                f"{inventory_docs_path.relative_to(repo_root).as_posix()}"
+            )
+    return errors
+
+
 def main() -> int:
     args = parse_args()
     root = args.repo_root.resolve()
@@ -1034,6 +1217,26 @@ def main() -> int:
     ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
     architecture_map = root / "docs" / "design" / "ARCHITECTURE-MAP.md"
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
+    doctrine_generation_digest = (
+        root / "specs" / "premath" / "draft" / "DOCTRINE-SITE-GENERATION-DIGEST.json"
+    )
+    doctrine_site_input = (
+        root / "specs" / "premath" / "draft" / "DOCTRINE-SITE-INPUT.json"
+    )
+    doctrine_site_map = root / "specs" / "premath" / "draft" / "DOCTRINE-SITE.json"
+    doctrine_operation_registry = (
+        root / "specs" / "premath" / "draft" / "DOCTRINE-OP-REGISTRY.json"
+    )
+    doctrine_cutover_contract = (
+        root / "specs" / "premath" / "draft" / "DOCTRINE-SITE-CUTOVER.json"
+    )
+    doctrine_packages_root = root / "specs" / "premath" / "site-packages"
+    doctrine_inventory_json = (
+        root / "docs" / "design" / "generated" / "DOCTRINE-SITE-INVENTORY.json"
+    )
+    doctrine_inventory_docs = (
+        root / "docs" / "design" / "generated" / "DOCTRINE-SITE-INVENTORY.md"
+    )
     conformance = root / "specs" / "premath" / "draft" / "CONFORMANCE.md"
     unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"
     span_square_checking = root / "specs" / "premath" / "draft" / "SPAN-SQUARE-CHECKING.md"
@@ -1284,6 +1487,29 @@ def main() -> int:
     missing_roadmap_markers = find_missing_markers(roadmap_text, ROADMAP_AUTHORITY_MARKERS)
     for marker in missing_roadmap_markers:
         errors.append(f"ROADMAP authority contract missing marker: {marker}")
+    if not doctrine_generation_digest.exists():
+        errors.append(
+            "missing doctrine generation digest contract: "
+            f"{doctrine_generation_digest.relative_to(root).as_posix()}"
+        )
+    else:
+        errors.extend(
+            check_doctrine_generation_digest_contract(doctrine_generation_digest, root)
+        )
+    errors.extend(check_doctrine_site_cutover_contract(doctrine_cutover_contract, root))
+    errors.extend(
+        check_doctrine_site_inventory(
+            repo_root=root,
+            packages_root=doctrine_packages_root,
+            site_input_path=doctrine_site_input,
+            site_map_path=doctrine_site_map,
+            operation_registry_path=doctrine_operation_registry,
+            control_plane_contract_path=control_plane_contract,
+            cutover_contract_path=doctrine_cutover_contract,
+            inventory_json_path=doctrine_inventory_json,
+            inventory_docs_path=doctrine_inventory_docs,
+        )
+    )
     stale_issue_refs = find_stale_tracked_issue_references(
         roots=[root / "docs", root / "specs"],
         issue_statuses=issue_statuses,

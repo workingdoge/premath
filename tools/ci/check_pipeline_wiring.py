@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 from pathlib import Path
 from typing import Dict, Iterable, List, Sequence, Set, Tuple
@@ -129,19 +130,80 @@ def _check_pipeline_hooks(
         errors.append(f"{script_path.name}: unreadable ({exc})")
         return errors, failure_classes
 
-    governance_missing = not governance_hook or governance_hook not in text
+    try:
+        call_names = _reachable_call_names(text)
+    except SyntaxError as exc:
+        failure_classes.add(_failure_class("unbound"))
+        errors.append(f"{script_path.name}: unable to parse source for hook checks ({exc})")
+        return errors, failure_classes
+
+    governance_missing = not governance_hook or governance_hook not in call_names
     if governance_missing:
         failure_classes.add(_failure_class("governanceGateMissing"))
         errors.append(
             f"{script_path.name}: missing governance gate hook `{governance_hook}`"
         )
-    mapping_missing = not kcir_mapping_hook or kcir_mapping_hook not in text
+    mapping_missing = not kcir_mapping_hook or kcir_mapping_hook not in call_names
     if mapping_missing:
         failure_classes.add(_failure_class("kcirMappingGateMissing"))
         errors.append(
             f"{script_path.name}: missing kcir mapping gate hook `{kcir_mapping_hook}`"
         )
     return errors, failure_classes
+
+
+def _reachable_call_names(text: str) -> Set[str]:
+    tree = ast.parse(text)
+    collector = _ReachableCallCollector()
+    collector.visit(tree)
+    return collector.calls
+
+
+def _call_name(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def _constant_bool(test: ast.AST) -> bool | None:
+    if isinstance(test, ast.Constant) and isinstance(test.value, bool):
+        return test.value
+    if isinstance(test, ast.Name):
+        if test.id == "False":
+            return False
+        if test.id == "True":
+            return True
+        if test.id == "TYPE_CHECKING":
+            return False
+    return None
+
+
+class _ReachableCallCollector(ast.NodeVisitor):
+    def __init__(self) -> None:
+        self.calls: Set[str] = set()
+
+    def _visit_statements(self, statements: Sequence[ast.stmt]) -> None:
+        for stmt in statements:
+            self.visit(stmt)
+
+    def visit_If(self, node: ast.If) -> None:
+        constant = _constant_bool(node.test)
+        if constant is True:
+            self._visit_statements(node.body)
+            return
+        if constant is False:
+            self._visit_statements(node.orelse)
+            return
+        self._visit_statements(node.body)
+        self._visit_statements(node.orelse)
+
+    def visit_Call(self, node: ast.Call) -> None:
+        name = _call_name(node.func)
+        if name:
+            self.calls.add(name)
+        self.generic_visit(node)
 
 
 def evaluate_pipeline_wiring(root: Path) -> Tuple[List[str], List[str]]:

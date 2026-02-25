@@ -634,3 +634,19 @@ Conforming implementations SHOULD:
 4. keep admissibility decisions checker/Gate-owned only,
 5. reject deterministically on missing/ambiguous/unbound evidence factorization
    routes.
+
+### 12.7 Explicit constructor binding requirement (GC profile)
+
+Implementations SHOULD materialize one explicit constructor object for active
+control-plane worldization profiles (see `draft/WORLD-REGISTRY` §2.5), with:
+
+- one declared context/cover base,
+- one deterministic world/morphism/route binding family digest closure,
+- one evidence-factorization route set into `Ev`.
+
+Doctrine-site route class policy and route-world bindings MUST provide total,
+unambiguous constructor input (`draft/DOCTRINE-SITE` §3.4-§3.5).
+
+Interpretation overlays (for example torsor/extension overlays) MAY decorate
+constructor outputs but MUST remain non-authority attachments and MUST NOT
+introduce alternate admissibility routes.

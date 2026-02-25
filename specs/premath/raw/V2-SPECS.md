@@ -53,4 +53,5 @@ remaining outside the kernel conformance core:
 - `raw/TUSK-CORE`: single-world runtime contracts over Premath kernel checks
 - `raw/SQUEAK-CORE`: inter-world transport/composition contracts
 - `raw/SQUEAK-SITE`: runtime-location site contracts (`Loc`, covers, glue)
+- `raw/FIBER-CONCURRENCY`: structured-concurrency transport profile
 - `raw/CI-TOPOS`: closure-style CI and change-projection discipline

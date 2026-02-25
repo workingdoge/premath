@@ -46,9 +46,11 @@ Purpose:
 
 | Draft spec | Primary executable surface | Status | Coverage target |
 | --- | --- | --- | --- |
-| `DOCTRINE-INF.md` | `mise run doctrine-check` (declaration-set + edge coherence + reachability + doctrine-inf semantic boundary vectors + claim-gated governance-profile vectors for policy provenance pin/mismatch, staged guardrails, eval gate + lineage evidence, observability/risk-tier policy, and self-evolution declaration bounds) | covered | - |
+| `DOCTRINE-INF.md` | `mise run doctrine-check` (declaration-set + edge coherence + reachability + doctrine-inf semantic boundary vectors + claim-gated governance-profile vectors for policy provenance pin/mismatch, staged guardrails, eval gate + lineage evidence, observability/risk-tier policy, self-evolution declaration bounds, and route-consolidation closure via kernel world-route validation) | covered | - |
 | `PREMATH-KERNEL.md` | `python3 tools/conformance/run_kernel_profile_vectors.py`; `python3 tools/conformance/check_statement_index.py`; `python3 tools/conformance/run_statement_index_vectors.py`; `python3 tools/conformance/run_statement_kcir_vectors.py`; `cargo test -p premath-kernel`; `mise run test-toy`; `mise run test-kcir-toy` | covered | - |
 | `KERNEL-STATEMENT-BINDINGS.json` | `python3 tools/conformance/check_statement_bindings.py`; `python3 tools/conformance/run_statement_binding_vectors.py`; `python3 tools/conformance/check_statement_projection_lane.py`; `cargo test -p premath-bd` | covered | - |
+| `WORLD-REGISTRY.md` | `cargo run --package premath-cli -- world-registry-check --site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json --operations specs/premath/draft/DOCTRINE-OP-REGISTRY.json --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json --json`; `mise run doctrine-check`; `python3 tools/conformance/check_runtime_orchestration.py`; `python3 tools/conformance/run_world_core_vectors.py`; `mise run coherence-check`; `mise run docs-coherence-check` | covered | - |
+| `SITE-RESOLVE.md` | `mise run doctrine-check`; `python3 tools/conformance/run_world_core_vectors.py`; `mise run docs-coherence-check` | covered | - |
 | `KCIR-CORE.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`kcir_domain_table_*`) | covered | - |
 | `REF-BINDING.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`ref_projection_and_verify_*`) | covered | - |
 | `NF.md` | `python3 tools/conformance/run_interop_core_vectors.py` (`nf_*`) + `capabilities.normal_forms` + kernel tests | covered | - |
@@ -61,16 +63,18 @@ Purpose:
 | `CONFORMANCE.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_interop_core_vectors.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
 | `CAPABILITY-VECTORS.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
 | `CHANGE-MORPHISMS.md` | `capabilities.change_morphisms` vectors | covered | - |
-| `DOCTRINE-SITE.md` | `mise run doctrine-check` (site roundtrip/reachability + runtime orchestration route checker + MCP doctrine-operation parity + doctrine-inf vectors) | covered | - |
+| `DOCTRINE-SITE.md` | `mise run doctrine-check` (site roundtrip/reachability + operation-class/route-eligibility + world-route total-binding checks + runtime orchestration route checker + MCP doctrine-operation parity + doctrine-inf vectors) | covered | - |
 | `DOCTRINE-SITE.json` | `mise run doctrine-check` (site roundtrip/reachability + runtime orchestration route checker + MCP doctrine-operation parity + doctrine-inf vectors) | covered | - |
 | `DOCTRINE-SITE-INPUT.json` | `mise run doctrine-check`; `python3 tools/conformance/generate_doctrine_site.py --check` | covered | - |
-| `DOCTRINE-OP-REGISTRY.json` | `mise run doctrine-check`; `python3 tools/conformance/generate_doctrine_site.py --check`; `python3 tools/conformance/run_runtime_orchestration_vectors.py` | covered | - |
+| `DOCTRINE-SITE-CUTOVER.json` | `mise run doctrine-check`; `python3 tools/conformance/test_doctrine_site_contract.py`; `mise run docs-coherence-check` | covered | - |
+| `DOCTRINE-SITE-GENERATION-DIGEST.json` | `python3 tools/conformance/generate_doctrine_site.py --check`; `mise run doctrine-check`; `mise run docs-coherence-check` | covered | - |
+| `DOCTRINE-OP-REGISTRY.json` | `mise run doctrine-check`; `python3 tools/conformance/generate_doctrine_site.py --check`; `python3 tools/conformance/run_runtime_orchestration_vectors.py`; `python3 tools/conformance/run_world_core_vectors.py` | covered | - |
 | `HARNESS-RUNTIME.md` | `cargo test -p premath-cli`; `python3 tools/conformance/run_harness_typestate_vectors.py`; `python3 tools/conformance/check_runtime_orchestration.py` (runtime route presence/morphism coverage + routed CI path boundary + optional `controlPlaneKcirMappings` row-shape checks + phase-3 command-surface parity rows for `governancePromotionCheck`/`kcirMappingCheck`); `python3 tools/conformance/run_runtime_orchestration_vectors.py` (golden/adversarial + invariance profile-permutation vectors, including phase-3 command-surface vectors); `python3 tools/ci/check_issue_graph.py`; `mise run docs-coherence-check` | covered | - |
 | `HARNESS-TYPESTATE.md` | `cargo test -p premath-tusk`; `cargo test -p premath-cli`; `python3 tools/conformance/run_harness_typestate_vectors.py`; `python3 tools/ci/check_issue_graph.py` | covered | - |
 | `HARNESS-RETRY-ESCALATION.md` | `python3 tools/ci/test_harness_retry_policy.py`; `python3 tools/ci/test_harness_escalation.py`; `mise run ci-pipeline-test`; `mise run doctrine-check` | covered | - |
 | `LLM-INSTRUCTION-DOCTRINE.md` | `capabilities.instruction_typing`; `capabilities.ci_witnesses`; `mise run ci-pipeline-test` | covered | - |
 | `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_check_client.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
-| `PREMATH-COHERENCE.md` | `mise run coherence-check`; `cargo test -p premath-coherence`; `coherence-check` CLI smoke test | covered | - |
+| `PREMATH-COHERENCE.md` | `mise run coherence-check`; `cargo test -p premath-coherence`; `coherence-check` CLI smoke test; `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract` | covered | - |
 | `COHERENCE-CONTRACT.json` | `mise run coherence-check`; `coherence-check` CLI smoke test | covered | - |
 | `CAPABILITY-REGISTRY.json` | `python3 tools/conformance/check_docs_coherence.py`; `python3 tools/conformance/run_capability_vectors.py`; `mise run coherence-check` | covered | - |
 | `CONTROL-PLANE-CONTRACT.json` | `mise run coherence-check`; `mise run ci-pipeline-test`; `python3 tools/ci/test_control_plane_contract.py`; `python3 tools/ci/test_run_required_checks.py`; `python3 tools/ci/test_governance_gate.py`; `python3 tools/ci/test_kcir_mapping_gate.py` | covered | - |

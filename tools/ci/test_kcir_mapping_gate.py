@@ -31,6 +31,7 @@ class KcirMappingGateTests(unittest.TestCase):
                     "coherenceObligations",
                     "coherenceCheckPayload",
                     "doctrineRouteBinding",
+                    "fiberLifecycleAction",
                     "requiredDecisionInput",
                 ],
                 "checkedRows": [
@@ -52,12 +53,12 @@ class KcirMappingGateTests(unittest.TestCase):
 
             run_cmd.assert_called_once()
             self.assertEqual(report.profile_id, "cp.kcir.mapping.v0")
-            self.assertEqual(len(set(report.declared_rows)), 6)
+            self.assertEqual(len(set(report.declared_rows)), 7)
             self.assertEqual(len(set(report.checked_rows)), 4)
             self.assertEqual(report.failure_classes, tuple())
 
             summary = "\n".join(kcir_mapping_gate.render_mapping_summary_lines(report))
-            self.assertIn("- KCIR mapping coverage: `4/6`", summary)
+            self.assertIn("- KCIR mapping coverage: `4/7`", summary)
             self.assertIn("- KCIR mapping failures: `(none)`", summary)
 
     def test_required_mapping_fail_closed_when_core_command_errors(self) -> None:

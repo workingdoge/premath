@@ -136,8 +136,38 @@
       }
     },
     {
+      "id": "op/ci.coherence_check",
+      "path": "crates/premath-cli/src/commands/coherence_check.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "op/ci.decide_required",
       "path": "tools/ci/decide_required.py",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/ci.required_delta",
+      "path": "crates/premath-cli/src/commands/required_delta.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/ci.required_gate_ref",
+      "path": "crates/premath-cli/src/commands/required_gate_ref.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/ci.required_projection",
+      "path": "crates/premath-cli/src/commands/required_projection.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/ci.required_witness",
+      "path": "crates/premath-cli/src/commands/required_witness.rs",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -156,6 +186,12 @@
     {
       "id": "op/ci.run_instruction",
       "path": "tools/ci/run_instruction.sh",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/ci.verify_required_decision",
+      "path": "crates/premath-cli/src/commands/required_decision_verify.rs",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -208,6 +244,30 @@
       "requiresDeclaration": false
     },
     {
+      "id": "op/harness.feature_check",
+      "path": "crates/premath-cli/src/commands/harness_feature.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.feature_next",
+      "path": "crates/premath-cli/src/commands/harness_feature.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.feature_read",
+      "path": "crates/premath-cli/src/commands/harness_feature.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.feature_write",
+      "path": "crates/premath-cli/src/commands/harness_feature.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "op/harness.session_bootstrap",
       "path": "crates/premath-cli/src/commands/harness_session.rs",
       "kind": "operation",
@@ -222,6 +282,18 @@
     {
       "id": "op/harness.session_write",
       "path": "crates/premath-cli/src/commands/harness_session.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.trajectory_append",
+      "path": "crates/premath-cli/src/commands/harness_trajectory.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/harness.trajectory_query",
+      "path": "crates/premath-cli/src/commands/harness_trajectory.rs",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -364,6 +436,36 @@
       "requiresDeclaration": false
     },
     {
+      "id": "op/transport.fiber_cancel",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/transport.fiber_join",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/transport.fiber_spawn",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/transport.issue_claim_next",
+      "path": "crates/premath-cli/src/commands/issue.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
+      "id": "op/transport.world_route_binding",
+      "path": "crates/premath-cli/src/commands/transport_dispatch.rs",
+      "kind": "operation",
+      "requiresDeclaration": false
+    },
+    {
       "id": "raw/CI-TOPOS",
       "path": "specs/premath/raw/CI-TOPOS.md",
       "kind": "ci-projection",
@@ -473,10 +575,16 @@
       "parts": [
         "draft/LLM-INSTRUCTION-DOCTRINE",
         "draft/LLM-PROPOSAL-CHECKING",
+        "op/ci.coherence_check",
         "op/ci.decide_required",
+        "op/ci.required_delta",
+        "op/ci.required_gate_ref",
+        "op/ci.required_projection",
+        "op/ci.required_witness",
         "op/ci.run_gate",
         "op/ci.run_gate_terraform",
         "op/ci.run_instruction",
+        "op/ci.verify_required_decision",
         "op/ci.verify_required_witness",
         "op/conformance.capability",
         "op/conformance.doctrine",
@@ -485,9 +593,15 @@
         "op/conformance.doctrine_mcp_parity",
         "op/conformance.runtime_orchestration",
         "op/conformance.stub",
+        "op/harness.feature_check",
+        "op/harness.feature_next",
+        "op/harness.feature_read",
+        "op/harness.feature_write",
         "op/harness.session_bootstrap",
         "op/harness.session_read",
         "op/harness.session_write",
+        "op/harness.trajectory_append",
+        "op/harness.trajectory_query",
         "op/mcp.dep_add",
         "op/mcp.dep_diagnostics",
         "op/mcp.dep_remove",
@@ -511,6 +625,11 @@
         "op/mcp.observe_latest",
         "op/mcp.observe_needs_attention",
         "op/mcp.observe_projection",
+        "op/transport.fiber_cancel",
+        "op/transport.fiber_join",
+        "op/transport.fiber_spawn",
+        "op/transport.issue_claim_next",
+        "op/transport.world_route_binding",
         "raw/CI-TOPOS"
       ]
     },
@@ -564,6 +683,15 @@
         "dm.identity",
         "dm.presentation.projection",
         "dm.profile.evidence"
+      ]
+    },
+    {
+      "id": "e.ci.op.coherence_check",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.coherence_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
       ]
     },
     {
@@ -656,6 +784,43 @@
       ]
     },
     {
+      "id": "e.ci.op.harness_feature_check",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.feature_check",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_feature_next",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.feature_next",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_feature_read",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.feature_read",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_feature_write",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.feature_write",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
       "id": "e.ci.op.harness_session_bootstrap",
       "from": "raw/PREMATH-CI",
       "to": "op/harness.session_bootstrap",
@@ -682,6 +847,25 @@
         "dm.commitment.attest",
         "dm.identity",
         "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_trajectory_append",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.trajectory_append",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.harness_trajectory_query",
+      "from": "raw/PREMATH-CI",
+      "to": "op/harness.trajectory_query",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
       ]
     },
     {
@@ -753,6 +937,16 @@
       "id": "e.ci.op.issue_claim",
       "from": "raw/PREMATH-CI",
       "to": "op/mcp.issue_claim",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.profile.execution"
+      ]
+    },
+    {
+      "id": "e.ci.op.issue_claim_next",
+      "from": "raw/PREMATH-CI",
+      "to": "op/transport.issue_claim_next",
       "morphisms": [
         "dm.commitment.attest",
         "dm.identity",
@@ -864,6 +1058,43 @@
       ]
     },
     {
+      "id": "e.ci.op.required_delta",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.required_delta",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.required_gate_ref",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.required_gate_ref",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.required_projection",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.required_projection",
+      "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.required_witness",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.required_witness",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
       "id": "e.ci.op.run_gate",
       "from": "raw/PREMATH-CI",
       "to": "op/ci.run_gate",
@@ -909,6 +1140,55 @@
       "from": "raw/PREMATH-CI",
       "to": "op/conformance.stub",
       "morphisms": [
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
+      "id": "e.ci.op.transport_fiber_cancel",
+      "from": "raw/PREMATH-CI",
+      "to": "op/transport.fiber_cancel",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.world"
+      ]
+    },
+    {
+      "id": "e.ci.op.transport_fiber_join",
+      "from": "raw/PREMATH-CI",
+      "to": "op/transport.fiber_join",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.world"
+      ]
+    },
+    {
+      "id": "e.ci.op.transport_fiber_spawn",
+      "from": "raw/PREMATH-CI",
+      "to": "op/transport.fiber_spawn",
+      "morphisms": [
+        "dm.identity",
+        "dm.profile.execution",
+        "dm.transport.world"
+      ]
+    },
+    {
+      "id": "e.ci.op.transport_world_route_binding",
+      "from": "raw/PREMATH-CI",
+      "to": "op/transport.world_route_binding",
+      "morphisms": [
+        "dm.identity",
+        "dm.transport.world"
+      ]
+    },
+    {
+      "id": "e.ci.op.verify_required_decision",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.verify_required_decision",
+      "morphisms": [
+        "dm.commitment.attest",
         "dm.identity",
         "dm.presentation.projection"
       ]

@@ -160,7 +160,7 @@ class HarnessMultithreadLoopTests(unittest.TestCase):
         )
         self.assertEqual(handoff.lease_action, "issue_lease_renew")
         self.assertEqual(handoff.result_class, "retry_needed_lease_active")
-        self.assertIn("issue_lease_renew", handoff.next_step)
+        self.assertIn("issue.lease_renew", handoff.next_step)
         self.assertTrue(handoff.lease_ref.startswith("lease://handoff/bd-4/active/"))
 
     def test_classify_failed_stop_handoff_local_transport_fails_closed(self) -> None:
@@ -185,6 +185,112 @@ class HarnessMultithreadLoopTests(unittest.TestCase):
         )
         self.assertEqual(handoff.lease_action, "issue_lease_renew")
         self.assertIn("switch to MCP transport", handoff.next_step)
+
+    def test_mcp_only_host_actions_fallback_stays_fail_closed_on_unreadable_contract(self) -> None:
+        original_path = multithread_loop.CONTROL_PLANE_CONTRACT_PATH
+        try:
+            multithread_loop.CONTROL_PLANE_CONTRACT_PATH = Path("/tmp/does-not-exist-control-plane-contract.json")
+            multithread_loop.load_mcp_only_host_actions.cache_clear()
+            actions = multithread_loop.load_mcp_only_host_actions()
+            self.assertEqual(actions, multithread_loop.DEFAULT_MCP_ONLY_HOST_ACTIONS)
+            self.assertTrue("issue.lease_renew" in actions)
+            self.assertTrue("issue.lease_release" in actions)
+        finally:
+            multithread_loop.CONTROL_PLANE_CONTRACT_PATH = original_path
+            multithread_loop.load_mcp_only_host_actions.cache_clear()
+
+    def test_execute_transport_recovery_action_dispatches_issue_lease_renew(self) -> None:
+        snapshot = multithread_loop.IssueLeaseSnapshot(
+            issue_id="bd-8",
+            status="in_progress",
+            assignee="alice",
+            lease_id="lease1_bd-8_alice",
+            lease_owner="alice",
+            lease_expires_at="2099-01-01T00:00:00Z",
+            lease_state="active",
+        )
+        handoff = multithread_loop.StopHandoff(
+            lease_state="active",
+            lease_action="issue_lease_renew",
+            result_class="retry_needed_lease_active",
+            summary="lease active",
+            next_step="renew",
+            lease_ref="lease://handoff/bd-8/active/digest",
+        )
+
+        captured: dict[str, object] = {}
+        original_dispatch = multithread_loop.run_transport_dispatch
+        try:
+            def fake_dispatch(base_cmd, cwd, *, action, payload):
+                captured["action"] = action
+                captured["payload"] = payload
+                return {
+                    "result": "accepted",
+                    "action": action,
+                    "semanticDigest": "ts1_abc123",
+                }
+
+            multithread_loop.run_transport_dispatch = fake_dispatch
+            updated, refs = multithread_loop.execute_transport_recovery_action(
+                base_cmd=["cargo", "run", "--package", "premath-cli", "--"],
+                cwd=Path("/tmp"),
+                issues_path=Path("/tmp/issues.jsonl"),
+                snapshot=snapshot,
+                worker_id="alice",
+                claimed_lease_id="lease1_bd-8_alice",
+                lease_ttl_seconds=3600,
+                handoff=handoff,
+                host_action_transport="mcp",
+            )
+        finally:
+            multithread_loop.run_transport_dispatch = original_dispatch
+
+        self.assertEqual(captured.get("action"), "issue.lease_renew")
+        payload = captured.get("payload")
+        self.assertIsInstance(payload, dict)
+        assert isinstance(payload, dict)
+        self.assertEqual(payload.get("id"), "bd-8")
+        self.assertEqual(payload.get("assignee"), "alice")
+        self.assertEqual(payload.get("leaseId"), "lease1_bd-8_alice")
+        self.assertEqual(payload.get("leaseTtlSeconds"), 3600)
+        self.assertEqual(updated.result_class, "retry_needed_lease_active_transport_dispatched")
+        self.assertEqual(
+            refs,
+            ["transport://dispatch/issue.lease_renew/ts1_abc123"],
+        )
+
+    def test_execute_transport_recovery_action_local_repl_skips_dispatch(self) -> None:
+        snapshot = multithread_loop.IssueLeaseSnapshot(
+            issue_id="bd-9",
+            status="in_progress",
+            assignee="alice",
+            lease_id="lease1_bd-9_alice",
+            lease_owner="alice",
+            lease_expires_at="2099-01-01T00:00:00Z",
+            lease_state="active",
+        )
+        handoff = multithread_loop.StopHandoff(
+            lease_state="active",
+            lease_action="issue_lease_renew",
+            result_class="control_plane_host_action_mcp_transport_required",
+            summary="mcp-only lease action cannot execute on local-repl transport",
+            next_step="switch to MCP transport",
+            lease_ref="lease://handoff/bd-9/active/digest",
+        )
+        updated, refs = multithread_loop.execute_transport_recovery_action(
+            base_cmd=["cargo", "run", "--package", "premath-cli", "--"],
+            cwd=Path("/tmp"),
+            issues_path=Path("/tmp/issues.jsonl"),
+            snapshot=snapshot,
+            worker_id="alice",
+            claimed_lease_id="lease1_bd-9_alice",
+            lease_ttl_seconds=3600,
+            handoff=handoff,
+            host_action_transport="local-repl",
+        )
+        self.assertEqual(updated.result_class, handoff.result_class)
+        self.assertEqual(updated.summary, handoff.summary)
+        self.assertEqual(refs, [])
 
     def test_classify_failed_stop_handoff_closed_restart_path(self) -> None:
         snapshot = multithread_loop.IssueLeaseSnapshot(

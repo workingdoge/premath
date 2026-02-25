@@ -95,7 +95,7 @@ Read/query family:
 
 Mutation family (instruction-linked):
 
-- `issue.claim`, `issue.lease_renew`, `issue.lease_release`,
+- `issue.claim`, `issue.claim_next`, `issue.lease_renew`, `issue.lease_release`,
 - `issue.update`, `issue.discover`,
 - `dep.add`, `dep.remove`, `dep.replace`.
 
@@ -104,8 +104,12 @@ Control/doctrine family:
 - `instruction.check`, `instruction.run`,
 - `coherence.check`,
 - `required.projection`, `required.delta`, `required.witness`,
-  `required.witness_verify`, `required.witness_decide`,
-  `required.decision_verify`, `required.gate_ref`.
+      `required.witness_verify`, `required.witness_decide`,
+      `required.decision_verify`, `required.gate_ref`.
+
+Transport lifecycle family:
+
+- `fiber.spawn`, `fiber.join`, `fiber.cancel`.
 
 Harness durability family:
 
@@ -124,6 +128,7 @@ Harness durability family:
 | `issue.check` | `premath issue check --issues <path> --json` | `issue_check` | `op/mcp.issue_check` |
 | `issue.backend_status` | `premath issue backend-status --issues <path> --repo <repo> --projection <path> --json` | `issue_backend_status` | `op/mcp.issue_backend_status` |
 | `issue.claim` | `premath issue claim <issue-id> --assignee <name> --issues <path> --json` | `issue_claim` | `op/mcp.issue_claim` |
+| `issue.claim_next` | `premath issue claim-next --assignee <name> --issues <path> --json` | n/a | `op/transport.issue_claim_next` |
 | `issue.lease_renew` | n/a | `issue_lease_renew` | `op/mcp.issue_lease_renew` |
 | `issue.lease_release` | n/a | `issue_lease_release` | `op/mcp.issue_lease_release` |
 | `issue.update` | `premath issue update <issue-id> --status <status> --issues <path> --json` | `issue_update` | `op/mcp.issue_update` |
@@ -138,23 +143,26 @@ Harness durability family:
 | `observe.projection` | `premath observe --surface <path> --mode projection --projection-digest <digest> --json` | `observe_projection` | `op/mcp.observe_projection` |
 | `instruction.check` | `premath instruction-check --instruction <path> --repo-root <repo> --json` | `instruction_check` | `op/mcp.instruction_check` |
 | `instruction.run` | `mise run ci-pipeline-instruction` | `instruction_run` | `op/mcp.instruction_run` |
-| `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a | n/a |
-| `required.projection` | `premath required-projection --input <path> --json` | n/a | n/a |
-| `required.delta` | `premath required-delta --input <path> --json` | n/a | n/a |
-| `required.gate_ref` | `premath required-gate-ref --input <path> --json` | n/a | n/a |
-| `required.witness` | `premath required-witness --runtime <path> --json` | n/a | n/a |
-| `required.witness_verify` | `premath required-witness-verify --input <path> --json` | n/a | n/a |
-| `required.witness_decide` | `premath required-witness-decide --input <path> --json` | n/a | n/a |
-| `required.decision_verify` | `premath required-decision-verify --input <path> --json` | n/a | n/a |
+| `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a | `op/ci.coherence_check` |
+| `required.projection` | `premath required-projection --input <path> --json` | n/a | `op/ci.required_projection` |
+| `required.delta` | `premath required-delta --input <path> --json` | n/a | `op/ci.required_delta` |
+| `required.gate_ref` | `premath required-gate-ref --input <path> --json` | n/a | `op/ci.required_gate_ref` |
+| `required.witness` | `premath required-witness --runtime <path> --json` | n/a | `op/ci.required_witness` |
+| `required.witness_verify` | `premath required-witness-verify --input <path> --json` | n/a | `op/ci.verify_required_witness` |
+| `required.witness_decide` | `premath required-witness-decide --input <path> --json` | n/a | `op/ci.decide_required` |
+| `fiber.spawn` | `premath transport-dispatch --action fiber.spawn --payload '<json>' --json` | n/a | `op/transport.fiber_spawn` |
+| `fiber.join` | `premath transport-dispatch --action fiber.join --payload '<json>' --json` | n/a | `op/transport.fiber_join` |
+| `fiber.cancel` | `premath transport-dispatch --action fiber.cancel --payload '<json>' --json` | n/a | `op/transport.fiber_cancel` |
+| `required.decision_verify` | `premath required-decision-verify --input <path> --json` | n/a | `op/ci.verify_required_decision` |
 | `harness.session.read` | `premath harness-session read --path <path> --json` | n/a | `op/harness.session_read` |
 | `harness.session.write` | `premath harness-session write --path <path> ... --json` | n/a | `op/harness.session_write` |
 | `harness.session.bootstrap` | `premath harness-session bootstrap --path <path> --feature-ledger <path> --json` | n/a | `op/harness.session_bootstrap` |
-| `harness.feature.read` | `premath harness-feature read --path <path> --json` | n/a | n/a |
-| `harness.feature.write` | `premath harness-feature write --path <path> ... --json` | n/a | n/a |
-| `harness.feature.check` | `premath harness-feature check --path <path> [--require-closure] --json` | n/a | n/a |
-| `harness.feature.next` | `premath harness-feature next --path <path> --json` | n/a | n/a |
-| `harness.trajectory.append` | `premath harness-trajectory append --path <path> ... --json` | n/a | n/a |
-| `harness.trajectory.query` | `premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json` | n/a | n/a |
+| `harness.feature.read` | `premath harness-feature read --path <path> --json` | n/a | `op/harness.feature_read` |
+| `harness.feature.write` | `premath harness-feature write --path <path> ... --json` | n/a | `op/harness.feature_write` |
+| `harness.feature.check` | `premath harness-feature check --path <path> [--require-closure] --json` | n/a | `op/harness.feature_check` |
+| `harness.feature.next` | `premath harness-feature next --path <path> --json` | n/a | `op/harness.feature_next` |
+| `harness.trajectory.append` | `premath harness-trajectory append --path <path> ... --json` | n/a | `op/harness.trajectory_append` |
+| `harness.trajectory.query` | `premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json` | n/a | `op/harness.trajectory_query` |
 
 Phase-3 lease-op boundary:
 
@@ -247,6 +255,8 @@ Selection rule:
 Phase 0: read-only evaluator
 
 - ship read/query host API only,
+- provide canonical first-run scaffold path via
+  `premath evaluator-scaffold --path .premath/evaluator_scaffold --json`,
 - validate deterministic effect-row emission.
 
 Phase 1: mutation parity

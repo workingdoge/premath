@@ -46,6 +46,10 @@ Run executable doctrine-inf vectors with:
 python3 tools/conformance/run_doctrine_inf_vectors.py
 ```
 
+`run_doctrine_inf_vectors.py` delegates semantic evaluation to
+`premath doctrine-inf-check` and only performs fixture orchestration/expect
+comparison.
+
 Run executable capability vectors with:
 
 ```bash

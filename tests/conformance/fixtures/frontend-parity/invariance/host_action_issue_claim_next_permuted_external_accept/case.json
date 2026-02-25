@@ -1,0 +1,113 @@
+{
+  "schema": 1,
+  "suiteId": "frontend-parity",
+  "vectorId": "invariance/host_action_issue_claim_next_permuted_external_accept",
+  "semanticScenarioId": "host_action.issue_claim_next.permuted",
+  "profile": "external",
+  "scenario": {
+    "equivalenceClassId": "host_action.issue_claim_next.v1",
+    "hostActionId": "issue.claim_next",
+    "kernelVerdict": "accepted",
+    "requiredFrontends": [
+      "steel",
+      "rhai",
+      "mcp",
+      "cli"
+    ],
+    "optionalFrontends": [
+      "nif"
+    ],
+    "frontends": {
+      "rhai": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_permuted"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_permuted",
+          "failureClasses": []
+        }
+      },
+      "cli": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_permuted"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_permuted",
+          "failureClasses": []
+        }
+      },
+      "steel": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_permuted"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_permuted",
+          "failureClasses": []
+        }
+      },
+      "mcp": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_permuted"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_permuted",
+          "failureClasses": []
+        }
+      },
+      "nif": {
+        "result": "accepted",
+        "failureClasses": [],
+        "witnessRefs": [
+          "transport://dispatch/issue.claim_next/ts1_issue_claim_next_permuted"
+        ],
+        "worldRouteId": "route.issue_claim_lease",
+        "transportProfile": "transport.dispatch.v1",
+        "resolverWitness": {
+          "siteId": "premath.doctrine_operation_site.v0",
+          "operationId": "op/transport.issue_claim_next",
+          "routeFamilyId": "route.issue_claim_lease",
+          "worldId": "world.lease.v1",
+          "morphismRowId": "wm.control.lease.mutation",
+          "semanticDigest": "sr1_ts1_issue_claim_next_permuted",
+          "failureClasses": []
+        }
+      }
+    }
+  }
+}

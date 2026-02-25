@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "suiteId": "doctrine-inf",
+  "vectorId": "golden/route_consolidation_transport_dispatch_accept",
+  "description": "Transport dispatch route consolidation accepts when route-bound rows are total and class-consistent.",
+  "artifacts": {
+    "doctrineRegistry": [
+      "dm.identity",
+      "dm.transport.world",
+      "dm.transport.location"
+    ],
+    "destinationDeclares": {
+      "preserved": [
+        "dm.identity",
+        "dm.transport.world",
+        "dm.transport.location"
+      ],
+      "notPreserved": []
+    },
+    "edgeMorphisms": [
+      "dm.identity"
+    ]
+  },
+  "routeConsolidation": {
+    "siteInput": {
+      "worldRouteBindings": {
+        "schema": 1,
+        "bindingKind": "premath.world_route_bindings.v1",
+        "rows": [
+          {
+            "routeFamilyId": "route.transport.dispatch",
+            "operationIds": [
+              "op/transport.world_route_binding"
+            ],
+            "worldId": "world.transport.v1",
+            "morphismRowId": "wm.control.transport.dispatch",
+            "requiredMorphisms": [
+              "dm.transport.world"
+            ],
+            "failureClassUnbound": "world_route_unbound"
+          }
+        ]
+      }
+    },
+    "operations": [
+      {
+        "operationId": "op/transport.world_route_binding",
+        "morphisms": [
+          "dm.transport.world"
+        ]
+      }
+    ],
+    "requiredRouteBindings": [
+      {
+        "routeFamilyId": "route.transport.dispatch",
+        "operationIds": [
+          "op/transport.world_route_binding"
+        ]
+      }
+    ]
+  }
+}

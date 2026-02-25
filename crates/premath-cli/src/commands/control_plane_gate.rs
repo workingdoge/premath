@@ -133,6 +133,28 @@ fn ordered_unique(values: &[String]) -> Vec<String> {
     out
 }
 
+fn validate_kcir_mapping_cli_input(request: &KcirMappingGateInput) -> Result<MappingScope, String> {
+    let scope = MappingScope::parse(&request.scope).ok_or_else(|| {
+        format!(
+            "scope must be `required` or `instruction` (got {})",
+            request.scope
+        )
+    })?;
+
+    if matches!(scope, MappingScope::Instruction) {
+        let instruction_path = request
+            .instruction_path
+            .as_deref()
+            .map(str::trim)
+            .unwrap_or("");
+        if instruction_path.is_empty() {
+            return Err("instruction scope requires instructionPath".to_string());
+        }
+    }
+
+    Ok(scope)
+}
+
 fn sha256_bytes(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
@@ -419,6 +441,7 @@ fn expected_declared_rows() -> BTreeSet<String> {
         "coherenceObligations",
         "coherenceCheckPayload",
         "doctrineRouteBinding",
+        "fiberLifecycleAction",
         "requiredDecisionInput",
     ]
     .iter()
@@ -889,7 +912,7 @@ pub fn run_kcir_mapping(input: String, json_output: bool) {
         );
     });
 
-    let request: KcirMappingGateInput = serde_json::from_slice(&bytes).unwrap_or_else(|err| {
+    let mut request: KcirMappingGateInput = serde_json::from_slice(&bytes).unwrap_or_else(|err| {
         emit_error(
             "kcir_mapping_gate_invalid",
             format!(
@@ -899,29 +922,9 @@ pub fn run_kcir_mapping(input: String, json_output: bool) {
         );
     });
 
-    if MappingScope::parse(&request.scope).is_none() {
-        emit_error(
-            "kcir_mapping_gate_invalid",
-            format!(
-                "scope must be `required` or `instruction` (got {})",
-                request.scope
-            ),
-        );
-    }
-
-    if request.scope == "instruction" {
-        let instruction_path = request
-            .instruction_path
-            .as_deref()
-            .map(str::trim)
-            .unwrap_or("");
-        if instruction_path.is_empty() {
-            emit_error(
-                "kcir_mapping_gate_invalid",
-                "instruction scope requires instructionPath",
-            );
-        }
-    }
+    let scope = validate_kcir_mapping_cli_input(&request)
+        .unwrap_or_else(|message| emit_error("kcir_mapping_gate_invalid", message));
+    request.scope = scope.as_str().to_string();
 
     let output = kcir_mapping_report(&request);
 
@@ -1142,5 +1145,33 @@ mod tests {
                 .contains(&KCIR_MAPPING_LEGACY_AUTHORITY_VIOLATION.to_string())
         );
         let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn kcir_mapping_cli_validation_accepts_trimmed_instruction_scope() {
+        let request = KcirMappingGateInput {
+            repo_root: None,
+            scope: " instruction ".to_string(),
+            instruction_path: Some(" instructions/2026-02-24-bd-1.json ".to_string()),
+            instruction_id: None,
+            strict: false,
+        };
+        let scope = validate_kcir_mapping_cli_input(&request)
+            .expect("trimmed instruction scope with instruction path should pass");
+        assert!(matches!(scope, MappingScope::Instruction));
+    }
+
+    #[test]
+    fn kcir_mapping_cli_validation_rejects_trimmed_instruction_scope_without_path() {
+        let request = KcirMappingGateInput {
+            repo_root: None,
+            scope: " instruction ".to_string(),
+            instruction_path: None,
+            instruction_id: None,
+            strict: false,
+        };
+        let err = validate_kcir_mapping_cli_input(&request)
+            .expect_err("instruction scope without instructionPath should fail");
+        assert_eq!(err, "instruction scope requires instructionPath");
     }
 }

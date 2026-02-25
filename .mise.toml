@@ -52,6 +52,9 @@ run = [
   "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 ]
 
+[tasks.doctrine-site-inventory-check]
+run = "python3 tools/conformance/generate_doctrine_site_inventory.py --check"
+
 [tasks.conformance-run]
 run = "python3 tools/conformance/run_fixture_suites.py"
 
@@ -163,6 +166,8 @@ run = [
   "python3 tools/conformance/test_doctrine_site_contract.py",
   "python3 tools/conformance/test_doctrine_mcp_parity.py",
   "python3 tools/conformance/test_runtime_orchestration.py",
+  "python3 tools/conformance/test_world_core_vectors.py",
+  "python3 tools/conformance/test_frontend_parity_vectors.py",
 ]
 
 [tasks.ci-observation-build]

@@ -195,6 +195,16 @@
           "policyDigest"
         ]
       },
+      "fiberLifecycleAction": {
+        "sourceKind": "transport.fiber.lifecycle.v1",
+        "targetDomain": "kcir.node",
+        "targetKind": "transport.fiber.lifecycle.witness.v1",
+        "identityFields": [
+          "actionId",
+          "semanticDigest",
+          "policyDigest"
+        ]
+      },
       "requiredDecisionInput": {
         "sourceKind": "ci.required.decision.input.v1",
         "targetDomain": "kcir.node",
@@ -435,6 +445,11 @@
         "mcpTool": "issue_claim",
         "operationId": "op/mcp.issue_claim"
       },
+      "issue.claim_next": {
+        "canonicalCli": "premath issue claim-next --assignee <name> --issues <path> --json",
+        "mcpTool": null,
+        "operationId": "op/transport.issue_claim_next"
+      },
       "issue.lease_renew": {
         "canonicalCli": null,
         "mcpTool": "issue_lease_renew",
@@ -507,35 +522,58 @@
       },
       "coherence.check": {
         "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.coherence_check"
       },
       "required.projection": {
         "canonicalCli": "premath required-projection --input <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.required_projection"
       },
       "required.delta": {
         "canonicalCli": "premath required-delta --input <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.required_delta"
       },
       "required.gate_ref": {
         "canonicalCli": "premath required-gate-ref --input <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.required_gate_ref"
       },
       "required.witness": {
         "canonicalCli": "premath required-witness --runtime <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.required_witness"
       },
       "required.witness_verify": {
         "canonicalCli": "premath required-witness-verify --input <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.verify_required_witness"
       },
       "required.witness_decide": {
         "canonicalCli": "premath required-witness-decide --input <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.decide_required"
+      },
+      "fiber.spawn": {
+        "canonicalCli": "premath transport-dispatch --action fiber.spawn --payload '<json>' --json",
+        "mcpTool": null,
+        "operationId": "op/transport.fiber_spawn"
+      },
+      "fiber.join": {
+        "canonicalCli": "premath transport-dispatch --action fiber.join --payload '<json>' --json",
+        "mcpTool": null,
+        "operationId": "op/transport.fiber_join"
+      },
+      "fiber.cancel": {
+        "canonicalCli": "premath transport-dispatch --action fiber.cancel --payload '<json>' --json",
+        "mcpTool": null,
+        "operationId": "op/transport.fiber_cancel"
       },
       "required.decision_verify": {
         "canonicalCli": "premath required-decision-verify --input <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/ci.verify_required_decision"
       },
       "harness.session.read": {
         "canonicalCli": "premath harness-session read --path <path> --json",
@@ -554,27 +592,33 @@
       },
       "harness.feature.read": {
         "canonicalCli": "premath harness-feature read --path <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.feature_read"
       },
       "harness.feature.write": {
         "canonicalCli": "premath harness-feature write --path <path> ... --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.feature_write"
       },
       "harness.feature.check": {
         "canonicalCli": "premath harness-feature check --path <path> [--require-closure] --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.feature_check"
       },
       "harness.feature.next": {
         "canonicalCli": "premath harness-feature next --path <path> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.feature_next"
       },
       "harness.trajectory.append": {
         "canonicalCli": "premath harness-trajectory append --path <path> ... --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.trajectory_append"
       },
       "harness.trajectory.query": {
         "canonicalCli": "premath harness-trajectory query --path <path> --mode <mode> --limit <n> --json",
-        "mcpTool": null
+        "mcpTool": null,
+        "operationId": "op/harness.trajectory_query"
       }
     },
     "mcpOnlyHostActions": [

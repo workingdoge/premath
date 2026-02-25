@@ -247,3 +247,28 @@ fail-closed classes for at least:
 - `governance.self_evolution_rollback_missing`,
 - `governance.trace_mode_violation`,
 - `governance.risk_tier_profile_missing`.
+
+## 10. Route consolidation boundary (v0)
+
+This section binds doctrine-level transport/route consolidation to the same
+single authority lane used by world/site contracts.
+
+Purpose:
+
+- prevent route-bound transport actions from drifting outside declared
+  world-route bindings,
+- keep doctrine boundary vectors aligned with kernel-backed route admission,
+- avoid wrapper-local route authority.
+
+Conforming doctrine-boundary evaluations SHOULD:
+
+- validate transport route closure through kernel world-route semantics
+  (`draft/WORLD-REGISTRY` + `draft/DOCTRINE-SITE` inputs),
+- require declared transport dispatch bindings when route families are marked
+  required by profile or vector contract,
+- fail closed when required route families or operation bindings are missing.
+
+Minimum fail-closed classes for this boundary:
+
+- `world_route_unbound`,
+- `world_route_morphism_drift`.

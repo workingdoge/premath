@@ -4,6 +4,7 @@ members = [
     "crates/premath-kernel",
     "crates/premath-tusk",
     "crates/premath-bd",
+    "crates/premath-transport",
     "crates/premath-jj",
     "crates/premath-coherence",
     "crates/premath-surreal",
@@ -23,6 +24,7 @@ description = "Premath: a kernel doctrine of definability for agent orchestratio
 premath-kernel = { path = "crates/premath-kernel" }
 premath-tusk = { path = "crates/premath-tusk" }
 premath-bd = { path = "crates/premath-bd" }
+premath-transport = { path = "crates/premath-transport" }
 premath-jj = { path = "crates/premath-jj" }
 premath-coherence = { path = "crates/premath-coherence" }
 premath-surreal = { path = "crates/premath-surreal" }

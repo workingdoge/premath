@@ -1,0 +1,19 @@
+{
+  "schema": 1,
+  "suiteId": "world-core",
+  "vectors": [
+    "golden/world_core_routes_bound_accept",
+    "golden/site_resolve_routes_bound_accept",
+    "adversarial/world_core_missing_family_reject",
+    "adversarial/world_core_morphism_drift_reject",
+    "adversarial/world_core_required_operation_unbound_reject",
+    "adversarial/site_resolve_unbound_reject",
+    "adversarial/site_resolve_overlap_mismatch_reject",
+    "adversarial/site_resolve_glue_missing_reject",
+    "adversarial/site_resolve_ambiguous_overlap_reject",
+    "invariance/world_core_permuted_local_accept",
+    "invariance/world_core_permuted_external_accept",
+    "invariance/site_resolve_projection_permuted_local_accept",
+    "invariance/site_resolve_projection_permuted_external_accept"
+  ]
+}

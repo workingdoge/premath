@@ -7,14 +7,23 @@ use crate::support::{
 use async_trait::async_trait;
 use chrono::{DateTime, Duration, Utc};
 use premath_bd::DEFAULT_NOTE_WARN_THRESHOLD;
+#[cfg(test)]
+use premath_bd::IssueLease;
 use premath_bd::issue::{issue_type_variants, parse_issue_type};
 use premath_bd::{
-    AtomicStoreMutationError, DepType, DependencyGraphScope, Issue, IssueLease, IssueLeaseState,
-    MemoryStore, mutate_store_jsonl, store_snapshot_ref,
+    AtomicStoreMutationError, DepType, DependencyGraphScope, Issue, IssueLeaseState, MemoryStore,
+    mutate_store_jsonl, store_snapshot_ref,
 };
 use premath_coherence::validate_instruction_envelope_payload;
 use premath_jj::JjClient;
 use premath_surreal::{ProjectionMatchMode, QueryCache};
+use premath_transport::{
+    IssueClaimRequest as TransportIssueClaimRequest,
+    IssueLeaseReleaseRequest as TransportIssueLeaseReleaseRequest,
+    IssueLeaseRenewRequest as TransportIssueLeaseRenewRequest, LeaseActionEnvelope,
+    issue_claim as transport_issue_claim, issue_lease_release as transport_issue_lease_release,
+    issue_lease_renew as transport_issue_lease_renew,
+};
 use premath_ux::{ObserveQuery, SurrealObservationBackend, UxService};
 use rust_mcp_sdk::{
     McpServer, StdioTransport, ToMcpServerHandler, TransportOptions,
@@ -865,17 +874,10 @@ const DEFAULT_LEASE_TTL_SECONDS: i64 = 3600;
 const MIN_LEASE_TTL_SECONDS: i64 = 30;
 const MAX_LEASE_TTL_SECONDS: i64 = 86_400;
 
-const FAILURE_LEASE_INVALID_ASSIGNEE: &str = "lease_invalid_assignee";
 const FAILURE_LEASE_INVALID_TTL: &str = "lease_invalid_ttl";
 const FAILURE_LEASE_BINDING_AMBIGUOUS: &str = "lease_binding_ambiguous";
 const FAILURE_LEASE_INVALID_EXPIRES_AT: &str = "lease_invalid_expires_at";
 const FAILURE_LEASE_NOT_FOUND: &str = "lease_not_found";
-const FAILURE_LEASE_CLOSED: &str = "lease_issue_closed";
-const FAILURE_LEASE_CONTENTION_ACTIVE: &str = "lease_contention_active";
-const FAILURE_LEASE_MISSING: &str = "lease_missing";
-const FAILURE_LEASE_STALE: &str = "lease_stale";
-const FAILURE_LEASE_OWNER_MISMATCH: &str = "lease_owner_mismatch";
-const FAILURE_LEASE_ID_MISMATCH: &str = "lease_id_mismatch";
 const FAILURE_LEASE_MUTATION_LOCK_BUSY: &str = "lease_mutation_lock_busy";
 const FAILURE_LEASE_MUTATION_LOCK_IO: &str = "lease_mutation_lock_io";
 const FAILURE_LEASE_MUTATION_STORE_IO: &str = "lease_mutation_store_io";
@@ -980,6 +982,72 @@ fn lease_error(failure_class: &str, detail: impl Into<String>) -> CallToolError 
     call_tool_error(format!("[failureClass={failure_class}] {}", detail.into()))
 }
 
+fn transport_rejected_error(envelope: &LeaseActionEnvelope) -> CallToolError {
+    let failure_class = envelope
+        .failure_classes
+        .first()
+        .map(String::as_str)
+        .unwrap_or("transport_rejected");
+    let diagnostic = envelope
+        .diagnostic
+        .clone()
+        .unwrap_or_else(|| format!("transport action rejected: {}", envelope.action));
+    lease_error(failure_class, diagnostic)
+}
+
+fn transport_issue_json(envelope: &LeaseActionEnvelope) -> Value {
+    envelope.issue.as_ref().map_or(Value::Null, |issue| {
+        serde_json::to_value(issue).unwrap_or(Value::Null)
+    })
+}
+
+fn transport_lease_projection_json(envelope: &LeaseActionEnvelope) -> Value {
+    envelope
+        .lease_projection
+        .as_ref()
+        .map_or(Value::Null, |projection| {
+            serde_json::to_value(projection).unwrap_or(Value::Null)
+        })
+}
+
+fn transport_resolver_witness_ref_json(envelope: &LeaseActionEnvelope) -> Value {
+    envelope
+        .resolver_witness_ref
+        .as_ref()
+        .map_or(Value::Null, |value| Value::String(value.clone()))
+}
+
+fn transport_resolver_witness_json(envelope: &LeaseActionEnvelope) -> Value {
+    envelope
+        .resolver_witness
+        .as_ref()
+        .map_or(Value::Null, |witness| {
+            serde_json::to_value(witness).unwrap_or(Value::Null)
+        })
+}
+
+fn attach_issue_write_witness_metadata(
+    path: &Path,
+    issue_id: &str,
+    write_witness: &Value,
+) -> std::result::Result<(), CallToolError> {
+    let issue_id = issue_id.to_string();
+    let witness = write_witness.clone();
+    mutate_store_jsonl(path, move |store| {
+        let issue = store.issue_mut(&issue_id).ok_or_else(|| {
+            lease_error(
+                FAILURE_LEASE_NOT_FOUND,
+                format!("issue not found when attaching write witness: {issue_id}"),
+            )
+        })?;
+        issue_attach_write_witness(issue, witness.clone());
+        issue.touch_updated_at();
+        Ok(((), true))
+    })
+    .map_err(map_atomic_store_mutation_error)?;
+    Ok(())
+}
+
 fn map_atomic_store_mutation_error(err: AtomicStoreMutationError<CallToolError>) -> CallToolError {
     match err {
         AtomicStoreMutationError::Mutation(inner) => inner,
@@ -997,6 +1065,7 @@ fn map_atomic_store_mutation_error(err: AtomicStoreMutationError<CallToolError>)
     }
 }
 
+#[allow(dead_code)]
 fn parse_lease_ttl_seconds(ttl_seconds: Option<i64>) -> std::result::Result<i64, CallToolError> {
     let ttl = ttl_seconds.unwrap_or(DEFAULT_LEASE_TTL_SECONDS);
     if !(MIN_LEASE_TTL_SECONDS..=MAX_LEASE_TTL_SECONDS).contains(&ttl) {
@@ -1010,6 +1079,7 @@ fn parse_lease_ttl_seconds(ttl_seconds: Option<i64>) -> std::result::Result<i64,
     Ok(ttl)
 }
 
+#[allow(dead_code)]
 fn parse_lease_expiry(
     lease_ttl_seconds: Option<i64>,
     lease_expires_at: Option<String>,
@@ -1051,6 +1121,7 @@ fn parse_lease_expiry(
         })
 }
 
+#[allow(dead_code)]
 fn lease_token(value: &str) -> String {
     let mut out = String::new();
     for ch in value.chars() {
@@ -1070,6 +1141,7 @@ fn lease_token(value: &str) -> String {
     }
 }
 
+#[allow(dead_code)]
 fn resolve_lease_id(raw_lease_id: Option<String>, issue_id: &str, assignee: &str) -> String {
     non_empty(raw_lease_id)
         .unwrap_or_else(|| format!("lease1_{}_{}", lease_token(issue_id), lease_token(assignee)))
@@ -1293,140 +1365,38 @@ fn call_issue_claim(
     let path = resolve_path(tool.issues_path, &config.issues_path);
     let instruction =
         resolve_instruction_link(config, tool.instruction_id, MutationAction::IssueClaim)?;
-    let assignee = tool.assignee.trim().to_string();
-    if assignee.is_empty() {
-        return Err(lease_error(
-            FAILURE_LEASE_INVALID_ASSIGNEE,
-            "assignee is required",
-        ));
-    }
-    let now = Utc::now();
-    let requested_lease_id = non_empty(tool.lease_id.clone());
-    let lease_expires_at = parse_lease_expiry(tool.lease_ttl_seconds, tool.lease_expires_at, now)?;
-
     let write_witness =
         build_write_witness(config, "issue.claim", &tool.id, &path, instruction.as_ref());
 
-    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
-        let issue = store
-            .issue_mut(&tool.id)
-            .ok_or_else(|| call_tool_error(format!("issue not found: {}", tool.id)))?;
-
-        if issue.status == "closed" {
-            return Err(lease_error(
-                FAILURE_LEASE_CLOSED,
-                format!("cannot claim closed issue: {}", tool.id),
-            ));
-        }
-
-        let mut changed = false;
-        let mut status_changed = false;
-
-        if issue.lease_state_at(now) == IssueLeaseState::Stale {
-            issue.lease = None;
-            changed = true;
-
-            if issue.status == "in_progress" {
-                issue.set_status("open".to_string());
-                status_changed = true;
-            }
-
-            if !issue.assignee.is_empty() && issue.assignee != assignee {
-                issue.assignee.clear();
-                changed = true;
-            }
-        }
-
-        if let Some(active_lease) = issue.lease.as_ref().filter(|lease| lease.expires_at > now)
-            && active_lease.owner != assignee
-        {
-            return Err(lease_error(
-                FAILURE_LEASE_CONTENTION_ACTIVE,
-                format!(
-                    "issue already leased: {} (owner={}, lease_id={})",
-                    tool.id, active_lease.owner, active_lease.lease_id
-                ),
-            ));
-        }
-
-        if issue.lease.is_none() && !issue.assignee.is_empty() && issue.assignee != assignee {
-            return Err(lease_error(
-                FAILURE_LEASE_CONTENTION_ACTIVE,
-                format!(
-                    "issue already claimed: {} (assignee={})",
-                    tool.id, issue.assignee
-                ),
-            ));
-        }
-
-        if issue.assignee != assignee {
-            issue.assignee = assignee.clone();
-            changed = true;
-        }
-        if issue.status != "in_progress" {
-            issue.set_status("in_progress".to_string());
-            changed = true;
-            status_changed = true;
-        }
-
-        let lease_id = issue
-            .lease
-            .as_ref()
-            .filter(|existing| existing.expires_at > now && existing.owner == assignee)
-            .map(|existing| existing.lease_id.clone())
-            .unwrap_or_else(|| resolve_lease_id(requested_lease_id.clone(), &tool.id, &assignee));
-
-        let next_lease = match issue.lease.as_ref() {
-            Some(existing) if existing.owner == assignee && existing.lease_id == lease_id => {
-                IssueLease {
-                    lease_id: lease_id.clone(),
-                    owner: assignee.clone(),
-                    acquired_at: existing.acquired_at,
-                    expires_at: lease_expires_at,
-                    renewed_at: Some(now),
-                }
-            }
-            _ => IssueLease {
-                lease_id: lease_id.clone(),
-                owner: assignee.clone(),
-                acquired_at: now,
-                expires_at: lease_expires_at,
-                renewed_at: None,
-            },
-        };
-
-        if issue.lease.as_ref() != Some(&next_lease) {
-            issue.lease = Some(next_lease);
-            changed = true;
-        }
-
-        if changed && !status_changed {
-            issue.touch_updated_at();
-        }
-
-        if changed {
-            issue_attach_write_witness(issue, write_witness.clone());
-        }
-        let updated = issue.clone();
-
-        Ok(((updated, changed, store.clone()), changed))
-    })
-    .map_err(map_atomic_store_mutation_error)?;
-
+    let envelope = transport_issue_claim(TransportIssueClaimRequest {
+        id: tool.id.clone(),
+        assignee: tool.assignee,
+        lease_id: tool.lease_id,
+        lease_ttl_seconds: tool.lease_ttl_seconds,
+        lease_expires_at: tool.lease_expires_at,
+        issues_path: Some(path.display().to_string()),
+    });
+    if envelope.result != "accepted" {
+        return Err(transport_rejected_error(&envelope));
+    }
+    let changed = envelope.changed.unwrap_or(false);
     if changed {
+        attach_issue_write_witness_metadata(&path, &tool.id, &write_witness)?;
+        let store = load_store_existing(&path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
-    let lease_projection = compute_lease_projection(&store, now);
 
     json_result(json!({
         "action": "issue.claim",
         "issuesPath": path.display().to_string(),
         "queryBackend": config.issue_query_backend.as_str(),
-        "issue": issue_summary_json(&updated, now),
+        "issue": transport_issue_json(&envelope),
         "changed": changed,
         "instruction": instruction.map(|link| link.to_json()),
         "writeWitness": if changed { Some(write_witness) } else { None },
-        "leaseProjection": lease_projection
+        "leaseProjection": transport_lease_projection_json(&envelope),
+        "resolverWitnessRef": transport_resolver_witness_ref_json(&envelope),
+        "resolverWitness": transport_resolver_witness_json(&envelope)
     }))
 }
 
@@ -1437,22 +1407,6 @@ fn call_issue_lease_renew(
     let path = resolve_path(tool.issues_path, &config.issues_path);
     let instruction =
         resolve_instruction_link(config, tool.instruction_id, MutationAction::IssueLeaseRenew)?;
-    let assignee = tool.assignee.trim().to_string();
-    if assignee.is_empty() {
-        return Err(lease_error(
-            FAILURE_LEASE_INVALID_ASSIGNEE,
-            "assignee is required",
-        ));
-    }
-    let lease_id = tool.lease_id.trim().to_string();
-    if lease_id.is_empty() {
-        return Err(lease_error(
-            FAILURE_LEASE_ID_MISMATCH,
-            "lease_id is required",
-        ));
-    }
-    let now = Utc::now();
-    let lease_expires_at = parse_lease_expiry(tool.lease_ttl_seconds, tool.lease_expires_at, now)?;
     let write_witness = build_write_witness(
         config,
         "issue.lease_renew",
@@ -1461,103 +1415,35 @@ fn call_issue_lease_renew(
         instruction.as_ref(),
     );
 
-    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
-        let issue = store.issue_mut(&tool.id).ok_or_else(|| {
-            lease_error(
-                FAILURE_LEASE_NOT_FOUND,
-                format!("issue not found: {}", tool.id),
-            )
-        })?;
-
-        if issue.status == "closed" {
-            return Err(lease_error(
-                FAILURE_LEASE_CLOSED,
-                format!("cannot renew lease on closed issue: {}", tool.id),
-            ));
-        }
-
-        let current = issue.lease.clone().ok_or_else(|| {
-            lease_error(
-                FAILURE_LEASE_MISSING,
-                format!("issue has no lease: {}", tool.id),
-            )
-        })?;
-
-        if current.expires_at <= now {
-            return Err(lease_error(
-                FAILURE_LEASE_STALE,
-                format!("lease is stale and must be reclaimed: {}", tool.id),
-            ));
-        }
-        if current.owner != assignee {
-            return Err(lease_error(
-                FAILURE_LEASE_OWNER_MISMATCH,
-                format!(
-                    "lease owner mismatch for {} (expected={}, got={})",
-                    tool.id, current.owner, assignee
-                ),
-            ));
-        }
-        if current.lease_id != lease_id {
-            return Err(lease_error(
-                FAILURE_LEASE_ID_MISMATCH,
-                format!(
-                    "lease_id mismatch for {} (expected={}, got={})",
-                    tool.id, current.lease_id, lease_id
-                ),
-            ));
-        }
-
-        let mut changed = false;
-        let mut status_changed = false;
-        if issue.assignee != assignee {
-            issue.assignee = assignee.clone();
-            changed = true;
-        }
-        if issue.status != "in_progress" {
-            issue.set_status("in_progress".to_string());
-            changed = true;
-            status_changed = true;
-        }
-
-        let renewed = IssueLease {
-            lease_id,
-            owner: assignee,
-            acquired_at: current.acquired_at,
-            expires_at: lease_expires_at,
-            renewed_at: Some(now),
-        };
-        if issue.lease.as_ref() != Some(&renewed) {
-            issue.lease = Some(renewed);
-            changed = true;
-        }
-
-        if changed && !status_changed {
-            issue.touch_updated_at();
-        }
-        if changed {
-            issue_attach_write_witness(issue, write_witness.clone());
-        }
-        let updated = issue.clone();
-
-        Ok(((updated, changed, store.clone()), changed))
-    })
-    .map_err(map_atomic_store_mutation_error)?;
-
+    let envelope = transport_issue_lease_renew(TransportIssueLeaseRenewRequest {
+        id: tool.id.clone(),
+        assignee: tool.assignee,
+        lease_id: tool.lease_id,
+        lease_ttl_seconds: tool.lease_ttl_seconds,
+        lease_expires_at: tool.lease_expires_at,
+        issues_path: Some(path.display().to_string()),
+    });
+    if envelope.result != "accepted" {
+        return Err(transport_rejected_error(&envelope));
+    }
+    let changed = envelope.changed.unwrap_or(false);
     if changed {
+        attach_issue_write_witness_metadata(&path, &tool.id, &write_witness)?;
+        let store = load_store_existing(&path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
-    let lease_projection = compute_lease_projection(&store, now);
 
     json_result(json!({
         "action": "issue.lease_renew",
         "issuesPath": path.display().to_string(),
         "queryBackend": config.issue_query_backend.as_str(),
-        "issue": issue_summary_json(&updated, now),
+        "issue": transport_issue_json(&envelope),
         "changed": changed,
         "instruction": instruction.map(|link| link.to_json()),
         "writeWitness": if changed { Some(write_witness) } else { None },
-        "leaseProjection": lease_projection
+        "leaseProjection": transport_lease_projection_json(&envelope),
+        "resolverWitnessRef": transport_resolver_witness_ref_json(&envelope),
+        "resolverWitness": transport_resolver_witness_json(&envelope)
     }))
 }
 
@@ -1573,7 +1459,6 @@ fn call_issue_lease_release(
     )?;
     let expected_assignee = non_empty(tool.assignee);
     let expected_lease_id = non_empty(tool.lease_id);
-    let now = Utc::now();
     let write_witness = build_write_witness(
         config,
         "issue.lease_release",
@@ -1582,88 +1467,33 @@ fn call_issue_lease_release(
         instruction.as_ref(),
     );
 
-    let (updated, changed, store) = mutate_store_jsonl(&path, |store| {
-        let issue = store.issue_mut(&tool.id).ok_or_else(|| {
-            lease_error(
-                FAILURE_LEASE_NOT_FOUND,
-                format!("issue not found: {}", tool.id),
-            )
-        })?;
-
-        let mut changed = false;
-        let mut status_changed = false;
-
-        match issue.lease.as_ref() {
-            None => {
-                if expected_assignee.is_some() || expected_lease_id.is_some() {
-                    return Err(lease_error(
-                        FAILURE_LEASE_MISSING,
-                        format!("issue has no lease: {}", tool.id),
-                    ));
-                }
-            }
-            Some(current) => {
-                if let Some(expected) = expected_assignee.as_ref()
-                    && current.owner != *expected
-                {
-                    return Err(lease_error(
-                        FAILURE_LEASE_OWNER_MISMATCH,
-                        format!(
-                            "lease owner mismatch for {} (expected={}, got={})",
-                            tool.id, current.owner, expected
-                        ),
-                    ));
-                }
-                if let Some(expected) = expected_lease_id.as_ref()
-                    && current.lease_id != *expected
-                {
-                    return Err(lease_error(
-                        FAILURE_LEASE_ID_MISMATCH,
-                        format!(
-                            "lease_id mismatch for {} (expected={}, got={})",
-                            tool.id, current.lease_id, expected
-                        ),
-                    ));
-                }
-                issue.lease = None;
-                changed = true;
-            }
-        }
-
-        if changed {
-            if !issue.assignee.is_empty() {
-                issue.assignee.clear();
-                changed = true;
-            }
-            if issue.status == "in_progress" {
-                issue.set_status("open".to_string());
-                status_changed = true;
-            }
-            if !status_changed {
-                issue.touch_updated_at();
-            }
-            issue_attach_write_witness(issue, write_witness.clone());
-        }
-        let updated = issue.clone();
-
-        Ok(((updated, changed, store.clone()), changed))
-    })
-    .map_err(map_atomic_store_mutation_error)?;
-
+    let envelope = transport_issue_lease_release(TransportIssueLeaseReleaseRequest {
+        id: tool.id.clone(),
+        assignee: expected_assignee,
+        lease_id: expected_lease_id,
+        issues_path: Some(path.display().to_string()),
+    });
+    if envelope.result != "accepted" {
+        return Err(transport_rejected_error(&envelope));
+    }
+    let changed = envelope.changed.unwrap_or(false);
     if changed {
+        attach_issue_write_witness_metadata(&path, &tool.id, &write_witness)?;
+        let store = load_store_existing(&path)?;
         refresh_issue_query_projection(config, &path, &store)?;
     }
-    let lease_projection = compute_lease_projection(&store, now);
 
     json_result(json!({
         "action": "issue.lease_release",
         "issuesPath": path.display().to_string(),
         "queryBackend": config.issue_query_backend.as_str(),
-        "issue": issue_summary_json(&updated, now),
+        "issue": transport_issue_json(&envelope),
         "changed": changed,
         "instruction": instruction.map(|link| link.to_json()),
         "writeWitness": if changed { Some(write_witness) } else { None },
-        "leaseProjection": lease_projection
+        "leaseProjection": transport_lease_projection_json(&envelope),
+        "resolverWitnessRef": transport_resolver_witness_ref_json(&envelope),
+        "resolverWitness": transport_resolver_witness_json(&envelope)
     }))
 }
 

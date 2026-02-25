@@ -32,8 +32,10 @@ pub mod descent;
 pub mod error;
 pub mod gate;
 pub mod obligation_registry;
+pub mod site_resolve;
 pub mod toy;
 pub mod witness;
+pub mod world_registry;
 
 pub use coherence::CoherenceLevel;
 pub use context::{Context, ContextId, Morphism};
@@ -48,4 +50,20 @@ pub use obligation_registry::{
     ObligationGateMapping, failure_class_to_law_ref, obligation_gate_registry,
     obligation_gate_registry_json, obligation_to_failure_class,
 };
+pub use site_resolve::{
+    SitePackageKcirMappingRow, SitePackageOperationRow, SitePackageProjection,
+    SitePackageSourceRefs, SitePackageTopology, SitePackageWorldRouteRow,
+    SiteResolveKcirMappingRef, SiteResolveProjection, SiteResolveRequest, SiteResolveResponse,
+    SiteResolveSelectedBinding, SiteResolveWitness, failure_class as site_resolve_failure_class,
+    resolve_site_request,
+};
 pub use witness::{GateFailure, GateResult};
+pub use world_registry::{
+    OperationRouteRow, RequiredRouteBinding, RouteBindingRow, ValidationIssue, ValidationReport,
+    WorldMorphismRow, WorldRegistry, WorldRouteBindingRow, WorldRow,
+    failure_class as world_failure_class, parse_operation_route_rows,
+    parse_world_route_binding_rows, resolve_operation_binding, resolve_route_family,
+    validate_world_bindings_against_operations, validate_world_registry,
+    validate_world_route_bindings, validate_world_route_bindings_with_required_families,
+    validate_world_route_bindings_with_requirements,
+};

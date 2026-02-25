@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-- Core crates live in `crates/`: `premath-kernel` (laws/gate/witnesses), `premath-tusk` (runtime identity/descent/witness envelope), `premath-bd` (JSONL memory), `premath-jj`, `premath-surreal` (query/index adapters), `premath-ux` (frontend/query composition surface), and `premath-cli`.
+- Core crates live in `crates/`: `premath-kernel` (laws/gate/witnesses), `premath-tusk` (runtime identity/descent/witness envelope), `premath-bd` (JSONL memory), `premath-transport` (transport adapter crate with optional rustler NIF exports), `premath-jj`, `premath-surreal` (query/index adapters), `premath-ux` (frontend/query composition surface), and `premath-cli`.
 - Specs are lifecycle-scoped:
   - `specs/premath/draft/` for promoted contract specs
   - `specs/premath/raw/` for exploratory/informational specs
@@ -30,6 +30,8 @@
 
 - `cargo build --workspace` — build all crates.
 - `cargo test --workspace` — run Rust tests.
+- `cargo test -p premath-transport` — run transport-core lease bridge tests.
+- `cargo test -p premath-transport --features rustler_nif` — compile rustler NIF adapter lane and validate feature-gated bridge surface.
 - `mise run baseline` — full local closure gate (`py-setup` + fmt + clippy + build/tests + toy + KCIR toy + conformance checks + traceability matrix check + coherence-check + docs-coherence check + drift-budget check + doctrine-site check; includes `rust-setup` for `rustfmt`/`clippy` components).
 - `mise run hk-install` — install optional `hk`-managed git hooks using `hk.pkl`.
 - `mise run hk-pre-commit` / `mise run hk-pre-push` — run hk hook profiles manually.
@@ -61,8 +63,8 @@
 - `mise run pf-gate-loop-start` / `mise run pf-gate-loop-stop` — optional background `ci-check` loop via pitchfork (`ci-check` every 30m).
 - `mise run mcp-serve` — run the stdio MCP server surface over premath issue/dep/observe/doctrine tools (JSONL-authoritative memory, `instruction-linked` mutation policy).
 - `mise run mcp-serve-status` / `mise run mcp-serve-stop` / `mise run mcp-serve-restart` — inspect/stop/restart repo-local `mcp-serve` processes deterministically (including stale duplicate wrappers).
-- `mise run harness-worker-loop -- --worker-id <worker-id> --mutation-mode human-override --override-reason '<reason>' --work-cmd '<cmd>' --verify-cmd '<cmd>' [--host-action-transport mcp|local-repl]` — run one deterministic worker loop (`claim-next -> work -> verify -> close/recover`) with explicit bounded override and harness projection updates.
-- `mise run harness-coordinator-loop -- --worktree <path> [--worktree <path> ...] --rounds <n> --mutation-mode human-override --override-reason '<reason>' [--host-action-transport mcp|local-repl]` — run deterministic coordinator round-robin dispatch over `N` worktrees under explicit auditable override.
+- `mise run harness-worker-loop -- --worker-id <worker-id> --mutation-mode human-override --override-reason '<reason>' --work-cmd '<cmd>' --verify-cmd '<cmd>' [--host-action-transport mcp|local-repl]` — run one deterministic worker loop (`claim-next -> work -> verify -> close/recover`) with explicit bounded override and harness projection updates (default transport: `PREMATH_HOST_ACTION_TRANSPORT` or `mcp`; `local-repl` fail-closes MCP-only lease actions).
+- `mise run harness-coordinator-loop -- --worktree <path> [--worktree <path> ...] --rounds <n> --mutation-mode human-override --override-reason '<reason>' [--host-action-transport mcp|local-repl]` — run deterministic coordinator round-robin dispatch over `N` worktrees under explicit auditable override (default transport: `PREMATH_HOST_ACTION_TRANSPORT` or `mcp`).
 - `mise run harness-kpi-report` — emit canonical multithread throughput KPI benchmark from trajectory projections with deterministic threshold decision (`pass|watch|rollback|insufficient_data`).
 - `mise run conformance-run` — run executable fixture suites (Interop Core + Gate + Witness-ID + cross-model kernel profile + Tusk runtime contract vectors + capability vectors) through the cached suite runner.
 - `mise run doctrine-check` — validate doctrine declarations/site reachability, MCP doctrine-operation parity, and doctrine-inf semantic boundary vectors (`specs/premath/draft/DOCTRINE-SITE.json`, `tests/conformance/fixtures/doctrine-inf/`).
@@ -72,7 +74,7 @@
 - `mise run precommit` — same as baseline.
 - `python3 tools/conformance/check_stub_invariance.py` — validate capability fixture stubs/invariance pairs.
 - `cargo run --package premath-cli -- <args>` — run CLI commands locally.
-- `cargo run --package premath-cli -- init .` — initialize local `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present).
+- `cargo run --package premath-cli -- init . [--json]` — initialize local `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present) with text or deterministic JSON output.
 - `cargo run --package premath-cli -- mock-gate --json` — emit a mock Gate witness envelope.
 - `cargo run --package premath-cli -- tusk-eval --identity <run_identity.json> --descent-pack <descent_pack.json> --json` — evaluate a Tusk descent pack and emit envelope + glue result.
 - `cargo run --package premath-cli -- proposal-check --proposal <proposal.json> --json` — validate/canonicalize one proposal payload, compile obligations, and emit deterministic discharge output.
@@ -87,6 +89,15 @@
 - `cargo run --package premath-cli -- required-decision-verify --input <verify_decision_input.json> --json` — verify one CI decision attestation chain (`decision + witness + delta + actual digests`) through core semantics.
 - `cargo run --package premath-cli -- governance-promotion-check --input <governance_gate_input.json> --json` — evaluate governance promotion gate semantics through core CLI surfaces and emit deterministic `failureClasses`.
 - `cargo run --package premath-cli -- kcir-mapping-check --input <kcir_mapping_gate_input.json> --json` — evaluate KCIR mapping gate semantics (`scope=required|instruction`) through core CLI surfaces and emit deterministic coverage/failure rows.
+- `cargo run --package premath-cli -- doctrine-inf-check --input <doctrine_inf_case.json> --json` — evaluate one doctrine-inf boundary/governance/route-consolidation case through core CLI semantics and emit deterministic `{result,failureClasses}`.
+- `cargo run --package premath-cli -- world-registry-check --registry <world_registry.json> [--operations <operation_rows_or_registry.json>] --json` — validate world rows/morphism rows/route bindings and optional operation-morphism drift through kernel `WorldRegistry` semantics.
+- `cargo run --package premath-cli -- world-registry-check --site-input <doctrine_site_input.json> --operations <doctrine_op_registry.json> [--required-route-family <route.id> ...] [--required-route-binding <route.id>=<operation.id> ...] --json` — validate `DOCTRINE-SITE-INPUT.worldRouteBindings` directly through kernel world-route semantics (including required family and required operation binding fail-closed checks).
+- `cargo run --package premath-cli -- transport-check --json` — validate typed transport action registry semantics (`action`/`actionId`/route/world/morphism projection + semantic digest closure) and emit deterministic check witness output.
+- `cargo run --package premath-cli -- transport-dispatch --action <action-id> --payload '<json>' --json` — execute one typed transport dispatch envelope (`issue.claim`, `issue.lease_renew`, `issue.lease_release`, `fiber.spawn`, `fiber.join`, `fiber.cancel`, `world.route_binding`) and emit deterministic dispatch metadata (`dispatchKind`, `profileId`, `actionId`, `semanticDigest`).
+- `cargo run --package premath-cli -- scheme-eval --program <program.json> --control-plane-contract <control_plane_contract.json> --trajectory-path <trajectory.jsonl> --json` — execute one bounded Scheme/Steel host-action program over the canonical host-action/transport lane.
+- `cargo run --package premath-cli -- rhai-eval --script <program.rhai> --control-plane-contract <control_plane_contract.json> --trajectory-path <trajectory.jsonl> --json` — execute one Rhai host-action script over the same canonical host-action/transport lane (default-enabled frontend).
+- `cargo run --package premath-cli -- evaluator-scaffold --path .premath/evaluator_scaffold --json` — generate deterministic first-run evaluator artifacts (`issues.jsonl`, `control-plane-contract.json`, `scheme-program.json`, `program.rhai`, `harness-trajectory.jsonl`) and canonical next-run commands for Scheme/Rhai.
+- `cargo run --package premath-cli -- world-gate-check --operations <operation_rows_or_registry.json> --check <gate_check.json> --profile control-plane --json` — run Gate checks against a real control-plane operation world (non-toy `World` binding).
 - `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json` — evaluate typed coherence obligations and emit deterministic coherence witness output.
 - `cargo run --package premath-cli -- ref project --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --json` — project deterministic backend refs via profile-bound `project_ref`.
 - `cargo run --package premath-cli -- ref verify --profile policies/ref/sha256_detached_v1.json --domain kcir.node --payload-hex <hex> --evidence-hex <hex> --ref-scheme-id <id> --ref-params-hash <hash> --ref-domain <domain> --ref-digest <digest> --json` — verify provided refs via profile-bound `verify_ref`.
@@ -113,7 +124,7 @@
 - `cargo run --package premath-cli -- issue check --issues .premath/issues.jsonl --json` — run deterministic issue-memory contract checks (epic typing + active acceptance/verification + note-size warnings).
 - `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json` — return unblocked open issues.
 - `cargo run --package premath-cli -- issue blocked --issues .premath/issues.jsonl --json` — return non-closed issues explicitly blocked (`status=blocked`) or blocked by unresolved dependencies.
-- `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .premath/issues.jsonl --json` — update issue fields.
+- `cargo run --package premath-cli -- issue update <issue-id> --status in_progress --issues .premath/issues.jsonl --json` — update issue fields (`--notes-file <path>` or `--notes-file -` avoids shell interpolation hazards for complex notes payloads).
 - `cargo run --package premath-cli -- dep add <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — add a dependency edge.
 - `cargo run --package premath-cli -- dep remove <issue-id> <depends-on-id> --type blocks --issues .premath/issues.jsonl --json` — remove a dependency edge.
 - `cargo run --package premath-cli -- dep replace <issue-id> <depends-on-id> --from-type blocks --to-type related --issues .premath/issues.jsonl --json` — replace one dependency edge type.
@@ -151,6 +162,8 @@
   - issue graph lane: `.premath/issues.jsonl` (authoritative task/dependency state),
   - operations lane: `.premath/OPERATIONS.md` (runbooks and rollout evidence),
   - doctrine/decision lane: `specs/*` + `specs/process/decision-log.md` (boundary/lifecycle authority).
+- Keep one compaction-recovery scratch lane:
+  - `.premath/SCRATCHSHEET.md` (non-authoritative active context snapshot: current issue chain, dependency wiring, invariants, and next steps).
 - Keep issue notes compact and reference operations/spec artifacts instead of pasting large transcripts.
 - Use `docs/design/MEMORY-LANES-CONTRACT.md` as the canonical write-discipline reference.
 
@@ -160,6 +173,11 @@
   - `docs/design/DEVELOPMENT-META-LOOP.md`
   - `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
   - `.premath/OPERATIONS.md` (`Development Meta Loop (Default)`)
+- On context compaction/new session, resume in this order:
+  1. read `.premath/SCRATCHSHEET.md`,
+  2. read active issue state from `.premath/issues.jsonl` (`issue ready/list`),
+  3. validate dependency integrity (`dep diagnostics`, `tools/ci/check_issue_graph.py`),
+  4. continue from the highest-priority unblocked issue.
 - For non-trivial epics, keep dependency order explicit:
   1. architecture contract
   2. spec/index + doctrine-site glue

@@ -103,6 +103,10 @@ Each worker step does:
 8. failure path:
    - issue-memory-derived lease state determines recovery action
      (`issue_lease_renew` / `issue_lease_release` / reclaim / stop),
+   - when transport is `mcp`, lease recovery actions (`issue_lease_renew`,
+     `issue_lease_release`) are dispatched through the typed
+     `premath transport-dispatch` command surface and recorded as transport
+     witness refs in trajectory/session projections,
    - when transport is `local-repl`, MCP-only lease actions fail closed with
      `control_plane_host_action_mcp_transport_required`,
    - append `harness-trajectory` row with lease handoff witness ref,
@@ -112,9 +116,14 @@ Each worker step does:
 
 ## 5. Heartbeat / Renew Guidance
 
-For long-running work exceeding lease TTL, renew from MCP mutation tools:
+For long-running work exceeding lease TTL, renew through the canonical
+transport-dispatch envelope (default transport: `mcp`; configurable by
+`PREMATH_HOST_ACTION_TRANSPORT`):
 
-- `issue_lease_renew(id, assignee, lease_id, lease_ttl_seconds|lease_expires_at)`
+- `premath transport-dispatch --action issue.lease_renew --payload '<json>' --json`
+  where payload carries at minimum:
+  `id`, `assignee`, `leaseId`, `leaseTtlSeconds` (or `leaseExpiresAt`), and
+  `issuesPath`.
 
 Run renewal on a fixed interval (for example every 10-15 minutes) bounded by the
 same worker identity and lease id.
@@ -128,11 +137,17 @@ Recovery sequence:
    - `dep_diagnostics(graph_scope=active)`
    - `issue.blocked` / `issue_lease_projection` (MCP)
 2. if lease owner is known and cooperative:
-   - `issue_lease_release(id, assignee?, lease_id?)`
+   - dispatch `issue.lease_release` via:
+     `premath transport-dispatch --action issue.lease_release --payload '<json>' --json`
 3. if worker died:
    - wait for stale lease boundary (or explicit release by operator),
    - reclaim with `issue claim-next`.
 4. record recovery in projection artifacts (`harness-session`, trajectory row).
+
+`local-repl` transport posture:
+
+- MCP-only lease actions (`issue.lease_renew`, `issue.lease_release`) fail
+  closed with `control_plane_host_action_mcp_transport_required`.
 
 Determinism rule:
 

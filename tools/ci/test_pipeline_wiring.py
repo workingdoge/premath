@@ -53,6 +53,10 @@ jobs:
             f"{check_pipeline_wiring.PIPELINE_WRAPPER_REQUIRED_GOVERNANCE_HOOK}\n"
             "from kcir_mapping_gate import "
             f"{check_pipeline_wiring.PIPELINE_WRAPPER_REQUIRED_KCIR_MAPPING_HOOK}\n"
+            "\n"
+            "def _hook_invocations(root):\n"
+            f"    {check_pipeline_wiring.PIPELINE_WRAPPER_REQUIRED_GOVERNANCE_HOOK}(root)\n"
+            f"    {check_pipeline_wiring.PIPELINE_WRAPPER_REQUIRED_KCIR_MAPPING_HOOK}(root, strict=False)\n"
         ),
     )
     _write(
@@ -62,6 +66,15 @@ jobs:
             f"{check_pipeline_wiring.PIPELINE_WRAPPER_INSTRUCTION_GOVERNANCE_HOOK}\n"
             "from kcir_mapping_gate import "
             f"{check_pipeline_wiring.PIPELINE_WRAPPER_INSTRUCTION_KCIR_MAPPING_HOOK}\n"
+            "\n"
+            "def _hook_invocations(root, instruction_path, instruction_id):\n"
+            f"    {check_pipeline_wiring.PIPELINE_WRAPPER_INSTRUCTION_GOVERNANCE_HOOK}(root)\n"
+            f"    {check_pipeline_wiring.PIPELINE_WRAPPER_INSTRUCTION_KCIR_MAPPING_HOOK}(\n"
+            "        root,\n"
+            "        instruction_path=instruction_path,\n"
+            "        instruction_id=instruction_id,\n"
+            "        strict=False,\n"
+            "    )\n"
         ),
     )
 
@@ -146,6 +159,57 @@ jobs:
             )
             errors, failure_classes = check_pipeline_wiring.evaluate_pipeline_wiring(root)
             self.assertTrue(any("pipeline_instruction.py: missing kcir mapping gate hook" in err for err in errors))
+            self.assertIn(
+                check_pipeline_wiring._failure_class("kcirMappingGateMissing"),
+                failure_classes,
+            )
+
+    def test_evaluate_pipeline_wiring_ignores_comment_only_hook_mentions(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-wiring-comment-only-") as tmp:
+            root = Path(tmp)
+            _minimal_repo(root)
+            _write(
+                root / "tools/ci/pipeline_required.py",
+                (
+                    "from governance_gate import governance_failure_classes\n"
+                    "from kcir_mapping_gate import evaluate_required_mapping\n"
+                    "# governance_failure_classes(root)\n"
+                    "# evaluate_required_mapping(root, strict=False)\n"
+                ),
+            )
+            errors, failure_classes = check_pipeline_wiring.evaluate_pipeline_wiring(root)
+            self.assertTrue(any("pipeline_required.py: missing governance gate hook" in err for err in errors))
+            self.assertTrue(any("pipeline_required.py: missing kcir mapping gate hook" in err for err in errors))
+            self.assertIn(
+                check_pipeline_wiring._failure_class("governanceGateMissing"),
+                failure_classes,
+            )
+            self.assertIn(
+                check_pipeline_wiring._failure_class("kcirMappingGateMissing"),
+                failure_classes,
+            )
+
+    def test_evaluate_pipeline_wiring_ignores_dead_false_branch_hook_calls(self) -> None:
+        with tempfile.TemporaryDirectory(prefix="premath-pipeline-wiring-dead-false-") as tmp:
+            root = Path(tmp)
+            _minimal_repo(root)
+            _write(
+                root / "tools/ci/pipeline_required.py",
+                (
+                    "from governance_gate import governance_failure_classes\n"
+                    "from kcir_mapping_gate import evaluate_required_mapping\n"
+                    "if False:\n"
+                    "    governance_failure_classes(None)\n"
+                    "    evaluate_required_mapping(None, strict=False)\n"
+                ),
+            )
+            errors, failure_classes = check_pipeline_wiring.evaluate_pipeline_wiring(root)
+            self.assertTrue(any("pipeline_required.py: missing governance gate hook" in err for err in errors))
+            self.assertTrue(any("pipeline_required.py: missing kcir mapping gate hook" in err for err in errors))
+            self.assertIn(
+                check_pipeline_wiring._failure_class("governanceGateMissing"),
+                failure_classes,
+            )
             self.assertIn(
                 check_pipeline_wiring._failure_class("kcirMappingGateMissing"),
                 failure_classes,

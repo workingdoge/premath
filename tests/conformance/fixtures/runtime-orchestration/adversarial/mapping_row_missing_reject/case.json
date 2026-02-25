@@ -89,6 +89,16 @@
             "normalizerId",
             "policyDigest"
           ]
+        },
+        "fiberLifecycleAction": {
+          "sourceKind": "transport.fiber.lifecycle.v1",
+          "targetDomain": "kcir.node",
+          "targetKind": "transport.fiber.lifecycle.witness.v1",
+          "identityFields": [
+            "actionId",
+            "semanticDigest",
+            "policyDigest"
+          ]
         }
       }
     }

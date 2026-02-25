@@ -61,6 +61,20 @@ fn assert_success(output: &Output) {
     }
 }
 
+fn assert_failure(output: &Output) {
+    if output.status.success() {
+        panic!(
+            "command unexpectedly succeeded\nstdout:\n{}\nstderr:\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr),
+        );
+    }
+}
+
+fn stdout_text(output: &Output) -> String {
+    String::from_utf8_lossy(&output.stdout).into_owned()
+}
+
 fn parse_json_stdout(output: &Output) -> Value {
     serde_json::from_slice::<Value>(&output.stdout).unwrap_or_else(|e| {
         panic!(
@@ -85,6 +99,177 @@ fn write_claim_next_issues(path: &Path) {
     ];
     fs::write(path, format!("{}\n", lines.join("\n")))
         .expect("claim-next issues should be written");
+}
+
+fn write_scheme_eval_control_plane_contract(path: &Path) {
+    write_scheme_eval_control_plane_contract_with_claim_next(path, "op/transport.issue_claim_next");
+}
+
+fn write_scheme_eval_control_plane_contract_with_claim_next(
+    path: &Path,
+    claim_next_operation_id: &str,
+) {
+    let payload = serde_json::json!({
+        "schema": 1,
+        "contractKind": "premath.control_plane_contract.v1",
+        "controlPlaneSite": {
+            "profileId": "cp.control.site.v0"
+        },
+        "controlPlaneKcirMappings": {
+            "profileId": "cp.kcir.mapping.v0"
+        },
+        "ciInstructionPolicy": {
+            "policyDigestPrefix": "pol1_"
+        },
+        "hostActionSurface": {
+            "requiredActions": {
+                "issue.ready": {
+                    "operationId": "op/mcp.issue_ready"
+                },
+                "issue.claim_next": {
+                    "operationId": claim_next_operation_id
+                }
+            },
+            "mcpOnlyHostActions": [],
+            "failureClasses": {
+                "bindingMismatch": "control_plane_host_action_binding_mismatch",
+                "contractUnbound": "control_plane_host_action_contract_unbound"
+            }
+        }
+    });
+    fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload).expect("scheme-eval contract should serialize"),
+    )
+    .expect("scheme-eval contract should be written");
+}
+
+fn write_scheme_eval_program(path: &Path, issues_path: &Path) {
+    let payload = serde_json::json!({
+        "schema": 1,
+        "programKind": "premath.scheme_eval.request.v0",
+        "issueId": "bd-scheme",
+        "policyDigest": "pol1_scheme_eval",
+        "instructionRef": "instructions/20260224T000000Z-bd-scheme.json",
+        "capabilityClaims": [
+            "capabilities.change_morphisms",
+            "capabilities.change_morphisms.issue_claim"
+        ],
+        "calls": [
+            {
+                "id": "call-ready",
+                "action": "issue.ready",
+                "args": {
+                    "issuesPath": issues_path.display().to_string()
+                }
+            },
+            {
+                "id": "call-claim-next",
+                "action": "issue.claim_next",
+                "args": {
+                    "assignee": "worker-scheme",
+                    "issuesPath": issues_path.display().to_string()
+                }
+            }
+        ]
+    });
+    fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload).expect("scheme-eval program should serialize"),
+    )
+    .expect("scheme-eval program should be written");
+}
+
+fn write_scheme_eval_denied_program(path: &Path) {
+    let payload = serde_json::json!({
+        "schema": 1,
+        "programKind": "premath.scheme_eval.request.v0",
+        "calls": [
+            {
+                "id": "call-denied",
+                "action": "shell.exec",
+                "args": {
+                    "command": "echo denied"
+                }
+            }
+        ]
+    });
+    fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload).expect("scheme-eval denied program should serialize"),
+    )
+    .expect("scheme-eval denied program should be written");
+}
+
+fn write_scheme_eval_program_with_call_level_metadata(path: &Path, issues_path: &Path) {
+    let payload = serde_json::json!({
+        "schema": 1,
+        "programKind": "premath.scheme_eval.request.v0",
+        "issueId": "bd-program-default",
+        "policyDigest": "pol1_program_default",
+        "instructionRef": "instructions/program-default.json",
+        "capabilityClaims": [
+            "capabilities.change_morphisms"
+        ],
+        "calls": [
+            {
+                "id": "call-ready",
+                "action": "issue.ready",
+                "args": {
+                    "issuesPath": issues_path.display().to_string()
+                }
+            },
+            {
+                "id": "call-claim-next",
+                "action": "issue.claim_next",
+                "args": {
+                    "assignee": "worker-scheme",
+                    "issuesPath": issues_path.display().to_string()
+                },
+                "issueId": "bd-call-override",
+                "policyDigest": "pol1_call_override",
+                "instructionRef": "instructions/call-override.json",
+                "capabilityClaims": [
+                    "capabilities.change_morphisms.issue_claim"
+                ]
+            }
+        ]
+    });
+    fs::write(
+        path,
+        serde_json::to_vec_pretty(&payload)
+            .expect("scheme-eval call-level metadata program should serialize"),
+    )
+    .expect("scheme-eval call-level metadata program should be written");
+}
+
+fn read_jsonl(path: &Path) -> Vec<Value> {
+    fs::read_to_string(path)
+        .expect("jsonl file should be readable")
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .map(|line| serde_json::from_str::<Value>(line).expect("jsonl row should be valid json"))
+        .collect()
+}
+
+#[cfg(feature = "rhai-frontend")]
+fn write_rhai_script(path: &Path, issues_path: &Path) {
+    let ready_args = serde_json::to_string(&serde_json::json!({
+        "issuesPath": issues_path.display().to_string()
+    }))
+    .expect("ready args should serialize");
+    let claim_next_args = serde_json::to_string(&serde_json::json!({
+        "assignee": "worker-scheme",
+        "issuesPath": issues_path.display().to_string()
+    }))
+    .expect("claim-next args should serialize");
+    let script = format!(
+        "host_action(\"issue.ready\", {});\nhost_action(\"issue.claim_next\", {});\n",
+        serde_json::to_string(&ready_args).expect("ready args script string should serialize"),
+        serde_json::to_string(&claim_next_args)
+            .expect("claim-next args script string should serialize")
+    );
+    fs::write(path, script).expect("rhai script should be written");
 }
 
 fn write_tusk_eval_inputs(dir: &Path) -> (PathBuf, PathBuf) {
@@ -416,6 +601,270 @@ fn write_required_gate_ref_input(dir: &Path) -> PathBuf {
     )
     .expect("required gate ref input should be written");
     input_path
+}
+
+fn write_world_registry_check_inputs(dir: &Path) -> (PathBuf, PathBuf) {
+    let registry = serde_json::json!({
+        "schema": 1,
+        "registryKind": "premath.world_registry.v1",
+        "worlds": [{
+            "worldId": "world.kernel.semantic.v1",
+            "role": "semantic_authority",
+            "contextFamilyId": "context.kernel",
+            "definableFamilyId": "definable.kernel",
+            "coverKind": "site_cover",
+            "equalityMode": "strict",
+            "sourceRefs": ["draft/PREMATH-KERNEL"],
+        }],
+        "morphisms": [{
+            "morphismRowId": "wm.kernel.semantic.runtime_gate",
+            "fromWorldId": "world.kernel.semantic.v1",
+            "toWorldId": "world.kernel.semantic.v1",
+            "doctrineMorphisms": ["dm.identity", "dm.profile.execution"],
+            "preservationClaims": [],
+        }],
+        "routeBindings": [{
+            "routeFamilyId": "route.gate_execution",
+            "operationIds": ["op/ci.run_gate"],
+            "worldId": "world.kernel.semantic.v1",
+            "morphismRowId": "wm.kernel.semantic.runtime_gate",
+            "failureClassUnbound": "world_route_unbound",
+        }],
+    });
+    let operations = serde_json::json!({
+        "operations": [{
+            "id": "op/ci.run_gate",
+            "morphisms": ["dm.identity", "dm.profile.execution"],
+        }],
+    });
+
+    let registry_path = dir.join("world-registry.json");
+    fs::write(
+        &registry_path,
+        serde_json::to_vec_pretty(&registry).expect("world registry should serialize"),
+    )
+    .expect("world registry should be written");
+    let operations_path = dir.join("operation-rows.json");
+    fs::write(
+        &operations_path,
+        serde_json::to_vec_pretty(&operations).expect("operation rows should serialize"),
+    )
+    .expect("operation rows should be written");
+    (registry_path, operations_path)
+}
+
+fn write_world_route_site_inputs(dir: &Path) -> (PathBuf, PathBuf) {
+    let site_input = serde_json::json!({
+        "schema": 1,
+        "inputKind": "premath.doctrine_operation_site.input.v1",
+        "worldRouteBindings": {
+            "schema": 1,
+            "bindingKind": "premath.world_route_bindings.v1",
+            "rows": [{
+                "routeFamilyId": "route.gate_execution",
+                "operationIds": ["op/ci.run_gate"],
+                "worldId": "world.kernel.semantic.v1",
+                "morphismRowId": "wm.kernel.semantic.runtime_gate",
+                "requiredMorphisms": ["dm.identity", "dm.profile.execution"],
+                "failureClassUnbound": "world_route_unbound",
+            }],
+        }
+    });
+    let operations = serde_json::json!({
+        "operations": [{
+            "id": "op/ci.run_gate",
+            "morphisms": ["dm.identity", "dm.profile.execution"],
+        }],
+    });
+
+    let site_input_path = dir.join("doctrine-site-input.json");
+    fs::write(
+        &site_input_path,
+        serde_json::to_vec_pretty(&site_input).expect("site input should serialize"),
+    )
+    .expect("site input should be written");
+    let operations_path = dir.join("doctrine-op-registry.json");
+    fs::write(
+        &operations_path,
+        serde_json::to_vec_pretty(&operations).expect("operation registry should serialize"),
+    )
+    .expect("operation registry should be written");
+    (site_input_path, operations_path)
+}
+
+fn write_world_gate_check_inputs(dir: &Path) -> (PathBuf, PathBuf) {
+    let operations = serde_json::json!({
+        "operations": [
+            {
+                "id": "op/ci.run_gate",
+                "morphisms": ["dm.identity", "dm.profile.execution"]
+            },
+            {
+                "id": "op/ci.run_instruction",
+                "morphisms": ["dm.identity", "dm.profile.execution", "dm.commitment.attest"]
+            }
+        ],
+    });
+    let check = serde_json::json!({
+        "kind": "locality",
+        "gammaMask": 3,
+        "a": "op/ci.run_gate",
+        "legs": [1, 2],
+        "tokenPath": null
+    });
+
+    let operations_path = dir.join("world-gate-operations.json");
+    fs::write(
+        &operations_path,
+        serde_json::to_vec_pretty(&operations).expect("world gate operations should serialize"),
+    )
+    .expect("world gate operations should be written");
+    let check_path = dir.join("world-gate-check.json");
+    fs::write(
+        &check_path,
+        serde_json::to_vec_pretty(&check).expect("world gate check should serialize"),
+    )
+    .expect("world gate check should be written");
+    (operations_path, check_path)
+}
+
+fn write_site_resolve_inputs(
+    dir: &Path,
+    operation_id: &str,
+    duplicate_operation_row: bool,
+) -> (PathBuf, PathBuf, PathBuf, PathBuf, PathBuf, PathBuf) {
+    let request = serde_json::json!({
+        "schema": 1,
+        "requestKind": "premath.site_resolve.request.v1",
+        "operationId": operation_id,
+        "claimedCapabilities": ["capabilities.ci_witnesses"],
+        "policyDigest": "pol1_test",
+        "profileId": "cp.bundle.v0",
+        "contextRef": "ctx.main"
+    });
+    let site_input = serde_json::json!({
+        "schema": 1,
+        "inputKind": "premath.doctrine_operation_site.input.v1",
+        "worldRouteBindings": {
+            "schema": 1,
+            "bindingKind": "premath.world_route_bindings.v1",
+            "rows": [{
+                "routeFamilyId": "route.gate_execution",
+                "operationIds": ["op/ci.run_gate"],
+                "worldId": "world.kernel.semantic.v1",
+                "morphismRowId": "wm.kernel.semantic.runtime_gate",
+                "requiredMorphisms": ["dm.identity", "dm.profile.execution"],
+                "failureClassUnbound": "world_route_unbound"
+            }]
+        }
+    });
+    let site = serde_json::json!({
+        "siteId": "premath.doctrine_operation_site.v0",
+        "nodes": [{"id": "raw/PREMATH-CI"}],
+        "covers": [{"id": "cover.ci", "parts": ["raw/CI-TOPOS"]}],
+        "edges": [{"id": "e.ci.op.run_gate"}]
+    });
+    let mut operations = vec![serde_json::json!({
+        "id": "op/ci.run_gate",
+        "edgeId": "e.ci.op.run_gate",
+        "operationClass": "route_bound",
+        "morphisms": ["dm.identity", "dm.profile.execution"],
+        "routeEligibility": {
+            "resolverEligible": true,
+            "worldRouteRequired": true,
+            "routeFamilyId": "route.gate_execution"
+        }
+    })];
+    if duplicate_operation_row {
+        operations.push(serde_json::json!({
+            "id": "op/ci.run_gate",
+            "edgeId": "e.ci.op.run_gate",
+            "operationClass": "route_bound",
+            "morphisms": ["dm.identity", "dm.profile.execution"],
+            "routeEligibility": {
+                "resolverEligible": true,
+                "worldRouteRequired": true,
+                "routeFamilyId": "route.gate_execution"
+            }
+        }));
+    }
+    let op_registry = serde_json::json!({
+        "schema": 1,
+        "registryKind": "premath.doctrine_operation_registry.v1",
+        "parentNodeId": "raw/PREMATH-CI",
+        "coverId": "cover.ci",
+        "operations": operations
+    });
+    let control_plane_contract = serde_json::json!({
+        "controlPlaneBundleProfile": {"profileId": "cp.bundle.v0"},
+        "controlPlaneKcirMappings": {
+            "profileId": "cp.kcir.mapping.v0",
+            "mappingTable": {
+                "doctrineRouteBinding": {
+                    "sourceKind": "doctrine.route.binding.v1",
+                    "targetDomain": "kcir.node",
+                    "targetKind": "doctrine.route.witness.v1",
+                    "identityFields": ["operationId", "siteDigest", "policyDigest"]
+                }
+            }
+        },
+        "ciInstructionPolicy": {
+            "policyDigestPrefix": "pol1_"
+        }
+    });
+    let capability_registry = serde_json::json!({
+        "schema": 1,
+        "registryKind": "premath.capability_registry.v1",
+        "executableCapabilities": ["capabilities.ci_witnesses"]
+    });
+
+    let request_path = dir.join("site-resolve-request.json");
+    fs::write(
+        &request_path,
+        serde_json::to_vec_pretty(&request).expect("request should serialize"),
+    )
+    .expect("site resolve request should be written");
+    let site_input_path = dir.join("site-resolve-input.json");
+    fs::write(
+        &site_input_path,
+        serde_json::to_vec_pretty(&site_input).expect("site input should serialize"),
+    )
+    .expect("site resolve input should be written");
+    let site_path = dir.join("site-resolve-site.json");
+    fs::write(
+        &site_path,
+        serde_json::to_vec_pretty(&site).expect("site should serialize"),
+    )
+    .expect("site should be written");
+    let op_registry_path = dir.join("site-resolve-op-registry.json");
+    fs::write(
+        &op_registry_path,
+        serde_json::to_vec_pretty(&op_registry).expect("op registry should serialize"),
+    )
+    .expect("op registry should be written");
+    let control_plane_path = dir.join("site-resolve-control-plane.json");
+    fs::write(
+        &control_plane_path,
+        serde_json::to_vec_pretty(&control_plane_contract)
+            .expect("control plane contract should serialize"),
+    )
+    .expect("control plane contract should be written");
+    let capability_registry_path = dir.join("site-resolve-capability-registry.json");
+    fs::write(
+        &capability_registry_path,
+        serde_json::to_vec_pretty(&capability_registry)
+            .expect("capability registry should serialize"),
+    )
+    .expect("capability registry should be written");
+
+    (
+        request_path,
+        site_input_path,
+        site_path,
+        op_registry_path,
+        control_plane_path,
+        capability_registry_path,
+    )
 }
 
 fn write_observation_surface(path: &Path) {
@@ -1118,6 +1567,811 @@ fn obligation_registry_json_smoke() {
 }
 
 #[test]
+fn transport_check_json_smoke() {
+    let output = run_premath(["transport-check", "--json"]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["checkKind"],
+        serde_json::json!("premath.transport_check.v1")
+    );
+    assert_eq!(
+        payload["registryKind"],
+        serde_json::json!("premath.transport_action_registry.v1")
+    );
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+    assert_eq!(payload["actionCount"], 8);
+    let actions = payload["actions"]
+        .as_array()
+        .expect("actions should be an array");
+    assert!(
+        actions
+            .iter()
+            .any(|row| row["action"] == "issue.lease_release"
+                && row["actionId"] == "transport.action.issue_lease_release")
+    );
+    assert!(actions.iter().any(|row| row["action"] == "issue.claim_next"
+        && row["actionId"] == "transport.action.issue_claim_next"));
+    assert!(
+        actions.iter().any(|row| row["action"] == "fiber.spawn"
+            && row["actionId"] == "transport.action.fiber_spawn")
+    );
+}
+
+#[test]
+fn transport_dispatch_json_smoke() {
+    let tmp = TempDirGuard::new("transport-dispatch-json");
+    let issues_path = tmp.path().join("issues.jsonl");
+    write_claim_next_issues(&issues_path);
+    let payload = serde_json::json!({
+        "id": "bd-1",
+        "assignee": "worker-transport",
+        "leaseTtlSeconds": 3600,
+        "issuesPath": issues_path.display().to_string()
+    })
+    .to_string();
+
+    let output = run_premath([
+        OsString::from("transport-dispatch"),
+        OsString::from("--action"),
+        OsString::from("issue.claim"),
+        OsString::from("--payload"),
+        OsString::from(payload),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let response = parse_json_stdout(&output);
+    assert_eq!(response["result"], "accepted");
+    assert_eq!(response["action"], "issue.claim");
+    assert_eq!(
+        response["dispatchKind"],
+        serde_json::json!("premath.transport_dispatch.v1")
+    );
+    assert_eq!(
+        response["actionId"],
+        serde_json::json!("transport.action.issue_claim")
+    );
+    assert!(
+        response["semanticDigest"]
+            .as_str()
+            .map(|value| value.starts_with("ts1_"))
+            .unwrap_or(false)
+    );
+}
+
+#[test]
+fn transport_dispatch_unknown_action_json_smoke() {
+    let output = run_premath([
+        OsString::from("transport-dispatch"),
+        OsString::from("--action"),
+        OsString::from("issue.not_supported"),
+        OsString::from("--payload"),
+        OsString::from("{}"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let response = parse_json_stdout(&output);
+    assert_eq!(response["result"], "rejected");
+    assert_eq!(
+        response["failureClasses"],
+        serde_json::json!(["transport_unknown_action"])
+    );
+    assert_eq!(
+        response["actionId"],
+        serde_json::json!("transport.action.unknown")
+    );
+}
+
+#[test]
+fn transport_dispatch_fiber_spawn_json_smoke() {
+    let payload = serde_json::json!({
+        "fiberId": "fib-smoke",
+        "taskRef": "task/review",
+        "scopeRef": "scope/repo"
+    })
+    .to_string();
+
+    let output = run_premath([
+        OsString::from("transport-dispatch"),
+        OsString::from("--action"),
+        OsString::from("fiber.spawn"),
+        OsString::from("--payload"),
+        OsString::from(payload),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let response = parse_json_stdout(&output);
+    assert_eq!(response["result"], "accepted");
+    assert_eq!(response["action"], "fiber.spawn");
+    assert_eq!(response["fiberId"], "fib-smoke");
+    assert_eq!(
+        response["actionId"],
+        serde_json::json!("transport.action.fiber_spawn")
+    );
+    assert_eq!(response["worldBinding"]["worldId"], "world.fiber.v1");
+}
+
+#[test]
+fn scheme_eval_json_smoke() {
+    let tmp = TempDirGuard::new("scheme-eval-json");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract(&contract_path);
+    write_scheme_eval_program(&program_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--step-prefix"),
+        OsString::from("scheme_eval_smoke"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["kind"],
+        serde_json::json!("premath.scheme_eval.result.v0")
+    );
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["executedCallCount"], 2);
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+
+    let effects = payload["effects"]
+        .as_array()
+        .expect("effects should be an array");
+    assert_eq!(effects.len(), 2);
+    assert!(
+        effects
+            .iter()
+            .all(|effect| effect["schema"] == "premath.host_effect.v0")
+    );
+
+    let rows = read_jsonl(&trajectory_path);
+    assert_eq!(rows.len(), 2);
+    assert!(
+        rows.iter()
+            .all(|row| row["stepKind"] == "premath.harness.step.v1")
+    );
+}
+
+#[test]
+fn scheme_eval_cli_metadata_overrides_program_defaults() {
+    let tmp = TempDirGuard::new("scheme-eval-cli-metadata-override");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract(&contract_path);
+    write_scheme_eval_program(&program_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--issue-id"),
+        OsString::from("bd-cli-default"),
+        OsString::from("--policy-digest"),
+        OsString::from("pol1_cli_default"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/cli-default.json"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["effects"][0]["policyDigest"], "pol1_cli_default");
+    assert_eq!(
+        payload["effects"][0]["instructionRef"],
+        "instructions/cli-default.json"
+    );
+    assert_eq!(payload["effects"][1]["policyDigest"], "pol1_cli_default");
+    assert_eq!(
+        payload["effects"][1]["instructionRef"],
+        "instructions/cli-default.json"
+    );
+
+    let rows = read_jsonl(&trajectory_path);
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["issueId"], "bd-cli-default");
+    assert_eq!(rows[1]["issueId"], "bd-cli-default");
+}
+
+#[test]
+fn scheme_eval_call_metadata_has_precedence_over_cli_defaults() {
+    let tmp = TempDirGuard::new("scheme-eval-call-metadata-precedence");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program-call-metadata.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract(&contract_path);
+    write_scheme_eval_program_with_call_level_metadata(&program_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--issue-id"),
+        OsString::from("bd-cli-default"),
+        OsString::from("--policy-digest"),
+        OsString::from("pol1_cli_default"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/cli-default.json"),
+        OsString::from("--capability-claim"),
+        OsString::from("capabilities.change_morphisms"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["result"], "accepted");
+
+    assert_eq!(payload["effects"][0]["policyDigest"], "pol1_cli_default");
+    assert_eq!(
+        payload["effects"][0]["instructionRef"],
+        "instructions/cli-default.json"
+    );
+    assert_eq!(payload["effects"][1]["policyDigest"], "pol1_call_override");
+    assert_eq!(
+        payload["effects"][1]["instructionRef"],
+        "instructions/call-override.json"
+    );
+
+    let rows = read_jsonl(&trajectory_path);
+    assert_eq!(rows.len(), 2);
+    assert_eq!(rows[0]["issueId"], "bd-cli-default");
+    assert_eq!(rows[1]["issueId"], "bd-call-override");
+}
+
+#[test]
+fn scheme_eval_rejects_route_preflight_when_contract_operation_is_unbound() {
+    let tmp = TempDirGuard::new("scheme-eval-route-unbound");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract_with_claim_next(&contract_path, "op/mcp.issue_ready");
+    write_scheme_eval_program(&program_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_failure(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["result"], "rejected");
+    assert!(
+        payload["failureClasses"]
+            .as_array()
+            .expect("failure classes should be an array")
+            .iter()
+            .any(|item| item == "site_resolve_unbound")
+    );
+    assert_eq!(payload["effects"][1]["resultClass"], "site_resolve_unbound");
+}
+
+#[test]
+fn scheme_eval_rejects_route_dispatch_binding_mismatch() {
+    let tmp = TempDirGuard::new("scheme-eval-route-binding-mismatch");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract_with_claim_next(
+        &contract_path,
+        "op/mcp.issue_lease_release",
+    );
+    write_scheme_eval_program(&program_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_failure(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["result"], "rejected");
+    assert!(
+        payload["failureClasses"]
+            .as_array()
+            .expect("failure classes should be an array")
+            .iter()
+            .any(|item| item == "control_plane_host_action_binding_mismatch")
+    );
+    assert_eq!(
+        payload["effects"][1]["resultClass"],
+        "control_plane_host_action_binding_mismatch"
+    );
+}
+
+#[test]
+fn scheme_eval_non_json_route_preflight_failure_prints_actionable_diagnostics() {
+    let tmp = TempDirGuard::new("scheme-eval-route-unbound-text");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract_with_claim_next(&contract_path, "op/mcp.issue_ready");
+    write_scheme_eval_program(&program_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+    ]);
+    assert_failure(&output);
+
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("Result: rejected"));
+    assert!(stdout.contains("Failure class: site_resolve_unbound"));
+    assert!(stdout.contains("Failure stage: route preflight"));
+    assert!(stdout.contains("Failed action: issue.claim_next"));
+    assert!(stdout.contains("Diagnostic: kernel route preflight rejected host action"));
+    assert!(stdout.contains("Hint: rerun with --json for full failure envelope"));
+}
+
+#[test]
+fn scheme_eval_non_json_transport_failure_prints_actionable_diagnostics() {
+    let tmp = TempDirGuard::new("scheme-eval-route-binding-mismatch-text");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract_with_claim_next(
+        &contract_path,
+        "op/mcp.issue_lease_release",
+    );
+    write_scheme_eval_program(&program_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+    ]);
+    assert_failure(&output);
+
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("Result: rejected"));
+    assert!(stdout.contains("Failure class: control_plane_host_action_binding_mismatch"));
+    assert!(stdout.contains("Failure stage: transport dispatch"));
+    assert!(stdout.contains("Failed action: issue.claim_next"));
+    assert!(stdout.contains("Diagnostic: transport resolver witness drift detected"));
+    assert!(stdout.contains("Hint: rerun with --json for full failure envelope"));
+}
+
+#[test]
+fn scheme_eval_denies_direct_effects_by_default() {
+    let tmp = TempDirGuard::new("scheme-eval-denied");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program-denied.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_scheme_eval_control_plane_contract(&contract_path);
+    write_scheme_eval_denied_program(&program_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_failure(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["result"], "rejected");
+    assert_eq!(
+        payload["failureClasses"],
+        serde_json::json!(["scheme_eval.effect_denied"])
+    );
+    assert_eq!(payload["executedCallCount"], 1);
+    assert_eq!(
+        payload["effects"][0]["failureClasses"],
+        serde_json::json!(["scheme_eval.effect_denied"])
+    );
+
+    let rows = read_jsonl(&trajectory_path);
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["resultClass"], "scheme_eval.effect_denied");
+}
+
+#[test]
+fn scheme_eval_non_json_policy_failure_prints_actionable_diagnostics() {
+    let tmp = TempDirGuard::new("scheme-eval-denied-text");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program-denied.json");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_scheme_eval_control_plane_contract(&contract_path);
+    write_scheme_eval_denied_program(&program_path);
+
+    let output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+    ]);
+    assert_failure(&output);
+
+    let stdout = stdout_text(&output);
+    assert!(stdout.contains("Result: rejected"));
+    assert!(stdout.contains("Failure class: scheme_eval.effect_denied"));
+    assert!(stdout.contains("Failure stage: policy/capability"));
+    assert!(stdout.contains("Failed action: shell.exec"));
+    assert!(stdout.contains("Diagnostic: direct effect denied in evaluator profile: shell.exec"));
+    assert!(stdout.contains("Hint: rerun with --json for full failure envelope"));
+}
+
+#[cfg(feature = "rhai-frontend")]
+#[test]
+fn rhai_eval_json_smoke() {
+    let tmp = TempDirGuard::new("rhai-eval-json");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let script_path = tmp.path().join("program.rhai");
+    let trajectory_path = tmp.path().join("harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract(&contract_path);
+    write_rhai_script(&script_path, &issues_path);
+
+    let output = run_premath([
+        OsString::from("rhai-eval"),
+        OsString::from("--script"),
+        script_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--policy-digest"),
+        OsString::from("pol1_scheme_eval"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/20260224T000000Z-bd-scheme.json"),
+        OsString::from("--issue-id"),
+        OsString::from("bd-rhai"),
+        OsString::from("--capability-claim"),
+        OsString::from("capabilities.change_morphisms"),
+        OsString::from("--capability-claim"),
+        OsString::from("capabilities.change_morphisms.issue_claim"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(payload["kind"], "premath.rhai_eval.result.v0");
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["executedCallCount"], 2);
+    assert_eq!(payload["effects"][0]["policyDigest"], "pol1_scheme_eval");
+    assert_eq!(
+        payload["effects"][0]["instructionRef"],
+        "instructions/20260224T000000Z-bd-scheme.json"
+    );
+    assert_eq!(payload["effects"][1]["policyDigest"], "pol1_scheme_eval");
+    assert_eq!(
+        payload["effects"][1]["instructionRef"],
+        "instructions/20260224T000000Z-bd-scheme.json"
+    );
+
+    let rows = read_jsonl(&trajectory_path);
+    assert_eq!(rows.len(), 2);
+    assert!(
+        rows.iter()
+            .all(|row| row["stepKind"] == "premath.harness.step.v1")
+    );
+    assert!(rows.iter().all(|row| row["issueId"] == "bd-rhai"));
+}
+
+#[cfg(feature = "rhai-frontend")]
+#[test]
+fn rhai_eval_preserves_failure_and_witness_parity_with_scheme_eval() {
+    let tmp = TempDirGuard::new("rhai-scheme-parity");
+    let issues_path = tmp.path().join("issues.jsonl");
+    let contract_path = tmp.path().join("control-plane-contract.json");
+    let program_path = tmp.path().join("program.json");
+    let script_path = tmp.path().join("program.rhai");
+    let scheme_trajectory_path = tmp.path().join("scheme-harness-trajectory.jsonl");
+    let rhai_trajectory_path = tmp.path().join("rhai-harness-trajectory.jsonl");
+    write_claim_next_issues(&issues_path);
+    write_scheme_eval_control_plane_contract(&contract_path);
+    write_scheme_eval_program(&program_path, &issues_path);
+    write_rhai_script(&script_path, &issues_path);
+
+    let scheme_output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        program_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        scheme_trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&scheme_output);
+    let scheme_payload = parse_json_stdout(&scheme_output);
+
+    let rhai_output = run_premath([
+        OsString::from("rhai-eval"),
+        OsString::from("--script"),
+        script_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        contract_path.as_os_str().to_os_string(),
+        OsString::from("--trajectory-path"),
+        rhai_trajectory_path.as_os_str().to_os_string(),
+        OsString::from("--policy-digest"),
+        OsString::from("pol1_scheme_eval"),
+        OsString::from("--instruction-ref"),
+        OsString::from("instructions/20260224T000000Z-bd-scheme.json"),
+        OsString::from("--capability-claim"),
+        OsString::from("capabilities.change_morphisms"),
+        OsString::from("--capability-claim"),
+        OsString::from("capabilities.change_morphisms.issue_claim"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&rhai_output);
+    let rhai_payload = parse_json_stdout(&rhai_output);
+
+    let scheme_effects = scheme_payload["effects"]
+        .as_array()
+        .expect("scheme effects should be an array");
+    let rhai_effects = rhai_payload["effects"]
+        .as_array()
+        .expect("rhai effects should be an array");
+    assert_eq!(scheme_effects.len(), rhai_effects.len());
+
+    for (scheme_effect, rhai_effect) in scheme_effects.iter().zip(rhai_effects.iter()) {
+        assert_eq!(
+            scheme_effect["failureClasses"],
+            rhai_effect["failureClasses"]
+        );
+        assert_eq!(scheme_effect["witnessRefs"], rhai_effect["witnessRefs"]);
+        assert_eq!(scheme_effect["policyDigest"], rhai_effect["policyDigest"]);
+        assert_eq!(
+            scheme_effect["instructionRef"],
+            rhai_effect["instructionRef"]
+        );
+    }
+}
+
+#[test]
+fn world_registry_check_json_smoke() {
+    let tmp = TempDirGuard::new("world-registry-check-json");
+    let (registry_path, operations_path) = write_world_registry_check_inputs(tmp.path());
+
+    let output = run_premath([
+        OsString::from("world-registry-check"),
+        OsString::from("--registry"),
+        registry_path.as_os_str().to_os_string(),
+        OsString::from("--operations"),
+        operations_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["checkKind"],
+        serde_json::json!("premath.world_registry_check.v1")
+    );
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+}
+
+#[test]
+fn world_registry_check_site_input_json_smoke() {
+    let tmp = TempDirGuard::new("world-registry-check-site-input-json");
+    let (site_input_path, operations_path) = write_world_route_site_inputs(tmp.path());
+
+    let output = run_premath([
+        OsString::from("world-registry-check"),
+        OsString::from("--site-input"),
+        site_input_path.as_os_str().to_os_string(),
+        OsString::from("--operations"),
+        operations_path.as_os_str().to_os_string(),
+        OsString::from("--required-route-family"),
+        OsString::from("route.gate_execution"),
+        OsString::from("--required-route-binding"),
+        OsString::from("route.gate_execution=op/ci.run_gate"),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["checkKind"],
+        serde_json::json!("premath.world_registry_check.v1")
+    );
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+    let required_bindings = payload["requiredRouteBindings"]
+        .as_array()
+        .expect("requiredRouteBindings should be an array");
+    assert_eq!(required_bindings.len(), 1);
+    assert_eq!(
+        required_bindings[0]["routeFamilyId"],
+        "route.gate_execution"
+    );
+    assert_eq!(
+        required_bindings[0]["operationIds"],
+        serde_json::json!(["op/ci.run_gate"])
+    );
+    let rows = payload["worldRouteBindings"]
+        .as_array()
+        .expect("worldRouteBindings should be an array");
+    assert_eq!(rows.len(), 1);
+    assert_eq!(rows[0]["routeFamilyId"], "route.gate_execution");
+    assert_eq!(rows[0]["status"], "ok");
+}
+
+#[test]
+fn site_resolve_json_smoke() {
+    let tmp = TempDirGuard::new("site-resolve-json");
+    let (
+        request_path,
+        site_input_path,
+        site_path,
+        op_registry_path,
+        control_plane_path,
+        capability_registry_path,
+    ) = write_site_resolve_inputs(tmp.path(), "op/ci.run_gate", false);
+
+    let output = run_premath([
+        OsString::from("site-resolve"),
+        OsString::from("--request"),
+        request_path.as_os_str().to_os_string(),
+        OsString::from("--doctrine-site-input"),
+        site_input_path.as_os_str().to_os_string(),
+        OsString::from("--doctrine-site"),
+        site_path.as_os_str().to_os_string(),
+        OsString::from("--doctrine-op-registry"),
+        op_registry_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        control_plane_path.as_os_str().to_os_string(),
+        OsString::from("--capability-registry"),
+        capability_registry_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["responseKind"],
+        serde_json::json!("premath.site_resolve.response.v1")
+    );
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+    assert_eq!(payload["selected"]["operationId"], "op/ci.run_gate");
+    assert_eq!(
+        payload["projection"]["projectionKind"],
+        serde_json::json!("premath.site_resolve.projection.v1")
+    );
+}
+
+#[test]
+fn site_resolve_rejects_ambiguous_candidates() {
+    let tmp = TempDirGuard::new("site-resolve-ambiguous");
+    let (
+        request_path,
+        site_input_path,
+        site_path,
+        op_registry_path,
+        control_plane_path,
+        capability_registry_path,
+    ) = write_site_resolve_inputs(tmp.path(), "op/ci.run_gate", true);
+
+    let output = run_premath([
+        OsString::from("site-resolve"),
+        OsString::from("--request"),
+        request_path.as_os_str().to_os_string(),
+        OsString::from("--doctrine-site-input"),
+        site_input_path.as_os_str().to_os_string(),
+        OsString::from("--doctrine-site"),
+        site_path.as_os_str().to_os_string(),
+        OsString::from("--doctrine-op-registry"),
+        op_registry_path.as_os_str().to_os_string(),
+        OsString::from("--control-plane-contract"),
+        control_plane_path.as_os_str().to_os_string(),
+        OsString::from("--capability-registry"),
+        capability_registry_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert!(
+        !output.status.success(),
+        "expected site-resolve ambiguity rejection, stdout:\n{}\nstderr:\n{}",
+        String::from_utf8_lossy(&output.stdout),
+        String::from_utf8_lossy(&output.stderr)
+    );
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["result"], "rejected");
+    assert_eq!(
+        payload["failureClasses"],
+        serde_json::json!(["site_resolve_ambiguous"])
+    );
+}
+
+#[test]
+fn world_gate_check_json_smoke() {
+    let tmp = TempDirGuard::new("world-gate-check-json");
+    let (operations_path, check_path) = write_world_gate_check_inputs(tmp.path());
+
+    let output = run_premath([
+        OsString::from("world-gate-check"),
+        OsString::from("--operations"),
+        operations_path.as_os_str().to_os_string(),
+        OsString::from("--check"),
+        check_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["checkKind"],
+        serde_json::json!("premath.world_gate_check.v1")
+    );
+    assert_eq!(payload["result"]["result"], "accepted");
+}
+
+#[test]
 fn init_text_smoke() {
     let tmp = TempDirGuard::new("init");
     let repo_root = tmp.path().join("repo");
@@ -1130,6 +2384,113 @@ fn init_text_smoke() {
     assert!(stdout.contains("premath dir:"));
     assert!(stdout.contains("issues path:"));
     assert!(repo_root.join(".premath/issues.jsonl").exists());
+}
+
+#[test]
+fn init_json_smoke() {
+    let tmp = TempDirGuard::new("init-json");
+    let repo_root = tmp.path().join("repo");
+
+    let output = run_premath([
+        OsString::from("init"),
+        repo_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["action"], "init");
+    assert_eq!(
+        payload["repoRoot"],
+        serde_json::json!(repo_root.display().to_string())
+    );
+    assert_eq!(
+        payload["premathDir"],
+        serde_json::json!(repo_root.join(".premath").display().to_string())
+    );
+    assert_eq!(
+        payload["issuesPath"],
+        serde_json::json!(
+            repo_root
+                .join(".premath/issues.jsonl")
+                .display()
+                .to_string()
+        )
+    );
+    assert_eq!(payload["created"]["issuesFile"], true);
+    assert!(repo_root.join(".premath/issues.jsonl").exists());
+}
+
+#[test]
+fn evaluator_scaffold_json_smoke() {
+    let tmp = TempDirGuard::new("evaluator-scaffold-json");
+    let scaffold_root = tmp.path().join("scaffold");
+
+    let output = run_premath([
+        OsString::from("evaluator-scaffold"),
+        OsString::from("--path"),
+        scaffold_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["action"], "evaluator.scaffold");
+    assert_eq!(
+        payload["root"],
+        serde_json::json!(scaffold_root.display().to_string())
+    );
+    assert_eq!(payload["created"]["issuesFile"], true);
+    assert_eq!(payload["created"]["contractFile"], true);
+    assert_eq!(payload["created"]["schemeProgramFile"], true);
+    assert_eq!(payload["created"]["rhaiScriptFile"], true);
+    assert_eq!(payload["created"]["trajectoryFile"], true);
+
+    assert!(scaffold_root.join("issues.jsonl").exists());
+    assert!(scaffold_root.join("control-plane-contract.json").exists());
+    assert!(scaffold_root.join("scheme-program.json").exists());
+    assert!(scaffold_root.join("program.rhai").exists());
+    assert!(scaffold_root.join("harness-trajectory.jsonl").exists());
+}
+
+#[test]
+fn evaluator_scaffold_generated_scheme_program_is_runnable() {
+    let tmp = TempDirGuard::new("evaluator-scaffold-runnable");
+    let scaffold_root = tmp.path().join("scaffold");
+
+    let scaffold_output = run_premath([
+        OsString::from("evaluator-scaffold"),
+        OsString::from("--path"),
+        scaffold_root.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&scaffold_output);
+
+    let run_output = run_premath([
+        OsString::from("scheme-eval"),
+        OsString::from("--program"),
+        scaffold_root
+            .join("scheme-program.json")
+            .as_os_str()
+            .to_os_string(),
+        OsString::from("--control-plane-contract"),
+        scaffold_root
+            .join("control-plane-contract.json")
+            .as_os_str()
+            .to_os_string(),
+        OsString::from("--trajectory-path"),
+        scaffold_root
+            .join("harness-trajectory.jsonl")
+            .as_os_str()
+            .to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&run_output);
+
+    let payload = parse_json_stdout(&run_output);
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["executedCallCount"], 1);
+    assert_eq!(payload["effects"][0]["action"], "issue.ready");
 }
 
 #[test]
