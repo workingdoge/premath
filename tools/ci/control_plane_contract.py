@@ -84,6 +84,52 @@ _WORKER_FAILURE_CLASSES = (
     "worker_lane_mutation_mode_drift",
     "worker_lane_route_unbound",
 )
+_WORLD_DESCENT_CONTRACT_ID = "doctrine.world_descent.v1"
+_WORLD_DESCENT_REQUIRED_FAILURE_CLASS_KEYS = (
+    "identityMissing",
+    "descentDataMissing",
+    "kcirHandoffIdentityMissing",
+)
+_WORLD_DESCENT_DEFAULT_REQUIRED_ROUTE_FAMILIES = (
+    "route.gate_execution",
+    "route.instruction_execution",
+    "route.required_decision_attestation",
+    "route.fiber.lifecycle",
+    "route.issue_claim_lease",
+    "route.session_projection",
+    "route.transport.dispatch",
+)
+_WORLD_DESCENT_DEFAULT_REQUIRED_ACTION_ROUTE_BINDINGS = {
+    "route.instruction_execution": (
+        "instruction.run",
+    ),
+    "route.required_decision_attestation": (
+        "required.witness_verify",
+        "required.witness_decide",
+    ),
+    "route.fiber.lifecycle": (
+        "fiber.spawn",
+        "fiber.join",
+        "fiber.cancel",
+    ),
+    "route.issue_claim_lease": (
+        "issue.claim_next",
+        "issue.claim",
+        "issue.lease_renew",
+        "issue.lease_release",
+        "issue.discover",
+    ),
+}
+_WORLD_DESCENT_DEFAULT_REQUIRED_STATIC_OPERATION_BINDINGS = {
+    "route.transport.dispatch": (
+        "op/transport.world_route_binding",
+    ),
+}
+_WORLD_DESCENT_DEFAULT_FAILURE_CLASSES = {
+    "identityMissing": "world_route_identity_missing",
+    "descentDataMissing": "world_descent_data_missing",
+    "kcirHandoffIdentityMissing": "kcir_handoff_identity_missing",
+}
 _REQUIRED_RUNTIME_ROUTE_FAILURE_CLASS_KEYS = (
     "missingRoute",
     "morphismDrift",
@@ -1188,6 +1234,177 @@ def _validate_runtime_route_bindings(
     }
 
 
+def _validate_world_descent_contract(
+    payload: Any, *, doctrine_operation_ids: frozenset[str]
+) -> Dict[str, Any]:
+    world_descent = _require_object(payload, "worldDescentContract")
+    contract_id = _require_non_empty_string(
+        world_descent.get("contractId"),
+        "worldDescentContract.contractId",
+    )
+    if contract_id != _WORLD_DESCENT_CONTRACT_ID:
+        raise ValueError(
+            "worldDescentContract.contractId must resolve to canonical "
+            f"{_WORLD_DESCENT_CONTRACT_ID!r}"
+        )
+
+    required_route_families = tuple(
+        sorted(
+            _require_string_list(
+                world_descent.get("requiredRouteFamilies"),
+                "worldDescentContract.requiredRouteFamilies",
+            )
+        )
+    )
+    if set(required_route_families) != set(_WORLD_DESCENT_DEFAULT_REQUIRED_ROUTE_FAMILIES):
+        raise ValueError(
+            "worldDescentContract.requiredRouteFamilies must match canonical set"
+        )
+
+    required_action_bindings = _require_object(
+        world_descent.get("requiredActionRouteBindings"),
+        "worldDescentContract.requiredActionRouteBindings",
+    )
+    parsed_action_bindings: Dict[str, Tuple[str, ...]] = {}
+    for route_family in sorted(required_action_bindings):
+        route_family_id = _require_non_empty_string(
+            route_family, "worldDescentContract.requiredActionRouteBindings.<routeFamilyId>"
+        )
+        if route_family_id not in required_route_families:
+            raise ValueError(
+                "worldDescentContract.requiredActionRouteBindings."
+                f"{route_family_id} must reference requiredRouteFamilies"
+            )
+        host_actions = tuple(
+            sorted(
+                _require_string_list(
+                    required_action_bindings.get(route_family),
+                    "worldDescentContract.requiredActionRouteBindings."
+                    f"{route_family_id}",
+                )
+            )
+        )
+        for host_action_id in host_actions:
+            if not _HOST_ACTION_ID_RE.match(host_action_id):
+                raise ValueError(
+                    "worldDescentContract.requiredActionRouteBindings."
+                    f"{route_family_id} contains invalid host action id: {host_action_id!r}"
+                )
+        parsed_action_bindings[route_family_id] = host_actions
+
+    expected_action_bindings = {
+        route_family: tuple(sorted(host_actions))
+        for route_family, host_actions in _WORLD_DESCENT_DEFAULT_REQUIRED_ACTION_ROUTE_BINDINGS.items()
+    }
+    if set(parsed_action_bindings) != set(expected_action_bindings):
+        raise ValueError(
+            "worldDescentContract.requiredActionRouteBindings must match canonical route-family keys"
+        )
+    for route_family_id, expected_actions in expected_action_bindings.items():
+        if parsed_action_bindings.get(route_family_id, tuple()) != expected_actions:
+            raise ValueError(
+                "worldDescentContract.requiredActionRouteBindings."
+                f"{route_family_id} must match canonical host-action bindings"
+            )
+
+    required_static_bindings = _require_object(
+        world_descent.get("requiredStaticOperationBindings"),
+        "worldDescentContract.requiredStaticOperationBindings",
+    )
+    parsed_static_bindings: Dict[str, Tuple[str, ...]] = {}
+    for route_family in sorted(required_static_bindings):
+        route_family_id = _require_non_empty_string(
+            route_family, "worldDescentContract.requiredStaticOperationBindings.<routeFamilyId>"
+        )
+        if route_family_id not in required_route_families:
+            raise ValueError(
+                "worldDescentContract.requiredStaticOperationBindings."
+                f"{route_family_id} must reference requiredRouteFamilies"
+            )
+        operation_ids = tuple(
+            sorted(
+                _require_string_list(
+                    required_static_bindings.get(route_family),
+                    "worldDescentContract.requiredStaticOperationBindings."
+                    f"{route_family_id}",
+                )
+            )
+        )
+        for operation_id in operation_ids:
+            if not _HOST_ACTION_OPERATION_ID_RE.match(operation_id):
+                raise ValueError(
+                    "worldDescentContract.requiredStaticOperationBindings."
+                    f"{route_family_id} contains invalid operationId: {operation_id!r}"
+                )
+            if operation_id not in doctrine_operation_ids:
+                raise ValueError(
+                    "worldDescentContract.requiredStaticOperationBindings."
+                    f"{route_family_id} operationId must exist in doctrine op registry: {operation_id!r}"
+                )
+        parsed_static_bindings[route_family_id] = operation_ids
+
+    expected_static_bindings = {
+        route_family: tuple(sorted(operation_ids))
+        for route_family, operation_ids in _WORLD_DESCENT_DEFAULT_REQUIRED_STATIC_OPERATION_BINDINGS.items()
+    }
+    if set(parsed_static_bindings) != set(expected_static_bindings):
+        raise ValueError(
+            "worldDescentContract.requiredStaticOperationBindings must match canonical route-family keys"
+        )
+    for route_family_id, expected_operation_ids in expected_static_bindings.items():
+        if parsed_static_bindings.get(route_family_id, tuple()) != expected_operation_ids:
+            raise ValueError(
+                "worldDescentContract.requiredStaticOperationBindings."
+                f"{route_family_id} must match canonical operation bindings"
+            )
+
+    failure_classes = _require_object(
+        world_descent.get("failureClasses"),
+        "worldDescentContract.failureClasses",
+    )
+    missing_failure_class_keys = sorted(
+        set(_WORLD_DESCENT_REQUIRED_FAILURE_CLASS_KEYS) - set(failure_classes)
+    )
+    if missing_failure_class_keys:
+        raise ValueError(
+            "worldDescentContract.failureClasses missing required keys: "
+            + ", ".join(missing_failure_class_keys)
+        )
+    unknown_failure_class_keys = sorted(
+        set(failure_classes) - set(_WORLD_DESCENT_REQUIRED_FAILURE_CLASS_KEYS)
+    )
+    if unknown_failure_class_keys:
+        raise ValueError(
+            "worldDescentContract.failureClasses includes unknown keys: "
+            + ", ".join(unknown_failure_class_keys)
+        )
+    parsed_failure_classes = {
+        key: _require_non_empty_string(
+            failure_classes.get(key),
+            f"worldDescentContract.failureClasses.{key}",
+        )
+        for key in _WORLD_DESCENT_REQUIRED_FAILURE_CLASS_KEYS
+    }
+    if parsed_failure_classes != _WORLD_DESCENT_DEFAULT_FAILURE_CLASSES:
+        raise ValueError(
+            "worldDescentContract.failureClasses must map to canonical world-descent classes"
+        )
+
+    return {
+        "contractId": contract_id,
+        "requiredRouteFamilies": list(required_route_families),
+        "requiredActionRouteBindings": {
+            route_family: list(parsed_action_bindings[route_family])
+            for route_family in sorted(parsed_action_bindings)
+        },
+        "requiredStaticOperationBindings": {
+            route_family: list(parsed_static_bindings[route_family])
+            for route_family in sorted(parsed_static_bindings)
+        },
+        "failureClasses": parsed_failure_classes,
+    }
+
+
 def _validate_command_surface(payload: Any) -> Dict[str, Any]:
     command_surface = _require_object(payload, "commandSurface")
     missing_surface_ids = sorted(
@@ -2019,6 +2236,10 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         root.get("workerLaneAuthority"),
         active_epoch=active_epoch,
     )
+    world_descent_contract = _validate_world_descent_contract(
+        root.get("worldDescentContract"),
+        doctrine_operation_ids=doctrine_operation_ids,
+    )
     runtime_route_bindings = _validate_runtime_route_bindings(
         root.get("runtimeRouteBindings"),
         doctrine_operation_ids=doctrine_operation_ids,
@@ -2194,6 +2415,7 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         },
         "laneFailureClasses": lane_failure_classes,
         "workerLaneAuthority": worker_lane_authority,
+        "worldDescentContract": world_descent_contract,
         "runtimeRouteBindings": runtime_route_bindings,
         "commandSurface": command_surface,
         "pipelineWrapperSurface": pipeline_wrapper_surface,
@@ -2342,6 +2564,31 @@ WORKER_LANE_FAILURE_CLASSES: Tuple[str, ...] = tuple(
     .get("failureClasses", {})
     .get(key, "")
     for key in ("policyDrift", "mutationModeDrift", "routeUnbound")
+)
+WORLD_DESCENT_CONTRACT: Dict[str, Any] = dict(
+    _CONTRACT.get("worldDescentContract", {})
+)
+WORLD_DESCENT_CONTRACT_ID: str = WORLD_DESCENT_CONTRACT.get("contractId", "")
+WORLD_DESCENT_REQUIRED_ROUTE_FAMILIES: Tuple[str, ...] = tuple(
+    WORLD_DESCENT_CONTRACT.get("requiredRouteFamilies", ())
+)
+WORLD_DESCENT_REQUIRED_ACTION_ROUTE_BINDINGS: Dict[str, Tuple[str, ...]] = {
+    route_family: tuple(host_actions)
+    for route_family, host_actions in WORLD_DESCENT_CONTRACT.get(
+        "requiredActionRouteBindings", {}
+    ).items()
+    if isinstance(host_actions, list)
+}
+WORLD_DESCENT_REQUIRED_STATIC_OPERATION_BINDINGS: Dict[str, Tuple[str, ...]] = {
+    route_family: tuple(operation_ids)
+    for route_family, operation_ids in WORLD_DESCENT_CONTRACT.get(
+        "requiredStaticOperationBindings", {}
+    ).items()
+    if isinstance(operation_ids, list)
+}
+WORLD_DESCENT_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    WORLD_DESCENT_CONTRACT.get("failureClasses", {}).get(key, "")
+    for key in _WORLD_DESCENT_REQUIRED_FAILURE_CLASS_KEYS
 )
 RUNTIME_ROUTE_BINDINGS: Dict[str, Dict[str, Any]] = {
     route_id: {

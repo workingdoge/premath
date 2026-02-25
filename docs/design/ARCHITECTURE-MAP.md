@@ -31,6 +31,47 @@ Generated newcomer index:
 - `docs/design/generated/DOCTRINE-SITE-INVENTORY.md`
   (site -> operations -> route families -> world bindings -> command surfaces).
 
+## 0.1 World Descent Authority Contract (WDAC-1)
+
+This is the architecture-level contract for world descent. It is execution
+policy, not a second semantic authority.
+
+Lane ownership:
+
+| Lane | Authority Surface | Ownership |
+| --- | --- | --- |
+| semantic lane | `PREMATH-KERNEL`, `GATE`, `BIDIR-DESCENT` | admissibility law and gate verdicts |
+| constructor lane | `WORLD-REGISTRY`, `SITE-RESOLVE` | route/world/morphism selection and constructor binding |
+| check-role lane | `PREMATH-COHERENCE` | parity/discharge over declared contract surfaces |
+| wrapper lane | `tools/ci/*`, `tools/conformance/*`, frontend adapters | transport, orchestration, replay/parity only |
+
+No-parallel-authority constraints:
+
+1. Wrapper lanes MUST NOT synthesize semantic accept/reject classes for route
+   admissibility.
+2. Wrapper lanes MUST consume core route decisions from `premath site-resolve`
+   and `premath world-registry-check` (or equivalent kernel-backed API).
+3. Missing/ambiguous/unbound constructor or route material MUST fail closed
+   through canonical authority classes; wrappers may only pass through those
+   classes.
+
+Execution-order contract (for non-trivial world-descent epics):
+
+1. architecture contract,
+2. spec/index + doctrine glue,
+3. control-plane parity wiring,
+4. implementation,
+5. conformance vectors,
+6. docs/traceability closure.
+
+Spec chain anchors:
+
+- `specs/premath/draft/SPEC-INDEX.md` §0.4 (world self-hosting boundary map),
+- `specs/premath/draft/WORLD-REGISTRY.md` (constructor + route/world contract),
+- `specs/premath/draft/SITE-RESOLVE.md` (deterministic resolver contract),
+- `specs/premath/draft/PREMATH-COHERENCE.md` (check-role authority),
+- `specs/premath/draft/UNIFICATION-DOCTRINE.md` §12 (descent operationalization).
+
 ## 1. Layer Stack
 
 `Doctrine` (what must be preserved):

@@ -60,7 +60,7 @@ Current phase (as of 2026-02-25):
 
 Active epic IDs:
 
-- none currently open/in-progress.
+- `bd-364`: World Descent: Route Every Site Through Kernel.
 
 Recently closed epic IDs:
 
@@ -101,7 +101,9 @@ non-authority wrappers:
    (`premath.world_grothendieck_constructor.v1`) for route-to-world binding
    decisions, with route-input material sourced from
    `draft/DOCTRINE-SITE-INPUT.json` world-route bindings and profile bindings in
-   `draft/CONTROL-PLANE-CONTRACT.json`.
+   `draft/CONTROL-PLANE-CONTRACT.json`; this lane is contract-bound by
+   `doctrine.world_descent.v1` (`draft/DOCTRINE-INF` §10) and instantiated by
+   `draft/DOCTRINE-SITE` + `draft/SITE-RESOLVE`.
 3. Check-role authority: `draft/PREMATH-COHERENCE` for deterministic parity and
    obligation discharge over declared control-plane surfaces.
 4. Wrapper/transport lane: CLI/CI wrappers, fixture runners, and adapter
@@ -112,6 +114,9 @@ Failure-class ownership is lane-local by authority surface:
 
 - kernel/gate families: semantic admissibility only,
 - constructor families: route missing, route ambiguity, binding unbound,
+- world-descent boundary classes:
+  `world_route_identity_missing`, `world_descent_data_missing`,
+  `kcir_handoff_identity_missing`,
 - coherence families: `coherence.*` parity/obligation failures,
 - wrappers: pass-through only; no independent semantic class authority.
 

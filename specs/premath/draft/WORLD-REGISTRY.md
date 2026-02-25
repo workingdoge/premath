@@ -50,7 +50,7 @@ declared and bound.
 
 ## 2. Canonical registry object
 
-Implementations SHOULD expose one deterministic `WorldRegistry` object:
+Implementations MUST expose one deterministic `WorldRegistry` object:
 
 ```text
 WorldRegistry {
@@ -122,7 +122,7 @@ Rules:
 
 ### 2.4 Kernel execution contract (K0)
 
-World registry rows are not docs-only metadata. Implementations SHOULD expose a
+World registry rows are not docs-only metadata. Implementations MUST expose a
 kernel-backed execution interface that all CLI/coherence/adapter paths consume.
 
 Canonical interface shape:
@@ -160,7 +160,7 @@ Rules:
 
 ### 2.5 Explicit Grothendieck constructor object (GC0)
 
-Implementations SHOULD expose one deterministic constructor object per active
+Implementations MUST expose one deterministic constructor object per active
 world profile:
 
 ```text
@@ -256,6 +256,23 @@ Rules:
   MUST preserve class identity and ordering semantics.
 - boundary ownership drift between constructor/coherence/wrapper lanes MUST
   reject fail closed.
+
+### 2.7 World-descent contract binding (WDC-1)
+
+This spec is the constructor/route-world authority surface for
+`doctrine.world_descent.v1` (`draft/DOCTRINE-INF` §10).
+
+Binding requirements:
+
+- world-route rows consumed by resolver/checker lanes MUST be total against
+  doctrine-site route inputs (`draft/DOCTRINE-SITE` §3.5),
+- route/world/morphism decisions MUST remain aligned with resolver projection
+  and KCIR handoff requirements (`draft/SITE-RESOLVE` §6),
+- missing route identity material (`worldId`, `morphismRowId`,
+  `requiredMorphisms`) MUST reject fail closed as
+  `world_route_identity_missing`,
+- missing required descent/construction material for route-world admissibility
+  MUST reject fail closed as `world_descent_data_missing`.
 
 ## 3. Required worldization rows (bundle v0)
 
@@ -359,7 +376,10 @@ A worldized route contract MUST reject when any of the following holds:
 - constructor derivation is missing for an active profile,
 - constructor derivation is ambiguous (multiple inequivalent constructors), or
 - constructor route/evidence bindings are unbound under declared deterministic
-  binding material.
+  binding material,
+- route/world identity material required by `doctrine.world_descent.v1` is
+  missing, or
+- required constructor/descent material for admissibility is missing.
 
 ## 8. Conformance and traceability
 

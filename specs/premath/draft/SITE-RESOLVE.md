@@ -38,6 +38,10 @@ operation-to-world routing through one authority path:
 
 `DOCTRINE-INF -> DOCTRINE-SITE -> WORLD-REGISTRY -> KCIR handoff`.
 
+This contract instantiates `doctrine.world_descent.v1` from
+`draft/DOCTRINE-INF` §10 for deterministic site-route selection and KCIR
+handoff identity closure.
+
 Purpose:
 
 - define one canonical `SitePackage` projection shape used by resolvers,
@@ -180,11 +184,14 @@ Resolver implementations MUST execute this order exactly:
 
 - remaining rows MUST be validated against world-route semantics from
   `draft/WORLD-REGISTRY` and `worldRouteBindings`.
-- implementations SHOULD execute this through the canonical command lane
+- world-route validation in this contract is the resolver-side realization of
+  `doctrine.world_descent.v1` (`draft/DOCTRINE-INF` §10).
+- implementations MUST execute this through the canonical command lane
   (`premath world-registry-check`) or equivalent kernel-backed API.
 - rows failing world validation MUST reject with canonical world classes (for
   example `world_route_unbound`, `world_route_unknown_world`,
-  `world_route_unknown_morphism`, `world_route_morphism_drift`).
+  `world_route_unknown_morphism`, `world_route_morphism_drift`,
+  `world_route_identity_missing`, `world_descent_data_missing`).
 
 ### 4.4 Overlap/glue decision
 
@@ -231,6 +238,9 @@ sufficient for KCIR authority handoff:
   `identityFields`) when the mapping exists in
   `controlPlaneKcirMappings.mappingTable`.
 
+Missing required route/site/world/KCIR identity material at this boundary MUST
+reject fail closed with `kcir_handoff_identity_missing`.
+
 This handoff is projection material only; final admissibility remains
 kernel/Gate owned.
 
@@ -245,4 +255,3 @@ Minimum execution surfaces for this contract:
 
 Implementations SHOULD keep resolver envelopes witness-linkable to the same
 deterministic lineage used by control-plane KCIR mappings.
-

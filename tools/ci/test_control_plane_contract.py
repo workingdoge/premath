@@ -369,6 +369,49 @@ def _base_payload() -> dict:
                 "routeUnbound": "worker_lane_route_unbound",
             },
         },
+        "worldDescentContract": {
+            "contractId": "doctrine.world_descent.v1",
+            "requiredRouteFamilies": [
+                "route.gate_execution",
+                "route.instruction_execution",
+                "route.required_decision_attestation",
+                "route.fiber.lifecycle",
+                "route.issue_claim_lease",
+                "route.session_projection",
+                "route.transport.dispatch",
+            ],
+            "requiredActionRouteBindings": {
+                "route.instruction_execution": [
+                    "instruction.run",
+                ],
+                "route.required_decision_attestation": [
+                    "required.witness_verify",
+                    "required.witness_decide",
+                ],
+                "route.fiber.lifecycle": [
+                    "fiber.spawn",
+                    "fiber.join",
+                    "fiber.cancel",
+                ],
+                "route.issue_claim_lease": [
+                    "issue.claim_next",
+                    "issue.claim",
+                    "issue.lease_renew",
+                    "issue.lease_release",
+                    "issue.discover",
+                ],
+            },
+            "requiredStaticOperationBindings": {
+                "route.transport.dispatch": [
+                    "op/transport.world_route_binding",
+                ]
+            },
+            "failureClasses": {
+                "identityMissing": "world_route_identity_missing",
+                "descentDataMissing": "world_descent_data_missing",
+                "kcirHandoffIdentityMissing": "kcir_handoff_identity_missing",
+            },
+        },
         "runtimeRouteBindings": {
             "requiredOperationRoutes": {
                 "runGate": {
@@ -649,6 +692,24 @@ class ControlPlaneContractTests(unittest.TestCase):
             "worker_lane_route_unbound",
         )
         self.assertEqual(
+            loaded["worldDescentContract"]["contractId"],
+            "doctrine.world_descent.v1",
+        )
+        self.assertIn(
+            "route.transport.dispatch",
+            loaded["worldDescentContract"]["requiredRouteFamilies"],
+        )
+        self.assertEqual(
+            loaded["worldDescentContract"]["requiredStaticOperationBindings"][
+                "route.transport.dispatch"
+            ],
+            ["op/transport.world_route_binding"],
+        )
+        self.assertEqual(
+            loaded["worldDescentContract"]["failureClasses"]["descentDataMissing"],
+            "world_descent_data_missing",
+        )
+        self.assertEqual(
             loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runGate"][
                 "operationId"
             ],
@@ -786,6 +847,18 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload = _base_payload()
         payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = "issue_discover"
         with self.assertRaisesRegex(ValueError, "canonical route"):
+            self._load(payload)
+
+    def test_load_rejects_missing_world_descent_contract(self) -> None:
+        payload = _base_payload()
+        payload.pop("worldDescentContract")
+        with self.assertRaisesRegex(ValueError, "worldDescentContract must be an object"):
+            self._load(payload)
+
+    def test_load_rejects_world_descent_failure_class_key_drift(self) -> None:
+        payload = _base_payload()
+        payload["worldDescentContract"]["failureClasses"].pop("descentDataMissing")
+        with self.assertRaisesRegex(ValueError, "failureClasses missing required keys"):
             self._load(payload)
 
     def test_load_rejects_runtime_route_morphism_drift(self) -> None:

@@ -24,8 +24,9 @@ Premath is a worldized semantic control plane:
 - specs/contracts/witnesses are definables indexed by those contexts,
 - route families are bound to explicit world profiles with deterministic
   morphism rows,
-- BEAM lease orchestration is bound to `world.lease.v1` (`route.issue_claim_lease`)
-  and checked through the core `premath world-registry-check` surface.
+- lease orchestration (including BEAM/Rustler adapters) is bound to
+  `world.lease.v1` (`route.issue_claim_lease`) and checked through the core
+  `premath world-registry-check` surface.
 
 North-star rule:
 

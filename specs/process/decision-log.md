@@ -4091,3 +4091,36 @@ topology warning pressure without increasing semantic coverage.
   and matrix rows are reduced together.
 - semantic authority scope is unchanged; only control-doc classification is
   tightened.
+
+---
+
+## 2026-02-25 — Decision 0133: Adopt explicit WDAC-1 architecture contract for world-descent execution order
+
+### Decision
+Adopt `WDAC-1` in `docs/design/ARCHITECTURE-MAP.md` as the canonical
+architecture contract for world descent, with explicit lane ownership and
+execution order.
+
+`WDAC-1` defines:
+
+1. lane ownership boundaries across semantic, constructor, check-role, and
+   wrapper lanes,
+2. no-parallel-authority constraints for wrapper/adapter surfaces,
+3. architecture-first execution order for world-descent epics:
+   architecture -> spec/index+doctrine glue -> control-plane parity ->
+   implementation -> conformance -> docs closure.
+
+The design onboarding surface (`docs/design/README.md`) now links directly to
+`ARCHITECTURE-MAP` §0.1 before downstream spec-chain reading.
+
+### Rationale
+World-descent constraints existed across specs and runbooks, but the
+architecture-level contract and sequencing were implicit. Making WDAC-1
+explicit reduces planning drift, keeps execution order stable across sessions,
+and prevents wrapper lanes from reintroducing parallel authority semantics.
+
+### Consequences
+- New world-descent work is anchored to one explicit architecture contract.
+- Docs now provide a single first stop for authority boundaries and ordering.
+- Spec and implementation slices remain linked to the same lane map, reducing
+  ambiguity during issue decomposition and review.

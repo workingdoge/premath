@@ -16,6 +16,8 @@ Use this order for newcomer/operator orientation:
 2. `docs/design/generated/DOCTRINE-SITE-INVENTORY.md` for route/world inventory.
 3. `specs/premath/draft/SPEC-INDEX.md` for normative scope and lifecycle status.
 4. `docs/design/ARCHITECTURE-MAP.md` for implementation placement.
+   - start with `ARCHITECTURE-MAP.md` §0.1 (`WDAC-1`) for world-descent
+     authority/ordering, then read the linked spec chain.
 
 Then validate the active surface:
 

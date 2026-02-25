@@ -175,6 +175,9 @@ operation registry lane.
 `DOCTRINE-SITE-INPUT` MUST provide a total, unambiguous constructor-input
 binding from route-eligible operations to world-route families.
 
+This section instantiates `doctrine.world_descent.v1`
+(`draft/DOCTRINE-INF` §10) for doctrine-site route inputs.
+
 Minimum rules:
 
 - every operation with `operationClass=route_bound` and
@@ -203,7 +206,11 @@ Fail-closed posture:
 - morphism mismatch -> reject with morphism drift class
   (`world_route_morphism_drift`),
 - cross-surface route/world mismatch against control-plane or world-registry
-  bindings -> reject with constructor binding drift class.
+  bindings -> reject with constructor binding drift class,
+- missing world/morphism identity fields in routed rows -> reject with
+  `world_route_identity_missing`,
+- missing declared route/descent constructor inputs required by
+  `doctrine.world_descent.v1` -> reject with `world_descent_data_missing`.
 
 ## 4. Required node classes
 
