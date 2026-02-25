@@ -549,12 +549,29 @@ fn load_mapping_context(repo_root: &Path, surface: &MappingSurface) -> MappingCo
     }
 
     let doctrine_site_digest = sha256_file(&doctrine_site_path);
-    let operation_ids = surface
-        .runtime_route_bindings
-        .values()
-        .filter_map(Value::as_object)
-        .filter_map(|value| non_empty_string(value.get("operationId")))
-        .collect::<BTreeSet<_>>();
+    fn collect_operation_ids(value: &Value, operation_ids: &mut BTreeSet<String>) {
+        match value {
+            Value::Object(map) => {
+                if let Some(operation_id) = non_empty_string(map.get("operationId")) {
+                    operation_ids.insert(operation_id);
+                }
+                for nested in map.values() {
+                    collect_operation_ids(nested, operation_ids);
+                }
+            }
+            Value::Array(items) => {
+                for item in items {
+                    collect_operation_ids(item, operation_ids);
+                }
+            }
+            _ => {}
+        }
+    }
+
+    let mut operation_ids = BTreeSet::new();
+    for value in surface.runtime_route_bindings.values() {
+        collect_operation_ids(value, &mut operation_ids);
+    }
     let doctrine_operation_id = if operation_ids.is_empty() {
         None
     } else {
@@ -1144,6 +1161,54 @@ mod tests {
                 .failure_classes
                 .contains(&KCIR_MAPPING_LEGACY_AUTHORITY_VIOLATION.to_string())
         );
+        let _ = fs::remove_dir_all(root);
+    }
+
+    #[test]
+    fn kcir_mapping_required_strict_accepts_nested_runtime_route_operation_ids() {
+        let root = temp_repo("kcir-required-strict-accept");
+        let ciwitness = root.join("artifacts/ciwitness");
+        fs::write(
+            ciwitness.join("latest-required.json"),
+            format!(
+                "{}\n",
+                serde_json::to_string_pretty(&json!({
+                    "projectionDigest": "proj_demo",
+                    "normalizerId": "normalizer.ci.required.v1",
+                    "policyDigest": "ci-topos-v0",
+                    "typedCoreProjectionDigest": "ev1_demo",
+                    "authorityPayloadDigest": "proj_demo"
+                }))
+                .expect("witness should render")
+            ),
+        )
+        .expect("required witness should write");
+        fs::write(
+            ciwitness.join("latest-decision.json"),
+            format!(
+                "{}\n",
+                serde_json::to_string_pretty(&json!({
+                    "decision": "accept",
+                    "reasonClass": "verified_accept",
+                    "policyDigest": "ci-topos-v0",
+                    "typedCoreProjectionDigest": "ev1_demo",
+                    "authorityPayloadDigest": "proj_demo",
+                    "witnessSha256": "witness_demo"
+                }))
+                .expect("decision should render")
+            ),
+        )
+        .expect("required decision should write");
+
+        let report = kcir_mapping_report(&KcirMappingGateInput {
+            repo_root: Some(root.display().to_string()),
+            scope: "required".to_string(),
+            instruction_path: None,
+            instruction_id: None,
+            strict: true,
+        });
+        assert!(!report.checked_rows.is_empty());
+        assert!(report.failure_classes.is_empty());
         let _ = fs::remove_dir_all(root);
     }
 
