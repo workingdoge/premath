@@ -217,6 +217,46 @@ Rules:
 - torsor overlays MAY be attached as interpretation metadata only; they MUST
   NOT appear as authority world targets.
 
+### 2.6 Authority boundary contract (WKS-1)
+
+The control-plane worldization stack MUST keep one semantic authority lane and
+explicitly non-authoritative wrapper lanes.
+
+Boundary map:
+
+- kernel semantic authority lane:
+  - authority surfaces: `draft/PREMATH-KERNEL`, `draft/GATE`,
+    `draft/BIDIR-DESCENT`
+  - ownership: semantic admissibility and kernel law verdicts
+  - failure class ownership: kernel and gate class families only
+- world constructor authority lane:
+  - authority surface: this spec (`draft/WORLD-REGISTRY`) via
+    `premath.world_grothendieck_constructor.v1` and kernel-routed world
+    checks
+  - ownership: route-to-world binding verdicts
+  - failure class ownership: `missingRoute`, `ambiguousRoute`,
+    `unboundBinding` class family declared in constructor object
+- coherence check-role lane:
+  - authority surface: `draft/PREMATH-COHERENCE` contract/check role
+  - ownership: deterministic parity and obligation discharge for declared
+    control-plane surfaces
+  - failure class ownership: `coherence.*` class families
+- wrapper and transport lane:
+  - surfaces: CLI wrapper scripts, CI wrappers, fixture runners, adapter
+    frontends
+  - ownership: replay, transport, formatting, and orchestration only
+  - failure class ownership: none for semantic authority; wrappers MUST pass
+    through authority-layer failure classes without redefining verdict logic
+
+Rules:
+
+- wrapper and transport lanes MUST NOT emit independent semantic accept or
+  reject classes for route-to-world admissibility.
+- when an authority lane emits deterministic failure classes, downstream lanes
+  MUST preserve class identity and ordering semantics.
+- boundary ownership drift between constructor/coherence/wrapper lanes MUST
+  reject fail closed.
+
 ## 3. Required worldization rows (bundle v0)
 
 For repository profile `cp.bundle.v0` (`draft/CONTROL-PLANE-CONTRACT.json`),
@@ -227,7 +267,8 @@ implementations MUST keep these row IDs reserved:
 - `world.lease.v1` (claim/lease mutation profile),
 - `world.fiber.v1` (structured-concurrency lifecycle profile),
 - `world.instruction.v1` (instruction envelope profile),
-- `world.ci_witness.v1` (required/decision witness profile).
+- `world.ci_witness.v1` (required/decision witness profile),
+- `world.transport.v1` (transport dispatch profile).
 
 Capability-gated requirement:
 
@@ -237,12 +278,23 @@ Capability-gated requirement:
 - when `capabilities.instruction_typing` is claimed, instruction route families
   MUST bind to `world.instruction.v1`,
 - when `capabilities.ci_witnesses` is claimed, required/decision witness route
-  families MUST bind to `world.ci_witness.v1`.
+  families MUST bind to `world.ci_witness.v1`,
+- transport dispatch route family `route.transport.dispatch` MUST bind to
+  `world.transport.v1`.
 
 Optional profile reservation:
 
 - structured-concurrency route family `route.fiber.lifecycle` MAY bind to
   `world.fiber.v1` for `fiber.spawn|join|cancel` transport lifecycle actions.
+
+Constructor glue requirement:
+
+- for one active profile, route rows declared in
+  `draft/CONTROL-PLANE-CONTRACT.json` and
+  `draft/DOCTRINE-SITE-INPUT.json` world-route bindings MUST map to the same
+  `worldId` and `morphismRowId` pairs under this registry.
+- mismatch across those surfaces MUST reject fail closed as constructor binding
+  drift.
 
 Optional overlay reservation:
 

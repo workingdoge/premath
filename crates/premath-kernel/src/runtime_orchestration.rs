@@ -65,13 +65,14 @@ const REQUIRED_PHASE3_COMMAND_SURFACES: [(&str, &[&str]); 2] = [
 ];
 
 const CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX: &str = "controlPlaneContract";
-const REQUIRED_WORLD_ROUTE_FAMILIES: [&str; 6] = [
+const REQUIRED_WORLD_ROUTE_FAMILIES: [&str; 7] = [
     "route.gate_execution",
     "route.instruction_execution",
     "route.required_decision_attestation",
     "route.fiber.lifecycle",
     "route.issue_claim_lease",
     "route.session_projection",
+    "route.transport.dispatch",
 ];
 
 const REQUIRED_WORLD_ROUTE_ACTION_BINDINGS: [(&str, &[&str]); 4] = [
@@ -95,6 +96,11 @@ const REQUIRED_WORLD_ROUTE_ACTION_BINDINGS: [(&str, &[&str]); 4] = [
         ],
     ),
 ];
+
+const REQUIRED_WORLD_ROUTE_STATIC_BINDINGS: [(&str, &[&str]); 1] = [(
+    "route.transport.dispatch",
+    &["op/transport.world_route_binding"],
+)];
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -628,6 +634,16 @@ fn derive_required_world_requirements_from_control_plane(
         .collect();
     let mut issues: Vec<ValidationIssue> = Vec::new();
 
+    for (route_family_id, operation_ids) in REQUIRED_WORLD_ROUTE_STATIC_BINDINGS {
+        route_families.insert(route_family_id.to_string());
+        let route_entry = route_bindings
+            .entry(route_family_id.to_string())
+            .or_default();
+        for operation_id in operation_ids {
+            route_entry.insert((*operation_id).to_string());
+        }
+    }
+
     let Some(contract_obj) = control_plane_contract.as_object() else {
         issues.push(control_plane_contract_issue(
             CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX.to_string(),
@@ -641,6 +657,15 @@ fn derive_required_world_requirements_from_control_plane(
             issues,
         );
     };
+
+    if let Ok(runtime_routes) = extract_runtime_routes(control_plane_contract) {
+        let gate_entry = route_bindings
+            .entry("route.gate_execution".to_string())
+            .or_default();
+        for route in runtime_routes.values() {
+            gate_entry.insert(route.operation_id.clone());
+        }
+    }
 
     let Some(host_action_surface) = contract_obj.get("hostActionSurface") else {
         issues.push(control_plane_contract_issue(
@@ -1106,6 +1131,141 @@ mod tests {
                 .routes
                 .iter()
                 .any(|row| row.status.contains("path_unbound"))
+        );
+    }
+
+    #[test]
+    fn world_route_check_rejects_missing_transport_dispatch_family() {
+        let control_plane = json!({
+            "runtimeRouteBindings": {
+                "requiredOperationRoutes": {
+                    "runGate": {
+                        "operationId": "op/ci.run_gate",
+                        "requiredMorphisms": ["dm.identity"]
+                    },
+                    "runGateTerraform": {
+                        "operationId": "op/ci.run_gate_terraform",
+                        "requiredMorphisms": ["dm.identity"]
+                    }
+                }
+            },
+            "hostActionSurface": {
+                "requiredActions": {
+                    "instruction.run": {"operationId": "op/mcp.instruction_run"},
+                    "required.witness_verify": {"operationId": "op/ci.verify_required_witness"},
+                    "required.witness_decide": {"operationId": "op/ci.decide_required"},
+                    "fiber.spawn": {"operationId": "op/transport.fiber_spawn"},
+                    "fiber.join": {"operationId": "op/transport.fiber_join"},
+                    "fiber.cancel": {"operationId": "op/transport.fiber_cancel"},
+                    "issue.claim_next": {"operationId": "op/transport.issue_claim_next"},
+                    "issue.claim": {"operationId": "op/mcp.issue_claim"},
+                    "issue.lease_renew": {"operationId": "op/mcp.issue_lease_renew"},
+                    "issue.lease_release": {"operationId": "op/mcp.issue_lease_release"},
+                    "issue.discover": {"operationId": "op/mcp.issue_discover"}
+                }
+            },
+            "commandSurface": command_surface(),
+        });
+        let operation_registry = json!({
+            "operations": [
+                {"id": "op/ci.run_gate", "path": "tools/ci/run_gate.sh", "morphisms": ["dm.identity"]},
+                {"id": "op/ci.run_gate_terraform", "path": "tools/ci/run_gate_terraform.sh", "morphisms": ["dm.identity"]},
+                {"id": "op/mcp.instruction_run", "path": "crates/premath-cli/src/commands/mcp_serve.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/ci.verify_required_witness", "path": "tools/ci/verify_required_witness.py", "morphisms": ["dm.identity"]},
+                {"id": "op/ci.decide_required", "path": "tools/ci/decide_required.py", "morphisms": ["dm.identity"]},
+                {"id": "op/transport.fiber_spawn", "path": "crates/premath-cli/src/commands/transport.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/transport.fiber_join", "path": "crates/premath-cli/src/commands/transport.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/transport.fiber_cancel", "path": "crates/premath-cli/src/commands/transport.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/transport.issue_claim_next", "path": "crates/premath-cli/src/commands/transport.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/mcp.issue_claim", "path": "crates/premath-cli/src/commands/mcp_serve.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/mcp.issue_lease_renew", "path": "crates/premath-cli/src/commands/mcp_serve.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/mcp.issue_lease_release", "path": "crates/premath-cli/src/commands/mcp_serve.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/mcp.issue_discover", "path": "crates/premath-cli/src/commands/mcp_serve.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/mcp.observe_latest", "path": "crates/premath-cli/src/commands/mcp_serve.rs", "morphisms": ["dm.identity"]},
+                {"id": "op/transport.world_route_binding", "path": "crates/premath-cli/src/commands/transport.rs", "morphisms": ["dm.identity"]}
+            ]
+        });
+        let doctrine_site_input = json!({
+            "worldRouteBindings": {
+                "schema": 1,
+                "bindingKind": "premath.world_route_bindings.v1",
+                "rows": [
+                    {
+                        "routeFamilyId": "route.gate_execution",
+                        "operationIds": ["op/ci.run_gate", "op/ci.run_gate_terraform"],
+                        "worldId": "world.kernel.semantic.v1",
+                        "morphismRowId": "wm.kernel.semantic.runtime_gate",
+                        "requiredMorphisms": ["dm.identity"],
+                        "failureClassUnbound": "world_route_unbound"
+                    },
+                    {
+                        "routeFamilyId": "route.instruction_execution",
+                        "operationIds": ["op/mcp.instruction_run"],
+                        "worldId": "world.instruction.v1",
+                        "morphismRowId": "wm.control.instruction.execution",
+                        "requiredMorphisms": ["dm.identity"],
+                        "failureClassUnbound": "world_route_unbound"
+                    },
+                    {
+                        "routeFamilyId": "route.required_decision_attestation",
+                        "operationIds": ["op/ci.verify_required_witness", "op/ci.decide_required"],
+                        "worldId": "world.ci_witness.v1",
+                        "morphismRowId": "wm.control.ci_witness.attest",
+                        "requiredMorphisms": ["dm.identity"],
+                        "failureClassUnbound": "world_route_unbound"
+                    },
+                    {
+                        "routeFamilyId": "route.fiber.lifecycle",
+                        "operationIds": ["op/transport.fiber_spawn", "op/transport.fiber_join", "op/transport.fiber_cancel"],
+                        "worldId": "world.fiber.v1",
+                        "morphismRowId": "wm.control.fiber.lifecycle",
+                        "requiredMorphisms": ["dm.identity"],
+                        "failureClassUnbound": "world_route_unbound"
+                    },
+                    {
+                        "routeFamilyId": "route.issue_claim_lease",
+                        "operationIds": [
+                            "op/transport.issue_claim_next",
+                            "op/mcp.issue_claim",
+                            "op/mcp.issue_lease_renew",
+                            "op/mcp.issue_lease_release",
+                            "op/mcp.issue_discover"
+                        ],
+                        "worldId": "world.lease.v1",
+                        "morphismRowId": "wm.control.lease.mutation",
+                        "requiredMorphisms": ["dm.identity"],
+                        "failureClassUnbound": "world_route_unbound"
+                    },
+                    {
+                        "routeFamilyId": "route.session_projection",
+                        "operationIds": ["op/mcp.observe_latest"],
+                        "worldId": "world.control_plane.bundle.v0",
+                        "morphismRowId": "wm.control.bundle.projection",
+                        "requiredMorphisms": ["dm.identity"],
+                        "failureClassUnbound": "world_route_unbound"
+                    }
+                ]
+            }
+        });
+
+        let report = evaluate_runtime_orchestration(
+            &control_plane,
+            &operation_registry,
+            valid_harness_runtime_text(),
+            Some(&doctrine_site_input),
+        );
+
+        assert_eq!(report.result, "rejected");
+        assert!(
+            report
+                .failure_classes
+                .iter()
+                .any(|class| class == world_failure_class::WORLD_ROUTE_UNBOUND)
+        );
+        assert!(
+            report.errors.iter().any(
+                |row| row.contains("missing required route families: route.transport.dispatch")
+            )
         );
     }
 

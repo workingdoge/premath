@@ -187,6 +187,12 @@ Minimum rules:
   `worldRouteBindings.rows[*].operationIds`.
 - each `worldRouteBindings` row MUST reference known `worldId`/`morphismRowId`
   declarations and deterministic `requiredMorphisms`.
+- each `worldRouteBindings.rows[*].routeFamilyId` row in this artifact MUST
+  have one corresponding route row in
+  `draft/CONTROL-PLANE-CONTRACT.json` world-route bindings for the active
+  profile.
+- each bound `(worldId, morphismRowId)` pair MUST match the constructor-lane
+  declarations in `draft/WORLD-REGISTRY` for the same route family.
 
 Fail-closed posture:
 
@@ -195,7 +201,9 @@ Fail-closed posture:
 - multiply-bound operation -> reject with ambiguity class
   (`site_resolve_ambiguous`),
 - morphism mismatch -> reject with morphism drift class
-  (`world_route_morphism_drift`).
+  (`world_route_morphism_drift`),
+- cross-surface route/world mismatch against control-plane or world-registry
+  bindings -> reject with constructor binding drift class.
 
 ## 4. Required node classes
 

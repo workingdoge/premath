@@ -90,6 +90,31 @@ Live status authority:
 
 - `.premath/issues.jsonl` via `premath issue list|ready|blocked`.
 
+### 0.4 World Self-Hosting Boundary Map
+
+Control-plane worldization follows one authority lane with explicit
+non-authority wrappers:
+
+1. Semantic authority: `draft/PREMATH-KERNEL`, `draft/GATE`,
+   `draft/BIDIR-DESCENT`.
+2. Constructor authority: `draft/WORLD-REGISTRY`
+   (`premath.world_grothendieck_constructor.v1`) for route-to-world binding
+   decisions, with route-input material sourced from
+   `draft/DOCTRINE-SITE-INPUT.json` world-route bindings and profile bindings in
+   `draft/CONTROL-PLANE-CONTRACT.json`.
+3. Check-role authority: `draft/PREMATH-COHERENCE` for deterministic parity and
+   obligation discharge over declared control-plane surfaces.
+4. Wrapper/transport lane: CLI/CI wrappers, fixture runners, and adapter
+   frontends are orchestration-only and MUST NOT synthesize independent
+   semantic verdict classes.
+
+Failure-class ownership is lane-local by authority surface:
+
+- kernel/gate families: semantic admissibility only,
+- constructor families: route missing, route ambiguity, binding unbound,
+- coherence families: `coherence.*` parity/obligation failures,
+- wrappers: pass-through only; no independent semantic class authority.
+
 ## 1. Purpose
 
 This file is the **front door**. It answers:

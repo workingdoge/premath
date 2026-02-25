@@ -52,6 +52,10 @@ Constructor authority stance:
   obligation compilation/discharge in this layer.
 - Python wrappers and fixture runners are replay/parity/transport surfaces
   only; they MUST NOT implement independent semantic verdict logic.
+- world route semantic admissibility and route-to-world binding ownership remain
+  in constructor-lane surfaces declared by `draft/WORLD-REGISTRY`; this checker
+  verifies parity of declared bindings and MUST NOT redefine constructor
+  verdict semantics.
 
 ## 2. Coherence Contract Artifact
 
