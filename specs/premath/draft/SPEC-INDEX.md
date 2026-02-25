@@ -3,7 +3,7 @@ slug: draft
 shortname: SPEC-INDEX
 title: workingdoge.com/premath/SPEC-INDEX
 name: Spec Index and Conformance Profiles
-status: draft
+status: informational
 category: Informational
 tags:
   - premath

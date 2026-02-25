@@ -4065,3 +4065,29 @@ plus generated operation edges preserves semantics while lowering topology load.
 - drift-budget warning for `doctrineSiteEdgeCount` is cleared without changing
   thresholds.
 - doctrine/control checks remain green with no operation-registry parity loss.
+
+---
+
+## 2026-02-25 — Decision 0132: Exclude index/traceability control docs from promoted draft topology count
+
+### Decision
+Reclassify `specs/premath/draft/SPEC-INDEX.md` and
+`specs/premath/draft/SPEC-TRACEABILITY.md` as informational control documents
+(`status: informational`) rather than promoted draft spec nodes.
+
+To keep traceability parity consistent with promoted draft detection, remove
+their matrix rows from `SPEC-TRACEABILITY`.
+
+### Rationale
+These two documents govern navigation and coverage reporting for promoted draft
+specs, but they are not semantic contract authorities in the same class as the
+draft specs they index. Counting them as promoted nodes created avoidable
+topology warning pressure without increasing semantic coverage.
+
+### Consequences
+- `draftSpecNodes` and `specTraceabilityRows` drop by 2 (36 -> 34), clearing
+  warning pressure without threshold changes.
+- `check_spec_traceability.py` parity remains exact because promoted draft set
+  and matrix rows are reduced together.
+- semantic authority scope is unchanged; only control-doc classification is
+  tightened.

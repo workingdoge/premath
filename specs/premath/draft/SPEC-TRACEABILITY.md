@@ -3,7 +3,7 @@ slug: draft
 shortname: SPEC-TRACEABILITY
 title: workingdoge.com/premath/SPEC-TRACEABILITY
 name: Draft Spec Traceability Matrix
-status: draft
+status: informational
 category: Informational
 tags:
   - premath
@@ -80,8 +80,6 @@ Purpose:
 | `CONTROL-PLANE-CONTRACT.json` | `mise run coherence-check`; `mise run ci-pipeline-test`; `python3 tools/ci/test_control_plane_contract.py`; `python3 tools/ci/test_run_required_checks.py`; `python3 tools/ci/test_governance_gate.py`; `python3 tools/ci/test_kcir_mapping_gate.py` | covered | - |
 | `UNIFICATION-DOCTRINE.md` | `mise run docs-coherence-check`; `mise run coherence-check` (`gate_chain_parity` Stage 1+Stage 2 parity/rollback/authority checks + Stage 2 direct bidir-evidence-route checks + Stage 3 typed-first closure mapping checks); `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract` (`gate_chain_parity_stage1_*` + `gate_chain_parity_stage2_*` vectors); `python3 tools/conformance/run_capability_vectors.py --capability capabilities.ci_witnesses` (boundary-authority lineage + obstruction roundtrip vectors); decision-log traceability via `check_spec_traceability.py` (Decisions 0106-0110) | covered | - |
 | `SPAN-SQUARE-CHECKING.md` | `mise run coherence-check` (`span_square_commutation` via site vectors, including composition-law vectors); `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract` | covered | - |
-| `SPEC-INDEX.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
-| `SPEC-TRACEABILITY.md` | `python3 tools/conformance/check_spec_traceability.py` | covered | - |
 
 ## 4. Coverage Targets (Open Gaps/Upgrades)
 

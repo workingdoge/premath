@@ -282,3 +282,22 @@ This file is context-recovery memory only; canonical authority remains issues/sp
   `mise run docs-coherence-check`,
   `mise run ci-drift-budget-check`
   (`doctrineSiteEdgeCount=65`, `warnAbove=65`).
+
+## 2026-02-25 Topology Follow-up (bd-349)
+
+- Closed `bd-349` by reducing draft/topology warning pressure without changing
+  thresholds.
+- Reclassified control docs:
+  - `specs/premath/draft/SPEC-INDEX.md` -> `status: informational`
+  - `specs/premath/draft/SPEC-TRACEABILITY.md` -> `status: informational`
+- Removed self-referential matrix rows from
+  `specs/premath/draft/SPEC-TRACEABILITY.md`:
+  - `SPEC-INDEX.md`
+  - `SPEC-TRACEABILITY.md`
+- Decision anchor added:
+  `specs/process/decision-log.md` (Decision 0132).
+- Verification anchors (all pass):
+  `mise run ci-drift-budget-check`
+  (`warningCount=0`, `draftSpecNodes=34`, `specTraceabilityRows=34`),
+  `mise run traceability-check` (`draftSpecs=34`, `matrixRows=34`),
+  `mise run docs-coherence-check`.
