@@ -7,14 +7,14 @@ Do not edit manually.
 
 - `siteId`: `premath.doctrine_operation_site.v0`
 - `version`: `v0`
-- `inventoryDigest`: `a105c6c2de2d9c0e28b48ee89bf12d7137405d9a26ceff5f1cb3752b9b1475fe`
-- topology: `67 nodes / 3 covers / 72 edges / 55 operations`
+- `inventoryDigest`: `e77e70674db517ae08b48597fced0de0878e4aad1c9585d6b5823104370d79b9`
+- topology: `67 nodes / 3 covers / 65 edges / 55 operations`
 - cutover: `generated_only` (mode `generated_only`, legacySourceKind=false, operationRegistryOverride=false)
 
 ## Source Artifacts
 
-- site input: `specs/premath/draft/DOCTRINE-SITE-INPUT.json` (`42aa72b53b4043395f98f4e70f43cc9f00ef02dc16a22b7ab29c622107612122`)
-- site map: `specs/premath/draft/DOCTRINE-SITE.json` (`c6a0b29b260e24c2318f44b7f39a76f7bfd80cfadbfc12b730b89fa618eb04a6`)
+- site input: `specs/premath/draft/DOCTRINE-SITE-INPUT.json` (`42b8d751ed572a14c45918a8b7b477f565c26330b1b3d49a445ff7ea4deb4edd`)
+- site map: `specs/premath/draft/DOCTRINE-SITE.json` (`e84506e8d34ecd1657933d7a1328049587977b013d93105c254de4676bf4e282`)
 - operation registry: `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (`b6ee97bec3f20cbf88d38d5c20e4895421086cd15e1618e90c0984b23123f375`)
 - control-plane contract: `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`
 - cutover contract: `specs/premath/draft/DOCTRINE-SITE-CUTOVER.json`

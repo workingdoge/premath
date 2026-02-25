@@ -4033,3 +4033,35 @@ and remains warning/fail sensitive to the next increments.
   - fail-closed posture starts above 36.
 - Future spec promotions still require either topology reduction or explicit,
   decision-logged budget adjustment.
+
+---
+
+## 2026-02-25 — Decision 0131: Reduce doctrine-site source topology by pruning derivable LLM link edges
+
+### Decision
+Reduce doctrine-site edge topology by removing seven source edges from
+`SITE-PACKAGE` that duplicated connectivity already implied by generated
+operation bindings and required doctrine/control checks:
+
+1. `e.doctrine.llm_instruction`
+2. `e.doctrine.llm_proposal`
+3. `e.ci.llm_instruction`
+4. `e.ci.llm_proposal`
+5. `e.llm_instruction.llm_proposal`
+6. `e.llm_proposal.bidir`
+7. `e.llm_instruction.op.run_instruction`
+
+Regenerated artifacts are authoritative (`DOCTRINE-SITE-INPUT`,
+`DOCTRINE-SITE`, generation digest, and generated inventory).
+
+### Rationale
+`doctrineSiteEdgeCount` exceeded the warning budget due to redundant source
+edges that were not required for operation reachability, route/world parity, or
+MCP/doctrine control-plane checks. Keeping only canonical source connectivity
+plus generated operation edges preserves semantics while lowering topology load.
+
+### Consequences
+- doctrine-site topology is reduced from 72 edges to 65 edges.
+- drift-budget warning for `doctrineSiteEdgeCount` is cleared without changing
+  thresholds.
+- doctrine/control checks remain green with no operation-registry parity loss.

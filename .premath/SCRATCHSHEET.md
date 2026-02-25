@@ -258,3 +258,27 @@ Update this scratchsheet whenever one of these changes:
 5. implementation sequencing decisions.
 
 This file is context-recovery memory only; canonical authority remains issues/specs/contracts.
+
+## 2026-02-25 Topology Follow-up (bd-348)
+
+- Closed `bd-348` by reducing doctrine-site source edges and regenerating
+  generated doctrine artifacts.
+- Source edge removals anchored in
+  `specs/premath/site-packages/premath.doctrine_operation_site.v0/SITE-PACKAGE.json`:
+  `e.doctrine.llm_instruction`, `e.doctrine.llm_proposal`,
+  `e.ci.llm_instruction`, `e.ci.llm_proposal`,
+  `e.llm_instruction.llm_proposal`, `e.llm_proposal.bidir`,
+  `e.llm_instruction.op.run_instruction`.
+- Regenerated outputs:
+  `specs/premath/draft/DOCTRINE-SITE-INPUT.json`,
+  `specs/premath/draft/DOCTRINE-SITE.json`,
+  `specs/premath/draft/DOCTRINE-SITE-GENERATION-DIGEST.json`,
+  `docs/design/generated/DOCTRINE-SITE-INVENTORY.json`,
+  `docs/design/generated/DOCTRINE-SITE-INVENTORY.md`.
+- Decision anchor added:
+  `specs/process/decision-log.md` (Decision 0131).
+- Verification anchors (all pass):
+  `mise run doctrine-check`,
+  `mise run docs-coherence-check`,
+  `mise run ci-drift-budget-check`
+  (`doctrineSiteEdgeCount=65`, `warnAbove=65`).
