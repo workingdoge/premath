@@ -15,6 +15,7 @@ if str(THIS_DIR) not in sys.path:
     sys.path.insert(0, str(THIS_DIR))
 
 import check_runtime_orchestration
+import wrapper_failure_guard
 
 
 class RuntimeOrchestrationCheckerTests(unittest.TestCase):
@@ -206,6 +207,24 @@ class RuntimeOrchestrationCheckerTests(unittest.TestCase):
 
         _, kwargs = patched.call_args
         self.assertEqual(kwargs["doctrine_site_input"], doctrine_site_input)
+
+    def test_wrapper_failure_constants_stay_nonsemantic(self) -> None:
+        failure_constants = [
+            value
+            for name, value in vars(check_runtime_orchestration).items()
+            if name.startswith("FAILURE_") and isinstance(value, str)
+        ]
+        wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+            wrapper_id="runtime-orchestration-wrapper",
+            failure_classes=failure_constants,
+        )
+
+    def test_wrapper_nonsemantic_guard_rejects_semantic_failure_class_prefixes(self) -> None:
+        with self.assertRaisesRegex(ValueError, "wrapper non-semantic guard"):
+            wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+                wrapper_id="runtime-orchestration-wrapper",
+                failure_classes=["runtime_route_missing"],
+            )
 
 
 if __name__ == "__main__":

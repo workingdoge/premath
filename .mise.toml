@@ -111,6 +111,7 @@ run = "python3 tools/ci/check_command_surface.py"
 [tasks.ci-hygiene-check]
 run = [
   "python3 tools/ci/check_repo_hygiene.py",
+  "python3 tools/ci/compact_issue_graph.py --mode check",
   "python3 tools/ci/check_issue_graph.py",
 ]
 

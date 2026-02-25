@@ -18,6 +18,25 @@ class RunFixtureSuitesTests(unittest.TestCase):
                 return suite
         self.fail(f"missing suite: {suite_id}")
 
+    def test_constructor_suites_route_through_rhai_eval(self) -> None:
+        expected_scripts = {
+            "runtime-orchestration": "tools/conformance/rhai/runtime_orchestration_vectors.rhai",
+            "frontend-parity": "tools/conformance/rhai/frontend_parity_vectors.rhai",
+            "world-core": "tools/conformance/rhai/world_core_vectors.rhai",
+        }
+        for suite_id, script in expected_scripts.items():
+            with self.subTest(suite_id=suite_id):
+                suite = self._suite_by_id(suite_id)
+                command = list(suite.command)
+                self.assertGreaterEqual(len(command), 9)
+                self.assertEqual(
+                    command[:6],
+                    ["cargo", "run", "--package", "premath-cli", "--", "rhai-eval"],
+                )
+                self.assertEqual(command[6:8], ["--script", script])
+                self.assertIn("--trajectory-path", command)
+                self.assertIn("--json", command)
+
     def test_coherence_contract_input_closure_includes_surface_and_operation_paths(self) -> None:
         paths = set(run_fixture_suites.load_coherence_contract_input_paths())
         root = run_fixture_suites.ROOT

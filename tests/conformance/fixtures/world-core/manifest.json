@@ -11,6 +11,7 @@
     "adversarial/site_resolve_overlap_mismatch_reject",
     "adversarial/site_resolve_glue_missing_reject",
     "adversarial/site_resolve_ambiguous_overlap_reject",
+    "adversarial/site_resolve_transport_dispatch_ambiguous_reject",
     "invariance/world_core_permuted_local_accept",
     "invariance/world_core_permuted_external_accept",
     "invariance/site_resolve_projection_permuted_local_accept",

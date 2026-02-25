@@ -12,6 +12,7 @@ use serde_json::{Map, Value, json};
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::path::PathBuf;
+use std::process::Command;
 
 const HOST_EFFECT_SCHEMA: &str = "premath.host_effect.v0";
 const SCHEME_EVAL_RESULT_KIND: &str = "premath.scheme_eval.result.v0";
@@ -38,6 +39,12 @@ const FAILURE_MUTATION_CAPABILITY_CLAIM_MISSING: &str = "mutation.capability_cla
 const FAILURE_MCP_TRANSPORT_REQUIRED: &str = "control_plane_host_action_mcp_transport_required";
 const FAILURE_HOST_ACTION_BINDING_MISMATCH: &str = "control_plane_host_action_binding_mismatch";
 const FAILURE_HOST_ACTION_CONTRACT_UNBOUND: &str = "control_plane_host_action_contract_unbound";
+const SEMANTIC_FAILURE_CLASS_PREFIXES: &[&str] = &[
+    "world_route_",
+    "site_resolve_",
+    "runtime_route_",
+    "runtime_",
+];
 
 const DOCTRINE_SITE_INPUT_JSON: &str =
     include_str!("../../../../specs/premath/draft/DOCTRINE-SITE-INPUT.json");
@@ -53,6 +60,9 @@ const HOST_ACTIONS_SUPPORTED: &[&str] = &[
     "issue.blocked",
     "issue.check",
     "dep.diagnostics",
+    "conformance.runtime_orchestration_vectors.run",
+    "conformance.frontend_parity_vectors.run",
+    "conformance.world_core_vectors.run",
     "issue.claim",
     "issue.claim_next",
     "issue.lease_renew",
@@ -77,6 +87,12 @@ const HOST_ACTIONS_TRANSPORT_DISPATCH: &[&str] = &[
     "fiber.spawn",
     "fiber.join",
     "fiber.cancel",
+];
+
+const HOST_ACTIONS_LOCAL_ORCHESTRATION: &[&str] = &[
+    "conformance.runtime_orchestration_vectors.run",
+    "conformance.frontend_parity_vectors.run",
+    "conformance.world_core_vectors.run",
 ];
 
 #[derive(Debug, Clone, Copy)]
@@ -709,14 +725,18 @@ fn parse_mcp_only_actions(contract: &Value) -> BTreeSet<String> {
 }
 
 fn derive_allowlisted_actions(host_actions: &BTreeMap<String, HostActionSpec>) -> BTreeSet<String> {
-    HOST_ACTIONS_SUPPORTED
+    let mut allowlisted: BTreeSet<String> = HOST_ACTIONS_SUPPORTED
         .iter()
         .filter_map(|action| {
             host_actions
                 .get(*action)
                 .and_then(|spec| spec.operation_id.as_ref().map(|_| (*action).to_string()))
         })
-        .collect()
+        .collect();
+    for action in HOST_ACTIONS_LOCAL_ORCHESTRATION {
+        allowlisted.insert((*action).to_string());
+    }
+    allowlisted
 }
 
 fn parse_embedded_json(payload: &str, label: &str) -> Value {
@@ -829,39 +849,42 @@ fn dispatch_with_route_admission(
     capability_registry: &Value,
     admission_config: &SiteResolveAdmissionConfig,
 ) -> Value {
-    let Some(spec) = host_action_spec else {
-        effect_failure_classes.push(FAILURE_ACTION_UNALLOWLISTED.to_string());
-        return json!({
-            "schema": 1,
-            "result": "rejected",
-            "failureClasses": [FAILURE_ACTION_UNALLOWLISTED],
-            "diagnostic": format!("host action is not allowlisted for scheme_eval: {action}"),
-        });
-    };
-
-    let preflight = match preflight_route_bound_host_action(
-        action,
-        spec,
-        capability_claims,
-        policy_digest,
-        frontend,
-        control_plane_contract,
-        doctrine_site_input,
-        doctrine_site,
-        doctrine_op_registry,
-        capability_registry,
-        admission_config,
-    ) {
-        Ok(value) => value,
-        Err(err) => {
-            let failure_class = err.failure_class.clone();
-            effect_failure_classes.push(failure_class.clone());
+    let preflight = if HOST_ACTIONS_LOCAL_ORCHESTRATION.contains(&action) {
+        None
+    } else {
+        let Some(spec) = host_action_spec else {
+            effect_failure_classes.push(FAILURE_ACTION_UNALLOWLISTED.to_string());
             return json!({
                 "schema": 1,
                 "result": "rejected",
-                "failureClasses": [failure_class],
-                "diagnostic": err.diagnostic,
+                "failureClasses": [FAILURE_ACTION_UNALLOWLISTED],
+                "diagnostic": format!("host action is not allowlisted for scheme_eval: {action}"),
             });
+        };
+        match preflight_route_bound_host_action(
+            action,
+            spec,
+            capability_claims,
+            policy_digest,
+            frontend,
+            control_plane_contract,
+            doctrine_site_input,
+            doctrine_site,
+            doctrine_op_registry,
+            capability_registry,
+            admission_config,
+        ) {
+            Ok(value) => value,
+            Err(err) => {
+                let failure_class = err.failure_class.clone();
+                effect_failure_classes.push(failure_class.clone());
+                return json!({
+                    "schema": 1,
+                    "result": "rejected",
+                    "failureClasses": [failure_class],
+                    "diagnostic": err.diagnostic,
+                });
+            }
         }
     };
 
@@ -1071,6 +1094,13 @@ fn dispatch_host_action(
         "issue.blocked" => dispatch_issue_blocked(args),
         "issue.check" => dispatch_issue_check(args),
         "dep.diagnostics" => dispatch_dep_diagnostics(args),
+        "conformance.runtime_orchestration_vectors.run" => {
+            dispatch_conformance_vector_suite(action, args)
+        }
+        "conformance.frontend_parity_vectors.run" => {
+            dispatch_conformance_vector_suite(action, args)
+        }
+        "conformance.world_core_vectors.run" => dispatch_conformance_vector_suite(action, args),
         _ => Err(HostActionDispatchError::new(
             FAILURE_ACTION_UNIMPLEMENTED,
             format!("unsupported host action in scheme_eval: {action}"),
@@ -1396,6 +1426,135 @@ fn dispatch_dep_diagnostics(
     })
 }
 
+#[derive(Debug, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct ConformanceVectorsArgs {
+    #[serde(default, alias = "fixtures_path")]
+    fixtures: Option<String>,
+}
+
+fn conformance_suite_binding(action: &str) -> Option<(&'static str, &'static str)> {
+    match action {
+        "conformance.runtime_orchestration_vectors.run" => Some((
+            "tools/conformance/run_runtime_orchestration_vectors.py",
+            "tests/conformance/fixtures/runtime-orchestration",
+        )),
+        "conformance.frontend_parity_vectors.run" => Some((
+            "tools/conformance/run_frontend_parity_vectors.py",
+            "tests/conformance/fixtures/frontend-parity",
+        )),
+        "conformance.world_core_vectors.run" => Some((
+            "tools/conformance/run_world_core_vectors.py",
+            "tests/conformance/fixtures/world-core",
+        )),
+        _ => None,
+    }
+}
+
+fn tail_lines(text: &str, max_lines: usize) -> Vec<String> {
+    let mut lines = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect::<Vec<_>>();
+    if lines.len() > max_lines {
+        lines = lines.split_off(lines.len() - max_lines);
+    }
+    lines
+}
+
+fn is_semantic_failure_class(failure_class: &str) -> bool {
+    let normalized = failure_class.trim();
+    SEMANTIC_FAILURE_CLASS_PREFIXES
+        .iter()
+        .any(|prefix| normalized.starts_with(prefix))
+}
+
+fn ensure_nonsemantic_wrapper_failure_class(
+    action: &str,
+    failure_class: &str,
+) -> Result<(), HostActionDispatchError> {
+    if is_semantic_failure_class(failure_class) {
+        return Err(HostActionDispatchError::new(
+            FAILURE_INVALID_PROGRAM,
+            format!(
+                "wrapper action `{action}` emitted semantic failure class family `{failure_class}`; wrappers must stay non-semantic"
+            ),
+        ));
+    }
+    Ok(())
+}
+
+fn dispatch_conformance_vector_suite(
+    action: &str,
+    args: &Value,
+) -> Result<HostActionDispatchResult, HostActionDispatchError> {
+    let parsed: ConformanceVectorsArgs = serde_json::from_value(args.clone()).map_err(|err| {
+        HostActionDispatchError::new(
+            FAILURE_INVALID_PROGRAM,
+            format!("invalid {action} args: {err}"),
+        )
+    })?;
+    let Some((script_path, default_fixtures)) = conformance_suite_binding(action) else {
+        return Err(HostActionDispatchError::new(
+            FAILURE_ACTION_UNIMPLEMENTED,
+            format!("unsupported conformance host action: {action}"),
+        ));
+    };
+    let fixtures = parsed
+        .fixtures
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .unwrap_or(default_fixtures);
+
+    let output = Command::new("python3")
+        .arg(script_path)
+        .arg("--fixtures")
+        .arg(fixtures)
+        .output()
+        .map_err(|err| {
+            HostActionDispatchError::new(
+                FAILURE_EXECUTION_ERROR,
+                format!("failed to execute `{script_path}`: {err}"),
+            )
+        })?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+
+    if !output.status.success() {
+        let exit_code = output.status.code().unwrap_or(1);
+        ensure_nonsemantic_wrapper_failure_class(action, FAILURE_EXECUTION_ERROR)?;
+        return Err(HostActionDispatchError::new(
+            FAILURE_EXECUTION_ERROR,
+            format!(
+                "{action} failed (exit={exit_code}); stdout_tail={:?}; stderr_tail={:?}",
+                tail_lines(&stdout, 8),
+                tail_lines(&stderr, 8)
+            ),
+        ));
+    }
+
+    let payload = json!({
+        "schema": 1,
+        "action": action,
+        "result": "accepted",
+        "command": ["python3", script_path, "--fixtures", fixtures],
+        "stdoutTail": tail_lines(&stdout, 8),
+    });
+    for failure_class in payload_failure_classes(&payload) {
+        ensure_nonsemantic_wrapper_failure_class(action, &failure_class)?;
+    }
+
+    Ok(HostActionDispatchResult {
+        payload,
+        failure_classes: Vec::new(),
+        witness_refs: Vec::new(),
+    })
+}
+
 fn validate_mutation_evidence(
     action: &str,
     policy_digest: Option<&str>,
@@ -1675,5 +1834,15 @@ mod tests {
         assert!(denies_direct_effect("network.request"));
         assert!(denies_direct_effect("http.get"));
         assert!(!denies_direct_effect("issue.ready"));
+    }
+
+    #[test]
+    fn semantic_failure_class_denylist_detects_route_families() {
+        assert!(is_semantic_failure_class("world_route_unbound"));
+        assert!(is_semantic_failure_class("site_resolve_ambiguous"));
+        assert!(is_semantic_failure_class("runtime_route_missing"));
+        assert!(!is_semantic_failure_class(
+            "scheme_eval.host_action_execution_error"
+        ));
     }
 }

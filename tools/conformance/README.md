@@ -18,10 +18,18 @@ Runs the executable conformance fixture suites through one command surface:
 - `coherence-contract` (`premath coherence-check`)
 - `tusk-core` (`run_tusk_core_vectors.py`)
 - `harness-typestate` (`run_harness_typestate_vectors.py`)
-- `runtime-orchestration` (`run_runtime_orchestration_vectors.py`)
-- `frontend-parity` (`run_frontend_parity_vectors.py`)
-- `world-core` (`run_world_core_vectors.py`)
+- `runtime-orchestration` (`premath rhai-eval --script tools/conformance/rhai/runtime_orchestration_vectors.rhai`)
+- `frontend-parity` (`premath rhai-eval --script tools/conformance/rhai/frontend_parity_vectors.rhai`)
+- `world-core` (`premath rhai-eval --script tools/conformance/rhai/world_core_vectors.rhai`)
 - `capabilities` (`run_capability_vectors.py`)
+
+For the three constructor suites above, Rhai is the canonical orchestration lane and
+host actions dispatch into the existing Python vector runners:
+`run_runtime_orchestration_vectors.py`, `run_frontend_parity_vectors.py`,
+and `run_world_core_vectors.py`.
+Wrapper-lane faults stay non-semantic: `rhai-eval` surfaces
+`scheme_eval.host_action_execution_error`, while wrapper CLIs keep
+`result = error` + `errors[]` envelopes for non-kernel faults.
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
 

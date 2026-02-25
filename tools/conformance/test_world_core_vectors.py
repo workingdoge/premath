@@ -13,6 +13,7 @@ if str(THIS_DIR) not in sys.path:
     sys.path.insert(0, str(THIS_DIR))
 
 import run_world_core_vectors as world_core
+import wrapper_failure_guard
 
 
 class WorldCoreVectorTests(unittest.TestCase):
@@ -50,6 +51,24 @@ class WorldCoreVectorTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, "core.result"):
                 world_core.evaluate_world_registry_vector(case)
+
+    def test_wrapper_failure_constants_stay_nonsemantic(self) -> None:
+        failure_constants = [
+            value
+            for name, value in vars(world_core).items()
+            if name.startswith("FAILURE_") and isinstance(value, str)
+        ]
+        wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+            wrapper_id="world-core-wrapper",
+            failure_classes=failure_constants,
+        )
+
+    def test_wrapper_nonsemantic_guard_rejects_semantic_failure_class_prefixes(self) -> None:
+        with self.assertRaisesRegex(ValueError, "wrapper non-semantic guard"):
+            wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+                wrapper_id="world-core-wrapper",
+                failure_classes=["site_resolve_ambiguous"],
+            )
 
 
 if __name__ == "__main__":

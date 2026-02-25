@@ -15,6 +15,7 @@ if str(THIS_DIR) not in sys.path:
     sys.path.insert(0, str(THIS_DIR))
 
 import run_frontend_parity_vectors as frontend_parity
+import wrapper_failure_guard
 
 
 class FrontendParityVectorTests(unittest.TestCase):
@@ -95,6 +96,24 @@ class FrontendParityVectorTests(unittest.TestCase):
 
         with self.assertRaisesRegex(ValueError, "scenario.siteResolve.operationId must be set"):
             frontend_parity.evaluate_case(case, self._golden_case_path())
+
+    def test_wrapper_failure_constants_stay_nonsemantic(self) -> None:
+        failure_constants = [
+            value
+            for name, value in vars(frontend_parity).items()
+            if name.startswith("FAILURE_") and isinstance(value, str)
+        ]
+        wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+            wrapper_id="frontend-parity-wrapper",
+            failure_classes=failure_constants,
+        )
+
+    def test_wrapper_nonsemantic_guard_rejects_semantic_failure_class_prefixes(self) -> None:
+        with self.assertRaisesRegex(ValueError, "wrapper non-semantic guard"):
+            wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+                wrapper_id="frontend-parity-wrapper",
+                failure_classes=["world_route_unbound"],
+            )
 
 
 if __name__ == "__main__":

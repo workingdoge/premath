@@ -188,7 +188,12 @@ def evaluate_compactness_findings(issues_path: Path) -> list[CompactnessFinding]
     return findings
 
 
-def print_compactness_findings(findings: list[CompactnessFinding]) -> None:
+def print_compactness_findings(
+    findings: list[CompactnessFinding],
+    *,
+    repo_root: Path | None = None,
+    issues_path: Path | None = None,
+) -> None:
     if not findings:
         return
     print(f"[issue-graph] FAIL (compactness drift: {len(findings)} finding(s))")
@@ -203,6 +208,13 @@ def print_compactness_findings(findings: list[CompactnessFinding]) -> None:
             )
         else:
             print(f"  - {failure_class} ({issue_id} -> {depends_on})")
+    repo_root_arg = str(repo_root) if repo_root is not None else "."
+    issues_arg = str(issues_path) if issues_path is not None else ".premath/issues.jsonl"
+    print(
+        "  remediation: "
+        "python3 tools/ci/compact_issue_graph.py "
+        f"--repo-root {repo_root_arg} --issues {issues_arg} --mode apply"
+    )
 
 
 def main() -> int:
@@ -246,7 +258,11 @@ def main() -> int:
     except ValueError as exc:
         print(f"[issue-graph] FAIL (compactness check parse error: {exc})")
         return 1
-    print_compactness_findings(findings)
+    print_compactness_findings(
+        findings,
+        repo_root=repo_root,
+        issues_path=issues_path,
+    )
     return 1 if findings else 0
 
 

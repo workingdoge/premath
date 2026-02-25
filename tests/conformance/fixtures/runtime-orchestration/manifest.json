@@ -8,6 +8,7 @@
     "golden/phase3_command_surface_bound_accept",
     "adversarial/route_missing_reject",
     "adversarial/world_route_transport_dispatch_missing_reject",
+    "adversarial/world_route_transport_dispatch_ambiguous_reject",
     "adversarial/morphism_drift_reject",
     "adversarial/handoff_contract_missing_reject",
     "adversarial/operation_path_outside_ci_reject",

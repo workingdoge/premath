@@ -163,6 +163,10 @@ class IssueGraphWrapperTests(unittest.TestCase):
             self.assertIn(
                 "issue_graph.compactness.closed_block_edge", completed.stdout
             )
+            self.assertIn(
+                "python3 tools/ci/compact_issue_graph.py",
+                completed.stdout,
+            )
 
     def test_compactness_fails_on_transitive_redundant_blocks_edge(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:
@@ -218,6 +222,10 @@ class IssueGraphWrapperTests(unittest.TestCase):
                 "issue_graph.compactness.transitive_block_edge", completed.stdout
             )
             self.assertIn("bd-a -> bd-c", completed.stdout)
+            self.assertIn(
+                "python3 tools/ci/compact_issue_graph.py",
+                completed.stdout,
+            )
 
     def test_compactness_accepts_non_redundant_blocks_chain(self) -> None:
         with tempfile.TemporaryDirectory(prefix="premath-issue-graph-test-") as tmp:

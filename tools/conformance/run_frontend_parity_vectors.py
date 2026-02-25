@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Sequence, Tuple
 
 import core_command_client
+import wrapper_failure_guard
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "frontend-parity"
@@ -243,7 +244,12 @@ def evaluate_case(
     if missing_required:
         failure_classes.add(FAILURE_FRONTEND_REQUIRED_MISSING)
         # Missing required rows mean we cannot build a complete parity baseline.
-        return "rejected", sorted(failure_classes)
+        guarded = sorted(failure_classes)
+        wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+            wrapper_id="frontend-parity",
+            failure_classes=guarded,
+        )
+        return "rejected", guarded
 
     site_resolve_cfg = scenario.get("siteResolve")
     if site_resolve_cfg is None:
@@ -356,7 +362,12 @@ def evaluate_case(
                 failure_classes.add(FAILURE_RESOLVER_WITNESS_PARITY_DRIFT)
 
     result = "accepted" if not failure_classes else "rejected"
-    return result, sorted(failure_classes)
+    guarded = sorted(failure_classes)
+    wrapper_failure_guard.assert_nonsemantic_wrapper_failure_classes(
+        wrapper_id="frontend-parity",
+        failure_classes=guarded,
+    )
+    return result, guarded
 
 
 def run(fixtures: Path) -> int:
