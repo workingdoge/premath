@@ -639,6 +639,32 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Validate runtime orchestration route/handoff bindings through core semantics
+    RuntimeOrchestrationCheck {
+        /// Control-plane contract JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
+        )]
+        control_plane_contract: String,
+
+        /// Doctrine operation registry JSON path
+        #[arg(long, default_value = "specs/premath/draft/DOCTRINE-OP-REGISTRY.json")]
+        doctrine_op_registry: String,
+
+        /// Harness runtime contract markdown path
+        #[arg(long, default_value = "specs/premath/draft/HARNESS-RUNTIME.md")]
+        harness_runtime: String,
+
+        /// Optional doctrine site input JSON path for world-route admission checks
+        #[arg(long)]
+        doctrine_site_input: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Run Gate checks against a real control-plane operation world
     WorldGateCheck {
         /// Operation registry/row JSON path

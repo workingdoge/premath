@@ -29,6 +29,7 @@ pub mod required_witness_decide;
 pub mod required_witness_verify;
 #[cfg(feature = "rhai-frontend")]
 pub mod rhai_eval;
+pub mod runtime_orchestration_check;
 pub mod scheme_eval;
 pub mod site_resolve;
 pub mod transport_check;

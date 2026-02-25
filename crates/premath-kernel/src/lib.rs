@@ -32,6 +32,7 @@ pub mod descent;
 pub mod error;
 pub mod gate;
 pub mod obligation_registry;
+pub mod runtime_orchestration;
 pub mod site_resolve;
 pub mod toy;
 pub mod witness;
@@ -49,6 +50,11 @@ pub use gate::{GateCheck, World};
 pub use obligation_registry::{
     ObligationGateMapping, failure_class_to_law_ref, obligation_gate_registry,
     obligation_gate_registry_json, obligation_to_failure_class,
+};
+pub use runtime_orchestration::{
+    KcirMappingCheckRow, Phase3CommandSurfaceCheckRow, RuntimeOrchestrationReport,
+    RuntimeOrchestrationSummary, RuntimeRouteCheckRow, WorldRouteBindingCheckRow,
+    evaluate_runtime_orchestration, failure_class as runtime_orchestration_failure_class,
 };
 pub use site_resolve::{
     SitePackageKcirMappingRow, SitePackageOperationRow, SitePackageProjection,

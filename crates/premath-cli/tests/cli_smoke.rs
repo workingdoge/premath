@@ -692,6 +692,75 @@ fn write_world_route_site_inputs(dir: &Path) -> (PathBuf, PathBuf) {
     (site_input_path, operations_path)
 }
 
+fn write_runtime_orchestration_inputs(dir: &Path) -> (PathBuf, PathBuf, PathBuf) {
+    let control_plane_contract = serde_json::json!({
+        "runtimeRouteBindings": {
+            "requiredOperationRoutes": {
+                "runGate": {
+                    "operationId": "op/ci.run_gate",
+                    "requiredMorphisms": ["dm.identity", "dm.profile.execution"]
+                }
+            }
+        },
+        "commandSurface": {
+            "governancePromotionCheck": {
+                "canonicalEntrypoint": [
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "governance-promotion-check"
+                ]
+            },
+            "kcirMappingCheck": {
+                "canonicalEntrypoint": [
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "kcir-mapping-check"
+                ]
+            }
+        }
+    });
+    let doctrine_op_registry = serde_json::json!({
+        "operations": [{
+            "id": "op/ci.run_gate",
+            "path": "tools/ci/run_gate.sh",
+            "morphisms": ["dm.identity", "dm.profile.execution"]
+        }],
+    });
+    let harness_runtime = "## 1.2 Harness-Squeak composition boundary (required)\nHarness computes deterministic work context and witness lineage refs.\nSqueak performs transport/runtime-placement mapping and emits transport-class witness outcomes.\nDestination Tusk/Gate performs destination-local admissibility checks and emits Gate-class outcomes.\nHarness records the resulting references in session/trajectory projections.\n";
+
+    let control_plane_path = dir.join("runtime-control-plane-contract.json");
+    fs::write(
+        &control_plane_path,
+        serde_json::to_vec_pretty(&control_plane_contract)
+            .expect("runtime control-plane contract should serialize"),
+    )
+    .expect("runtime control-plane contract should be written");
+
+    let doctrine_op_registry_path = dir.join("runtime-doctrine-op-registry.json");
+    fs::write(
+        &doctrine_op_registry_path,
+        serde_json::to_vec_pretty(&doctrine_op_registry)
+            .expect("runtime doctrine operation registry should serialize"),
+    )
+    .expect("runtime doctrine operation registry should be written");
+
+    let harness_runtime_path = dir.join("runtime-harness-runtime.md");
+    fs::write(&harness_runtime_path, harness_runtime)
+        .expect("runtime harness runtime markdown should be written");
+
+    (
+        control_plane_path,
+        doctrine_op_registry_path,
+        harness_runtime_path,
+    )
+}
+
 fn write_world_gate_check_inputs(dir: &Path) -> (PathBuf, PathBuf) {
     let operations = serde_json::json!({
         "operations": [
@@ -2302,6 +2371,35 @@ fn site_resolve_json_smoke() {
         payload["projection"]["projectionKind"],
         serde_json::json!("premath.site_resolve.projection.v1")
     );
+}
+
+#[test]
+fn runtime_orchestration_check_json_smoke() {
+    let tmp = TempDirGuard::new("runtime-orchestration-check-json");
+    let (control_plane_path, doctrine_op_registry_path, harness_runtime_path) =
+        write_runtime_orchestration_inputs(tmp.path());
+
+    let output = run_premath([
+        OsString::from("runtime-orchestration-check"),
+        OsString::from("--control-plane-contract"),
+        control_plane_path.as_os_str().to_os_string(),
+        OsString::from("--doctrine-op-registry"),
+        doctrine_op_registry_path.as_os_str().to_os_string(),
+        OsString::from("--harness-runtime"),
+        harness_runtime_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["schema"], 1);
+    assert_eq!(
+        payload["checkKind"],
+        serde_json::json!("conformance.runtime_orchestration.v1")
+    );
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+    assert_eq!(payload["summary"]["checkedRoutes"], 1);
 }
 
 #[test]

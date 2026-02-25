@@ -301,6 +301,20 @@ fn main() {
             json,
         ),
 
+        Commands::RuntimeOrchestrationCheck {
+            control_plane_contract,
+            doctrine_op_registry,
+            harness_runtime,
+            doctrine_site_input,
+            json,
+        } => commands::runtime_orchestration_check::run(
+            control_plane_contract,
+            doctrine_op_registry,
+            harness_runtime,
+            doctrine_site_input,
+            json,
+        ),
+
         Commands::WorldGateCheck {
             operations,
             check,
