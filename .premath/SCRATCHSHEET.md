@@ -312,3 +312,22 @@ This file is context-recovery memory only; canonical authority remains issues/sp
 - Verification anchors:
   `mise run docs-coherence-check` (pass),
   open/in-progress epic scan over `.premath/issues.jsonl` (0).
+
+## 2026-02-25 New Epic Scaffold (bd-351 chain)
+
+- Opened new epic `bd-351`:
+  `[EPIC] World Kernel Self-Hosting Consolidation v1`.
+- Added dependency-ordered task spine:
+  - `bd-352` WKS-1 architecture contract (claimed, in_progress),
+  - `bd-353` WKS-2 spec and doctrine-site glue,
+  - `bd-354` WKS-3 control-plane parity enforcement,
+  - `bd-355` WKS-4 implementation migration,
+  - `bd-356` WKS-5 conformance invariance vectors,
+  - `bd-357` WKS-6 docs and traceability closure.
+- Dependency wiring:
+  - chain blocks: `352 -> 353 -> 354 -> 355 -> 356 -> 357`,
+  - epic blocked by all tasks (`bd-351` depends on `bd-352..bd-357`).
+- Validation anchors:
+  - `premath dep diagnostics --graph-scope active` (no cycles),
+  - `premath issue check` (accepted),
+  - `premath issue ready` (0 after claiming `bd-352`).
