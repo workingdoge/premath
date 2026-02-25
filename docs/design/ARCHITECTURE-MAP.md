@@ -214,9 +214,9 @@ Role split inside CI/Control:
 - `tools/ci/verify_required_witness.py`
 - `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
-- `tools/conformance/check_doctrine_site.py`
+- `premath doctrine-site-check`
 - `premath runtime-orchestration-check` (canonical authority)
-- `tools/conformance/check_doctrine_mcp_parity.py`
+- `premath doctrine-mcp-parity-check`
 - `tools/conformance/run_doctrine_inf_vectors.py`
 - `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
 - `hk.pkl`, `.mise.toml`
@@ -236,9 +236,9 @@ DOCTRINE-INF
         -> tools/ci/run_required_checks.py
         -> tools/ci/verify_required_witness.py
         -> tools/ci/run_gate.sh
-  -> tools/conformance/check_doctrine_site.py /
+  -> premath doctrine-site-check /
      runtime-orchestration-check /
-     check_doctrine_mcp_parity.py / run_doctrine_inf_vectors.py
+     doctrine-mcp-parity-check / run_doctrine_inf_vectors.py
   -> tools/conformance/generate_doctrine_site_inventory.py
      -> docs/design/generated/DOCTRINE-SITE-INVENTORY.md
   -> hk/mise tasks (.mise baseline + ci-required-attested)
@@ -310,8 +310,8 @@ Baseline gate (`mise run baseline`) enforces:
 - conformance + traceability + coherence-check + docs-coherence + doctrine closure,
 - doctrine closure includes doctrine-site roundtrip/reachability plus MCP
   doctrine-operation parity + runtime-route parity
-  (`check_doctrine_site.py`, `runtime-orchestration-check`,
-  `check_doctrine_mcp_parity.py`),
+  (`doctrine-site-check`, `runtime-orchestration-check`,
+  `doctrine-mcp-parity-check`),
 - world semantic route/binding closure runs in dedicated `world-core` vectors
   (`run_world_core_vectors.py`) with fixture parity against core outputs,
 - CI/control-plane wiring, pipeline, observation, instruction, and drift-budget checks,

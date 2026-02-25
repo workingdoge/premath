@@ -65,11 +65,12 @@ README_DOCTRINE_MARKERS: Tuple[str, ...] = (
     "mise run doctrine-check",
 )
 ARCHITECTURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
+    "`premath doctrine-site-check`",
     "`premath runtime-orchestration-check`",
-    "`tools/conformance/check_doctrine_mcp_parity.py`",
+    "`premath doctrine-mcp-parity-check`",
     "doctrine-operation parity + runtime-route parity",
     "`runtime-orchestration-check`,",
-    "`check_doctrine_mcp_parity.py`),",
+    "`doctrine-mcp-parity-check`),",
 )
 EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
     "cargo run --package premath-cli -- doctrine-site-check --json",

@@ -22,8 +22,8 @@ Implemented in this repo:
 - optional infra provisioning scaffold via `mise run infra-up|infra-down|ci-check-tf`
 - doctrine-to-operation site map and checker:
   `specs/premath/draft/DOCTRINE-SITE.{md,json}` +
-  `python3 tools/conformance/check_doctrine_site.py` +
-  `python3 tools/conformance/check_doctrine_mcp_parity.py`
+  `cargo run --package premath-cli -- doctrine-site-check --json` +
+  `cargo run --package premath-cli -- doctrine-mcp-parity-check --mcp-source crates/premath-cli/src/commands/mcp_serve.rs --registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --json`
 - instruction typing/binding doctrine:
   `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
 

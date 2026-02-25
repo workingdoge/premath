@@ -87,9 +87,9 @@
     "tools/ci/run_instruction.sh",
     "tools/ci/verify_required_witness.py",
     "tools/ci/decide_required.py",
-    "tools/conformance/check_stub_invariance.py",
+    "crates/premath-cli/src/commands/capability_stub_invariance_check.rs",
     "tools/conformance/run_capability_vectors.py",
-    "tools/conformance/check_doctrine_site.py",
+    "crates/premath-cli/src/commands/doctrine_site_check.rs",
     "tools/conformance/run_doctrine_inf_vectors.py"
   ],
   "overlayDocs": [

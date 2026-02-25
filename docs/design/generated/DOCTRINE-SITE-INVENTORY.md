@@ -7,15 +7,15 @@ Do not edit manually.
 
 - `siteId`: `premath.doctrine_operation_site.v0`
 - `version`: `v0`
-- `inventoryDigest`: `e77e70674db517ae08b48597fced0de0878e4aad1c9585d6b5823104370d79b9`
+- `inventoryDigest`: `0b668962175b33cd86da414c35ba04b8102cd8aad4e70e8718e52279fd961b87`
 - topology: `67 nodes / 3 covers / 65 edges / 55 operations`
 - cutover: `generated_only` (mode `generated_only`, legacySourceKind=false, operationRegistryOverride=false)
 
 ## Source Artifacts
 
-- site input: `specs/premath/draft/DOCTRINE-SITE-INPUT.json` (`42b8d751ed572a14c45918a8b7b477f565c26330b1b3d49a445ff7ea4deb4edd`)
-- site map: `specs/premath/draft/DOCTRINE-SITE.json` (`e84506e8d34ecd1657933d7a1328049587977b013d93105c254de4676bf4e282`)
-- operation registry: `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (`b6ee97bec3f20cbf88d38d5c20e4895421086cd15e1618e90c0984b23123f375`)
+- site input: `specs/premath/draft/DOCTRINE-SITE-INPUT.json` (`cae12b494dd602b4a81451885eea030943daadcb3901c81f8f8ec490a3a22526`)
+- site map: `specs/premath/draft/DOCTRINE-SITE.json` (`19d3df2b9cacfb958e93f4b79a480e32420063b5215c3501bdc96028811cb6d6`)
+- operation registry: `specs/premath/draft/DOCTRINE-OP-REGISTRY.json` (`c2f677f5133e8b1b03872712ceb4c51a89828df191782f3a7772d5301b52abfc`)
 - control-plane contract: `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`
 - cutover contract: `specs/premath/draft/DOCTRINE-SITE-CUTOVER.json`
 
@@ -47,12 +47,12 @@ Do not edit manually.
 | `op/ci.verify_required_decision` | `route_bound` | `route.required_decision_attestation` | `world.ci_witness.v1` | `hostAction:required.decision_verify`, `path:crates/premath-cli/src/commands/required_decision_verify.rs` |
 | `op/ci.verify_required_witness` | `route_bound` | `route.required_decision_attestation` | `world.ci_witness.v1` | `hostAction:required.witness_verify`, `path:tools/ci/verify_required_witness.py` |
 | `op/conformance.capability` | `tooling_only` | - | - | `path:tools/conformance/run_capability_vectors.py` |
-| `op/conformance.doctrine` | `tooling_only` | - | - | `path:tools/conformance/check_doctrine_site.py` |
+| `op/conformance.doctrine` | `tooling_only` | - | - | `path:crates/premath-cli/src/commands/doctrine_site_check.rs` |
 | `op/conformance.doctrine_inf` | `tooling_only` | - | - | `path:tools/conformance/run_doctrine_inf_vectors.py` |
 | `op/conformance.doctrine_inf_governance` | `tooling_only` | - | - | `path:tools/conformance/run_doctrine_inf_vectors.py` |
-| `op/conformance.doctrine_mcp_parity` | `tooling_only` | - | - | `path:tools/conformance/check_doctrine_mcp_parity.py` |
+| `op/conformance.doctrine_mcp_parity` | `tooling_only` | - | - | `path:crates/premath-cli/src/commands/doctrine_mcp_parity_check.rs` |
 | `op/conformance.runtime_orchestration` | `tooling_only` | - | - | `path:crates/premath-cli/src/commands/runtime_orchestration_check.rs` |
-| `op/conformance.stub` | `tooling_only` | - | - | `path:tools/conformance/check_stub_invariance.py` |
+| `op/conformance.stub` | `tooling_only` | - | - | `path:crates/premath-cli/src/commands/capability_stub_invariance_check.rs` |
 | `op/harness.feature_check` | `route_bound` | `route.session_projection` | `world.control_plane.bundle.v0` | `hostAction:harness.feature.check`, `path:crates/premath-cli/src/commands/harness_feature.rs` |
 | `op/harness.feature_next` | `route_bound` | `route.session_projection` | `world.control_plane.bundle.v0` | `hostAction:harness.feature.next`, `path:crates/premath-cli/src/commands/harness_feature.rs` |
 | `op/harness.feature_read` | `route_bound` | `route.session_projection` | `world.control_plane.bundle.v0` | `hostAction:harness.feature.read`, `path:crates/premath-cli/src/commands/harness_feature.rs` |

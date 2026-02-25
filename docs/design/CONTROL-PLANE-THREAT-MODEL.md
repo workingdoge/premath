@@ -34,7 +34,7 @@ Assets:
 | ID | Threat | Primary impact | Current controls | Residual gap |
 |---|---|---|---|---|
 | CP-01 | Instruction envelope bypass / untyped execution | Unauthorized mutation/execution | `instruction_check`, `instruction_run`, mutation-policy instruction linking | Tighten policy rollout + reviewer governance once reviewer pool is available |
-| CP-02 | Parallel semantic surfaces drift | Contradictory control-plane truth | `coherence-check`, `docs-coherence-check`, `ci-drift-budget-check`, doctrine-site + MCP parity checks (`check_doctrine_site.py`, `check_doctrine_mcp_parity.py`) | Continue reducing duplicate wrappers during migrations |
+| CP-02 | Parallel semantic surfaces drift | Contradictory control-plane truth | `coherence-check`, `docs-coherence-check`, `ci-drift-budget-check`, doctrine-site + MCP parity checks (`doctrine-site-check`, `doctrine-mcp-parity-check`) | Continue reducing duplicate wrappers during migrations |
 | CP-03 | Unauthorized issue mutation actions | Work graph corruption | Instruction-linked capability claims (`capabilities.change_morphisms.*`) | Expand threat tests for new mutation actions over time |
 | CP-04 | Witness/projection integrity mismatch | False pass/fail claims | required witness/decision verify path, observation semantic invariance checks | Keep projection schema migration discipline and semantic invariance tests strict |
 | CP-05 | Dependency graph poisoning (cycle/self-loop) | Ready queue deadlock / hidden blockers | `dep add` cycle/self-loop rejection, `dep diagnostics`, MCP `dep_add` cycle rejection, MCP `dep_diagnostics` scoped cycle checks | Keep graph diagnostics + readiness policy coverage growing with new dep operations |
@@ -49,7 +49,7 @@ Assets:
 | Typed instruction gate before execution | Implemented | `mise run ci-instruction-check`, instruction pipeline |
 | Contract/checker drift sentinels | Implemented | `mise run ci-drift-budget-check` |
 | Lane ownership + cross-lane route checks | Implemented | `premath coherence-check`, conformance vectors |
-| Doctrine operation-route parity for MCP surfaces | Implemented | `mise run doctrine-check` (`check_doctrine_site.py`, `check_doctrine_mcp_parity.py`) |
+| Doctrine operation-route parity for MCP surfaces | Implemented | `mise run doctrine-check` (`doctrine-site-check`, `doctrine-mcp-parity-check`) |
 | Dependency mutation safety (remove/replace/cycle rejection) | Implemented | `premath dep *`, MCP `dep_add/dep_remove/dep_replace` |
 | Schema/version and deprecation policy | In progress | lifecycle/coherence flows + issue-memory roadmap |
 | Reviewer-gated policy hardening | Pending reviewer pool | governance rollout when reviewer pool exists |

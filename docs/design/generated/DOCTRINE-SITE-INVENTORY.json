@@ -8,9 +8,9 @@
     "operationRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
     "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
     "cutoverContract": "specs/premath/draft/DOCTRINE-SITE-CUTOVER.json",
-    "siteInputDigest": "42b8d751ed572a14c45918a8b7b477f565c26330b1b3d49a445ff7ea4deb4edd",
-    "siteMapDigest": "e84506e8d34ecd1657933d7a1328049587977b013d93105c254de4676bf4e282",
-    "operationRegistryDigest": "b6ee97bec3f20cbf88d38d5c20e4895421086cd15e1618e90c0984b23123f375"
+    "siteInputDigest": "cae12b494dd602b4a81451885eea030943daadcb3901c81f8f8ec490a3a22526",
+    "siteMapDigest": "19d3df2b9cacfb958e93f4b79a480e32420063b5215c3501bdc96028811cb6d6",
+    "operationRegistryDigest": "c2f677f5133e8b1b03872712ceb4c51a89828df191782f3a7772d5301b52abfc"
   },
   "site": {
     "siteId": "premath.doctrine_operation_site.v0",
@@ -367,7 +367,7 @@
     {
       "operationId": "op/conformance.doctrine",
       "operationClass": "tooling_only",
-      "path": "tools/conformance/check_doctrine_site.py",
+      "path": "crates/premath-cli/src/commands/doctrine_site_check.rs",
       "kind": "operation",
       "edgeId": "e.ci.op.doctrine",
       "morphisms": [
@@ -378,7 +378,7 @@
       "worldId": null,
       "morphismRowId": null,
       "commandSurfaceRefs": [
-        "path:tools/conformance/check_doctrine_site.py"
+        "path:crates/premath-cli/src/commands/doctrine_site_check.rs"
       ]
     },
     {
@@ -422,7 +422,7 @@
     {
       "operationId": "op/conformance.doctrine_mcp_parity",
       "operationClass": "tooling_only",
-      "path": "tools/conformance/check_doctrine_mcp_parity.py",
+      "path": "crates/premath-cli/src/commands/doctrine_mcp_parity_check.rs",
       "kind": "operation",
       "edgeId": "e.ci.op.doctrine_mcp_parity",
       "morphisms": [
@@ -433,7 +433,7 @@
       "worldId": null,
       "morphismRowId": null,
       "commandSurfaceRefs": [
-        "path:tools/conformance/check_doctrine_mcp_parity.py"
+        "path:crates/premath-cli/src/commands/doctrine_mcp_parity_check.rs"
       ]
     },
     {
@@ -456,7 +456,7 @@
     {
       "operationId": "op/conformance.stub",
       "operationClass": "tooling_only",
-      "path": "tools/conformance/check_stub_invariance.py",
+      "path": "crates/premath-cli/src/commands/capability_stub_invariance_check.rs",
       "kind": "operation",
       "edgeId": "e.ci.op.stub",
       "morphisms": [
@@ -467,7 +467,7 @@
       "worldId": null,
       "morphismRowId": null,
       "commandSurfaceRefs": [
-        "path:tools/conformance/check_stub_invariance.py"
+        "path:crates/premath-cli/src/commands/capability_stub_invariance_check.rs"
       ]
     },
     {
@@ -1152,5 +1152,5 @@
       ]
     }
   ],
-  "inventoryDigest": "e77e70674db517ae08b48597fced0de0878e4aad1c9585d6b5823104370d79b9"
+  "inventoryDigest": "0b668962175b33cd86da414c35ba04b8102cd8aad4e70e8718e52279fd961b87"
 }

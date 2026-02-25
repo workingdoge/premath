@@ -27,8 +27,8 @@ Scope: design-level, non-normative
 - Site-shaped map from doctrine declarations to operational entrypoints.
 - In this repo: `specs/premath/draft/DOCTRINE-SITE.{md,json}` validated by
   doctrine-site + MCP parity checks
-  (`tools/conformance/check_doctrine_site.py`,
-  `tools/conformance/check_doctrine_mcp_parity.py`).
+  (`premath doctrine-site-check`,
+  `premath doctrine-mcp-parity-check`).
 
 `LLM Instruction Doctrine`
 - Doctrine-level constraints for typed instruction handling, unknown classification, and deterministic instruction-to-witness binding.

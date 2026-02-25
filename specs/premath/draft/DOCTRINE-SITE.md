@@ -264,9 +264,9 @@ Repository v0 note:
 - harness-session operation nodes include `read`, `write`, and `bootstrap`
   paths in `crates/premath-cli/src/commands/harness_session.rs`.
 - doctrine-conformance operation nodes currently include
-  `tools/conformance/check_doctrine_site.py`,
+  `premath doctrine-site-check`,
   `premath runtime-orchestration-check`,
-  `tools/conformance/check_doctrine_mcp_parity.py`, and
+  `premath doctrine-mcp-parity-check`, and
   `tools/conformance/run_doctrine_inf_vectors.py` (including claim-gated
   governance-profile vectors). Runtime-orchestration semantic authority for
   this node is the core command `premath runtime-orchestration-check`.
@@ -319,9 +319,9 @@ Repositories SHOULD provide a deterministic checker that validates:
 
 In this repository, that checker is:
 
-- `tools/conformance/check_doctrine_site.py`
+- `premath doctrine-site-check`
 - `premath runtime-orchestration-check` (canonical semantic authority lane)
-- `tools/conformance/check_doctrine_mcp_parity.py` (MCP operation parity
+- `premath doctrine-mcp-parity-check` (MCP operation parity
   against `draft/DOCTRINE-OP-REGISTRY.json`)
 - `tools/conformance/run_doctrine_inf_vectors.py` (semantic-boundary +
   claim-gated governance-profile vectors)
