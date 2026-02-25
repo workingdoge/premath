@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/premath-kernel",
+    "crates/premath-doctrine",
     "crates/premath-tusk",
     "crates/premath-bd",
     "crates/premath-transport",
@@ -22,6 +23,7 @@ description = "Premath: a kernel doctrine of definability for agent orchestratio
 [workspace.dependencies]
 # Internal crates
 premath-kernel = { path = "crates/premath-kernel" }
+premath-doctrine = { path = "crates/premath-doctrine" }
 premath-tusk = { path = "crates/premath-tusk" }
 premath-bd = { path = "crates/premath-bd" }
 premath-transport = { path = "crates/premath-transport" }

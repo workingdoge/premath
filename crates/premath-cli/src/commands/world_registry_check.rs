@@ -1,44 +1,18 @@
 use crate::support::read_json_file_or_exit;
+use premath_doctrine::{
+    DoctrineRequiredRouteBinding, DoctrineValidationIssue,
+    derive_world_descent_requirements_for_world_registry_check,
+};
 use premath_kernel::{
     OperationRouteRow, RequiredRouteBinding, ValidationIssue, ValidationReport, WorldRegistry,
     WorldRouteBindingRow, parse_operation_route_rows, parse_world_route_binding_rows,
     validate_world_bindings_against_operations, validate_world_registry,
-    validate_world_route_bindings_with_requirements, world_failure_class,
+    validate_world_route_bindings_with_requirements,
 };
 use serde_json::{Value, json};
 use std::collections::{BTreeMap, BTreeSet};
 
 const WORLD_REGISTRY_CHECK_KIND: &str = "premath.world_registry_check.v1";
-const CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX: &str = "controlPlaneContract";
-const REQUIRED_WORLD_ROUTE_FAMILIES: &[&str] = &[
-    "route.gate_execution",
-    "route.instruction_execution",
-    "route.required_decision_attestation",
-    "route.fiber.lifecycle",
-    "route.issue_claim_lease",
-    "route.session_projection",
-];
-const REQUIRED_WORLD_ROUTE_ACTION_BINDINGS: &[(&str, &[&str])] = &[
-    ("route.instruction_execution", &["instruction.run"]),
-    (
-        "route.required_decision_attestation",
-        &["required.witness_verify", "required.witness_decide"],
-    ),
-    (
-        "route.fiber.lifecycle",
-        &["fiber.spawn", "fiber.join", "fiber.cancel"],
-    ),
-    (
-        "route.issue_claim_lease",
-        &[
-            "issue.claim_next",
-            "issue.claim",
-            "issue.lease_renew",
-            "issue.lease_release",
-            "issue.discover",
-        ],
-    ),
-];
 
 pub fn run(
     registry: Option<String>,
@@ -121,16 +95,12 @@ fn run_site_input_mode(
     let mut contract_issues: Vec<ValidationIssue> = Vec::new();
     if let Some(path) = control_plane_contract.as_deref() {
         let control_plane_payload: Value = read_json_file_or_exit(path, "control-plane contract");
-        let (contract_requirements, issues) =
+        let (contract_required_families, contract_required_bindings, issues) =
             derive_required_world_requirements_from_control_plane(&control_plane_payload);
-        merged_required_families = merge_required_route_families(
-            &merged_required_families,
-            &contract_requirements.families,
-        );
-        merged_required_bindings = merge_required_route_bindings(
-            &merged_required_bindings,
-            &contract_requirements.bindings,
-        );
+        merged_required_families =
+            merge_required_route_families(&merged_required_families, &contract_required_families);
+        merged_required_bindings =
+            merge_required_route_bindings(&merged_required_bindings, &contract_required_bindings);
         contract_issues = issues;
     }
     let report = validate_world_route_bindings_with_requirements(
@@ -202,141 +172,15 @@ fn parse_required_route_bindings_or_exit(
         .collect()
 }
 
-#[derive(Debug, Clone, Default)]
-struct DerivedWorldRequirements {
-    families: Vec<String>,
-    bindings: Vec<RequiredRouteBinding>,
-}
-
 fn derive_required_world_requirements_from_control_plane(
     control_plane_contract: &Value,
-) -> (DerivedWorldRequirements, Vec<ValidationIssue>) {
-    let mut route_families: BTreeSet<String> = REQUIRED_WORLD_ROUTE_FAMILIES
-        .iter()
-        .map(|family| family.to_string())
-        .collect();
-    let mut route_bindings: BTreeMap<String, BTreeSet<String>> = route_families
-        .iter()
-        .map(|family| (family.clone(), BTreeSet::new()))
-        .collect();
-    let mut issues: Vec<ValidationIssue> = Vec::new();
-
-    let Some(contract_obj) = control_plane_contract.as_object() else {
-        issues.push(control_plane_contract_issue(
-            CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX.to_string(),
-            "must be an object",
-        ));
-        return (
-            DerivedWorldRequirements {
-                families: route_families.into_iter().collect(),
-                bindings: route_bindings_to_rows(route_bindings),
-            },
-            issues,
-        );
-    };
-
-    let Some(host_action_surface) = contract_obj.get("hostActionSurface") else {
-        issues.push(control_plane_contract_issue(
-            format!("{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.hostActionSurface"),
-            "missing required object",
-        ));
-        return (
-            DerivedWorldRequirements {
-                families: route_families.into_iter().collect(),
-                bindings: route_bindings_to_rows(route_bindings),
-            },
-            issues,
-        );
-    };
-    let Some(host_action_surface_obj) = host_action_surface.as_object() else {
-        issues.push(control_plane_contract_issue(
-            format!("{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.hostActionSurface"),
-            "must be an object",
-        ));
-        return (
-            DerivedWorldRequirements {
-                families: route_families.into_iter().collect(),
-                bindings: route_bindings_to_rows(route_bindings),
-            },
-            issues,
-        );
-    };
-
-    let Some(required_actions) = host_action_surface_obj.get("requiredActions") else {
-        issues.push(control_plane_contract_issue(
-            format!("{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.hostActionSurface.requiredActions"),
-            "missing required object",
-        ));
-        return (
-            DerivedWorldRequirements {
-                families: route_families.into_iter().collect(),
-                bindings: route_bindings_to_rows(route_bindings),
-            },
-            issues,
-        );
-    };
-    let Some(required_actions_obj) = required_actions.as_object() else {
-        issues.push(control_plane_contract_issue(
-            format!("{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.hostActionSurface.requiredActions"),
-            "must be an object",
-        ));
-        return (
-            DerivedWorldRequirements {
-                families: route_families.into_iter().collect(),
-                bindings: route_bindings_to_rows(route_bindings),
-            },
-            issues,
-        );
-    };
-
-    for (route_family_id, host_action_ids) in REQUIRED_WORLD_ROUTE_ACTION_BINDINGS {
-        route_families.insert((*route_family_id).to_string());
-        let route_entry = route_bindings
-            .entry((*route_family_id).to_string())
-            .or_default();
-        for host_action_id in *host_action_ids {
-            let Some(action_row) = required_actions_obj.get(*host_action_id) else {
-                issues.push(control_plane_contract_issue(
-                    format!(
-                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.hostActionSurface.requiredActions.{host_action_id}"
-                    ),
-                    "missing required host-action row",
-                ));
-                continue;
-            };
-            let Some(action_obj) = action_row.as_object() else {
-                issues.push(control_plane_contract_issue(
-                    format!(
-                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.hostActionSurface.requiredActions.{host_action_id}"
-                    ),
-                    "must be an object",
-                ));
-                continue;
-            };
-            let Some(operation_id) = action_obj
-                .get("operationId")
-                .and_then(Value::as_str)
-                .map(str::trim)
-                .filter(|value| !value.is_empty())
-            else {
-                issues.push(control_plane_contract_issue(
-                    format!(
-                        "{CONTROL_PLANE_CONTRACT_ISSUE_PATH_PREFIX}.hostActionSurface.requiredActions.{host_action_id}.operationId"
-                    ),
-                    "must be a non-empty string",
-                ));
-                continue;
-            };
-            route_entry.insert(operation_id.to_string());
-        }
-    }
-
+) -> (Vec<String>, Vec<RequiredRouteBinding>, Vec<ValidationIssue>) {
+    let (requirements, issues) =
+        derive_world_descent_requirements_for_world_registry_check(control_plane_contract);
     (
-        DerivedWorldRequirements {
-            families: route_families.into_iter().collect(),
-            bindings: route_bindings_to_rows(route_bindings),
-        },
-        issues,
+        requirements.families,
+        doctrine_required_bindings_to_kernel(requirements.bindings),
+        doctrine_issues_to_validation(issues),
     )
 }
 
@@ -349,12 +193,27 @@ fn route_bindings_to_rows(rows: BTreeMap<String, BTreeSet<String>>) -> Vec<Requi
         .collect()
 }
 
-fn control_plane_contract_issue(path: String, message: &str) -> ValidationIssue {
-    ValidationIssue {
-        failure_class: world_failure_class::WORLD_ROUTE_UNBOUND.to_string(),
-        path,
-        message: message.to_string(),
-    }
+fn doctrine_required_bindings_to_kernel(
+    bindings: Vec<DoctrineRequiredRouteBinding>,
+) -> Vec<RequiredRouteBinding> {
+    bindings
+        .into_iter()
+        .map(|binding| RequiredRouteBinding {
+            route_family_id: binding.route_family_id,
+            operation_ids: binding.operation_ids,
+        })
+        .collect()
+}
+
+fn doctrine_issues_to_validation(issues: Vec<DoctrineValidationIssue>) -> Vec<ValidationIssue> {
+    issues
+        .into_iter()
+        .map(|issue| ValidationIssue {
+            failure_class: issue.failure_class,
+            path: issue.path,
+            message: issue.message,
+        })
+        .collect()
 }
 
 fn merge_required_route_families(current: &[String], additional: &[String]) -> Vec<String> {
@@ -402,9 +261,12 @@ fn merge_report_with_contract_issues(
     report.issues.sort_by(|a, b| {
         (&a.path, &a.failure_class, &a.message).cmp(&(&b.path, &b.failure_class, &b.message))
     });
-    report
-        .failure_classes
-        .push(world_failure_class::WORLD_ROUTE_UNBOUND.to_string());
+    report.failure_classes.extend(
+        report
+            .issues
+            .iter()
+            .map(|issue| issue.failure_class.clone()),
+    );
     report.failure_classes.sort();
     report.failure_classes.dedup();
     report.result = "rejected".to_string();
@@ -565,6 +427,7 @@ fn parse_route_binding_index(path: &str) -> Option<usize> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use premath_kernel::world_failure_class;
     use premath_kernel::world_registry::WORLD_REGISTRY_KIND;
     use premath_kernel::{RouteBindingRow, WorldMorphismRow, WorldRow};
 
@@ -679,6 +542,38 @@ mod tests {
     #[test]
     fn derive_required_world_requirements_from_control_plane_extracts_bindings() {
         let control_plane = json!({
+            "worldDescentContract": {
+                "contractId": "doctrine.world_descent.v1",
+                "requiredRouteFamilies": [
+                    "route.gate_execution",
+                    "route.instruction_execution",
+                    "route.required_decision_attestation",
+                    "route.fiber.lifecycle",
+                    "route.issue_claim_lease",
+                    "route.session_projection",
+                    "route.transport.dispatch"
+                ],
+                "requiredActionRouteBindings": {
+                    "route.instruction_execution": ["instruction.run"],
+                    "route.required_decision_attestation": ["required.witness_verify", "required.witness_decide"],
+                    "route.fiber.lifecycle": ["fiber.spawn", "fiber.join", "fiber.cancel"],
+                    "route.issue_claim_lease": [
+                        "issue.claim_next",
+                        "issue.claim",
+                        "issue.lease_renew",
+                        "issue.lease_release",
+                        "issue.discover"
+                    ]
+                },
+                "requiredStaticOperationBindings": {
+                    "route.transport.dispatch": ["op/transport.world_route_binding"]
+                },
+                "failureClasses": {
+                    "identityMissing": "world_route_identity_missing",
+                    "descentDataMissing": "world_descent_data_missing",
+                    "kcirHandoffIdentityMissing": "kcir_handoff_identity_missing"
+                }
+            },
             "hostActionSurface": {
                 "requiredActions": {
                     "instruction.run": {"operationId": "op/mcp.instruction_run"},
@@ -695,12 +590,12 @@ mod tests {
                 }
             }
         });
-        let (requirements, issues) =
+        let (required_families, required_bindings, issues) =
             derive_required_world_requirements_from_control_plane(&control_plane);
         assert!(issues.is_empty());
-        assert_eq!(requirements.families.len(), 6);
+        assert_eq!(required_families.len(), 7);
         let mut by_family: BTreeMap<String, Vec<String>> = BTreeMap::new();
-        for row in requirements.bindings {
+        for row in required_bindings {
             by_family.insert(row.route_family_id, row.operation_ids);
         }
         assert_eq!(
@@ -732,11 +627,47 @@ mod tests {
                 "op/transport.fiber_spawn".to_string()
             ])
         );
+        assert_eq!(
+            by_family.get("route.transport.dispatch"),
+            Some(&vec!["op/transport.world_route_binding".to_string()])
+        );
     }
 
     #[test]
     fn derive_required_world_requirements_from_control_plane_reports_unbound_operation_rows() {
         let control_plane = json!({
+            "worldDescentContract": {
+                "contractId": "doctrine.world_descent.v1",
+                "requiredRouteFamilies": [
+                    "route.gate_execution",
+                    "route.instruction_execution",
+                    "route.required_decision_attestation",
+                    "route.fiber.lifecycle",
+                    "route.issue_claim_lease",
+                    "route.session_projection",
+                    "route.transport.dispatch"
+                ],
+                "requiredActionRouteBindings": {
+                    "route.instruction_execution": ["instruction.run"],
+                    "route.required_decision_attestation": ["required.witness_verify", "required.witness_decide"],
+                    "route.fiber.lifecycle": ["fiber.spawn", "fiber.join", "fiber.cancel"],
+                    "route.issue_claim_lease": [
+                        "issue.claim_next",
+                        "issue.claim",
+                        "issue.lease_renew",
+                        "issue.lease_release",
+                        "issue.discover"
+                    ]
+                },
+                "requiredStaticOperationBindings": {
+                    "route.transport.dispatch": ["op/transport.world_route_binding"]
+                },
+                "failureClasses": {
+                    "identityMissing": "world_route_identity_missing",
+                    "descentDataMissing": "world_descent_data_missing",
+                    "kcirHandoffIdentityMissing": "kcir_handoff_identity_missing"
+                }
+            },
             "hostActionSurface": {
                 "requiredActions": {
                     "instruction.run": {"operationId": "op/mcp.instruction_run"},
@@ -753,12 +684,14 @@ mod tests {
                 }
             }
         });
-        let (_requirements, issues) =
+        let (_required_families, _required_bindings, issues) =
             derive_required_world_requirements_from_control_plane(&control_plane);
         assert!(!issues.is_empty());
-        assert_eq!(
-            issues[0].failure_class,
-            world_failure_class::WORLD_ROUTE_UNBOUND.to_string()
+        assert!(
+            issues
+                .iter()
+                .any(|issue| issue.failure_class
+                    == world_failure_class::WORLD_ROUTE_IDENTITY_MISSING)
         );
         assert!(issues.iter().any(|issue| {
             issue.path

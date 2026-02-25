@@ -12,6 +12,9 @@ pub mod failure_class {
     pub const WORLD_ROUTE_UNKNOWN_WORLD: &str = "world_route_unknown_world";
     pub const WORLD_ROUTE_UNKNOWN_MORPHISM: &str = "world_route_unknown_morphism";
     pub const WORLD_ROUTE_MORPHISM_DRIFT: &str = "world_route_morphism_drift";
+    pub const WORLD_ROUTE_IDENTITY_MISSING: &str = "world_route_identity_missing";
+    pub const WORLD_DESCENT_DATA_MISSING: &str = "world_descent_data_missing";
+    pub const KCIR_HANDOFF_IDENTITY_MISSING: &str = "kcir_handoff_identity_missing";
 }
 
 pub const WORLD_REGISTRY_KIND: &str = "premath.world_registry.v1";

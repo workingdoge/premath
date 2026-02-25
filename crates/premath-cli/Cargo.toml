@@ -15,6 +15,7 @@ path = "src/main.rs"
 
 [dependencies]
 premath-kernel = { workspace = true }
+premath-doctrine = { workspace = true }
 premath-tusk = { workspace = true }
 premath-bd = { workspace = true }
 premath-transport = { workspace = true }

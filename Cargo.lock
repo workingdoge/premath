@@ -742,6 +742,7 @@ dependencies = [
  "clap",
  "premath-bd",
  "premath-coherence",
+ "premath-doctrine",
  "premath-jj",
  "premath-kernel",
  "premath-surreal",
@@ -770,6 +771,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "premath-doctrine"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "premath-jj"
 version = "0.1.0"
 dependencies = [
@@ -782,6 +791,7 @@ name = "premath-kernel"
 version = "0.1.0"
 dependencies = [
  "insta",
+ "premath-doctrine",
  "serde",
  "serde_json",
  "sha2",
