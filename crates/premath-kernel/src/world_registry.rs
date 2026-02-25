@@ -229,12 +229,12 @@ pub fn parse_world_route_binding_rows(
         return Err("DOCTRINE-SITE-INPUT.worldRouteBindings must be an object".to_string());
     };
 
-    if let Some(schema) = block.get("schema").and_then(Value::as_u64) {
-        if schema != WORLD_ROUTE_BINDINGS_SCHEMA as u64 {
-            return Err(format!(
-                "DOCTRINE-SITE-INPUT.worldRouteBindings.schema must equal {WORLD_ROUTE_BINDINGS_SCHEMA}, got {schema}"
-            ));
-        }
+    if let Some(schema) = block.get("schema").and_then(Value::as_u64)
+        && schema != WORLD_ROUTE_BINDINGS_SCHEMA as u64
+    {
+        return Err(format!(
+            "DOCTRINE-SITE-INPUT.worldRouteBindings.schema must equal {WORLD_ROUTE_BINDINGS_SCHEMA}, got {schema}"
+        ));
     }
 
     let Some(binding_kind) = block
@@ -704,17 +704,16 @@ pub fn validate_world_registry(registry: &WorldRegistry) -> ValidationReport {
             let route_family_id = binding.route_family_id.trim().to_string();
             if let Some(existing) = operation_binding_owner
                 .insert(operation_id.trim().to_string(), route_family_id.clone())
+                && existing != route_family_id
             {
-                if existing != route_family_id {
-                    push_issue(
-                        &mut issues,
-                        failure_class::WORLD_ROUTE_UNBOUND,
-                        format!("{path}.operationIds[{op_idx}]"),
-                        format!(
-                            "operation {operation_id} already bound under routeFamilyId {existing}"
-                        ),
-                    );
-                }
+                push_issue(
+                    &mut issues,
+                    failure_class::WORLD_ROUTE_UNBOUND,
+                    format!("{path}.operationIds[{op_idx}]"),
+                    format!(
+                        "operation {operation_id} already bound under routeFamilyId {existing}"
+                    ),
+                );
             }
         }
     }

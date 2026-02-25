@@ -927,13 +927,14 @@ fn site_resolve_semantic_digest(
     result: &str,
     failure_classes: &[String],
 ) -> String {
-    let mut material = Vec::new();
-    material.push(site_id.to_string());
-    material.push(operation_id.to_string());
-    material.push(route_family_id.unwrap_or("").to_string());
-    material.push(world_id.unwrap_or("").to_string());
-    material.push(morphism_row_id.unwrap_or("").to_string());
-    material.push(result.to_string());
+    let mut material = vec![
+        site_id.to_string(),
+        operation_id.to_string(),
+        route_family_id.unwrap_or("").to_string(),
+        world_id.unwrap_or("").to_string(),
+        morphism_row_id.unwrap_or("").to_string(),
+        result.to_string(),
+    ];
     material.extend(failure_classes.iter().cloned());
     let joined = material.join("\u{0000}");
     format!(

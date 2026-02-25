@@ -547,7 +547,7 @@
       {
         "id": "op/conformance.runtime_orchestration",
         "edgeId": "e.ci.op.runtime_orchestration",
-        "path": "tools/conformance/check_runtime_orchestration.py",
+        "path": "crates/premath-cli/src/commands/runtime_orchestration_check.rs",
         "kind": "operation",
         "operationClass": "tooling_only",
         "morphisms": [

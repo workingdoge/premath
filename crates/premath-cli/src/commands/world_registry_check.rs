@@ -143,12 +143,14 @@ fn run_site_input_mode(
     let world_route_rows = parse_world_route_binding_rows(&site_input_payload).unwrap_or_default();
     emit_site_input_report(
         report,
-        &site_input_path,
-        &operations_path,
-        control_plane_contract.as_deref(),
-        &merged_required_families,
-        &merged_required_bindings,
-        &world_route_rows,
+        SiteInputReportContext {
+            site_input_path: &site_input_path,
+            operations_path: &operations_path,
+            control_plane_contract_path: control_plane_contract.as_deref(),
+            required_route_families: &merged_required_families,
+            required_route_bindings: &merged_required_bindings,
+            world_route_rows: &world_route_rows,
+        },
         json_output,
     );
 }
@@ -454,26 +456,30 @@ fn emit_registry_report(
     println!("  Issues: {}", report.issues.len());
 }
 
+struct SiteInputReportContext<'a> {
+    site_input_path: &'a str,
+    operations_path: &'a str,
+    control_plane_contract_path: Option<&'a str>,
+    required_route_families: &'a [String],
+    required_route_bindings: &'a [RequiredRouteBinding],
+    world_route_rows: &'a [WorldRouteBindingRow],
+}
+
 fn emit_site_input_report(
     report: ValidationReport,
-    site_input_path: &str,
-    operations_path: &str,
-    control_plane_contract_path: Option<&str>,
-    required_route_families: &[String],
-    required_route_bindings: &[RequiredRouteBinding],
-    world_route_rows: &[WorldRouteBindingRow],
+    context: SiteInputReportContext<'_>,
     json_output: bool,
 ) {
-    let projected_rows = project_world_route_rows(world_route_rows, &report.issues);
+    let projected_rows = project_world_route_rows(context.world_route_rows, &report.issues);
     if json_output {
         let payload = json!({
             "schema": 1,
             "checkKind": WORLD_REGISTRY_CHECK_KIND,
-            "siteInputPath": site_input_path,
-            "operationsPath": operations_path,
-            "controlPlaneContractPath": control_plane_contract_path,
-            "requiredRouteFamilies": required_route_families,
-            "requiredRouteBindings": required_route_bindings,
+            "siteInputPath": context.site_input_path,
+            "operationsPath": context.operations_path,
+            "controlPlaneContractPath": context.control_plane_contract_path,
+            "requiredRouteFamilies": context.required_route_families,
+            "requiredRouteBindings": context.required_route_bindings,
             "result": report.result,
             "failureClasses": report.failure_classes,
             "issues": report.issues,
@@ -488,18 +494,18 @@ fn emit_site_input_report(
     }
 
     println!("premath world-registry-check");
-    println!("  Site input path: {site_input_path}");
-    println!("  Operations path: {operations_path}");
-    if let Some(path) = control_plane_contract_path {
+    println!("  Site input path: {}", context.site_input_path);
+    println!("  Operations path: {}", context.operations_path);
+    if let Some(path) = context.control_plane_contract_path {
         println!("  Control-plane contract path: {path}");
     }
     println!(
         "  Required route families: {}",
-        required_route_families.len()
+        context.required_route_families.len()
     );
     println!(
         "  Required route operation bindings: {}",
-        required_route_bindings.len()
+        context.required_route_bindings.len()
     );
     println!("  Checked world route families: {}", projected_rows.len());
     println!("  Result: {}", report.result);
@@ -517,13 +523,13 @@ fn project_world_route_rows(
         .map(|row| row.route_family_id.clone())
         .collect();
     for issue in issues {
-        if let Some(index) = parse_route_binding_index(issue.path.as_str()) {
-            if let Some(family) = route_families_by_index.get(index) {
-                family_errors
-                    .entry(family.clone())
-                    .or_default()
-                    .push(issue.message.clone());
-            }
+        if let Some(index) = parse_route_binding_index(issue.path.as_str())
+            && let Some(family) = route_families_by_index.get(index)
+        {
+            family_errors
+                .entry(family.clone())
+                .or_default()
+                .push(issue.message.clone());
         }
     }
 

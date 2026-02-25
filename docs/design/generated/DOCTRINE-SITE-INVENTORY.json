@@ -8,9 +8,9 @@
     "operationRegistry": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
     "controlPlaneContract": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
     "cutoverContract": "specs/premath/draft/DOCTRINE-SITE-CUTOVER.json",
-    "siteInputDigest": "aeb8b25b90927b884f340e78d4cf2c81b59ab2362c660f1e83c5fa412a050ac3",
-    "siteMapDigest": "fd16b05774b5a3012bae0bf0aed299f526452b950afa89cf50dcbee126b44250",
-    "operationRegistryDigest": "a91ea65cafe2cff958ccb973444c44c2967c9fcf4648dee4e800f058f7675b84"
+    "siteInputDigest": "42aa72b53b4043395f98f4e70f43cc9f00ef02dc16a22b7ab29c622107612122",
+    "siteMapDigest": "c6a0b29b260e24c2318f44b7f39a76f7bfd80cfadbfc12b730b89fa618eb04a6",
+    "operationRegistryDigest": "b6ee97bec3f20cbf88d38d5c20e4895421086cd15e1618e90c0984b23123f375"
   },
   "site": {
     "siteId": "premath.doctrine_operation_site.v0",
@@ -439,7 +439,7 @@
     {
       "operationId": "op/conformance.runtime_orchestration",
       "operationClass": "tooling_only",
-      "path": "tools/conformance/check_runtime_orchestration.py",
+      "path": "crates/premath-cli/src/commands/runtime_orchestration_check.rs",
       "kind": "operation",
       "edgeId": "e.ci.op.runtime_orchestration",
       "morphisms": [
@@ -450,7 +450,7 @@
       "worldId": null,
       "morphismRowId": null,
       "commandSurfaceRefs": [
-        "path:tools/conformance/check_runtime_orchestration.py"
+        "path:crates/premath-cli/src/commands/runtime_orchestration_check.rs"
       ]
     },
     {
@@ -1152,5 +1152,5 @@
       ]
     }
   ],
-  "inventoryDigest": "f785cefc5408936d554f5459d2aec34304dfc88fe12c3b8c811732315bff6e0b"
+  "inventoryDigest": "a105c6c2de2d9c0e28b48ee89bf12d7137405d9a26ceff5f1cb3752b9b1475fe"
 }

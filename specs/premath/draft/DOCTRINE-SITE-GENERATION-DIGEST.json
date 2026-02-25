@@ -10,15 +10,15 @@
   "artifacts": {
     "siteInput": {
       "path": "specs/premath/draft/DOCTRINE-SITE-INPUT.json",
-      "sha256": "aeb8b25b90927b884f340e78d4cf2c81b59ab2362c660f1e83c5fa412a050ac3"
+      "sha256": "42aa72b53b4043395f98f4e70f43cc9f00ef02dc16a22b7ab29c622107612122"
     },
     "siteMap": {
       "path": "specs/premath/draft/DOCTRINE-SITE.json",
-      "sha256": "fd16b05774b5a3012bae0bf0aed299f526452b950afa89cf50dcbee126b44250"
+      "sha256": "c6a0b29b260e24c2318f44b7f39a76f7bfd80cfadbfc12b730b89fa618eb04a6"
     },
     "operationRegistry": {
       "path": "specs/premath/draft/DOCTRINE-OP-REGISTRY.json",
-      "sha256": "a91ea65cafe2cff958ccb973444c44c2967c9fcf4648dee4e800f058f7675b84"
+      "sha256": "b6ee97bec3f20cbf88d38d5c20e4895421086cd15e1618e90c0984b23123f375"
     }
   }
 }
