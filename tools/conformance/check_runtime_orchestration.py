@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
-"""Validate Harness+Squeak runtime orchestration bindings via core command authority."""
+"""Compatibility wrapper for runtime orchestration checks.
+
+Canonical authority is `premath runtime-orchestration-check`. This module is
+kept as a bounded compatibility alias for existing conformance wiring.
+"""
 
 from __future__ import annotations
 

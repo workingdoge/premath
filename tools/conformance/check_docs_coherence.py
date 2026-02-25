@@ -73,7 +73,7 @@ ARCHITECTURE_DOCTRINE_MARKERS: Tuple[str, ...] = (
 )
 EXPECTED_DOCTRINE_CHECK_COMMANDS: Tuple[str, ...] = (
     "python3 tools/conformance/check_doctrine_site.py",
-    "python3 tools/conformance/check_runtime_orchestration.py",
+    "cargo run --package premath-cli -- runtime-orchestration-check --control-plane-contract specs/premath/draft/CONTROL-PLANE-CONTRACT.json --doctrine-op-registry specs/premath/draft/DOCTRINE-OP-REGISTRY.json --harness-runtime specs/premath/draft/HARNESS-RUNTIME.md --doctrine-site-input specs/premath/draft/DOCTRINE-SITE-INPUT.json --json",
     "python3 tools/conformance/check_doctrine_mcp_parity.py",
     "python3 tools/conformance/run_fixture_suites.py --suite doctrine-inf",
 )
