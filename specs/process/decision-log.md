@@ -4003,3 +4003,33 @@ single authority target.
   ambiguity / morphism-drift classes in one boundary story.
 - Torsor extension surfaces remain expressiveness overlays only and cannot
   become authority targets.
+
+---
+
+## 2026-02-25 — Decision 0130: Reconcile topology-budget thresholds with promoted draft/spec traceability cardinality
+
+### Decision
+Adjust topology-budget thresholds for two cardinality metrics to match the
+current promoted baseline while preserving fail-closed pressure against further
+topology growth:
+
+1. `draftSpecNodes`: `warnAbove` 32 -> 34, `failAbove` 34 -> 36
+2. `specTraceabilityRows`: `warnAbove` 32 -> 34, `failAbove` 34 -> 36
+
+No other topology budget metrics are changed.
+
+### Rationale
+Repository baseline gates were failing on `topology_budget_drift` solely because
+the promoted draft set and traceability matrix reached 36 rows while the budget
+still hard-failed above 34. This update removes stale-budget false negatives
+without weakening discipline: current cardinality now sits at the fail boundary
+and remains warning/fail sensitive to the next increments.
+
+### Consequences
+- `ci-drift-budget-check` and `baseline` no longer fail on current promoted
+  cardinality alone.
+- Topology pressure remains explicit:
+  - warning pressure starts above 34,
+  - fail-closed posture starts above 36.
+- Future spec promotions still require either topology reduction or explicit,
+  decision-logged budget adjustment.

@@ -16,14 +16,25 @@ JUSTFILE_WORD_RE = re.compile(r"\bjustfile\b", re.IGNORECASE)
 
 
 def list_repo_files(repo_root: Path) -> List[Path]:
-    cmd = ["git", "ls-files", "--cached", "--others", "--exclude-standard"]
-    proc = subprocess.run(
-        cmd,
-        cwd=repo_root,
-        check=True,
-        capture_output=True,
-        text=True,
-    )
+    ls_files_args = ["ls-files", "--cached", "--others", "--exclude-standard"]
+    proc: subprocess.CompletedProcess[str]
+    try:
+        proc = subprocess.run(
+            ["git", *ls_files_args],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except subprocess.CalledProcessError as first_error:
+        # Bare-repository setups require explicit git-dir/work-tree pairing.
+        proc = subprocess.run(
+            ["git", "--git-dir=.git", "--work-tree=.", *ls_files_args],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
     files: List[Path] = []
     for raw in proc.stdout.splitlines():
         if not raw.strip():
