@@ -523,6 +523,17 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Validate capability fixture stub/invariance conformance vectors
+    CapabilityStubInvarianceCheck {
+        /// Capability fixture root directory
+        #[arg(long, default_value = "tests/conformance/fixtures/capabilities")]
+        fixtures: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Validate promoted draft spec traceability matrix integrity
     SpecTraceabilityCheck {
         /// Promoted draft spec directory

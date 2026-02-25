@@ -72,7 +72,7 @@
 - `mise run coherence-check` — evaluate typed coherence obligations from `specs/premath/draft/COHERENCE-CONTRACT.json` and emit deterministic checker witness output.
 - `mise run docs-coherence-check` — validate deterministic docs-to-executable coherence invariants (capability lists, baseline/projection check surfaces, and SPEC-INDEX capability-scoped normativity clauses).
 - `mise run precommit` — same as baseline.
-- `python3 tools/conformance/check_stub_invariance.py` — validate capability fixture stubs/invariance pairs.
+- `cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json` — validate capability fixture stubs/invariance pairs through checker-native command surface.
 - `cargo run --package premath-cli -- <args>` — run CLI commands locally.
 - `cargo run --package premath-cli -- init . [--json]` — initialize local `.premath/issues.jsonl` (migrates legacy `.beads/issues.jsonl` when present) with text or deterministic JSON output.
 - `cargo run --package premath-cli -- mock-gate --json` — emit a mock Gate witness envelope.
@@ -208,7 +208,7 @@
 
 - Treat `mise run baseline` as the minimum local merge gate.
 - If using `hk`, keep `pre-push`/`check` mapped to the same baseline closure gate.
-- For spec/conformance fixture edits, run `python3 tools/conformance/check_stub_invariance.py`.
+- For spec/conformance fixture edits, run `cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json`.
 - For executable interop-core vectors, run `python3 tools/conformance/run_interop_core_vectors.py`.
 - For executable gate vectors, run `python3 tools/conformance/run_gate_vectors.py`.
 - For executable capability vectors, run `python3 tools/conformance/run_capability_vectors.py`.

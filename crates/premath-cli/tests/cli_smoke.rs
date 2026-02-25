@@ -1448,6 +1448,32 @@ fn doctrine_mcp_parity_check_json_smoke() {
 }
 
 #[test]
+fn capability_stub_invariance_check_json_smoke() {
+    let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let repo_root = crate_dir
+        .parent()
+        .and_then(|p| p.parent())
+        .expect("workspace root should be two levels above crate dir")
+        .to_path_buf();
+    let fixtures = repo_root.join("tests/conformance/fixtures/capabilities");
+
+    let output = run_premath([
+        OsString::from("capability-stub-invariance-check"),
+        OsString::from("--fixtures"),
+        fixtures.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(
+        payload["checkKind"],
+        "ci.capability_stub_invariance_check.v1"
+    );
+    assert_eq!(payload["result"], "accepted");
+}
+
+#[test]
 fn drift_budget_check_json_smoke() {
     let crate_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     let repo_root = crate_dir

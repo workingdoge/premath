@@ -25,7 +25,7 @@ Spec-to-suite traceability is tracked in:
 Validate fixture integrity and invariance pairing with:
 
 ```bash
-python3 tools/conformance/check_stub_invariance.py
+cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json
 ```
 
 Run executable interop-core vectors with:

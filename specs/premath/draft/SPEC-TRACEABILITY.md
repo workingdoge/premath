@@ -60,8 +60,8 @@ Purpose:
 | `WITNESS-ID.md` | `python3 tools/conformance/run_witness_id_vectors.py`; `premath-kernel` witness-id unit tests | covered | - |
 | `BIDIR-DESCENT.md` | `capabilities.instruction_typing`; `capabilities.adjoints_sites` | covered | - |
 | `GATE.md` | `python3 tools/conformance/run_gate_vectors.py` + `premath-kernel` gate tests + toy vectors | covered | - |
-| `CONFORMANCE.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_interop_core_vectors.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
-| `CAPABILITY-VECTORS.md` | `python3 tools/conformance/check_stub_invariance.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
+| `CONFORMANCE.md` | `cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json`; `python3 tools/conformance/run_interop_core_vectors.py`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
+| `CAPABILITY-VECTORS.md` | `cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json`; `python3 tools/conformance/run_capability_vectors.py` | covered | - |
 | `CHANGE-MORPHISMS.md` | `capabilities.change_morphisms` vectors | covered | - |
 | `DOCTRINE-SITE.md` | `mise run doctrine-check` (site roundtrip/reachability + operation-class/route-eligibility + world-route total-binding checks + runtime orchestration route checker + MCP doctrine-operation parity + doctrine-inf vectors) | covered | - |
 | `DOCTRINE-SITE.json` | `mise run doctrine-check` (site roundtrip/reachability + runtime orchestration route checker + MCP doctrine-operation parity + doctrine-inf vectors) | covered | - |

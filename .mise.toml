@@ -30,7 +30,7 @@ run = "python3 tools/toy/run_toy_vectors.py --fixtures tests/toy/fixtures"
 run = "python3 tools/kcir_toy/run_kcir_toy_vectors.py --fixtures tests/kcir_toy/fixtures"
 
 [tasks.conformance-check]
-run = "python3 tools/conformance/check_stub_invariance.py"
+run = "cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json"
 
 [tasks.traceability-check]
 run = "cargo run --package premath-cli -- spec-traceability-check --json"
@@ -166,6 +166,7 @@ run = [
   "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
   "cargo test --package premath-cli doctrine_mcp_parity_check_json_smoke",
+  "cargo test --package premath-cli capability_stub_invariance_check_json_smoke",
   "python3 tools/conformance/test_runtime_orchestration.py",
   "python3 tools/conformance/test_world_core_vectors.py",
   "python3 tools/conformance/test_frontend_parity_vectors.py",

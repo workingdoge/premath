@@ -238,6 +238,10 @@ fn main() {
             commands::command_surface_check::run(repo_root, json)
         }
 
+        Commands::CapabilityStubInvarianceCheck { fixtures, json } => {
+            commands::capability_stub_invariance_check::run(fixtures, json)
+        }
+
         Commands::SpecTraceabilityCheck {
             draft_dir,
             matrix,

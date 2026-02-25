@@ -53,7 +53,7 @@ Disable cache for one run:
 PREMATH_CONFORMANCE_CACHE=0 python3 tools/conformance/run_fixture_suites.py --no-cache
 ```
 
-## `check_stub_invariance.py`
+## `premath capability-stub-invariance-check`
 
 Validates capability fixture stubs in:
 
@@ -70,7 +70,7 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_stub_invariance.py
+cargo run --package premath-cli -- capability-stub-invariance-check --fixtures tests/conformance/fixtures/capabilities --json
 ```
 
 ## `premath spec-traceability-check`

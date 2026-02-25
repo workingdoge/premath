@@ -1,4 +1,5 @@
 pub mod branch_policy_check;
+pub mod capability_stub_invariance_check;
 pub mod check;
 pub mod ci_wiring_check;
 pub mod coherence_check;
