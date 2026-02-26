@@ -174,7 +174,11 @@ Minimum parity set includes:
   `draft/CONTROL-PLANE-CONTRACT.json` (`workerLaneAuthority`) MUST fail closed
   on policy drift (expired/unbounded compatibility override windows),
   mutation-mode drift (default/allowed mode mismatch from
-  `instruction-linked`-first contract), and unbound mutation capability routes.
+  `instruction-linked`-first contract), and unbound mutation capability routes,
+- when `draft/WORLD-REGISTRY` exposes iterated context-chain constructor
+  metadata, checker parity MUST fail closed on missing constructor-chain
+  contract terms (`iteratedContextChain`, projection-tower digest, projection
+  law declarations) and missing Palmgren foundation reference URL.
 
 ### 4.4 `operation_reachability`
 
@@ -332,6 +336,23 @@ This bridge is vocabulary-preserving:
 
 Any bridge drift MUST reject deterministically through existing obligation/fail
 surfaces (no bridge-local admissibility authority).
+
+### 4.17 Iterated Grothendieck context-chain parity boundary
+
+Reference foundation:
+
+- Erik Palmgren, *The Grothendieck construction and models for dependent types*
+  (v8): <https://staff.math.su.se/palmgren/iterated_presheaves_and_dependent_types_v8.pdf>
+
+Routing rule:
+
+- MPSh/iterated-context-chain contract parity is discharged under
+  `gate_chain_parity`.
+- CwF pullback/substitution equalities over that chain are discharged under
+  `cwf_substitution_identity`, `cwf_substitution_composition`,
+  `cwf_comprehension_beta`, and `cwf_comprehension_eta`.
+- this boundary MUST NOT introduce new coherence obligation IDs; it is a
+  routing/ownership refinement over existing obligations.
 
 ## 5. Deterministic Failure Classes
 

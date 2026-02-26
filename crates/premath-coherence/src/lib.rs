@@ -162,6 +162,21 @@ const GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE: &str =
     "coherence.gate_chain_parity.worker_lane_mutation_mode_drift";
 const GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE: &str =
     "coherence.gate_chain_parity.worker_lane_route_unbound";
+const GATE_CHAIN_WORLD_REGISTRY_ITERATED_CONTEXT_MISSING_FAILURE: &str =
+    "coherence.gate_chain_parity.world_registry_iterated_context_missing";
+const GATE_CHAIN_WORLD_REGISTRY_PALMGREN_REFERENCE_MISSING_FAILURE: &str =
+    "coherence.gate_chain_parity.world_registry_palmgren_reference_missing";
+const WORLD_REGISTRY_SPEC_PATH: &str = "specs/premath/draft/WORLD-REGISTRY.md";
+const WORLD_REGISTRY_ITERATED_CONTEXT_START: &str = "### 2.5.1 Iterated context chain (MPSh-1)";
+const WORLD_REGISTRY_ITERATED_CONTEXT_END: &str = "### 2.6 Authority boundary contract (WKS-1)";
+const WORLD_REGISTRY_PALMGREN_REFERENCE_URL: &str =
+    "https://staff.math.su.se/palmgren/iterated_presheaves_and_dependent_types_v8.pdf";
+const WORLD_REGISTRY_ITERATED_CONTEXT_REQUIRED_TERMS: &[&str] = &[
+    "iteratedContextChain",
+    "projectionTowerDigest",
+    "multinaturalProjectionLaw",
+    "qProjectionLaw",
+];
 const STAGE2_REQUIRED_KERNEL_OBLIGATIONS: &[&str] = &[
     "stability",
     "locality",
@@ -1815,6 +1830,13 @@ fn check_gate_chain_parity(
     failures.extend(lane_registry_check.failure_classes.clone());
     let worker_lane_check = evaluate_gate_chain_worker_lane_authority(&control_plane_contract);
     failures.extend(worker_lane_check.failure_classes.clone());
+    let world_registry_iterated_context_check =
+        evaluate_world_registry_iterated_context_parity(repo_root)?;
+    failures.extend(
+        world_registry_iterated_context_check
+            .failure_classes
+            .clone(),
+    );
 
     let lane_vectors_check = if contract.surfaces.site_fixture_root_path.trim().is_empty() {
         None
@@ -1855,8 +1877,92 @@ fn check_gate_chain_parity(
             "evidenceFactorization": evidence_factorization_check.details,
             "laneRegistry": lane_registry_check.details,
             "workerLaneAuthority": worker_lane_check.details,
+            "worldRegistryIteratedContext": world_registry_iterated_context_check.details,
             "laneOwnershipVectors": lane_vectors_check.map(|check| check.details),
         }),
+    })
+}
+
+fn evaluate_world_registry_iterated_context_parity(
+    repo_root: &Path,
+) -> Result<ObligationCheck, CoherenceError> {
+    let world_registry_path = resolve_path(repo_root, WORLD_REGISTRY_SPEC_PATH);
+    let mut details = json!({
+        "present": world_registry_path.exists(),
+        "path": to_repo_relative_or_absolute(repo_root, &world_registry_path),
+        "iteratedContextSectionPresent": false,
+        "palmgrenReferencePresent": false,
+        "requiredTerms": WORLD_REGISTRY_ITERATED_CONTEXT_REQUIRED_TERMS,
+        "missingTerms": [],
+        "reasons": [],
+    });
+
+    if !world_registry_path.exists() {
+        return Ok(ObligationCheck {
+            failure_classes: Vec::new(),
+            details,
+        });
+    }
+
+    let mut failures = Vec::new();
+    let mut reasons = Vec::new();
+
+    let world_registry_text = read_text(&world_registry_path)?;
+    let palmgren_reference_present =
+        world_registry_text.contains(WORLD_REGISTRY_PALMGREN_REFERENCE_URL);
+    details["palmgrenReferencePresent"] = json!(palmgren_reference_present);
+    if !palmgren_reference_present {
+        failures.push(GATE_CHAIN_WORLD_REGISTRY_PALMGREN_REFERENCE_MISSING_FAILURE.to_string());
+        reasons.push(format!(
+            "WORLD-REGISTRY must reference Palmgren foundation URL `{WORLD_REGISTRY_PALMGREN_REFERENCE_URL}`"
+        ));
+    }
+
+    let section_result = extract_section_between(
+        &world_registry_text,
+        WORLD_REGISTRY_ITERATED_CONTEXT_START,
+        WORLD_REGISTRY_ITERATED_CONTEXT_END,
+    );
+    let section_text = match section_result {
+        Ok(section) => {
+            details["iteratedContextSectionPresent"] = json!(true);
+            section.to_string()
+        }
+        Err(error) => {
+            failures.push(GATE_CHAIN_WORLD_REGISTRY_ITERATED_CONTEXT_MISSING_FAILURE.to_string());
+            reasons.push(format!(
+                "WORLD-REGISTRY iterated-context section missing or malformed: {error}"
+            ));
+            String::new()
+        }
+    };
+
+    if !section_text.is_empty() {
+        let missing_terms: Vec<String> = WORLD_REGISTRY_ITERATED_CONTEXT_REQUIRED_TERMS
+            .iter()
+            .filter_map(|term| {
+                if section_text.contains(term) {
+                    None
+                } else {
+                    Some((*term).to_string())
+                }
+            })
+            .collect();
+        details["missingTerms"] = json!(&missing_terms);
+        if !missing_terms.is_empty() {
+            failures.push(GATE_CHAIN_WORLD_REGISTRY_ITERATED_CONTEXT_MISSING_FAILURE.to_string());
+            reasons.push(format!(
+                "WORLD-REGISTRY iterated-context section missing required constructor terms: {}",
+                missing_terms.join(", ")
+            ));
+        }
+    }
+
+    details["reasons"] = json!(dedupe_sorted(reasons));
+
+    Ok(ObligationCheck {
+        failure_classes: dedupe_sorted(failures),
+        details,
     })
 }
 
@@ -5701,6 +5807,43 @@ Current deterministic projected check IDs include:
         );
     }
 
+    fn write_world_registry_with_iterated_context(path: &Path, include_palmgren_ref: bool) {
+        let palmgren = if include_palmgren_ref {
+            format!(
+                "- Palmgren v8: <{}>\n",
+                WORLD_REGISTRY_PALMGREN_REFERENCE_URL
+            )
+        } else {
+            String::new()
+        };
+        let content = format!(
+            r#"## 2. Canonical registry object
+
+### 2.5 Explicit Grothendieck constructor object (GC0)
+
+```text
+WorldGrothendieckConstructor {{
+  iteratedContextChain: {{
+    projectionTowerDigest: string
+    multinaturalProjectionLaw: string
+    qProjectionLaw: string
+  }}
+}}
+```
+
+### 2.5.1 Iterated context chain (MPSh-1)
+
+{palmgren}- required term: `iteratedContextChain`
+- required term: `projectionTowerDigest`
+- required term: `multinaturalProjectionLaw`
+- required term: `qProjectionLaw`
+
+### 2.6 Authority boundary contract (WKS-1)
+"#
+        );
+        write_text_file(path, content.as_str());
+    }
+
     fn base_control_plane_contract_payload() -> Value {
         json!({
             "schema": 1,
@@ -6403,6 +6546,60 @@ Current deterministic projected check IDs include:
         let evaluated =
             check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
         assert!(evaluated.failure_classes.is_empty());
+    }
+
+    #[test]
+    fn check_gate_chain_parity_accepts_world_registry_iterated_context_contract() {
+        let temp = TempDirGuard::new("gate-chain-world-registry-iterated-context-valid");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &base_control_plane_contract_payload(),
+        );
+        write_world_registry_with_iterated_context(
+            &temp.path().join(WORLD_REGISTRY_SPEC_PATH),
+            true,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(evaluated.failure_classes.is_empty());
+        assert_eq!(
+            evaluated.details["worldRegistryIteratedContext"]["present"],
+            json!(true)
+        );
+    }
+
+    #[test]
+    fn check_gate_chain_parity_rejects_world_registry_missing_palmgren_reference() {
+        let temp = TempDirGuard::new("gate-chain-world-registry-palmgren-missing");
+        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_json_file(
+            &temp
+                .path()
+                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
+            &base_control_plane_contract_payload(),
+        );
+        write_world_registry_with_iterated_context(
+            &temp.path().join(WORLD_REGISTRY_SPEC_PATH),
+            false,
+        );
+        let contract =
+            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
+
+        let evaluated =
+            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
+        assert!(
+            evaluated.failure_classes.contains(
+                &GATE_CHAIN_WORLD_REGISTRY_PALMGREN_REFERENCE_MISSING_FAILURE.to_string()
+            )
+        );
     }
 
     #[test]

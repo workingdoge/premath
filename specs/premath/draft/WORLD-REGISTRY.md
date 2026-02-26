@@ -184,6 +184,19 @@ WorldGrothendieckConstructor {
     morphismRowsDigest: string
     routeBindingsDigest: string
   }
+  iteratedContextChain: {
+    chainKind: "premath.iterated_grothendieck_context_chain.v1"
+    baseCategoryRef: string
+    levels: list<{
+      level: integer
+      presheafRef: string
+      totalCategoryDigest: string
+      projectionRef: string
+    }>
+    projectionTowerDigest: string
+    multinaturalProjectionLaw: string
+    qProjectionLaw: string
+  }
   evidence: {
     evidenceFamilyId: string
     factorizationRouteKind: string
@@ -210,12 +223,45 @@ Rules:
 - constructor derivation MUST be deterministic from the source refs above.
 - one active profile MUST resolve to exactly one constructor object up to
   canonical projection equality.
+- `iteratedContextChain` MUST encode one finite context chain equivalent to
+  iterated Grothendieck construction over a base category
+  (`Σ(C,P1,...,Pn)`-style context tower).
+- `multinaturalProjectionLaw` MUST declare the restricted morphism condition
+  `π*_Q ∘ f = π*_P` for context-chain maps.
+- `qProjectionLaw` MUST declare the pullback/substitution compatibility law for
+  context extension projection (`q(f,σ)`-style CwF boundary).
 - CLI/checker/CI wrapper lanes MUST consume route/world decisions derived from
   this constructor and MUST NOT synthesize independent semantic route verdicts.
 - constructor evidence routes MUST remain aligned with Unified Evidence
   factoring (`draft/UNIFICATION-DOCTRINE` §10 and §12).
 - torsor overlays MAY be attached as interpretation metadata only; they MUST
   NOT appear as authority world targets.
+
+### 2.5.1 Iterated context chain (MPSh-1)
+
+The constructor object in §2.5 MUST carry one explicit iterated context-chain
+encoding for the active world profile.
+
+Foundation reference:
+
+- Erik Palmgren, *The Grothendieck construction and models for dependent types*
+  (v8): <https://staff.math.su.se/palmgren/iterated_presheaves_and_dependent_types_v8.pdf>
+
+Required interpretation boundary:
+
+- `iteratedContextChain` MUST be present as the constructor-chain object for
+  active world profiles.
+- `levels[k]` MUST correspond to one presheaf layer over the previous total
+  category (`P(k+1) ∈ PSh(Σ(C,P1,...,Pk))`).
+- `projectionTowerDigest` MUST deterministically bind the composed projection
+  tower to base (`π*_{P1,...,Pn}`).
+- `multinaturalProjectionLaw` MUST declare the multinatural projection
+  constraint for chain morphisms (`π*_Q ∘ f = π*_P`).
+- `qProjectionLaw` MUST declare pullback/substitution compatibility for context
+  extension projection (`q(f,σ)`-style CwF boundary).
+- CwF projection/substitution pullback laws over the chain remain checker-lane
+  obligations (`draft/PREMATH-COHERENCE` `cwf_*` obligations); constructor lane
+  ownership is route/world binding, not semantic redefinition.
 
 ### 2.6 Authority boundary contract (WKS-1)
 

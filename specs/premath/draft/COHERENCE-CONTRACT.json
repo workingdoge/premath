@@ -17,7 +17,7 @@
     },
     {
       "id": "gate_chain_parity",
-      "description": "Ensure baseline and projected gate-chain documentation matches executable command surfaces."
+      "description": "Ensure baseline and projected gate-chain documentation matches executable command surfaces, including world-registry iterated context-chain constructor parity."
     },
     {
       "id": "operation_reachability",
