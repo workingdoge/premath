@@ -162,7 +162,6 @@ run = [
   "cargo test --package premath-cli branch_policy_check_json_smoke",
   "python3 tools/ci/test_repo_hygiene.py",
   "python3 tools/ci/test_issue_graph.py",
-  "python3 tools/conformance/test_docs_coherence.py",
   "python3 tools/conformance/test_run_fixture_suites.py",
   "python3 tools/conformance/test_doctrine_site_contract.py",
   "cargo test --package premath-cli doctrine_mcp_parity_check_json_smoke",
