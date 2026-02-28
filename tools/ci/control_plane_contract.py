@@ -1146,6 +1146,10 @@ def _validate_runtime_route_bindings(
             route_obj.get("operationId"),
             f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}.operationId",
         )
+        route_family_id = _require_non_empty_string(
+            route_obj.get("routeFamilyId"),
+            f"runtimeRouteBindings.requiredOperationRoutes.{key_norm}.routeFamilyId",
+        )
         if operation_id not in doctrine_operation_ids:
             raise ValueError(
                 "runtimeRouteBindings.requiredOperationRoutes."
@@ -1161,6 +1165,7 @@ def _validate_runtime_route_bindings(
         )
         parsed_routes[key_norm] = {
             "operationId": operation_id,
+            "routeFamilyId": route_family_id,
             "requiredMorphisms": required_morphisms,
         }
 
@@ -2446,6 +2451,7 @@ WORLD_DESCENT_FAILURE_CLASSES: Tuple[str, ...] = tuple(
 RUNTIME_ROUTE_BINDINGS: Dict[str, Dict[str, Any]] = {
     route_id: {
         "operationId": str(route.get("operationId", "")),
+        "routeFamilyId": str(route.get("routeFamilyId", "")),
         "requiredMorphisms": tuple(route.get("requiredMorphisms", ())),
     }
     for route_id, route in _CONTRACT.get("runtimeRouteBindings", {})

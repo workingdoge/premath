@@ -817,6 +817,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "premath-bd",
+ "premath-coherence",
  "premath-kernel",
  "rustler",
  "serde",

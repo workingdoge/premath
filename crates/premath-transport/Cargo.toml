@@ -14,6 +14,7 @@ rustler_nif = ["dep:rustler"]
 
 [dependencies]
 premath-bd = { workspace = true }
+premath-coherence = { workspace = true }
 premath-kernel = { workspace = true }
 chrono = { workspace = true }
 serde = { workspace = true }

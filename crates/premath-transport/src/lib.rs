@@ -4,6 +4,11 @@ use premath_bd::{
     IssueLease, IssueLeaseState, MAX_LEASE_TTL_SECONDS, MIN_LEASE_TTL_SECONDS, MemoryStore,
     claim_next_issue_jsonl, mutate_store_jsonl,
 };
+use premath_coherence::{
+    ExecutedInstructionCheck, InstructionError, InstructionWitness, InstructionWitnessRuntime,
+    ValidatedInstructionEnvelope, build_instruction_witness, build_pre_execution_reject_witness,
+    validate_instruction_envelope_payload,
+};
 use premath_kernel::{
     RequiredRouteBinding, SiteResolveRequest, SiteResolveWitness, parse_operation_route_rows,
     resolve_site_request, validate_world_route_bindings_with_requirements, world_failure_class,
@@ -13,6 +18,10 @@ use serde_json::Value;
 use sha2::{Digest, Sha256};
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::Infallible;
+use std::fs;
+use std::path::{Path, PathBuf};
+use std::process::Command;
+use std::time::Instant;
 
 const DEFAULT_ISSUES_PATH: &str = ".premath/issues.jsonl";
 const WORLD_ID_LEASE: &str = "world.lease.v1";
@@ -24,6 +33,9 @@ const MORPHISM_ROW_TRANSPORT: &str = "wm.control.transport.dispatch";
 const WORLD_ID_FIBER: &str = "world.fiber.v1";
 const ROUTE_FAMILY_FIBER: &str = "route.fiber.lifecycle";
 const MORPHISM_ROW_FIBER: &str = "wm.control.fiber.lifecycle";
+const WORLD_ID_INSTRUCTION: &str = "world.instruction.v1";
+const ROUTE_FAMILY_INSTRUCTION: &str = "route.instruction_execution";
+const MORPHISM_ROW_INSTRUCTION: &str = "wm.control.instruction.execution";
 const DOCTRINE_SITE_INPUT_JSON: &str =
     include_str!("../../../specs/premath/draft/DOCTRINE-SITE-INPUT.json");
 const DOCTRINE_SITE_JSON: &str = include_str!("../../../specs/premath/draft/DOCTRINE-SITE.json");
@@ -69,6 +81,9 @@ const FAILURE_TRANSPORT_REGISTRY_DIGEST_MISMATCH: &str = "transport_registry_dig
 const FAILURE_TRANSPORT_KERNEL_CONTRACT_UNAVAILABLE: &str = "transport_kernel_contract_unavailable";
 const FAILURE_FIBER_INVALID_PAYLOAD: &str = "fiber_invalid_payload";
 const FAILURE_FIBER_MISSING_FIELD: &str = "fiber_missing_field";
+const FAILURE_INSTRUCTION_INVALID_PAYLOAD: &str = "instruction_invalid_payload";
+const FAILURE_INSTRUCTION_EXECUTION_IO: &str = "instruction_execution_io";
+const FAILURE_INSTRUCTION_RUNTIME_INVALID: &str = "instruction_runtime_invalid";
 
 #[derive(Debug, Clone, Copy)]
 enum LeaseActionKind {
@@ -108,6 +123,7 @@ enum TransportActionId {
     FiberSpawn,
     FiberJoin,
     FiberCancel,
+    InstructionRun,
 }
 
 impl TransportActionId {
@@ -129,6 +145,7 @@ impl TransportActionId {
             Self::FiberSpawn => "transport.action.fiber_spawn",
             Self::FiberJoin => "transport.action.fiber_join",
             Self::FiberCancel => "transport.action.fiber_cancel",
+            Self::InstructionRun => "transport.action.instruction_run",
         }
     }
 }
@@ -152,8 +169,13 @@ const REQUIRED_MORPHISMS_LEASE: &[&str] = &[
 const REQUIRED_MORPHISMS_TRANSPORT: &[&str] = &["dm.identity", "dm.transport.world"];
 const REQUIRED_MORPHISMS_FIBER: &[&str] =
     &["dm.identity", "dm.profile.execution", "dm.transport.world"];
+const REQUIRED_MORPHISMS_INSTRUCTION: &[&str] = &[
+    "dm.commitment.attest",
+    "dm.identity",
+    "dm.profile.execution",
+];
 
-const TRANSPORT_ACTION_SPECS: [TransportActionSpec; 8] = [
+const TRANSPORT_ACTION_SPECS: [TransportActionSpec; 9] = [
     TransportActionSpec {
         action_id: TransportActionId::IssueClaim,
         action: "issue.claim",
@@ -225,6 +247,15 @@ const TRANSPORT_ACTION_SPECS: [TransportActionSpec; 8] = [
         world_id: WORLD_ID_FIBER,
         morphism_row_id: MORPHISM_ROW_FIBER,
         required_morphisms: REQUIRED_MORPHISMS_FIBER,
+    },
+    TransportActionSpec {
+        action_id: TransportActionId::InstructionRun,
+        action: "instruction.run",
+        operation_id: "op/mcp.instruction_run",
+        route_family_id: ROUTE_FAMILY_INSTRUCTION,
+        world_id: WORLD_ID_INSTRUCTION,
+        morphism_row_id: MORPHISM_ROW_INSTRUCTION,
+        required_morphisms: REQUIRED_MORPHISMS_INSTRUCTION,
     },
 ];
 
@@ -1095,6 +1126,16 @@ pub struct TransportWorldBindingRequest {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct InstructionRunRequest {
+    pub instruction_path: String,
+    #[serde(default)]
+    pub allow_failure: Option<bool>,
+    #[serde(default)]
+    pub repo_root: Option<String>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct FiberSpawnRequest {
     #[serde(default)]
     pub fiber_id: Option<String>,
@@ -1170,6 +1211,433 @@ fn fiber_rejected(action_id: TransportActionId, failure_class: &str, diagnostic:
         failure_class,
         diagnostic.to_string(),
     )
+}
+
+fn truncate_for_payload(value: &str, max_chars: usize) -> String {
+    let total = value.chars().count();
+    if total <= max_chars {
+        return value.to_string();
+    }
+    let clipped: String = value.chars().take(max_chars).collect();
+    let remaining = total.saturating_sub(max_chars);
+    format!("{clipped}...<truncated {remaining} chars>")
+}
+
+fn resolve_repo_root(raw_repo_root: Option<String>) -> Result<PathBuf, String> {
+    let candidate = raw_repo_root.unwrap_or_else(|| ".".to_string());
+    let trimmed = candidate.trim();
+    if trimmed.is_empty() {
+        return Err("repoRoot must be non-empty when provided".to_string());
+    }
+    let root = PathBuf::from(trimmed);
+    if root.is_absolute() {
+        Ok(root)
+    } else {
+        std::env::current_dir()
+            .map(|cwd| cwd.join(root))
+            .map_err(|err| format!("failed to resolve repoRoot from current directory: {err}"))
+    }
+}
+
+fn resolve_instruction_path(
+    repo_root: &Path,
+    raw_instruction_path: &str,
+) -> Result<PathBuf, String> {
+    let trimmed = raw_instruction_path.trim();
+    if trimmed.is_empty() {
+        return Err("instructionPath must be non-empty".to_string());
+    }
+    let path = PathBuf::from(trimmed);
+    if path.is_absolute() {
+        Ok(path)
+    } else {
+        Ok(repo_root.join(path))
+    }
+}
+
+fn instruction_ref(repo_root: &Path, instruction_path: &Path) -> String {
+    instruction_path
+        .strip_prefix(repo_root)
+        .map(|path| path.display().to_string())
+        .unwrap_or_else(|_| instruction_path.display().to_string())
+}
+
+fn fallback_instruction_id_from_path(path: &Path) -> String {
+    if let Some(stem) = path.file_stem().and_then(|value| value.to_str())
+        && !stem.is_empty()
+    {
+        return stem.to_string();
+    }
+    if let Some(name) = path.file_name().and_then(|value| value.to_str())
+        && !name.is_empty()
+    {
+        return name.to_string();
+    }
+    "instruction-invalid".to_string()
+}
+
+fn instruction_id_from_validated_path(path: &Path) -> String {
+    path.file_stem()
+        .and_then(|value| value.to_str())
+        .map(ToString::to_string)
+        .unwrap_or_else(|| fallback_instruction_id_from_path(path))
+}
+
+fn sort_json_value(value: &Value) -> Value {
+    match value {
+        Value::Object(map) => {
+            let mut keys: Vec<&String> = map.keys().collect();
+            keys.sort_unstable();
+            let mut sorted = serde_json::Map::new();
+            for key in keys {
+                if let Some(item) = map.get(key) {
+                    sorted.insert(key.clone(), sort_json_value(item));
+                }
+            }
+            Value::Object(sorted)
+        }
+        Value::Array(items) => Value::Array(items.iter().map(sort_json_value).collect()),
+        _ => value.clone(),
+    }
+}
+
+fn normalized_instruction_digest(instruction_bytes: &[u8], envelope: Option<&Value>) -> String {
+    if let Some(value) = envelope {
+        let canonical = serde_json::to_string(&sort_json_value(value))
+            .expect("canonical envelope serialization should succeed");
+        let mut hasher = Sha256::new();
+        hasher.update(canonical.as_bytes());
+        return format!("instr1_{:x}", hasher.finalize());
+    }
+    let mut hasher = Sha256::new();
+    hasher.update(instruction_bytes);
+    format!("instr1_{:x}", hasher.finalize())
+}
+
+fn instruction_runtime_payload(
+    instruction_id: String,
+    instruction_ref: String,
+    instruction_digest: String,
+    squeak_site_profile: String,
+    run_started_at: DateTime<Utc>,
+    run_finished_at: DateTime<Utc>,
+    results: Vec<ExecutedInstructionCheck>,
+) -> InstructionWitnessRuntime {
+    let run_duration_ms = (run_finished_at - run_started_at).num_milliseconds();
+    InstructionWitnessRuntime {
+        instruction_id,
+        instruction_ref,
+        instruction_digest,
+        squeak_site_profile,
+        run_started_at: run_started_at.to_rfc3339(),
+        run_finished_at: run_finished_at.to_rfc3339(),
+        run_duration_ms: run_duration_ms.max(0) as u64,
+        results,
+    }
+}
+
+fn write_instruction_witness(path: &Path, witness: &InstructionWitness) -> Result<(), String> {
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|err| {
+            format!(
+                "failed to create witness directory {}: {err}",
+                parent.display()
+            )
+        })?;
+    }
+    let rendered = serde_json::to_string_pretty(witness)
+        .map_err(|err| format!("failed to render witness json: {err}"))?;
+    fs::write(path, format!("{rendered}\n"))
+        .map_err(|err| format!("failed to write witness file {}: {err}", path.display()))
+}
+
+fn run_gate_check(
+    repo_root: &Path,
+    check_id: &str,
+) -> Result<(ExecutedInstructionCheck, String, String), String> {
+    let started = Instant::now();
+    let output = Command::new("sh")
+        .arg(repo_root.join("tools/ci/run_gate.sh"))
+        .arg(check_id)
+        .current_dir(repo_root)
+        .output()
+        .map_err(|err| format!("failed to execute check `{check_id}`: {err}"))?;
+    let duration_ms = started.elapsed().as_millis();
+    let exit_code = output.status.code().unwrap_or(1);
+    let result = ExecutedInstructionCheck {
+        check_id: check_id.to_string(),
+        status: if exit_code == 0 {
+            "passed".to_string()
+        } else {
+            "failed".to_string()
+        },
+        exit_code: i64::from(exit_code),
+        duration_ms: duration_ms.min(u128::from(u64::MAX)) as u64,
+    };
+    Ok((
+        result,
+        String::from_utf8_lossy(&output.stdout).to_string(),
+        String::from_utf8_lossy(&output.stderr).to_string(),
+    ))
+}
+
+fn decision_state(checked: &ValidatedInstructionEnvelope) -> Option<String> {
+    serde_json::to_value(&checked.execution_decision)
+        .ok()
+        .and_then(|value| {
+            value
+                .get("state")
+                .and_then(Value::as_str)
+                .map(ToString::to_string)
+        })
+}
+
+fn decision_source_reason(
+    checked: &ValidatedInstructionEnvelope,
+) -> (Option<String>, Option<String>) {
+    let value = serde_json::to_value(&checked.execution_decision).ok();
+    let source = value
+        .as_ref()
+        .and_then(|item| item.get("source"))
+        .and_then(Value::as_str)
+        .map(ToString::to_string);
+    let reason = value
+        .as_ref()
+        .and_then(|item| item.get("reason"))
+        .and_then(Value::as_str)
+        .map(ToString::to_string);
+    (source, reason)
+}
+
+fn instruction_run_rejected(
+    action_id: TransportActionId,
+    failure_class: &str,
+    diagnostic: impl Into<String>,
+) -> Value {
+    transport_rejected(
+        transport_action_spec(action_id).action,
+        action_id.as_str(),
+        failure_class,
+        diagnostic.into(),
+    )
+}
+
+fn instruction_run_response(payload: Value) -> Value {
+    let action_id = TransportActionId::InstructionRun;
+    let parsed = match serde_json::from_value::<InstructionRunRequest>(payload) {
+        Ok(value) => value,
+        Err(source) => {
+            return instruction_run_rejected(
+                action_id,
+                FAILURE_INSTRUCTION_INVALID_PAYLOAD,
+                format!("invalid instruction.run payload: {source}"),
+            );
+        }
+    };
+
+    let repo_root = match resolve_repo_root(parsed.repo_root) {
+        Ok(path) => path,
+        Err(err) => {
+            return instruction_run_rejected(action_id, FAILURE_INSTRUCTION_INVALID_PAYLOAD, err);
+        }
+    };
+    let instruction_path = match resolve_instruction_path(&repo_root, &parsed.instruction_path) {
+        Ok(path) => path,
+        Err(err) => {
+            return instruction_run_rejected(action_id, FAILURE_INSTRUCTION_INVALID_PAYLOAD, err);
+        }
+    };
+    let allow_failure = parsed.allow_failure.unwrap_or(false);
+    if !instruction_path.exists() {
+        return instruction_run_rejected(
+            action_id,
+            FAILURE_INSTRUCTION_EXECUTION_IO,
+            format!("instruction file not found: {}", instruction_path.display()),
+        );
+    }
+    if !instruction_path.is_file() {
+        return instruction_run_rejected(
+            action_id,
+            FAILURE_INSTRUCTION_EXECUTION_IO,
+            format!(
+                "instruction path is not a file: {}",
+                instruction_path.display()
+            ),
+        );
+    }
+
+    let instruction_ref = instruction_ref(&repo_root, &instruction_path);
+    let squeak_site_profile = std::env::var("PREMATH_SQUEAK_SITE_PROFILE")
+        .ok()
+        .or_else(|| std::env::var("PREMATH_EXECUTOR_PROFILE").ok())
+        .unwrap_or_else(|| "local".to_string());
+    let run_started_at = Utc::now();
+    let mut stdout_parts: Vec<String> = Vec::new();
+    let mut stderr_parts: Vec<String> = Vec::new();
+
+    let instruction_bytes = match fs::read(&instruction_path) {
+        Ok(bytes) => bytes,
+        Err(err) => {
+            return instruction_run_rejected(
+                action_id,
+                FAILURE_INSTRUCTION_EXECUTION_IO,
+                format!(
+                    "failed to read instruction file {}: {err}",
+                    instruction_path.display()
+                ),
+            );
+        }
+    };
+    let envelope_value = serde_json::from_slice::<Value>(&instruction_bytes).ok();
+    let validated = if let Some(value) = envelope_value.as_ref() {
+        validate_instruction_envelope_payload(value, &instruction_path, &repo_root)
+    } else {
+        Err(InstructionError {
+            failure_class: "instruction_envelope_invalid_json".to_string(),
+            message: format!(
+                "failed to parse instruction json {}",
+                instruction_path.display()
+            ),
+        })
+    };
+
+    let (witness, exit_code) = match validated {
+        Ok(checked) => {
+            let instruction_id = instruction_id_from_validated_path(&instruction_path);
+            let instruction_digest = checked.instruction_digest.clone();
+            let mut results: Vec<ExecutedInstructionCheck> = Vec::new();
+            if matches!(decision_state(&checked).as_deref(), Some("execute")) {
+                for check_id in &checked.requested_checks {
+                    stdout_parts.push(format!("[instruction] running check: {check_id}"));
+                    let (result, stdout, stderr) = match run_gate_check(&repo_root, check_id) {
+                        Ok(value) => value,
+                        Err(err) => {
+                            return instruction_run_rejected(
+                                action_id,
+                                FAILURE_INSTRUCTION_EXECUTION_IO,
+                                err,
+                            );
+                        }
+                    };
+                    if !stdout.trim().is_empty() {
+                        stdout_parts.push(stdout.trim_end().to_string());
+                    }
+                    if !stderr.trim().is_empty() {
+                        stderr_parts.push(stderr.trim_end().to_string());
+                    }
+                    results.push(result);
+                }
+            } else {
+                let (source, reason) = decision_source_reason(&checked);
+                stderr_parts.push(format!(
+                    "[instruction] execution decision rejected before execution (source={}, reason={})",
+                    source.unwrap_or_else(|| "unknown".to_string()),
+                    reason.unwrap_or_else(|| "unknown".to_string())
+                ));
+            }
+
+            let run_finished_at = Utc::now();
+            let runtime = instruction_runtime_payload(
+                instruction_id,
+                instruction_ref.clone(),
+                instruction_digest,
+                squeak_site_profile.clone(),
+                run_started_at,
+                run_finished_at,
+                results,
+            );
+            let witness = match build_instruction_witness(&checked, runtime) {
+                Ok(value) => value,
+                Err(err) => {
+                    return instruction_run_rejected(
+                        action_id,
+                        FAILURE_INSTRUCTION_RUNTIME_INVALID,
+                        err.to_string(),
+                    );
+                }
+            };
+            let exit_code = if witness.verdict_class == "rejected" && !allow_failure {
+                1
+            } else {
+                0
+            };
+            (witness, exit_code)
+        }
+        Err(err) => {
+            let run_finished_at = Utc::now();
+            let instruction_id = fallback_instruction_id_from_path(&instruction_path);
+            let instruction_digest =
+                normalized_instruction_digest(&instruction_bytes, envelope_value.as_ref());
+            let runtime = instruction_runtime_payload(
+                instruction_id,
+                instruction_ref.clone(),
+                instruction_digest,
+                squeak_site_profile.clone(),
+                run_started_at,
+                run_finished_at,
+                Vec::new(),
+            );
+            let witness = match build_pre_execution_reject_witness(
+                envelope_value.as_ref(),
+                runtime,
+                err.failure_class.as_str(),
+                err.message.as_str(),
+            ) {
+                Ok(value) => value,
+                Err(build_err) => {
+                    return instruction_run_rejected(
+                        action_id,
+                        FAILURE_INSTRUCTION_RUNTIME_INVALID,
+                        build_err.to_string(),
+                    );
+                }
+            };
+            stderr_parts.push(format!(
+                "[error] invalid instruction envelope: {}: {}",
+                err.failure_class, err.message
+            ));
+            (witness, 2)
+        }
+    };
+
+    let witness_path = repo_root
+        .join("artifacts")
+        .join("ciwitness")
+        .join(format!("{}.json", witness.instruction_id));
+    if let Err(err) = write_instruction_witness(&witness_path, &witness) {
+        return instruction_run_rejected(action_id, FAILURE_INSTRUCTION_EXECUTION_IO, err);
+    }
+    stdout_parts.push(format!(
+        "[instruction] witness written: {}",
+        witness_path.display()
+    ));
+
+    let ok = exit_code == 0;
+    let failure_classes: Vec<String> = if ok {
+        Vec::new()
+    } else {
+        witness.failure_classes.clone()
+    };
+
+    serde_json::json!({
+        "schema": 1,
+        "result": if ok { "accepted" } else { "rejected" },
+        "failureClasses": failure_classes,
+        "action": transport_action_spec(action_id).action,
+        "repoRoot": repo_root.display().to_string(),
+        "instructionPath": instruction_path.display().to_string(),
+        "allowFailure": allow_failure,
+        "ok": ok,
+        "exitCode": exit_code,
+        "witnessPath": witness_path.display().to_string(),
+        "witnessExists": witness_path.exists(),
+        "instructionId": witness.instruction_id,
+        "verdictClass": witness.verdict_class,
+        "requiredChecks": witness.required_checks,
+        "executedChecks": witness.executed_checks,
+        "stdout": truncate_for_payload(&stdout_parts.join("\n"), 16_000),
+        "stderr": truncate_for_payload(&stderr_parts.join("\n"), 16_000),
+    })
 }
 
 fn fiber_spawn_response(payload: Value) -> Value {
@@ -1997,6 +2465,7 @@ fn dispatch_transport_action(action_id: TransportActionId, payload: Value) -> Va
         TransportActionId::FiberSpawn => fiber_spawn_response(payload),
         TransportActionId::FiberJoin => fiber_join_response(payload),
         TransportActionId::FiberCancel => fiber_cancel_response(payload),
+        TransportActionId::InstructionRun => instruction_run_response(payload),
     }
 }
 
@@ -2291,6 +2760,27 @@ mod tests {
     }
 
     #[test]
+    fn transport_dispatch_instruction_run_rejects_invalid_payload() {
+        let request = serde_json::json!({
+            "action": "instruction.run",
+            "payload": {
+                "instructionPath": "   "
+            }
+        });
+        let response = transport_dispatch_json(&request.to_string());
+        let value: Value = serde_json::from_str(&response).expect("dispatch response should parse");
+        assert_eq!(value["result"], "rejected");
+        assert_eq!(
+            value["failureClasses"],
+            serde_json::json!(["instruction_invalid_payload"])
+        );
+        assert_eq!(
+            value["actionId"],
+            serde_json::json!("transport.action.instruction_run")
+        );
+    }
+
+    #[test]
     fn transport_dispatch_world_route_binding_accepts() {
         let request = serde_json::json!({
             "action": "world.route_binding",
@@ -2370,7 +2860,7 @@ mod tests {
         assert_eq!(report.profile_id, "transport.issue_lease.v1");
         assert_eq!(report.result, "accepted");
         assert!(report.failure_classes.is_empty());
-        assert_eq!(report.action_count, 8);
+        assert_eq!(report.action_count, 9);
         assert!(
             report
                 .actions
@@ -2388,6 +2878,13 @@ mod tests {
         assert!(
             report.actions.iter().any(|row| row.action == "fiber.spawn"
                 && row.action_id == "transport.action.fiber_spawn")
+        );
+        assert!(
+            report
+                .actions
+                .iter()
+                .any(|row| row.action == "instruction.run"
+                    && row.action_id == "transport.action.instruction_run")
         );
         assert!(report.semantic_digest.starts_with("ts1_"));
     }

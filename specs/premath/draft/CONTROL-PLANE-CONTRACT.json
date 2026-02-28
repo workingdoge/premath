@@ -347,6 +347,7 @@
     "requiredOperationRoutes": {
       "runGate": {
         "operationId": "op/ci.run_gate",
+        "routeFamilyId": "route.gate_execution",
         "requiredMorphisms": [
           "dm.identity",
           "dm.profile.execution",
@@ -356,11 +357,21 @@
       },
       "runGateTerraform": {
         "operationId": "op/ci.run_gate_terraform",
+        "routeFamilyId": "route.gate_execution",
         "requiredMorphisms": [
           "dm.identity",
           "dm.profile.execution",
           "dm.transport.location",
           "dm.transport.world"
+        ]
+      },
+      "runInstruction": {
+        "operationId": "op/ci.run_instruction",
+        "routeFamilyId": "route.instruction_execution",
+        "requiredMorphisms": [
+          "dm.commitment.attest",
+          "dm.identity",
+          "dm.profile.execution"
         ]
       }
     },
@@ -568,7 +579,7 @@
         "operationId": "op/mcp.instruction_check"
       },
       "instruction.run": {
-        "canonicalCli": "mise run ci-pipeline-instruction",
+        "canonicalCli": "premath transport-dispatch --action instruction.run --payload '<json>' --json",
         "mcpTool": "instruction_run",
         "operationId": "op/mcp.instruction_run"
       },

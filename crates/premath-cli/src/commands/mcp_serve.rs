@@ -22,7 +22,7 @@ use premath_transport::{
     IssueLeaseReleaseRequest as TransportIssueLeaseReleaseRequest,
     IssueLeaseRenewRequest as TransportIssueLeaseRenewRequest, LeaseActionEnvelope,
     issue_claim as transport_issue_claim, issue_lease_release as transport_issue_lease_release,
-    issue_lease_renew as transport_issue_lease_renew,
+    issue_lease_renew as transport_issue_lease_renew, transport_dispatch_json,
 };
 use premath_ux::{ObserveQuery, SurrealObservationBackend, UxService};
 use rust_mcp_sdk::{
@@ -41,7 +41,6 @@ use serde_json::{Value, json};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
-use std::process::Command;
 use std::sync::Arc;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -2020,45 +2019,20 @@ fn call_instruction_run(
     let repo_root = resolve_repo_root(&config.repo_root);
     let instruction_path = resolve_instruction_path(&repo_root, &tool.instruction_path);
     let allow_failure = tool.allow_failure.unwrap_or(false);
-    let instruction_id = instruction_path
-        .file_stem()
-        .map(|s| s.to_string_lossy().to_string())
-        .unwrap_or_default();
-
-    let mut cmd = Command::new("python3");
-    cmd.arg("tools/ci/pipeline_instruction.py")
-        .arg("--instruction")
-        .arg(&instruction_path)
-        .arg("--repo-root")
-        .arg(&repo_root)
-        .current_dir(&repo_root);
-    if allow_failure {
-        cmd.arg("--allow-failure");
-    }
-
-    let output = cmd
-        .output()
-        .map_err(|e| call_tool_error(format!("failed to execute instruction pipeline: {e}")))?;
-
-    let witness_path = repo_root
-        .join("artifacts")
-        .join("ciwitness")
-        .join(format!("{instruction_id}.json"));
-    let witness_exists = witness_path.exists();
-
-    let payload = json!({
+    let request = json!({
         "action": "instruction.run",
-        "repoRoot": repo_root.display().to_string(),
-        "instructionPath": instruction_path.display().to_string(),
-        "allowFailure": allow_failure,
-        "ok": output.status.success(),
-        "exitCode": output.status.code(),
-        "witnessPath": witness_path.display().to_string(),
-        "witnessExists": witness_exists,
-        "stdout": truncate_for_payload(&String::from_utf8_lossy(&output.stdout), 16_000),
-        "stderr": truncate_for_payload(&String::from_utf8_lossy(&output.stderr), 16_000)
+        "payload": {
+            "instructionPath": instruction_path.display().to_string(),
+            "repoRoot": repo_root.display().to_string(),
+            "allowFailure": allow_failure
+        }
     });
-    json_result(payload)
+    let request_json = serde_json::to_string(&request)
+        .map_err(|e| call_tool_error(format!("failed to serialize transport request: {e}")))?;
+    let response_json = transport_dispatch_json(&request_json);
+    let response: Value = serde_json::from_str(&response_json)
+        .map_err(|e| call_tool_error(format!("failed to parse transport response: {e}")))?;
+    json_result(response)
 }
 
 fn load_observe_service(

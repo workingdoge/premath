@@ -416,6 +416,7 @@ def _base_payload() -> dict:
             "requiredOperationRoutes": {
                 "runGate": {
                     "operationId": "op/ci.run_gate",
+                    "routeFamilyId": "route.gate_execution",
                     "requiredMorphisms": [
                         "dm.identity",
                         "dm.profile.execution",
@@ -425,11 +426,21 @@ def _base_payload() -> dict:
                 },
                 "runGateTerraform": {
                     "operationId": "op/ci.run_gate_terraform",
+                    "routeFamilyId": "route.gate_execution",
                     "requiredMorphisms": [
                         "dm.identity",
                         "dm.profile.execution",
                         "dm.transport.location",
                         "dm.transport.world",
+                    ],
+                },
+                "runInstruction": {
+                    "operationId": "op/ci.run_instruction",
+                    "routeFamilyId": "route.instruction_execution",
+                    "requiredMorphisms": [
+                        "dm.commitment.attest",
+                        "dm.identity",
+                        "dm.profile.execution",
                     ],
                 },
             },
@@ -549,6 +560,11 @@ def _base_payload() -> dict:
                 "coherence.check": {
                     "canonicalCli": "premath coherence-check --contract <path> --repo-root <repo> --json",
                     "mcpTool": None,
+                },
+                "instruction.run": {
+                    "canonicalCli": "premath transport-dispatch --action instruction.run --payload '<json>' --json",
+                    "mcpTool": "instruction_run",
+                    "operationId": "op/mcp.instruction_run",
                 },
                 "issue.lease_renew": {
                     "canonicalCli": None,
@@ -725,6 +741,24 @@ class ControlPlaneContractTests(unittest.TestCase):
             "op/ci.run_gate",
         )
         self.assertEqual(
+            loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runGate"][
+                "routeFamilyId"
+            ],
+            "route.gate_execution",
+        )
+        self.assertEqual(
+            loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runInstruction"][
+                "operationId"
+            ],
+            "op/ci.run_instruction",
+        )
+        self.assertEqual(
+            loaded["runtimeRouteBindings"]["requiredOperationRoutes"]["runInstruction"][
+                "routeFamilyId"
+            ],
+            "route.instruction_execution",
+        )
+        self.assertEqual(
             loaded["commandSurface"]["requiredDecision"]["canonicalEntrypoint"],
             ["mise", "run", "ci-required-attested"],
         )
@@ -798,6 +832,12 @@ class ControlPlaneContractTests(unittest.TestCase):
                 "operationId"
             ],
             "op/mcp.issue_lease_renew",
+        )
+        self.assertEqual(
+            loaded["hostActionSurface"]["requiredActions"]["instruction.run"][
+                "canonicalCli"
+            ],
+            "premath transport-dispatch --action instruction.run --payload '<json>' --json",
         )
         self.assertEqual(
             loaded["hostActionSurface"]["mcpOnlyHostActions"],

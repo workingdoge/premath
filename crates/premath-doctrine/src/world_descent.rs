@@ -41,6 +41,7 @@ const DEFAULT_WORLD_ROUTE_STATIC_BINDINGS: [(&str, &[&str]); 1] = [(
     "route.transport.dispatch",
     &["op/transport.world_route_binding"],
 )];
+const DEFAULT_RUNTIME_ROUTE_FAMILY_ID: &str = "route.gate_execution";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
@@ -185,11 +186,12 @@ fn derive_world_descent_requirements(
     }
 
     if mode.include_runtime_route_operations() {
-        let gate_entry = route_bindings
-            .entry("route.gate_execution".to_string())
-            .or_default();
-        for operation_id in parse_runtime_route_operation_ids(control_plane_contract) {
-            gate_entry.insert(operation_id);
+        for (route_family_id, operation_ids) in
+            parse_runtime_route_operation_bindings(control_plane_contract)
+        {
+            route_families.insert(route_family_id.clone());
+            let route_entry = route_bindings.entry(route_family_id).or_default();
+            route_entry.extend(operation_ids);
         }
     }
 
@@ -682,30 +684,40 @@ fn expected_failure_classes(config: &WorldDescentConfig) -> BTreeMap<String, Str
     out
 }
 
-fn parse_runtime_route_operation_ids(control_plane_contract: &Value) -> Vec<String> {
+fn parse_runtime_route_operation_bindings(
+    control_plane_contract: &Value,
+) -> BTreeMap<String, BTreeSet<String>> {
     let Some(contract_obj) = control_plane_contract.as_object() else {
-        return Vec::new();
+        return BTreeMap::new();
     };
     let Some(runtime_route_bindings) = contract_obj.get("runtimeRouteBindings") else {
-        return Vec::new();
+        return BTreeMap::new();
     };
     let Some(runtime_route_bindings_obj) = runtime_route_bindings.as_object() else {
-        return Vec::new();
+        return BTreeMap::new();
     };
     let Some(required_operation_routes) = runtime_route_bindings_obj.get("requiredOperationRoutes")
     else {
-        return Vec::new();
+        return BTreeMap::new();
     };
     let Some(required_operation_routes_obj) = required_operation_routes.as_object() else {
-        return Vec::new();
+        return BTreeMap::new();
     };
-    required_operation_routes_obj
+    let mut rows: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for route_obj in required_operation_routes_obj
         .values()
         .filter_map(Value::as_object)
-        .filter_map(|route_obj| non_empty_string(route_obj.get("operationId")))
-        .collect::<BTreeSet<_>>()
-        .into_iter()
-        .collect()
+    {
+        let Some(operation_id) = non_empty_string(route_obj.get("operationId")) else {
+            continue;
+        };
+        let route_family_id = non_empty_string(route_obj.get("routeFamilyId"))
+            .unwrap_or_else(|| DEFAULT_RUNTIME_ROUTE_FAMILY_ID.to_string());
+        rows.entry(route_family_id)
+            .or_default()
+            .insert(operation_id);
+    }
+    rows
 }
 
 fn route_bindings_to_rows(
@@ -1041,6 +1053,62 @@ mod tests {
         assert_eq!(
             gate_binding.operation_ids,
             vec!["op/ci.run_gate".to_string()]
+        );
+    }
+
+    #[test]
+    fn runtime_mode_routes_runtime_operations_to_declared_route_families() {
+        let control_plane = serde_json::json!({
+            "runtimeRouteBindings": {
+                "requiredOperationRoutes": {
+                    "runInstruction": {
+                        "operationId": "op/ci.run_instruction",
+                        "routeFamilyId": "route.instruction_execution",
+                        "requiredMorphisms": ["dm.commitment.attest", "dm.identity", "dm.profile.execution"]
+                    }
+                }
+            },
+            "worldDescentContract": {
+                "contractId": "doctrine.world_descent.v1",
+                "requiredRouteFamilies": [
+                    "route.gate_execution",
+                    "route.instruction_execution",
+                    "route.required_decision_attestation",
+                    "route.fiber.lifecycle",
+                    "route.issue_claim_lease",
+                    "route.session_projection",
+                    "route.transport.dispatch"
+                ],
+                "requiredActionRouteBindings": {
+                    "route.instruction_execution": ["instruction.run"]
+                },
+                "requiredStaticOperationBindings": {
+                    "route.transport.dispatch": ["op/transport.world_route_binding"]
+                },
+                "failureClasses": {
+                    "identityMissing": "world_route_identity_missing",
+                    "descentDataMissing": "world_descent_data_missing",
+                    "kcirHandoffIdentityMissing": "kcir_handoff_identity_missing"
+                }
+            },
+            "hostActionSurface": {
+                "requiredActions": {
+                    "instruction.run": {"operationId": "op/mcp.instruction_run"}
+                }
+            }
+        });
+
+        let (requirements, _issues) =
+            derive_world_descent_requirements_for_runtime_orchestration(&control_plane);
+        let instruction_binding = requirements
+            .bindings
+            .iter()
+            .find(|row| row.route_family_id == "route.instruction_execution")
+            .expect("missing route.instruction_execution binding");
+        assert!(
+            instruction_binding
+                .operation_ids
+                .contains(&"op/ci.run_instruction".to_string())
         );
     }
 }

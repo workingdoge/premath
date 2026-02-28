@@ -4209,3 +4209,37 @@ semantic Python lane while preserving deterministic parity behavior.
   `doctrine_mcp_parity_check_json_smoke`.
 - legacy Python checker file can remain temporarily as a compatibility/path
   reference lane, but active enforcement route is checker-native.
+
+---
+
+## 2026-02-27 — Decision 0137: Make instruction runtime routing explicit and transport-first
+
+### Decision
+Tighten control-plane routing authority for instruction execution:
+
+1. Define `runtimeRouteBindings.requiredOperationRoutes.runInstruction` in
+   `draft/CONTROL-PLANE-CONTRACT.json` with explicit
+   `routeFamilyId=route.instruction_execution`,
+   `operationId=op/ci.run_instruction`, and required morphisms.
+2. Make `hostActionSurface.requiredActions["instruction.run"].canonicalCli`
+   transport-first:
+   `premath transport-dispatch --action instruction.run --payload '<json>' --json`.
+3. Update doctrine world-descent requirement derivation to honor per-runtime-route
+   `routeFamilyId` (defaulting to `route.gate_execution` only when absent),
+   rather than forcing all runtime routes into `route.gate_execution`.
+
+### Rationale
+Without explicit per-route family mapping, adding instruction runtime routing to
+`runtimeRouteBindings` produced a false world-route obligation on
+`route.gate_execution`. Declaring route family at the runtime-route row and
+routing `instruction.run` through transport keeps architecture intent explicit:
+runtime routes map to their world families, adapters remain thin, and doctrine
+checks enforce the intended shape.
+
+### Consequences
+- runtime-orchestration checks now validate three runtime routes explicitly:
+  `runGate`, `runGateTerraform`, and `runInstruction`.
+- world-route derivation no longer conflates instruction execution with gate
+  execution when runtime routes are expanded.
+- host-action command mapping for `instruction.run` now matches the active
+  transport-dispatch execution boundary.

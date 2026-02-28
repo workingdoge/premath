@@ -1991,7 +1991,7 @@ fn transport_check_json_smoke() {
     );
     assert_eq!(payload["result"], "accepted");
     assert_eq!(payload["failureClasses"], serde_json::json!([]));
-    assert_eq!(payload["actionCount"], 8);
+    assert_eq!(payload["actionCount"], 9);
     let actions = payload["actions"]
         .as_array()
         .expect("actions should be an array");
@@ -2007,6 +2007,8 @@ fn transport_check_json_smoke() {
         actions.iter().any(|row| row["action"] == "fiber.spawn"
             && row["actionId"] == "transport.action.fiber_spawn")
     );
+    assert!(actions.iter().any(|row| row["action"] == "instruction.run"
+        && row["actionId"] == "transport.action.instruction_run"));
 }
 
 #[test]
