@@ -1958,21 +1958,23 @@ fn relative_display(path: &Path, repo_root: &Path) -> String {
         .unwrap_or_else(|_| path.to_string_lossy().to_string())
 }
 
-fn digest_payload(
-    repo_root: &Path,
-    packages_root: &Path,
-    input_map: &Path,
-    site_map: &Path,
-    operation_registry: &Path,
-    cutover_contract: &Path,
-    generated_input: &Map<String, Value>,
-    generated_site: &Map<String, Value>,
-    generated_registry: &Map<String, Value>,
-) -> Map<String, Value> {
+struct DigestPayloadInput<'a> {
+    repo_root: &'a Path,
+    packages_root: &'a Path,
+    input_map: &'a Path,
+    site_map: &'a Path,
+    operation_registry: &'a Path,
+    cutover_contract: &'a Path,
+    generated_input: &'a Map<String, Value>,
+    generated_site: &'a Map<String, Value>,
+    generated_registry: &'a Map<String, Value>,
+}
+
+fn digest_payload(input: DigestPayloadInput<'_>) -> Map<String, Value> {
     let mut source = Map::new();
     source.insert(
         "packagesRoot".to_string(),
-        Value::String(relative_display(packages_root, repo_root)),
+        Value::String(relative_display(input.packages_root, input.repo_root)),
     );
     source.insert(
         "packageGlob".to_string(),
@@ -1984,37 +1986,37 @@ fn digest_payload(
     );
     source.insert(
         "cutoverContract".to_string(),
-        Value::String(relative_display(cutover_contract, repo_root)),
+        Value::String(relative_display(input.cutover_contract, input.repo_root)),
     );
 
     let mut site_input_row = Map::new();
     site_input_row.insert(
         "path".to_string(),
-        Value::String(relative_display(input_map, repo_root)),
+        Value::String(relative_display(input.input_map, input.repo_root)),
     );
     site_input_row.insert(
         "sha256".to_string(),
-        Value::String(site_input_digest(generated_input)),
+        Value::String(site_input_digest(input.generated_input)),
     );
 
     let mut site_map_row = Map::new();
     site_map_row.insert(
         "path".to_string(),
-        Value::String(relative_display(site_map, repo_root)),
+        Value::String(relative_display(input.site_map, input.repo_root)),
     );
     site_map_row.insert(
         "sha256".to_string(),
-        Value::String(site_map_digest(generated_site)),
+        Value::String(site_map_digest(input.generated_site)),
     );
 
     let mut operation_registry_row = Map::new();
     operation_registry_row.insert(
         "path".to_string(),
-        Value::String(relative_display(operation_registry, repo_root)),
+        Value::String(relative_display(input.operation_registry, input.repo_root)),
     );
     operation_registry_row.insert(
         "sha256".to_string(),
-        Value::String(operation_registry_digest(generated_registry)),
+        Value::String(operation_registry_digest(input.generated_registry)),
     );
 
     let mut artifacts = Map::new();
@@ -2206,17 +2208,17 @@ pub fn run(
         generated_registry.as_ref(),
         tracked_digest_contract.as_ref(),
     ) {
-        let expected_digest = digest_payload(
-            &repo_root,
-            &packages_root,
-            &input_map,
-            &site_map,
-            &operation_registry,
-            &cutover_contract,
+        let expected_digest = digest_payload(DigestPayloadInput {
+            repo_root: &repo_root,
+            packages_root: &packages_root,
+            input_map: &input_map,
+            site_map: &site_map,
+            operation_registry: &operation_registry,
+            cutover_contract: &cutover_contract,
             generated_input,
             generated_site,
             generated_registry,
-        );
+        });
         if canonical_json_string(&Value::Object(expected_digest.clone()))
             != canonical_json_string(&Value::Object(tracked_digest.clone()))
         {
@@ -2249,17 +2251,17 @@ pub fn run(
         }
     }
 
-    if let (Some(site), Some(registry)) = (tracked_site.as_ref(), tracked_registry.as_ref()) {
-        if let Ok((nodes, edges, covers, operations)) = summarize_site_map(site) {
-            summary = Some(DoctrineSiteSummary {
-                nodes,
-                edges,
-                covers,
-                operations,
-                site_digest: site_map_digest(site),
-                registry_digest: operation_registry_digest(registry),
-            });
-        }
+    if let (Some(site), Some(registry)) = (tracked_site.as_ref(), tracked_registry.as_ref())
+        && let Ok((nodes, edges, covers, operations)) = summarize_site_map(site)
+    {
+        summary = Some(DoctrineSiteSummary {
+            nodes,
+            edges,
+            covers,
+            operations,
+            site_digest: site_map_digest(site),
+            registry_digest: operation_registry_digest(registry),
+        });
     }
 
     let accepted = errors.is_empty();
