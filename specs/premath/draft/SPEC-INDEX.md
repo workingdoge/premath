@@ -398,6 +398,8 @@ explicitly claimed under §5.4 or §5.6.
 - `raw/HYPERDESCENT` — optional strengthening: hyperdescent.
 - `raw/UNIVERSE` — optional extension: universe + comprehension (Tarski-style).
 - `raw/SPLIT-PRESENTATION` — guidance: strict IR vs. semantic equality.
+- `raw/IDENTITY-ADMISSION` — reusable local admission vocabulary for
+  presentations, assertions, witnesses, and typed obstructions.
 - `raw/TUSK-CORE` — single-world operational runtime contracts (informational/raw).
 - `raw/SQUEAK-CORE` — inter-world transport/composition contracts (informational/raw).
 - `raw/FIBER-CONCURRENCY` — structured-concurrency transport profile over
@@ -509,6 +511,13 @@ If you are proving semantics:
 2) `draft/PREMATH-KERNEL`
 3) `raw/SEMANTICS-INFTOPOS` (optional)
 4) optional extensions (`HYPERDESCENT`, `UNIVERSE`)
+
+If you are extracting or adopting local admission profiles:
+1) `draft/PREMATH-KERNEL`
+2) `draft/GATE`
+3) `raw/IDENTITY-ADMISSION`
+4) the relevant domain profile or product surface
+5) `raw/SPLIT-PRESENTATION` (only when a strict IR/equality boundary matters)
 
 If you are implementing Interop Full:
 1) `draft/DOCTRINE-INF`
