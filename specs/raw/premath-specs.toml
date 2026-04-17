@@ -1,0 +1,41 @@
+[package]
+name = "premath-specs"
+version = "0.1.0-draft"
+kind = "spec-only"
+entry = "specs/overview.md"
+
+[[module]]
+name = "PREMATH.ASP0"
+path = "specs/asp/ASP0.md"
+depends = []
+status = "draft"
+
+[[module]]
+name = "PREMATH.IDENT0"
+path = "specs/ident/IDENT0.md"
+depends = ["PREMATH.ASP0"]
+status = "draft"
+
+[[module]]
+name = "PREMATH.IDENT.JWT0"
+path = "specs/ident/JWT0.md"
+depends = ["PREMATH.IDENT0"]
+status = "draft"
+
+[[module]]
+name = "PREMATH.IDENT.JWT0.OBS"
+path = "specs/ident/JWT0-OBS.md"
+depends = ["PREMATH.IDENT.JWT0"]
+status = "draft"
+
+[[module]]
+name = "PREMATH.IDENT.JWT0.SEARCH"
+path = "specs/ident/JWT0-SEARCH.md"
+depends = ["PREMATH.IDENT.JWT0.OBS"]
+status = "draft"
+
+[[module]]
+name = "PREMATH.IDENT.JWT1.JWKS0"
+path = "specs/ident/JWT1-JWKS0.md"
+depends = ["PREMATH.IDENT.JWT0.SEARCH"]
+status = "draft"
