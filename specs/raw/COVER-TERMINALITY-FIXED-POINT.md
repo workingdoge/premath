@@ -117,7 +117,7 @@ runtime failure classes.
 ## Relation to later stages
 
 `limit` is the first downstream terminal-summary stage that may summarize from a
-`fixed_point` witness.
+`fixed_point` witness; see `COVER-TERMINALITY-LIMIT.md`.
 
 `attractor`, `basin_of_attraction`, and `attractor_family` remain follow-up
 drafts and are not defined here.

@@ -117,7 +117,9 @@ This document does **not** yet define:
 
 - the `fixed_point` member law inline; see
   `COVER-TERMINALITY-FIXED-POINT.md` for the first member-law draft,
-- the theorem packages for `limit`, `attractor`, `basin_of_attraction`, or
+- the `limit` member law inline; see `COVER-TERMINALITY-LIMIT.md` for the
+  first downstream terminal-summary draft,
+- the theorem packages for `attractor`, `basin_of_attraction`, or
   `attractor_family`,
 - executable witness validation rules.
 

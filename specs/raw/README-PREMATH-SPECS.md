@@ -24,18 +24,20 @@ It does **not** contain:
 1. `specs/raw/ASP-IDENT-OVERVIEW.md`
 2. `specs/raw/COVER-TERMINALITY.md`
 3. `specs/raw/COVER-TERMINALITY-FIXED-POINT.md`
-4. `specs/raw/asp/ASP0.md`
-5. `specs/raw/ident/IDENT0.md`
-6. `specs/raw/ident/JWT0.md`
-7. `specs/raw/ident/JWT0-OBS.md`
-8. `specs/raw/ident/JWT0-SEARCH.md`
-9. `specs/raw/ident/JWT1-JWKS0.md`
+4. `specs/raw/COVER-TERMINALITY-LIMIT.md`
+5. `specs/raw/asp/ASP0.md`
+6. `specs/raw/ident/IDENT0.md`
+7. `specs/raw/ident/JWT0.md`
+8. `specs/raw/ident/JWT0-OBS.md`
+9. `specs/raw/ident/JWT0-SEARCH.md`
+10. `specs/raw/ident/JWT1-JWKS0.md`
 
 ## Module graph
 
 ```text
 PREMATH.COVER.TERMINALITY
   └─ PREMATH.COVER.TERMINALITY.FIXED_POINT
+       └─ PREMATH.COVER.TERMINALITY.LIMIT
 PREMATH.ASP0
   └─ PREMATH.IDENT0
        └─ PREMATH.IDENT.JWT0
@@ -54,6 +56,7 @@ premath-specs/
     ├── ASP-IDENT-OVERVIEW.md
     ├── COVER-TERMINALITY.md
     ├── COVER-TERMINALITY-FIXED-POINT.md
+    ├── COVER-TERMINALITY-LIMIT.md
     ├── asp/
     │   └── ASP0.md
     └── ident/
