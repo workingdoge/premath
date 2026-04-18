@@ -21,17 +21,19 @@ It does **not** contain:
 
 ## Reading order
 
-1. `specs/overview.md`
-2. `specs/asp/ASP0.md`
-3. `specs/ident/IDENT0.md`
-4. `specs/ident/JWT0.md`
-5. `specs/ident/JWT0-OBS.md`
-6. `specs/ident/JWT0-SEARCH.md`
-7. `specs/ident/JWT1-JWKS0.md`
+1. `specs/raw/ASP-IDENT-OVERVIEW.md`
+2. `specs/raw/COVER-TERMINALITY.md`
+3. `specs/raw/asp/ASP0.md`
+4. `specs/raw/ident/IDENT0.md`
+5. `specs/raw/ident/JWT0.md`
+6. `specs/raw/ident/JWT0-OBS.md`
+7. `specs/raw/ident/JWT0-SEARCH.md`
+8. `specs/raw/ident/JWT1-JWKS0.md`
 
 ## Module graph
 
 ```text
+PREMATH.COVER.TERMINALITY
 PREMATH.ASP0
   └─ PREMATH.IDENT0
        └─ PREMATH.IDENT.JWT0
@@ -46,8 +48,9 @@ PREMATH.ASP0
 premath-specs/
 ├── README.md
 ├── premath-specs.toml
-└── specs/
-    ├── overview.md
+└── specs/raw/
+    ├── ASP-IDENT-OVERVIEW.md
+    ├── COVER-TERMINALITY.md
     ├── asp/
     │   └── ASP0.md
     └── ident/
