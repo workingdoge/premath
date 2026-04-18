@@ -162,7 +162,8 @@ assign runtime failure classes.
 ## Relation to later stages
 
 `basin_of_attraction` is the next downstream stage that may relate attractor
-classifiers back to the wider limit line.
+classifiers back to the wider limit line; see
+`COVER-TERMINALITY-BASIN-OF-ATTRACTION.md`.
 
 `attractor_family` remains a follow-up draft and is not defined here.
 

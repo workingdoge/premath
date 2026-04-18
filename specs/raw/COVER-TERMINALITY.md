@@ -121,7 +121,10 @@ This document does **not** yet define:
   first downstream terminal-summary draft,
 - the `attractor` member law inline; see
   `COVER-TERMINALITY-ATTRACTOR.md` for the first classifier-stage draft,
-- the theorem packages for `basin_of_attraction` or `attractor_family`,
+- the `basin_of_attraction` member law inline; see
+  `COVER-TERMINALITY-BASIN-OF-ATTRACTION.md` for the first relation-stage
+  draft,
+- the theorem packages for `attractor_family`,
 - executable witness validation rules.
 
 Those belong in follow-up drafts once the family shape is fixed.
