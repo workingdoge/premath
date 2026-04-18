@@ -10,3 +10,5 @@ This directory contains lifecycle and governance documents for the Premath spec 
   branch/ruleset enforcement checks on `main`.
 - `HARNESS-SPEC-PROMOTION-MAP.md` — parallel-safe preflight map/checklist for
   promoting harness design docs into draft spec surfaces.
+- `PREMATH-SPECS-0.1.0-DRAFT-PROMOTION-REVIEW.md` — non-normative review
+  artifact for the absorbed ASP/IDENT/JWT raw pack and its draft-promotion bar.
