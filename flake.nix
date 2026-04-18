@@ -4,6 +4,9 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    tusk.url = "git+file:///Users/arj/irai/tusk?ref=main";
+    devenv.follows = "tusk/devenv";
+    llm-agents.follows = "tusk/llm-agents";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -20,6 +23,9 @@
       self,
       nixpkgs,
       flake-utils,
+      tusk,
+      devenv,
+      llm-agents,
       rust-overlay,
       crane,
       jj,
@@ -76,8 +82,7 @@
                 rocksdb
               ]
               ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-                pkgs.darwin.apple_sdk.frameworks.Security
-                pkgs.darwin.apple_sdk.frameworks.SystemConfiguration
+                pkgs.apple-sdk
                 pkgs.libiconv
               ];
 
@@ -123,39 +128,83 @@
             fmt = craneLib.cargoFmt { inherit src; };
           };
 
-          devShells.default = craneLib.devShell {
-            checks = self.checks.${system};
+          devShells.default = tusk.lib.mkRepoShell {
+            inherit system;
+            pkgs = pkgs;
+            flakeInputs = {
+              inherit
+                self
+                nixpkgs
+                flake-utils
+                tusk
+                devenv
+                llm-agents
+                rust-overlay
+                crane
+                jj
+                ;
+            };
+            modules = [
+              (
+                { pkgs, ... }:
+                {
+                  codex.skills.tusk.source = tusk + "/.agents/skills/tusk";
+                  codex.skills.nix.source = tusk + "/.agents/skills/nix";
+                  codex.skills.ops.source = tusk + "/.agents/skills/ops";
+                  codex.skills.topology.source = tusk + "/.agents/skills/topology";
 
-            packages = with pkgs; [
-              # Rust
-              rustToolchain
-              cargo-watch
-              cargo-nextest
-              cargo-insta
+                  claude.skills.tusk.source = tusk + "/.agents/skills/tusk";
+                  claude.skills.nix.source = tusk + "/.agents/skills/nix";
+                  claude.skills.ops.source = tusk + "/.agents/skills/ops";
+                  claude.skills.topology.source = tusk + "/.agents/skills/topology";
 
-              # Version control
-              jujutsu
-
-              # Database
-              surrealdb
-
-              # Tools
-              direnv
-              mise
-              opentofu
-              terraform
-              ripgrep
-              tokei
-            ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
-              vfkit
+                  tusk.consumer = {
+                    enable = true;
+                    # Premath still uses an embedded tracker backend today, so
+                    # do not auto-start tuskd/beads-dolt from the shared shell.
+                    beadsDolt.enable = false;
+                    extraPackages = with pkgs; [
+                      rustToolchain
+                      cargo-watch
+                      cargo-nextest
+                      cargo-insta
+                      mise
+                      opentofu
+                      tokei
+                      python3
+                      pkg-config
+                      cmake
+                      openssl
+                      rocksdb
+                    ] ++ pkgs.lib.optionals pkgs.stdenv.isDarwin [
+                      pkgs.apple-sdk
+                      pkgs.libiconv
+                      vfkit
+                    ];
+                    smokeCheck.skillChecks = [
+                      ".codex/skills/tusk"
+                      ".codex/skills/nix"
+                      ".codex/skills/ops"
+                      ".codex/skills/topology"
+                      ".claude/skills/tusk"
+                      ".claude/skills/nix"
+                      ".claude/skills/ops"
+                      ".claude/skills/topology"
+                    ];
+                    extraEnterShell = ''
+                      export ROCKSDB_LIB_DIR="${pkgs.rocksdb}/lib"
+                      export ROCKSDB_INCLUDE_DIR="${pkgs.rocksdb}/include"
+                      echo "premath tusk consumer shell"
+                      echo "  rust:     $(rustc --version)"
+                      echo "  jj:       $(jj --version 2>/dev/null || echo 'not found')"
+                      echo "  surreal:  $(surreal version 2>/dev/null || echo 'not found')"
+                      echo "  cargo build --workspace"
+                      echo "  mise run baseline"
+                    '';
+                  };
+                }
+              )
             ];
-
-            shellHook = ''
-              echo "premath development shell"
-              echo "  rust:     $(rustc --version)"
-              echo "  jj:      $(jj --version 2>/dev/null || echo 'not found')"
-              echo "  surreal: $(surreal version 2>/dev/null || echo 'not found')"
-            '';
           };
         }
       );
