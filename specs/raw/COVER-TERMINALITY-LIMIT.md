@@ -120,7 +120,8 @@ runtime failure classes.
 ## Relation to later stages
 
 `attractor` is the next downstream stage that may classify structure induced by
-the terminal summary carried by `limit`.
+the terminal summary carried by `limit`; see
+`COVER-TERMINALITY-ATTRACTOR.md`.
 
 `basin_of_attraction` and `attractor_family` remain follow-up drafts and are
 not defined here.

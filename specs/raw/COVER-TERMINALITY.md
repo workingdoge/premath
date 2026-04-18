@@ -119,8 +119,9 @@ This document does **not** yet define:
   `COVER-TERMINALITY-FIXED-POINT.md` for the first member-law draft,
 - the `limit` member law inline; see `COVER-TERMINALITY-LIMIT.md` for the
   first downstream terminal-summary draft,
-- the theorem packages for `attractor`, `basin_of_attraction`, or
-  `attractor_family`,
+- the `attractor` member law inline; see
+  `COVER-TERMINALITY-ATTRACTOR.md` for the first classifier-stage draft,
+- the theorem packages for `basin_of_attraction` or `attractor_family`,
 - executable witness validation rules.
 
 Those belong in follow-up drafts once the family shape is fixed.

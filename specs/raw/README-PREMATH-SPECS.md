@@ -25,12 +25,13 @@ It does **not** contain:
 2. `specs/raw/COVER-TERMINALITY.md`
 3. `specs/raw/COVER-TERMINALITY-FIXED-POINT.md`
 4. `specs/raw/COVER-TERMINALITY-LIMIT.md`
-5. `specs/raw/asp/ASP0.md`
-6. `specs/raw/ident/IDENT0.md`
-7. `specs/raw/ident/JWT0.md`
-8. `specs/raw/ident/JWT0-OBS.md`
-9. `specs/raw/ident/JWT0-SEARCH.md`
-10. `specs/raw/ident/JWT1-JWKS0.md`
+5. `specs/raw/COVER-TERMINALITY-ATTRACTOR.md`
+6. `specs/raw/asp/ASP0.md`
+7. `specs/raw/ident/IDENT0.md`
+8. `specs/raw/ident/JWT0.md`
+9. `specs/raw/ident/JWT0-OBS.md`
+10. `specs/raw/ident/JWT0-SEARCH.md`
+11. `specs/raw/ident/JWT1-JWKS0.md`
 
 ## Module graph
 
@@ -38,6 +39,7 @@ It does **not** contain:
 PREMATH.COVER.TERMINALITY
   └─ PREMATH.COVER.TERMINALITY.FIXED_POINT
        └─ PREMATH.COVER.TERMINALITY.LIMIT
+            └─ PREMATH.COVER.TERMINALITY.ATTRACTOR
 PREMATH.ASP0
   └─ PREMATH.IDENT0
        └─ PREMATH.IDENT.JWT0
@@ -57,6 +59,7 @@ premath-specs/
     ├── COVER-TERMINALITY.md
     ├── COVER-TERMINALITY-FIXED-POINT.md
     ├── COVER-TERMINALITY-LIMIT.md
+    ├── COVER-TERMINALITY-ATTRACTOR.md
     ├── asp/
     │   └── ASP0.md
     └── ident/
