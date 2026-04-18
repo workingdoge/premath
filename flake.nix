@@ -148,6 +148,8 @@
               (
                 { pkgs, ... }:
                 {
+                  env.PREMATH_TUSK_ROOT = "${tusk}";
+
                   codex.skills.tusk.source = tusk + "/.agents/skills/tusk";
                   codex.skills.nix.source = tusk + "/.agents/skills/nix";
                   codex.skills.ops.source = tusk + "/.agents/skills/ops";
@@ -160,9 +162,9 @@
 
                   tusk.consumer = {
                     enable = true;
-                    # Premath still uses an embedded tracker backend today, so
-                    # do not auto-start tuskd/beads-dolt from the shared shell.
-                    beadsDolt.enable = false;
+                    # Premath runs its local tracker in Dolt server mode so the
+                    # shared bd/tuskd shell surface stays truthful.
+                    beadsDolt.enable = true;
                     extraPackages = with pkgs; [
                       rustToolchain
                       cargo-watch
