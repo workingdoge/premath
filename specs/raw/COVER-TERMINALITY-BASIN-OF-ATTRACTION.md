@@ -153,7 +153,8 @@ assign runtime failure classes.
 ## Relation to later stages
 
 `attractor_family` is the next downstream stage that may group basin relations
-into a higher family surface.
+into a higher family surface; see
+`COVER-TERMINALITY-ATTRACTOR-FAMILY.md`.
 
 ## Implementation boundary
 

@@ -124,7 +124,8 @@ This document does **not** yet define:
 - the `basin_of_attraction` member law inline; see
   `COVER-TERMINALITY-BASIN-OF-ATTRACTION.md` for the first relation-stage
   draft,
-- the theorem packages for `attractor_family`,
+- the `attractor_family` member law inline; see
+  `COVER-TERMINALITY-ATTRACTOR-FAMILY.md` for the final family-stage draft,
 - executable witness validation rules.
 
 Those belong in follow-up drafts once the family shape is fixed.
