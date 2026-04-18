@@ -115,7 +115,8 @@ behavior.
 
 This document does **not** yet define:
 
-- the full proof law for `fixed_point`,
+- the `fixed_point` member law inline; see
+  `COVER-TERMINALITY-FIXED-POINT.md` for the first member-law draft,
 - the theorem packages for `limit`, `attractor`, `basin_of_attraction`, or
   `attractor_family`,
 - executable witness validation rules.
