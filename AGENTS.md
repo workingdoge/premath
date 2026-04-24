@@ -2,7 +2,7 @@
 
 ## Project Structure & Module Organization
 
-- Core crates live in `crates/`: `premath-kernel` (laws/gate/witnesses), `premath-tusk` (runtime identity/descent/witness envelope), `premath-bd` (JSONL memory), `premath-transport` (transport adapter crate with optional rustler NIF exports), `premath-jj`, `premath-surreal` (query/index adapters), `premath-ux` (frontend/query composition surface), and `premath-cli`.
+- Core crates live in `crates/`: `premath-kernel` (laws/gate/witnesses), `premath-identity` (stable intent/run identity contracts), `premath-tusk` (runtime descent/witness envelope plus compatibility identity re-exports), `premath-bd` (JSONL memory), `premath-transport` (transport adapter crate with optional rustler NIF exports), `premath-jj`, `premath-surreal` (query/index adapters), `premath-ux` (frontend/query composition surface), and `premath-cli`.
 - Specs are lifecycle-scoped:
   - `specs/premath/draft/` for promoted contract specs
   - `specs/premath/raw/` for exploratory/informational specs

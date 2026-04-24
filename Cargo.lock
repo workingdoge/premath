@@ -770,6 +770,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "premath-identity"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+]
+
+[[package]]
 name = "premath-jj"
 version = "0.1.0"
 dependencies = [
@@ -817,6 +826,7 @@ dependencies = [
 name = "premath-tusk"
 version = "0.1.0"
 dependencies = [
+ "premath-identity",
  "premath-kernel",
  "serde",
  "serde_json",
