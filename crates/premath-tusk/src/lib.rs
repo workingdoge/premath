@@ -1,7 +1,7 @@
 //! # premath-tusk
 //!
 //! Minimal `tusk-core` runtime skeleton:
-//! - deterministic run/intent identity
+//! - compatibility re-exports for deterministic run/intent identity
 //! - `DescentCore` / `DescentPack` artifacts
 //! - world-owned glue selection result surface
 //! - Gate-class mapping + gate witness envelope emission

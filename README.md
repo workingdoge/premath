@@ -236,9 +236,16 @@ Runtime crates are split by responsibility:
 - `crates/premath-coherence`:
   - Typed coherence-obligation evaluator used by `premath coherence-check`.
   - Emits deterministic checker witness output over the coherence contract.
+- `crates/premath-identity`:
+  - Stable Premath-owned identity contracts (`IntentSpec`, `RunIdentity`,
+    `RunIdOptions`, `compute_intent_id`).
+  - No Tusk tracker/lane/receipt behavior; downstream runtimes consume this as
+    meaning-level identity material.
 - `crates/premath-tusk`:
-  - Minimal `tusk-core` runtime surface (run identity, descent pack artifacts,
-    Gate-class mapping, witness envelope emission).
+  - Minimal `tusk-core` runtime surface (descent pack artifacts, Gate-class
+    mapping, witness envelope emission).
+  - Re-exports `premath-identity` types for compatibility while Tusk-specific
+    operational mapping remains outside Premath.
 - `crates/premath-bd`:
   - Canonical memory/storage model (`Issue`, `Dependency`, JSONL, `MemoryStore`).
   - Projection-only spec-IR lane (`spec_ir`) for typed statement entity/edge

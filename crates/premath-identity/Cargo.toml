@@ -1,0 +1,11 @@
+[package]
+name = "premath-identity"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Stable Premath identity contracts: intent specs, intent IDs, and run identity"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+sha2 = { workspace = true }

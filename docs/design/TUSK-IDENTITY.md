@@ -60,6 +60,13 @@ It becomes identity material only under explicit hardening policy.
 
 Deterministic IDs should be computed from canonical serialization of identity material.
 
+Implementation ownership:
+
+- `premath-identity` owns stable Premath identity contracts and ID derivation.
+- `premath-tusk` re-exports those contracts for compatibility with older callers.
+- Tusk-owned tracker, lane, witness, and receipt projections remain outside
+  Premath and translate into `IntentSpec` at the seam.
+
 Examples:
 
 - `run_id = digest(canonical(run_identity_fields))`
