@@ -82,12 +82,235 @@ _REQUIRED_RUNTIME_ROUTE_FAILURE_CLASS_KEYS = (
     "morphismDrift",
     "contractUnbound",
 )
+_REPL_HOST_ACTION_SURFACE_KIND = "premath.repl_host_action.bindings.v0"
+_REPL_HOST_ACTION_EVALUATOR_TOOL_ID = "scheme_eval"
+_REPL_HOST_ACTION_ALLOWED_TRANSPORT_MODES = (
+    "cli-and-mcp",
+    "mcp-only",
+    "cli-only",
+)
+_REPL_HOST_ACTION_ALLOWED_AUTHORITY_MODES = (
+    "read-only",
+    "instruction-linked",
+    "session-linked",
+)
+_REPL_HOST_ACTION_FAILURE_CLASS_KEYS = (
+    "unregisteredHostId",
+    "bindingMismatch",
+    "duplicateBinding",
+)
+_REPL_HOST_ACTION_FAILURE_CLASSES = (
+    "repl_host_action_unregistered",
+    "repl_host_action_binding_mismatch",
+    "repl_host_action_duplicate_binding",
+)
+_REPL_HOST_ACTION_EXPECTED_BINDINGS: Dict[str, Dict[str, Any]] = {
+    "dep.add": {
+        "operationId": "op/mcp.dep_add",
+        "mcpTool": "dep_add",
+        "cliEntrypoint": ("premath", "dep", "add"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "instruction-linked",
+    },
+    "dep.diagnostics": {
+        "operationId": "op/mcp.dep_diagnostics",
+        "mcpTool": "dep_diagnostics",
+        "cliEntrypoint": ("premath", "dep", "diagnostics"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "dep.remove": {
+        "operationId": "op/mcp.dep_remove",
+        "mcpTool": "dep_remove",
+        "cliEntrypoint": ("premath", "dep", "remove"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "instruction-linked",
+    },
+    "dep.replace": {
+        "operationId": "op/mcp.dep_replace",
+        "mcpTool": "dep_replace",
+        "cliEntrypoint": ("premath", "dep", "replace"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "instruction-linked",
+    },
+    "harness.session.bootstrap": {
+        "operationId": "op/harness.session_bootstrap",
+        "mcpTool": None,
+        "cliEntrypoint": ("premath", "harness-session", "bootstrap"),
+        "transportMode": "cli-only",
+        "authorityMode": "session-linked",
+    },
+    "harness.session.read": {
+        "operationId": "op/harness.session_read",
+        "mcpTool": None,
+        "cliEntrypoint": ("premath", "harness-session", "read"),
+        "transportMode": "cli-only",
+        "authorityMode": "read-only",
+    },
+    "harness.session.write": {
+        "operationId": "op/harness.session_write",
+        "mcpTool": None,
+        "cliEntrypoint": ("premath", "harness-session", "write"),
+        "transportMode": "cli-only",
+        "authorityMode": "session-linked",
+    },
+    "instruction.check": {
+        "operationId": "op/mcp.instruction_check",
+        "mcpTool": "instruction_check",
+        "cliEntrypoint": ("premath", "instruction-check"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "instruction.run": {
+        "operationId": "op/mcp.instruction_run",
+        "mcpTool": "instruction_run",
+        "cliEntrypoint": ("premath", "mcp-serve"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "instruction-linked",
+    },
+    "issue.backend_status": {
+        "operationId": "op/mcp.issue_backend_status",
+        "mcpTool": "issue_backend_status",
+        "cliEntrypoint": ("premath", "issue", "backend-status"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "issue.blocked": {
+        "operationId": "op/mcp.issue_blocked",
+        "mcpTool": "issue_blocked",
+        "cliEntrypoint": ("premath", "issue", "blocked"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "issue.check": {
+        "operationId": "op/mcp.issue_check",
+        "mcpTool": "issue_check",
+        "cliEntrypoint": ("premath", "issue", "check"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "issue.claim": {
+        "operationId": "op/mcp.issue_claim",
+        "mcpTool": "issue_claim",
+        "cliEntrypoint": ("premath", "issue", "claim"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "instruction-linked",
+    },
+    "issue.discover": {
+        "operationId": "op/mcp.issue_discover",
+        "mcpTool": "issue_discover",
+        "cliEntrypoint": ("premath", "issue", "discover"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "instruction-linked",
+    },
+    "issue.lease_release": {
+        "operationId": "op/mcp.issue_lease_release",
+        "mcpTool": "issue_lease_release",
+        "cliEntrypoint": None,
+        "transportMode": "mcp-only",
+        "authorityMode": "instruction-linked",
+    },
+    "issue.lease_renew": {
+        "operationId": "op/mcp.issue_lease_renew",
+        "mcpTool": "issue_lease_renew",
+        "cliEntrypoint": None,
+        "transportMode": "mcp-only",
+        "authorityMode": "instruction-linked",
+    },
+    "issue.list": {
+        "operationId": "op/mcp.issue_list",
+        "mcpTool": "issue_list",
+        "cliEntrypoint": ("premath", "issue", "list"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "issue.ready": {
+        "operationId": "op/mcp.issue_ready",
+        "mcpTool": "issue_ready",
+        "cliEntrypoint": ("premath", "issue", "ready"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "issue.update": {
+        "operationId": "op/mcp.issue_update",
+        "mcpTool": "issue_update",
+        "cliEntrypoint": ("premath", "issue", "update"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "instruction-linked",
+    },
+    "observe.instruction": {
+        "operationId": "op/mcp.observe_instruction",
+        "mcpTool": "observe_instruction",
+        "cliEntrypoint": ("premath", "observe"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "observe.latest": {
+        "operationId": "op/mcp.observe_latest",
+        "mcpTool": "observe_latest",
+        "cliEntrypoint": ("premath", "observe"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "observe.needs_attention": {
+        "operationId": "op/mcp.observe_needs_attention",
+        "mcpTool": "observe_needs_attention",
+        "cliEntrypoint": ("premath", "observe"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+    "observe.projection": {
+        "operationId": "op/mcp.observe_projection",
+        "mcpTool": "observe_projection",
+        "cliEntrypoint": ("premath", "observe"),
+        "transportMode": "cli-and-mcp",
+        "authorityMode": "read-only",
+    },
+}
 _REQUIRED_COMMAND_SURFACE_IDS = (
     "requiredDecision",
     "instructionEnvelopeCheck",
     "instructionDecision",
 )
 _REQUIRED_COMMAND_SURFACE_FAILURE_CLASS_KEYS = ("unbound",)
+_REQUIRED_PROVIDER_PIPELINE_WRAPPER_IDS = (
+    "requiredPipeline",
+    "instructionPipeline",
+)
+_REQUIRED_PROVIDER_PIPELINE_FAILURE_CLASS_KEYS = (
+    "workflowDrift",
+    "canonicalEntrypointDrift",
+    "gateDrift",
+)
+_PROVIDER_PIPELINE_FAILURE_CLASSES = (
+    "provider_pipeline_workflow_drift",
+    "provider_pipeline_canonical_entrypoint_drift",
+    "provider_pipeline_gate_drift",
+)
+_PROVIDER_PIPELINE_EXPECTED_BINDINGS: Dict[str, Dict[str, Any]] = {
+    "requiredPipeline": {
+        "workflowPath": ".github/workflows/baseline.yml",
+        "wrapperPath": "tools/ci/pipeline_required.py",
+        "workflowEntrypoint": ("python3", "tools/ci/pipeline_required.py"),
+        "boundCommandSurfaces": ("requiredDecision",),
+        "enforcedGates": ("governance", "kcirMapping"),
+    },
+    "instructionPipeline": {
+        "workflowPath": ".github/workflows/instruction.yml",
+        "wrapperPath": "tools/ci/pipeline_instruction.py",
+        "workflowEntrypoint": (
+            "python3",
+            "tools/ci/pipeline_instruction.py",
+            "--instruction",
+            "$INSTRUCTION_PATH",
+        ),
+        "boundCommandSurfaces": (
+            "instructionEnvelopeCheck",
+            "instructionDecision",
+        ),
+        "enforcedGates": ("governance", "kcirMapping"),
+    },
+}
 _CONTROL_PLANE_BUNDLE_PROFILE_ID = "cp.bundle.v0"
 _CONTROL_PLANE_BUNDLE_CONTEXT_FAMILY_ID = "C_cp"
 _CONTROL_PLANE_BUNDLE_CONTEXT_KINDS = (
@@ -172,6 +395,15 @@ def _require_command_tokens(value: Any, label: str) -> Tuple[str, ...]:
     for idx, item in enumerate(value):
         out.append(_require_non_empty_string(item, f"{label}[{idx}]"))
     return tuple(out)
+
+
+def _require_optional_command_tokens(
+    value: Any,
+    label: str,
+) -> Optional[Tuple[str, ...]]:
+    if value is None:
+        return None
+    return _require_command_tokens(value, label)
 
 
 def _require_command_aliases(value: Any, label: str) -> Tuple[Tuple[str, ...], ...]:
@@ -1125,6 +1357,204 @@ def _validate_runtime_route_bindings(payload: Any) -> Dict[str, Any]:
     }
 
 
+def _validate_repl_host_action_bindings(payload: Any) -> Dict[str, Any]:
+    bindings = _require_object(payload, "replHostActionBindings")
+    surface_kind = _require_non_empty_string(
+        bindings.get("surfaceKind"),
+        "replHostActionBindings.surfaceKind",
+    )
+    if surface_kind != _REPL_HOST_ACTION_SURFACE_KIND:
+        raise ValueError(
+            "replHostActionBindings.surfaceKind must equal "
+            f"{_REPL_HOST_ACTION_SURFACE_KIND!r}"
+        )
+    evaluator_tool_id = _require_non_empty_string(
+        bindings.get("evaluatorToolId"),
+        "replHostActionBindings.evaluatorToolId",
+    )
+    if evaluator_tool_id != _REPL_HOST_ACTION_EVALUATOR_TOOL_ID:
+        raise ValueError(
+            "replHostActionBindings.evaluatorToolId must equal "
+            f"{_REPL_HOST_ACTION_EVALUATOR_TOOL_ID!r}"
+        )
+
+    action_rows = _require_object(
+        bindings.get("actions"),
+        "replHostActionBindings.actions",
+    )
+    parsed_actions: Dict[str, Dict[str, Any]] = {}
+    normalized_action_ids: Dict[str, list[str]] = {}
+    for action_id_raw in sorted(action_rows):
+        action_id = _require_non_empty_string(
+            action_id_raw,
+            "replHostActionBindings.actions.<hostActionId>",
+        )
+        normalized_action_id = action_id.lower()
+        normalized_action_ids.setdefault(normalized_action_id, []).append(action_id)
+
+    duplicate_action_id_groups = [
+        values for values in normalized_action_ids.values() if len(values) > 1
+    ]
+    if duplicate_action_id_groups:
+        rendered = "; ".join(
+            ", ".join(repr(value) for value in values)
+            for values in duplicate_action_id_groups
+        )
+        raise ValueError(
+            "replHostActionBindings.actions contains duplicate host action ids "
+            f"after normalization: {rendered}"
+        )
+
+    for action_id_raw in sorted(action_rows):
+        action_id = _require_non_empty_string(
+            action_id_raw,
+            "replHostActionBindings.actions.<hostActionId>",
+        )
+        normalized_action_id = action_id.lower()
+        if normalized_action_id != action_id:
+            raise ValueError(
+                "replHostActionBindings.actions host action ids must already be canonical lowercase ids"
+            )
+        row = _require_object(
+            action_rows.get(action_id_raw),
+            f"replHostActionBindings.actions.{action_id}",
+        )
+        operation_id = _require_non_empty_string(
+            row.get("operationId"),
+            f"replHostActionBindings.actions.{action_id}.operationId",
+        )
+        mcp_tool_raw = row.get("mcpTool")
+        mcp_tool = (
+            None
+            if mcp_tool_raw is None
+            else _require_non_empty_string(
+                mcp_tool_raw,
+                f"replHostActionBindings.actions.{action_id}.mcpTool",
+            )
+        )
+        cli_entrypoint = _require_optional_command_tokens(
+            row.get("cliEntrypoint"),
+            f"replHostActionBindings.actions.{action_id}.cliEntrypoint",
+        )
+        transport_mode = _require_non_empty_string(
+            row.get("transportMode"),
+            f"replHostActionBindings.actions.{action_id}.transportMode",
+        )
+        if transport_mode not in _REPL_HOST_ACTION_ALLOWED_TRANSPORT_MODES:
+            raise ValueError(
+                f"replHostActionBindings.actions.{action_id}.transportMode "
+                "must be one of: "
+                + ", ".join(_REPL_HOST_ACTION_ALLOWED_TRANSPORT_MODES)
+            )
+        authority_mode = _require_non_empty_string(
+            row.get("authorityMode"),
+            f"replHostActionBindings.actions.{action_id}.authorityMode",
+        )
+        if authority_mode not in _REPL_HOST_ACTION_ALLOWED_AUTHORITY_MODES:
+            raise ValueError(
+                f"replHostActionBindings.actions.{action_id}.authorityMode "
+                "must be one of: "
+                + ", ".join(_REPL_HOST_ACTION_ALLOWED_AUTHORITY_MODES)
+            )
+        if transport_mode == "cli-and-mcp" and (
+            cli_entrypoint is None or mcp_tool is None
+        ):
+            raise ValueError(
+                f"replHostActionBindings.actions.{action_id} transportMode=cli-and-mcp "
+                "requires cliEntrypoint and mcpTool"
+            )
+        if transport_mode == "mcp-only" and (cli_entrypoint is not None or mcp_tool is None):
+            raise ValueError(
+                f"replHostActionBindings.actions.{action_id} transportMode=mcp-only "
+                "requires mcpTool and forbids cliEntrypoint"
+            )
+        if transport_mode == "cli-only" and (cli_entrypoint is None or mcp_tool is not None):
+            raise ValueError(
+                f"replHostActionBindings.actions.{action_id} transportMode=cli-only "
+                "requires cliEntrypoint and forbids mcpTool"
+            )
+        parsed_actions[action_id] = {
+            "operationId": operation_id,
+            "mcpTool": mcp_tool,
+            "cliEntrypoint": cli_entrypoint,
+            "transportMode": transport_mode,
+            "authorityMode": authority_mode,
+        }
+
+    missing_action_ids = sorted(set(_REPL_HOST_ACTION_EXPECTED_BINDINGS) - set(parsed_actions))
+    if missing_action_ids:
+        raise ValueError(
+            "replHostActionBindings.actions missing registered host action ids: "
+            + ", ".join(missing_action_ids)
+        )
+    unknown_action_ids = sorted(set(parsed_actions) - set(_REPL_HOST_ACTION_EXPECTED_BINDINGS))
+    if unknown_action_ids:
+        raise ValueError(
+            "replHostActionBindings.actions includes unregistered host action ids: "
+            + ", ".join(unknown_action_ids)
+        )
+
+    for action_id, expected in _REPL_HOST_ACTION_EXPECTED_BINDINGS.items():
+        actual = parsed_actions[action_id]
+        drift_fields = [
+            field
+            for field in (
+                "operationId",
+                "mcpTool",
+                "cliEntrypoint",
+                "transportMode",
+                "authorityMode",
+            )
+            if actual[field] != expected[field]
+        ]
+        if drift_fields:
+            raise ValueError(
+                f"replHostActionBindings.actions.{action_id} mismatches canonical binding fields: "
+                + ", ".join(drift_fields)
+            )
+
+    failure_classes = _require_object(
+        bindings.get("failureClasses"),
+        "replHostActionBindings.failureClasses",
+    )
+    missing_failure_class_keys = sorted(
+        set(_REPL_HOST_ACTION_FAILURE_CLASS_KEYS) - set(failure_classes)
+    )
+    if missing_failure_class_keys:
+        raise ValueError(
+            "replHostActionBindings.failureClasses missing required keys: "
+            + ", ".join(missing_failure_class_keys)
+        )
+    unknown_failure_class_keys = sorted(
+        set(failure_classes) - set(_REPL_HOST_ACTION_FAILURE_CLASS_KEYS)
+    )
+    if unknown_failure_class_keys:
+        raise ValueError(
+            "replHostActionBindings.failureClasses includes unknown keys: "
+            + ", ".join(unknown_failure_class_keys)
+        )
+    parsed_failure_classes = {
+        key: _require_non_empty_string(
+            failure_classes.get(key),
+            f"replHostActionBindings.failureClasses.{key}",
+        )
+        for key in _REPL_HOST_ACTION_FAILURE_CLASS_KEYS
+    }
+    if tuple(parsed_failure_classes[key] for key in _REPL_HOST_ACTION_FAILURE_CLASS_KEYS) != (
+        _REPL_HOST_ACTION_FAILURE_CLASSES
+    ):
+        raise ValueError(
+            "replHostActionBindings.failureClasses must map to canonical host-action classes"
+        )
+
+    return {
+        "surfaceKind": surface_kind,
+        "evaluatorToolId": evaluator_tool_id,
+        "actions": parsed_actions,
+        "failureClasses": parsed_failure_classes,
+    }
+
+
 def _validate_command_surface(payload: Any) -> Dict[str, Any]:
     command_surface = _require_object(payload, "commandSurface")
     missing_surface_ids = sorted(
@@ -1197,6 +1627,131 @@ def _validate_command_surface(payload: Any) -> Dict[str, Any]:
     )
     parsed_surface["failureClasses"] = {"unbound": unbound}
     return parsed_surface
+
+
+def _validate_provider_pipeline_wrappers(
+    payload: Any,
+    command_surface: Dict[str, Any],
+) -> Dict[str, Any]:
+    wrappers = _require_object(payload, "providerPipelineWrappers")
+    missing_wrapper_ids = sorted(
+        set(_REQUIRED_PROVIDER_PIPELINE_WRAPPER_IDS) - set(wrappers)
+    )
+    if missing_wrapper_ids:
+        raise ValueError(
+            "providerPipelineWrappers missing required wrappers: "
+            + ", ".join(missing_wrapper_ids)
+        )
+    unknown_keys = sorted(
+        set(wrappers)
+        - (set(_REQUIRED_PROVIDER_PIPELINE_WRAPPER_IDS) | {"failureClasses"})
+    )
+    if unknown_keys:
+        raise ValueError(
+            "providerPipelineWrappers includes unknown keys: "
+            + ", ".join(unknown_keys)
+        )
+
+    parsed_wrappers: Dict[str, Any] = {}
+    command_surface_ids = set(command_surface) - {"failureClasses"}
+    for wrapper_id in _REQUIRED_PROVIDER_PIPELINE_WRAPPER_IDS:
+        row = _require_object(
+            wrappers.get(wrapper_id),
+            f"providerPipelineWrappers.{wrapper_id}",
+        )
+        expected = _PROVIDER_PIPELINE_EXPECTED_BINDINGS[wrapper_id]
+        workflow_path = _require_non_empty_string(
+            row.get("workflowPath"),
+            f"providerPipelineWrappers.{wrapper_id}.workflowPath",
+        )
+        wrapper_path = _require_non_empty_string(
+            row.get("wrapperPath"),
+            f"providerPipelineWrappers.{wrapper_id}.wrapperPath",
+        )
+        workflow_entrypoint = _require_command_tokens(
+            row.get("workflowEntrypoint"),
+            f"providerPipelineWrappers.{wrapper_id}.workflowEntrypoint",
+        )
+        bound_command_surfaces = _require_string_list(
+            row.get("boundCommandSurfaces"),
+            f"providerPipelineWrappers.{wrapper_id}.boundCommandSurfaces",
+        )
+        enforced_gates = _require_string_list(
+            row.get("enforcedGates"),
+            f"providerPipelineWrappers.{wrapper_id}.enforcedGates",
+        )
+
+        if workflow_path != expected["workflowPath"]:
+            raise ValueError(
+                f"providerPipelineWrappers.{wrapper_id}.workflowPath must match canonical workflow"
+            )
+        if wrapper_path != expected["wrapperPath"]:
+            raise ValueError(
+                f"providerPipelineWrappers.{wrapper_id}.wrapperPath must match canonical wrapper"
+            )
+        if workflow_entrypoint != expected["workflowEntrypoint"]:
+            raise ValueError(
+                f"providerPipelineWrappers.{wrapper_id}.workflowEntrypoint must match canonical provider entrypoint"
+            )
+        if bound_command_surfaces != expected["boundCommandSurfaces"]:
+            raise ValueError(
+                f"providerPipelineWrappers.{wrapper_id}.boundCommandSurfaces must match canonical command surfaces"
+            )
+        if enforced_gates != expected["enforcedGates"]:
+            raise ValueError(
+                f"providerPipelineWrappers.{wrapper_id}.enforcedGates must match canonical gates"
+            )
+        unknown_surfaces = sorted(set(bound_command_surfaces) - command_surface_ids)
+        if unknown_surfaces:
+            raise ValueError(
+                f"providerPipelineWrappers.{wrapper_id}.boundCommandSurfaces includes unknown command surfaces: "
+                + ", ".join(unknown_surfaces)
+            )
+
+        parsed_wrappers[wrapper_id] = {
+            "workflowPath": workflow_path,
+            "wrapperPath": wrapper_path,
+            "workflowEntrypoint": list(workflow_entrypoint),
+            "boundCommandSurfaces": list(bound_command_surfaces),
+            "enforcedGates": list(enforced_gates),
+        }
+
+    failure_classes = _require_object(
+        wrappers.get("failureClasses"),
+        "providerPipelineWrappers.failureClasses",
+    )
+    missing_failure_class_keys = sorted(
+        set(_REQUIRED_PROVIDER_PIPELINE_FAILURE_CLASS_KEYS) - set(failure_classes)
+    )
+    if missing_failure_class_keys:
+        raise ValueError(
+            "providerPipelineWrappers.failureClasses missing required keys: "
+            + ", ".join(missing_failure_class_keys)
+        )
+    unknown_failure_class_keys = sorted(
+        set(failure_classes) - set(_REQUIRED_PROVIDER_PIPELINE_FAILURE_CLASS_KEYS)
+    )
+    if unknown_failure_class_keys:
+        raise ValueError(
+            "providerPipelineWrappers.failureClasses includes unknown keys: "
+            + ", ".join(unknown_failure_class_keys)
+        )
+    parsed_failure_classes = {
+        key: _require_non_empty_string(
+            failure_classes.get(key),
+            f"providerPipelineWrappers.failureClasses.{key}",
+        )
+        for key in _REQUIRED_PROVIDER_PIPELINE_FAILURE_CLASS_KEYS
+    }
+    if tuple(
+        parsed_failure_classes[key]
+        for key in _REQUIRED_PROVIDER_PIPELINE_FAILURE_CLASS_KEYS
+    ) != _PROVIDER_PIPELINE_FAILURE_CLASSES:
+        raise ValueError(
+            "providerPipelineWrappers.failureClasses must map to canonical provider-pipeline classes"
+        )
+    parsed_wrappers["failureClasses"] = parsed_failure_classes
+    return parsed_wrappers
 
 
 def _validate_control_plane_bundle_profile(payload: Any) -> Dict[str, Any]:
@@ -1664,7 +2219,14 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
     runtime_route_bindings = _validate_runtime_route_bindings(
         root.get("runtimeRouteBindings")
     )
+    repl_host_action_bindings = _validate_repl_host_action_bindings(
+        root.get("replHostActionBindings")
+    )
     command_surface = _validate_command_surface(root.get("commandSurface"))
+    provider_pipeline_wrappers = _validate_provider_pipeline_wrappers(
+        root.get("providerPipelineWrappers"),
+        command_surface,
+    )
 
     harness_retry_obj = _require_object(
         root.get("harnessRetry"),
@@ -1829,7 +2391,9 @@ def load_control_plane_contract(path: Path = CONTROL_PLANE_CONTRACT_PATH) -> Dic
         "laneFailureClasses": lane_failure_classes,
         "workerLaneAuthority": worker_lane_authority,
         "runtimeRouteBindings": runtime_route_bindings,
+        "replHostActionBindings": repl_host_action_bindings,
         "commandSurface": command_surface,
+        "providerPipelineWrappers": provider_pipeline_wrappers,
         "harnessRetry": {
             "policyKind": harness_retry_policy_kind,
             "policyPath": harness_retry_policy_path,
@@ -1991,6 +2555,29 @@ RUNTIME_ROUTE_FAILURE_CLASSES: Tuple[str, ...] = tuple(
     .get(key, "")
     for key in ("missingRoute", "morphismDrift", "contractUnbound")
 )
+REPL_HOST_ACTION_BINDINGS: Dict[str, Dict[str, Any]] = {
+    action_id: {
+        "operationId": str(action.get("operationId", "")),
+        "mcpTool": action.get("mcpTool"),
+        "cliEntrypoint": (
+            None
+            if action.get("cliEntrypoint") is None
+            else tuple(action.get("cliEntrypoint", ()))
+        ),
+        "transportMode": str(action.get("transportMode", "")),
+        "authorityMode": str(action.get("authorityMode", "")),
+    }
+    for action_id, action in _CONTRACT.get("replHostActionBindings", {})
+    .get("actions", {})
+    .items()
+    if isinstance(action, dict)
+}
+REPL_HOST_ACTION_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+    _CONTRACT.get("replHostActionBindings", {})
+    .get("failureClasses", {})
+    .get(key, "")
+    for key in _REPL_HOST_ACTION_FAILURE_CLASS_KEYS
+)
 CONTROL_PLANE_COMMAND_SURFACE: Dict[str, Any] = dict(
     _CONTRACT.get("commandSurface", {})
 )
@@ -2029,6 +2616,12 @@ INSTRUCTION_DECISION_COMPATIBILITY_ALIASES: Tuple[Tuple[str, ...], ...] = tuple(
 )
 CONTROL_PLANE_COMMAND_SURFACE_FAILURE_CLASS_UNBOUND: str = (
     CONTROL_PLANE_COMMAND_SURFACE.get("failureClasses", {}).get("unbound", "")
+)
+PROVIDER_PIPELINE_WRAPPERS: Dict[str, Any] = dict(
+    _CONTRACT.get("providerPipelineWrappers", {})
+)
+PROVIDER_PIPELINE_FAILURE_CLASSES: Dict[str, str] = dict(
+    PROVIDER_PIPELINE_WRAPPERS.get("failureClasses", {})
 )
 CONTROL_PLANE_BUNDLE_PROFILE: Dict[str, Any] = dict(
     _CONTRACT.get("controlPlaneBundleProfile", {})

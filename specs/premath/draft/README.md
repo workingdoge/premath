@@ -47,6 +47,7 @@ Additive control-plane overlays (only when needed):
   by CI projection and coherence parity checks (including schema lifecycle
   alias-window policy for contract/witness/projection kinds, governance-mode
   metadata, runtime-route parity bindings under `runtimeRouteBindings`, and
+  provider workflow/wrapper bindings under `providerPipelineWrappers`, plus
   explicit control-plane bundle profile fields under
   `controlPlaneBundleProfile` (`C_cp`/`E_cp`, reindex/cover-glue obligations,
   and authority split boundaries), plus canonical KCIR control-plane mapping

@@ -818,8 +818,10 @@ def main() -> int:
     mise_toml = root / ".mise.toml"
     readme = root / "README.md"
     conformance_readme = root / "tools" / "conformance" / "README.md"
-    ci_closure = root / "docs" / "design" / "CI-CLOSURE.md"
-    architecture_map = root / "docs" / "design" / "ARCHITECTURE-MAP.md"
+    ci_closure = root / "docs" / "design" / "control-plane" / "CI-CLOSURE.md"
+    architecture_map = (
+        root / "docs" / "design" / "control-plane" / "ARCHITECTURE-MAP.md"
+    )
     spec_index = root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
     conformance = root / "specs" / "premath" / "draft" / "CONFORMANCE.md"
     unification_doctrine = root / "specs" / "premath" / "draft" / "UNIFICATION-DOCTRINE.md"

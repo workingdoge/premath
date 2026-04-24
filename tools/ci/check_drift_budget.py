@@ -22,6 +22,7 @@ DRIFT_CLASS_PROFILE_OVERLAYS = "profile_overlay_claim_drift"
 DRIFT_CLASS_LANE_BINDINGS = "control_plane_lane_binding_drift"
 DRIFT_CLASS_KCIR_MAPPINGS = "control_plane_kcir_mapping_drift"
 DRIFT_CLASS_RUNTIME_ROUTE_BINDINGS = "runtime_route_binding_drift"
+DRIFT_CLASS_REPL_HOST_ACTION_BINDINGS = "repl_host_action_binding_drift"
 DRIFT_CLASS_REQUIRED_OBLIGATIONS = "coherence_required_obligation_drift"
 DRIFT_CLASS_SIGPI_NOTATION = "sigpi_notation_drift"
 DRIFT_CLASS_CACHE_CLOSURE = "coherence_cache_input_closure_drift"
@@ -350,6 +351,61 @@ def parse_doctrine_operation_registry(registry_path: Path) -> Dict[str, Dict[str
     return out
 
 
+def split_markdown_table_row(line: str) -> List[str]:
+    stripped = line.strip()
+    if stripped.startswith("|"):
+        stripped = stripped[1:]
+    if stripped.endswith("|"):
+        stripped = stripped[:-1]
+    cells: List[str] = []
+    current: List[str] = []
+    in_code = False
+    for char in stripped:
+        if char == "`":
+            in_code = not in_code
+            current.append(char)
+        elif char == "|" and not in_code:
+            cells.append("".join(current).strip())
+            current = []
+        else:
+            current.append(char)
+    cells.append("".join(current).strip())
+    return cells
+
+
+def parse_repl_host_action_docs(doc_path: Path) -> Dict[str, Dict[str, str]]:
+    text = doc_path.read_text(encoding="utf-8")
+    table_start = text.find("| Host function id | Canonical CLI surface | MCP tool |")
+    if table_start < 0:
+        raise ValueError(f"{doc_path}: missing REPL host action mapping table")
+    table_text = text[table_start:]
+    next_heading = re.search(r"^### ", table_text[len("| Host function id |") :], re.MULTILINE)
+    if next_heading is not None:
+        table_text = table_text[: len("| Host function id |") + next_heading.start()]
+
+    rows: Dict[str, Dict[str, str]] = {}
+    for line in table_text.splitlines():
+        stripped = line.strip()
+        if not stripped.startswith("|") or "`" not in stripped:
+            continue
+        columns = split_markdown_table_row(stripped)
+        if len(columns) < 3:
+            continue
+        host_match = re.search(r"`([^`]+)`", columns[0])
+        if host_match is None:
+            continue
+        host_action_id = host_match.group(1).strip()
+        if host_action_id in rows:
+            raise ValueError(
+                f"{doc_path}: duplicate REPL host action mapping for {host_action_id!r}"
+            )
+        rows[host_action_id] = {
+            "cliSurface": columns[1],
+            "mcpTool": columns[2],
+        }
+    return rows
+
+
 def normalize_runtime_route_bindings(values: Any) -> Dict[str, Dict[str, Any]]:
     if not isinstance(values, dict):
         return {}
@@ -367,6 +423,140 @@ def normalize_runtime_route_bindings(values: Any) -> Dict[str, Dict[str, Any]]:
             "requiredMorphisms": as_sorted_strings(raw.get("requiredMorphisms", ())),
         }
     return out
+
+
+def normalize_repl_host_action_bindings(values: Any) -> Dict[str, Dict[str, Any]]:
+    if not isinstance(values, dict):
+        return {}
+    out: Dict[str, Dict[str, Any]] = {}
+    for action_id, raw in values.items():
+        if not isinstance(action_id, str) or not action_id.strip():
+            continue
+        if not isinstance(raw, dict):
+            continue
+        cli_entrypoint_raw = raw.get("cliEntrypoint")
+        cli_entrypoint: Tuple[str, ...] | None
+        if cli_entrypoint_raw is None:
+            cli_entrypoint = None
+        elif isinstance(cli_entrypoint_raw, (list, tuple)):
+            cli_entrypoint = tuple(
+                token.strip()
+                for token in cli_entrypoint_raw
+                if isinstance(token, str) and token.strip()
+            )
+        else:
+            cli_entrypoint = tuple()
+        mcp_tool_raw = raw.get("mcpTool")
+        out[action_id.strip()] = {
+            "operationId": str(raw.get("operationId", "")).strip(),
+            "mcpTool": (
+                None
+                if mcp_tool_raw is None
+                else str(mcp_tool_raw).strip()
+            ),
+            "cliEntrypoint": cli_entrypoint,
+            "transportMode": str(raw.get("transportMode", "")).strip(),
+            "authorityMode": str(raw.get("authorityMode", "")).strip(),
+        }
+    return out
+
+
+MCP_ONLY_CLI_SCAN_PATHS: Tuple[str, ...] = (
+    "crates/premath-cli/src/cli.rs",
+    "crates/premath-cli/src/commands/issue.rs",
+)
+
+MCP_TOOL_SCAN_PATH = "crates/premath-cli/src/commands/mcp_serve.rs"
+
+MCP_ONLY_FORBIDDEN_CLI_MARKERS: Dict[str, Tuple[str, ...]] = {
+    "issue.lease_renew": (
+        "IssueLeaseRenew",
+        "LeaseRenew",
+        "RenewLease",
+        "lease-renew",
+        "lease_renew",
+        "run_lease_renew",
+    ),
+    "issue.lease_release": (
+        "IssueLeaseRelease",
+        "LeaseRelease",
+        "ReleaseLease",
+        "lease-release",
+        "lease_release",
+        "run_lease_release",
+    ),
+}
+
+
+def check_mcp_only_repl_host_action_sources(
+    repo_root: Path,
+    contract_bindings: Dict[str, Dict[str, Any]],
+) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
+    cli_fallbacks: List[Dict[str, str]] = []
+    missing_mcp_tools: List[Dict[str, str]] = []
+
+    cli_sources: Dict[str, str] = {}
+    for rel_path in MCP_ONLY_CLI_SCAN_PATHS:
+        path = repo_root / rel_path
+        cli_sources[rel_path] = path.read_text(encoding="utf-8") if path.exists() else ""
+
+    mcp_path = repo_root / MCP_TOOL_SCAN_PATH
+    mcp_source = mcp_path.read_text(encoding="utf-8") if mcp_path.exists() else ""
+
+    for action_id, binding in sorted(contract_bindings.items()):
+        if binding.get("transportMode") != "mcp-only":
+            continue
+        if binding.get("cliEntrypoint") is not None:
+            cli_fallbacks.append(
+                {
+                    "hostActionId": action_id,
+                    "path": "CONTROL-PLANE-CONTRACT.json",
+                    "marker": "cliEntrypoint",
+                }
+            )
+        for marker in MCP_ONLY_FORBIDDEN_CLI_MARKERS.get(action_id, ()):
+            for rel_path, source in cli_sources.items():
+                if marker in source:
+                    cli_fallbacks.append(
+                        {
+                            "hostActionId": action_id,
+                            "path": rel_path,
+                            "marker": marker,
+                        }
+                    )
+
+        mcp_tool = binding.get("mcpTool")
+        if isinstance(mcp_tool, str) and mcp_tool:
+            tool_name_re = re.compile(
+                rf'name\s*=\s*"{re.escape(mcp_tool)}"|{re.escape(mcp_tool)}'
+            )
+            if tool_name_re.search(mcp_source) is None:
+                missing_mcp_tools.append(
+                    {
+                        "hostActionId": action_id,
+                        "path": MCP_TOOL_SCAN_PATH,
+                        "mcpTool": mcp_tool,
+                    }
+                )
+        else:
+            missing_mcp_tools.append(
+                {
+                    "hostActionId": action_id,
+                    "path": "CONTROL-PLANE-CONTRACT.json",
+                    "mcpTool": "",
+                }
+            )
+
+    return (
+        sorted(
+            cli_fallbacks,
+            key=lambda row: (row["hostActionId"], row["path"], row["marker"]),
+        ),
+        sorted(
+            missing_mcp_tools,
+            key=lambda row: (row["hostActionId"], row["path"], row["mcpTool"]),
+        ),
+    )
 
 
 def check_spec_index_capability_map(
@@ -1091,6 +1281,167 @@ def check_runtime_route_bindings(
     return bool(reasons), details
 
 
+def check_repl_host_action_bindings(
+    loaded_control_plane_contract: Dict[str, Any],
+    control_plane_module: Any,
+    doctrine_operations: Dict[str, Dict[str, Any]],
+    docs_action_rows: Dict[str, Dict[str, str]],
+    repo_root: Path | None = None,
+) -> Tuple[bool, Dict[str, Any]]:
+    reasons: List[str] = []
+    contract_bindings = normalize_repl_host_action_bindings(
+        loaded_control_plane_contract.get("replHostActionBindings", {}).get(
+            "actions", {}
+        )
+    )
+    if not contract_bindings:
+        reasons.append("CONTROL-PLANE-CONTRACT missing replHostActionBindings.actions")
+
+    contract_failure_classes = as_sorted_strings(
+        loaded_control_plane_contract.get("replHostActionBindings", {})
+        .get("failureClasses", {})
+        .values()
+    )
+    if not contract_failure_classes:
+        reasons.append("CONTROL-PLANE-CONTRACT missing replHostActionBindings.failureClasses")
+
+    loader_bindings = normalize_repl_host_action_bindings(
+        getattr(control_plane_module, "REPL_HOST_ACTION_BINDINGS", {})
+    )
+    loader_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "REPL_HOST_ACTION_FAILURE_CLASSES", ())
+    )
+    if loader_bindings != contract_bindings:
+        reasons.append(
+            "control_plane_contract.py REPL_HOST_ACTION_BINDINGS drift from contract payload"
+        )
+    if loader_failure_classes != contract_failure_classes:
+        reasons.append(
+            "control_plane_contract.py REPL_HOST_ACTION_FAILURE_CLASSES drift from contract payload"
+        )
+
+    missing_operation_bindings: List[Dict[str, str]] = []
+    observed_registry_bindings: Dict[str, Dict[str, Any]] = {}
+    for action_id, binding in contract_bindings.items():
+        operation_id = str(binding.get("operationId", "")).strip()
+        operation_row = doctrine_operations.get(operation_id)
+        if operation_row is None:
+            missing_operation_bindings.append(
+                {
+                    "hostActionId": action_id,
+                    "operationId": operation_id,
+                }
+            )
+            continue
+        observed_registry_bindings[action_id] = {
+            "operationId": operation_id,
+            "path": operation_row.get("path", ""),
+            "morphisms": as_sorted_strings(operation_row.get("morphisms", ())),
+        }
+    if missing_operation_bindings:
+        reasons.append(
+            "DOCTRINE-OP-REGISTRY missing required REPL host-action operation bindings"
+        )
+
+    missing_doc_rows: List[str] = []
+    cli_doc_mismatches: List[Dict[str, str]] = []
+    mcp_doc_mismatches: List[Dict[str, str]] = []
+    for action_id, binding in contract_bindings.items():
+        doc_row = docs_action_rows.get(action_id)
+        if doc_row is None:
+            missing_doc_rows.append(action_id)
+            continue
+        cli_surface = doc_row.get("cliSurface", "")
+        cli_surface_plain = cli_surface.replace("`", "")
+        cli_entrypoint = binding.get("cliEntrypoint")
+        if cli_entrypoint is None:
+            if "n/a" not in cli_surface_plain.lower():
+                cli_doc_mismatches.append(
+                    {
+                        "hostActionId": action_id,
+                        "expected": "n/a",
+                        "observed": cli_surface,
+                    }
+                )
+        else:
+            cli_tokens = [
+                token for token in cli_entrypoint if isinstance(token, str) and token
+            ]
+            missing_tokens = [
+                token for token in cli_tokens if token not in cli_surface_plain
+            ]
+            if missing_tokens:
+                cli_doc_mismatches.append(
+                    {
+                        "hostActionId": action_id,
+                        "expected": " ".join(cli_tokens),
+                        "observed": cli_surface,
+                    }
+                )
+
+        mcp_tool = binding.get("mcpTool")
+        mcp_cell = doc_row.get("mcpTool", "")
+        mcp_cell_plain = mcp_cell.replace("`", "")
+        if mcp_tool is None:
+            if "n/a" not in mcp_cell_plain.lower():
+                mcp_doc_mismatches.append(
+                    {
+                        "hostActionId": action_id,
+                        "expected": "n/a",
+                        "observed": mcp_cell,
+                    }
+                )
+        elif str(mcp_tool) not in mcp_cell_plain:
+            mcp_doc_mismatches.append(
+                {
+                    "hostActionId": action_id,
+                    "expected": str(mcp_tool),
+                    "observed": mcp_cell,
+                }
+            )
+
+    if missing_doc_rows or cli_doc_mismatches or mcp_doc_mismatches:
+        reasons.append(
+            "docs/design/control-plane/STEEL-REPL-DESCENT-CONTROL.md host-action table drifts from CONTROL-PLANE-CONTRACT"
+        )
+
+    mcp_only_cli_fallbacks: List[Dict[str, str]] = []
+    missing_mcp_only_tools: List[Dict[str, str]] = []
+    if repo_root is not None:
+        (
+            mcp_only_cli_fallbacks,
+            missing_mcp_only_tools,
+        ) = check_mcp_only_repl_host_action_sources(repo_root, contract_bindings)
+        if mcp_only_cli_fallbacks:
+            reasons.append(
+                "MCP-only REPL host actions expose forbidden CLI/local fallback markers"
+            )
+        if missing_mcp_only_tools:
+            reasons.append("MCP-only REPL host actions are missing MCP tool bindings")
+
+    details = {
+        "reasons": reasons,
+        "contractReplHostActionBindings": contract_bindings,
+        "contractReplHostActionFailureClasses": contract_failure_classes,
+        "loaderReplHostActionBindings": loader_bindings,
+        "loaderReplHostActionFailureClasses": loader_failure_classes,
+        "observedDoctrineRegistryBindings": observed_registry_bindings,
+        "missingOperationBindings": missing_operation_bindings,
+        "missingDocRows": sorted(missing_doc_rows),
+        "cliDocMismatches": sorted(
+            cli_doc_mismatches,
+            key=lambda row: row["hostActionId"],
+        ),
+        "mcpDocMismatches": sorted(
+            mcp_doc_mismatches,
+            key=lambda row: row["hostActionId"],
+        ),
+        "mcpOnlyCliFallbacks": mcp_only_cli_fallbacks,
+        "missingMcpOnlyTools": missing_mcp_only_tools,
+    }
+    return bool(reasons), details
+
+
 def check_control_plane_kcir_mappings(
     loaded_control_plane_contract: Dict[str, Any],
     control_plane_module: Any,
@@ -1550,10 +1901,14 @@ def build_drift_budget_payload(
     )
     spec_index_path = repo_root / "specs" / "premath" / "draft" / "SPEC-INDEX.md"
     conformance_path = repo_root / "specs" / "premath" / "draft" / "CONFORMANCE.md"
+    repl_host_action_docs_path = (
+        repo_root / "docs" / "design" / "control-plane" / "STEEL-REPL-DESCENT-CONTROL.md"
+    )
 
     spec_map = parse_spec_index_capability_doc_map(spec_index_path)
     registry_contract = parse_capability_registry(capability_registry_path)
     doctrine_operations = parse_doctrine_operation_registry(doctrine_op_registry_path)
+    repl_host_action_doc_rows = parse_repl_host_action_docs(repl_host_action_docs_path)
     executable_capabilities = registry_contract.executable_capabilities
     registry_overlay_claims = registry_contract.profile_overlay_claims
     conformance_overlay_claims = parse_conformance_profile_overlay_claims(conformance_path)
@@ -1619,6 +1974,21 @@ def build_drift_budget_payload(
             runtime_route_failed,
             False,
             runtime_route_details,
+        )
+    )
+    repl_host_action_failed, repl_host_action_details = check_repl_host_action_bindings(
+        control_plane_contract,
+        control_plane_module,
+        doctrine_operations,
+        repl_host_action_doc_rows,
+        repo_root=repo_root,
+    )
+    checks.append(
+        (
+            DRIFT_CLASS_REPL_HOST_ACTION_BINDINGS,
+            repl_host_action_failed,
+            False,
+            repl_host_action_details,
         )
     )
     required_failed, required_details = check_coherence_required_obligations(

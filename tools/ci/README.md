@@ -166,11 +166,13 @@ only). Alias lookups are compatibility-scoped and require
 
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
 entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
-attested required gate chain, and emits summary/sha artifacts.
+attested required gate chain, enforces governance/KCIR mapping gates, and emits
+summary/sha artifacts.
 
 `tools/ci/pipeline_instruction.py` is the provider-neutral instruction pipeline
 entrypoint (`mise run ci-pipeline-instruction`): validates envelope shape, runs
-instruction execution, and emits summary/sha artifacts.
+instruction execution, enforces governance/KCIR mapping gates, and emits
+summary/sha artifacts.
 
 Workflow authoring contract:
 
@@ -183,6 +185,10 @@ Workflow authoring contract:
   `PREMATH_BRANCH_POLICY_TOKEN` for admin-read API access.
 - workflow files should not inline attestation/summary logic; keep pipeline
   orchestration in `tools/ci/pipeline_*.py`.
+- wrapper workflow entrypoints and required gates are declared under
+  `providerPipelineWrappers` in
+  `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`; `ci-pipeline-check`
+  derives its expected commands from that contract.
 - validate with:
   - `mise run ci-pipeline-check`
   - `mise run ci-pipeline-test`
@@ -261,7 +267,7 @@ Command-surface contract authority is
   `sh tools/ci/run_instruction.sh`
 
 Provider-specific check naming/binding guidance lives in
-`docs/design/CI-PROVIDER-BINDINGS.md`.
+`docs/design/control-plane/CI-PROVIDER-BINDINGS.md`.
 
 ## Provider-Neutral CI Ref Contract
 

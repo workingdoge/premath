@@ -150,13 +150,13 @@
   - operations lane: `.premath/OPERATIONS.md` (runbooks and rollout evidence),
   - doctrine/decision lane: `specs/*` + `specs/process/decision-log.md` (boundary/lifecycle authority).
 - Keep issue notes compact and reference operations/spec artifacts instead of pasting large transcripts.
-- Use `docs/design/MEMORY-LANES-CONTRACT.md` as the canonical write-discipline reference.
+- Use `docs/design/control-plane/MEMORY-LANES-CONTRACT.md` as the canonical write-discipline reference.
 
 ## Development Meta Workflow
 
 - Do not re-derive process shape per task; use:
-  - `docs/design/DEVELOPMENT-META-LOOP.md`
-  - `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
+  - `docs/design/control-plane/DEVELOPMENT-META-LOOP.md`
+  - `docs/design/runtime/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
   - `.premath/OPERATIONS.md` (`Development Meta Loop (Default)`)
 - For non-trivial epics, keep dependency order explicit:
   1. architecture contract

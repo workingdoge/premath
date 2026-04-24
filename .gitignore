@@ -13,9 +13,11 @@ node_modules/
 .claude/
 .codex/
 .serena/
+.devenv/
 .beads/
 .beads.server-bad-*/
 .git-worktrees/
+.jj-workspaces/
 .venv/
 venv/
 .terraform/

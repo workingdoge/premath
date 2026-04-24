@@ -11,6 +11,181 @@ from pathlib import Path
 import control_plane_contract
 
 
+def _repl_host_action_bindings() -> dict:
+    return {
+        "surfaceKind": "premath.repl_host_action.bindings.v0",
+        "evaluatorToolId": "scheme_eval",
+        "actions": {
+            "dep.add": {
+                "operationId": "op/mcp.dep_add",
+                "mcpTool": "dep_add",
+                "cliEntrypoint": ["premath", "dep", "add"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "instruction-linked",
+            },
+            "dep.diagnostics": {
+                "operationId": "op/mcp.dep_diagnostics",
+                "mcpTool": "dep_diagnostics",
+                "cliEntrypoint": ["premath", "dep", "diagnostics"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "dep.remove": {
+                "operationId": "op/mcp.dep_remove",
+                "mcpTool": "dep_remove",
+                "cliEntrypoint": ["premath", "dep", "remove"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "instruction-linked",
+            },
+            "dep.replace": {
+                "operationId": "op/mcp.dep_replace",
+                "mcpTool": "dep_replace",
+                "cliEntrypoint": ["premath", "dep", "replace"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "instruction-linked",
+            },
+            "harness.session.bootstrap": {
+                "operationId": "op/harness.session_bootstrap",
+                "mcpTool": None,
+                "cliEntrypoint": ["premath", "harness-session", "bootstrap"],
+                "transportMode": "cli-only",
+                "authorityMode": "session-linked",
+            },
+            "harness.session.read": {
+                "operationId": "op/harness.session_read",
+                "mcpTool": None,
+                "cliEntrypoint": ["premath", "harness-session", "read"],
+                "transportMode": "cli-only",
+                "authorityMode": "read-only",
+            },
+            "harness.session.write": {
+                "operationId": "op/harness.session_write",
+                "mcpTool": None,
+                "cliEntrypoint": ["premath", "harness-session", "write"],
+                "transportMode": "cli-only",
+                "authorityMode": "session-linked",
+            },
+            "instruction.check": {
+                "operationId": "op/mcp.instruction_check",
+                "mcpTool": "instruction_check",
+                "cliEntrypoint": ["premath", "instruction-check"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "instruction.run": {
+                "operationId": "op/mcp.instruction_run",
+                "mcpTool": "instruction_run",
+                "cliEntrypoint": ["premath", "mcp-serve"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "instruction-linked",
+            },
+            "issue.backend_status": {
+                "operationId": "op/mcp.issue_backend_status",
+                "mcpTool": "issue_backend_status",
+                "cliEntrypoint": ["premath", "issue", "backend-status"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "issue.blocked": {
+                "operationId": "op/mcp.issue_blocked",
+                "mcpTool": "issue_blocked",
+                "cliEntrypoint": ["premath", "issue", "blocked"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "issue.check": {
+                "operationId": "op/mcp.issue_check",
+                "mcpTool": "issue_check",
+                "cliEntrypoint": ["premath", "issue", "check"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "issue.claim": {
+                "operationId": "op/mcp.issue_claim",
+                "mcpTool": "issue_claim",
+                "cliEntrypoint": ["premath", "issue", "claim"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "instruction-linked",
+            },
+            "issue.discover": {
+                "operationId": "op/mcp.issue_discover",
+                "mcpTool": "issue_discover",
+                "cliEntrypoint": ["premath", "issue", "discover"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "instruction-linked",
+            },
+            "issue.lease_release": {
+                "operationId": "op/mcp.issue_lease_release",
+                "mcpTool": "issue_lease_release",
+                "cliEntrypoint": None,
+                "transportMode": "mcp-only",
+                "authorityMode": "instruction-linked",
+            },
+            "issue.lease_renew": {
+                "operationId": "op/mcp.issue_lease_renew",
+                "mcpTool": "issue_lease_renew",
+                "cliEntrypoint": None,
+                "transportMode": "mcp-only",
+                "authorityMode": "instruction-linked",
+            },
+            "issue.list": {
+                "operationId": "op/mcp.issue_list",
+                "mcpTool": "issue_list",
+                "cliEntrypoint": ["premath", "issue", "list"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "issue.ready": {
+                "operationId": "op/mcp.issue_ready",
+                "mcpTool": "issue_ready",
+                "cliEntrypoint": ["premath", "issue", "ready"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "issue.update": {
+                "operationId": "op/mcp.issue_update",
+                "mcpTool": "issue_update",
+                "cliEntrypoint": ["premath", "issue", "update"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "instruction-linked",
+            },
+            "observe.instruction": {
+                "operationId": "op/mcp.observe_instruction",
+                "mcpTool": "observe_instruction",
+                "cliEntrypoint": ["premath", "observe"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "observe.latest": {
+                "operationId": "op/mcp.observe_latest",
+                "mcpTool": "observe_latest",
+                "cliEntrypoint": ["premath", "observe"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "observe.needs_attention": {
+                "operationId": "op/mcp.observe_needs_attention",
+                "mcpTool": "observe_needs_attention",
+                "cliEntrypoint": ["premath", "observe"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+            "observe.projection": {
+                "operationId": "op/mcp.observe_projection",
+                "mcpTool": "observe_projection",
+                "cliEntrypoint": ["premath", "observe"],
+                "transportMode": "cli-and-mcp",
+                "authorityMode": "read-only",
+            },
+        },
+        "failureClasses": {
+            "unregisteredHostId": "repl_host_action_unregistered",
+            "bindingMismatch": "repl_host_action_binding_mismatch",
+            "duplicateBinding": "repl_host_action_duplicate_binding",
+        },
+    }
+
+
 def _base_payload() -> dict:
     return {
         "schema": 1,
@@ -396,6 +571,7 @@ def _base_payload() -> dict:
                 "contractUnbound": "runtime_route_contract_unbound",
             },
         },
+        "replHostActionBindings": _repl_host_action_bindings(),
         "commandSurface": {
             "requiredDecision": {
                 "canonicalEntrypoint": [
@@ -432,6 +608,46 @@ def _base_payload() -> dict:
             },
             "failureClasses": {
                 "unbound": "control_plane_command_surface_unbound",
+            },
+        },
+        "providerPipelineWrappers": {
+            "requiredPipeline": {
+                "workflowPath": ".github/workflows/baseline.yml",
+                "wrapperPath": "tools/ci/pipeline_required.py",
+                "workflowEntrypoint": [
+                    "python3",
+                    "tools/ci/pipeline_required.py",
+                ],
+                "boundCommandSurfaces": [
+                    "requiredDecision",
+                ],
+                "enforcedGates": [
+                    "governance",
+                    "kcirMapping",
+                ],
+            },
+            "instructionPipeline": {
+                "workflowPath": ".github/workflows/instruction.yml",
+                "wrapperPath": "tools/ci/pipeline_instruction.py",
+                "workflowEntrypoint": [
+                    "python3",
+                    "tools/ci/pipeline_instruction.py",
+                    "--instruction",
+                    "$INSTRUCTION_PATH",
+                ],
+                "boundCommandSurfaces": [
+                    "instructionEnvelopeCheck",
+                    "instructionDecision",
+                ],
+                "enforcedGates": [
+                    "governance",
+                    "kcirMapping",
+                ],
+            },
+            "failureClasses": {
+                "workflowDrift": "provider_pipeline_workflow_drift",
+                "canonicalEntrypointDrift": "provider_pipeline_canonical_entrypoint_drift",
+                "gateDrift": "provider_pipeline_gate_drift",
             },
         },
         "harnessRetry": {
@@ -577,6 +793,22 @@ class ControlPlaneContractTests(unittest.TestCase):
             [["sh", "tools/ci/run_instruction.sh"]],
         )
         self.assertEqual(
+            loaded["providerPipelineWrappers"]["requiredPipeline"][
+                "boundCommandSurfaces"
+            ],
+            ["requiredDecision"],
+        )
+        self.assertEqual(
+            loaded["providerPipelineWrappers"]["instructionPipeline"][
+                "enforcedGates"
+            ],
+            ["governance", "kcirMapping"],
+        )
+        self.assertEqual(
+            loaded["providerPipelineWrappers"]["failureClasses"]["workflowDrift"],
+            "provider_pipeline_workflow_drift",
+        )
+        self.assertEqual(
             loaded["controlPlaneBundleProfile"]["profileId"],
             "cp.bundle.v0",
         )
@@ -601,6 +833,20 @@ class ControlPlaneContractTests(unittest.TestCase):
         self.assertIn(
             "runtime_route_morphism_drift",
             loaded["runtimeRouteBindings"]["failureClasses"]["morphismDrift"],
+        )
+        self.assertEqual(
+            loaded["replHostActionBindings"]["actions"]["issue.claim"]["mcpTool"],
+            "issue_claim",
+        )
+        self.assertEqual(
+            loaded["replHostActionBindings"]["actions"]["issue.lease_renew"][
+                "transportMode"
+            ],
+            "mcp-only",
+        )
+        self.assertEqual(
+            loaded["replHostActionBindings"]["failureClasses"]["bindingMismatch"],
+            "repl_host_action_binding_mismatch",
         )
 
     def test_load_rejects_duplicate_lane_ids(self) -> None:
@@ -635,6 +881,42 @@ class ControlPlaneContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "non-empty list"):
             self._load(payload)
 
+    def test_load_rejects_repl_host_action_unregistered_id(self) -> None:
+        payload = _base_payload()
+        payload["replHostActionBindings"]["actions"]["issue.delete"] = {
+            "operationId": "op/mcp.issue_delete",
+            "mcpTool": "issue_delete",
+            "cliEntrypoint": ["premath", "issue", "delete"],
+            "transportMode": "cli-and-mcp",
+            "authorityMode": "instruction-linked",
+        }
+        with self.assertRaisesRegex(ValueError, "unregistered host action ids"):
+            self._load(payload)
+
+    def test_load_rejects_repl_host_action_duplicate_normalized_id(self) -> None:
+        payload = _base_payload()
+        payload["replHostActionBindings"]["actions"]["Issue.Claim"] = dict(
+            payload["replHostActionBindings"]["actions"]["issue.claim"]
+        )
+        with self.assertRaisesRegex(ValueError, "duplicate host action ids"):
+            self._load(payload)
+
+    def test_load_rejects_repl_host_action_mcp_binding_drift(self) -> None:
+        payload = _base_payload()
+        payload["replHostActionBindings"]["actions"]["issue.claim"][
+            "mcpTool"
+        ] = "issue_update"
+        with self.assertRaisesRegex(ValueError, "mismatches canonical binding"):
+            self._load(payload)
+
+    def test_load_rejects_repl_host_action_cli_fallback_for_mcp_only(self) -> None:
+        payload = _base_payload()
+        payload["replHostActionBindings"]["actions"]["issue.lease_renew"][
+            "cliEntrypoint"
+        ] = ["premath", "issue", "lease-renew"]
+        with self.assertRaisesRegex(ValueError, "transportMode=mcp-only"):
+            self._load(payload)
+
     def test_load_rejects_command_surface_canonical_entrypoint_drift(self) -> None:
         payload = _base_payload()
         payload["commandSurface"]["requiredDecision"]["canonicalEntrypoint"] = [
@@ -651,6 +933,30 @@ class ControlPlaneContractTests(unittest.TestCase):
             ["python3", "tools/ci/run_instruction.py"]
         ]
         with self.assertRaisesRegex(ValueError, "must not include canonicalEntrypoint"):
+            self._load(payload)
+
+    def test_load_rejects_provider_pipeline_workflow_entrypoint_drift(self) -> None:
+        payload = _base_payload()
+        payload["providerPipelineWrappers"]["requiredPipeline"][
+            "workflowEntrypoint"
+        ] = ["mise", "run", "ci-required-attested"]
+        with self.assertRaisesRegex(ValueError, "workflowEntrypoint"):
+            self._load(payload)
+
+    def test_load_rejects_provider_pipeline_bound_surface_drift(self) -> None:
+        payload = _base_payload()
+        payload["providerPipelineWrappers"]["instructionPipeline"][
+            "boundCommandSurfaces"
+        ] = ["instructionDecision"]
+        with self.assertRaisesRegex(ValueError, "boundCommandSurfaces"):
+            self._load(payload)
+
+    def test_load_rejects_provider_pipeline_failure_class_drift(self) -> None:
+        payload = _base_payload()
+        payload["providerPipelineWrappers"]["failureClasses"][
+            "gateDrift"
+        ] = "provider_pipeline_gate_missing"
+        with self.assertRaisesRegex(ValueError, "canonical provider-pipeline classes"):
             self._load(payload)
 
     def test_load_rejects_control_plane_bundle_context_family_id_mismatch(self) -> None:

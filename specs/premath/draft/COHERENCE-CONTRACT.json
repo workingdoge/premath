@@ -115,7 +115,7 @@
     "specIndexCapabilityHeading": "5.4",
     "specIndexInformativeHeading": "5.5",
     "specIndexOverlayHeading": "5.6",
-    "ciClosurePath": "docs/design/CI-CLOSURE.md",
+    "ciClosurePath": "docs/design/control-plane/CI-CLOSURE.md",
     "ciClosureBaselineStart": "Current full baseline gate (`mise run baseline`) includes:",
     "ciClosureBaselineEnd": "Local command:",
     "ciClosureProjectionStart": "Current deterministic projected check IDs include:",

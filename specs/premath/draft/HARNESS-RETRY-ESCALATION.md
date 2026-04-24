@@ -179,8 +179,8 @@ Minimum deterministic verification:
 ## 9. Related surfaces
 
 - design docs:
-  - `docs/design/TUSK-HARNESS-RETRY-POLICY.md`
-  - `docs/design/TUSK-HARNESS-CONTRACT.md`
+  - `docs/design/runtime/TUSK-HARNESS-RETRY-POLICY.md`
+  - `docs/design/runtime/TUSK-HARNESS-CONTRACT.md`
 - index/authority overlays:
   - `draft/SPEC-INDEX.md`
   - `draft/UNIFICATION-DOCTRINE.md`

@@ -145,7 +145,8 @@ projection artifacts MAY still be emitted.
 `stop` MUST:
 
 - persist compact continuation handoff state,
-- release or renew lease deterministically through canonical issue memory,
+- release or renew lease deterministically through the MCP-only
+  `op/mcp.issue_lease_release` / `op/mcp.issue_lease_renew` host actions,
 - append trajectory row(s) linking issue/mutation identity, verification
   outcome, witness references, and next-step recommendation.
 
@@ -283,10 +284,10 @@ Minimum deterministic verification includes:
 ## 10. Related surfaces
 
 - design runbooks:
-  - `docs/design/TUSK-HARNESS-CONTRACT.md`
-  - `docs/design/TUSK-HARNESS-FEATURE-LEDGER.md`
-  - `docs/design/TUSK-HARNESS-CONTRACT.md` (§11 session artifact, §12 trajectory, §13 KPI benchmark)
-  - `docs/design/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
+  - `docs/design/runtime/TUSK-HARNESS-CONTRACT.md`
+  - `docs/design/runtime/TUSK-HARNESS-FEATURE-LEDGER.md`
+  - `docs/design/runtime/TUSK-HARNESS-CONTRACT.md` (§11 session artifact, §12 trajectory, §13 KPI benchmark)
+  - `docs/design/runtime/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
 - lane composition and authority:
   - `draft/SPEC-INDEX.md`
 - `draft/UNIFICATION-DOCTRINE.md`

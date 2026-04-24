@@ -1,0 +1,22 @@
+# Premath Specs
+
+This directory contains Premath's spec authority, grouped by lifecycle state.
+
+## Entry Points
+
+- `draft/SPEC-INDEX.md` is the first authority entrypoint for current
+  conformance claims, active phase posture, and profile scope.
+- `draft/README.md` summarizes promoted draft contracts.
+- `profile/README.md` summarizes optional overlays that become normative only
+  when explicitly claimed.
+- `raw/README.md` summarizes exploratory or informational specs that are not
+  active conformance authority.
+
+## Authority Split
+
+- `draft/` is the active promoted contract surface.
+- `profile/` contains additive claim-scoped overlays.
+- `raw/` is visible incubation material and historical context.
+
+Implementation-facing design notes live under `../../docs/design/` and must
+route back to this tree when they discuss normative behavior.

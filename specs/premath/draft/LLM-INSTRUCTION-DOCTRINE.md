@@ -51,7 +51,7 @@ This specification complements:
 
 Design map reference (non-normative):
 
-- `../../../docs/design/ARCHITECTURE-MAP.md` (doctrine-to-operation path summary).
+- `../../../docs/design/control-plane/ARCHITECTURE-MAP.md` (doctrine-to-operation path summary).
 
 ## 2. Core objects
 

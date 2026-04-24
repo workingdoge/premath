@@ -5821,7 +5821,7 @@ Current deterministic projected check IDs include:
         let mut contract = test_contract_with_fixture_roots("", "");
         contract.surfaces.mise_path = ".mise.toml".to_string();
         contract.surfaces.mise_baseline_task = "baseline".to_string();
-        contract.surfaces.ci_closure_path = "docs/design/CI-CLOSURE.md".to_string();
+        contract.surfaces.ci_closure_path = "docs/design/control-plane/CI-CLOSURE.md".to_string();
         contract.surfaces.ci_closure_baseline_start =
             "Current full baseline gate (`mise run baseline`) includes:".to_string();
         contract.surfaces.ci_closure_baseline_end = "Local command:".to_string();
@@ -6141,7 +6141,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_accepts_valid_lane_registry() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-valid");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         write_json_file(
             &temp
                 .path()
@@ -6160,7 +6160,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_missing_schema_lifecycle() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-missing");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload
             .as_object_mut()
@@ -6188,7 +6188,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_expired_schema_alias() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-expired-alias");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["requiredWitness"]["witnessKind"] = json!("ci.required.v0");
         payload["schemaLifecycle"]["activeEpoch"] = json!("2026-07");
@@ -6214,7 +6214,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_freeze_with_active_aliases() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-with-aliases");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["schemaLifecycle"]["governance"] = json!({
             "mode": "freeze",
@@ -6244,7 +6244,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_accepts_freeze_without_aliases() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-no-aliases");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["schemaLifecycle"]["governance"] = json!({
             "mode": "freeze",
@@ -6279,7 +6279,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_duplicate_lane_ids() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-duplicate-ids");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceLanes"]["runtimeTransport"] = json!("strict_checker");
         write_json_file(
@@ -6304,7 +6304,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_unknown_lane_artifact_kind_mapping() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-unknown-lane-kind");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["laneArtifactKinds"]["unknown_lane"] = json!(["opaque_kind"]);
         write_json_file(
@@ -6329,7 +6329,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_missing_cross_lane_route() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-missing-route");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["laneOwnership"]["requiredCrossLaneWitnessRoute"] = Value::Null;
         write_json_file(
@@ -6354,7 +6354,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_checker_core_ownership_violation() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-ownership-violation");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["laneOwnership"]["checkerCoreOnlyObligations"] =
             json!(["cwf_substitution_identity", "span_square_commutation"]);
@@ -6380,7 +6380,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_worker_lane_default_mode_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-default-mode-drift");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationPolicy"]["defaultMode"] = json!("human-override");
         write_json_file(
@@ -6405,7 +6405,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_worker_lane_route_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-route-drift");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = json!("issue_discover");
         write_json_file(
@@ -6430,7 +6430,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_worker_lane_policy_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-policy-drift");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationPolicy"]["compatibilityOverrides"][0]["supportUntilEpoch"] =
             json!("2026-01");
@@ -6456,7 +6456,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_evidence_factorization_missing_route() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-missing-route");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["factorizationRoutes"] = json!([]);
         write_json_file(
@@ -6481,7 +6481,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_evidence_factorization_ambiguous_routes() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-ambiguous-routes");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["factorizationRoutes"] =
             json!(["eta.route_a", "eta.route_b"]);
@@ -6507,7 +6507,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_evidence_factorization_unbound_binding() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-unbound-binding");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["binding"]["policyDigestRef"] = json!("policy");
         write_json_file(
@@ -6532,7 +6532,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage1_missing_route() {
         let temp = TempDirGuard::new("gate-chain-stage1-missing-route");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["authorityToTypedCoreRoute"] = json!("");
         write_json_file(
@@ -6557,7 +6557,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage1_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage1-unbound-binding");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["comparisonTuple"]["normalizerIdRef"] = json!("normalizer");
         write_json_file(
@@ -6582,7 +6582,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage1_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage1-failure-class-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["failureClasses"]["mismatch"] = json!("ev.parity.mismatch");
         write_json_file(
@@ -6607,7 +6607,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage1_missing_profile_kind() {
         let temp = TempDirGuard::new("gate-chain-stage1-missing-profile-kind");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["profileKind"] = json!("");
         write_json_file(
@@ -6632,7 +6632,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage1_rollback_missing_trigger_classes() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-missing-triggers");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["triggerFailureClasses"] =
             json!(["unification.evidence_stage1.parity.missing"]);
@@ -6658,7 +6658,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage1_rollback_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-unbound-binding");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["identityRefs"]["policyDigestRef"] = json!("policy");
         write_json_file(
@@ -6683,7 +6683,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage1_rollback_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-class-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["failureClasses"]["identityDrift"] =
             json!("ev.rollback.identity");
@@ -6709,7 +6709,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage2_alias_role_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-alias-role-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["compatibilityAlias"]["role"] = json!("authority");
         write_json_file(
@@ -6734,7 +6734,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage2_alias_window_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-alias-window-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["compatibilityAlias"]["supportUntilEpoch"] =
             json!("2026-07");
@@ -6760,7 +6760,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage2_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage2-unbound-binding");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["typedAuthority"]["policyDigestRef"] = json!("policy");
         write_json_file(
@@ -6785,7 +6785,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage2_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-failure-class-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["failureClasses"]["unbound"] =
             json!("unification.evidence_stage2.not_bound");
@@ -6811,7 +6811,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage2_bidir_route_obligation_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-bidir-route-obligation-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"] =
             json!(["stability"]);
@@ -6837,7 +6837,7 @@ Current deterministic projected check IDs include:
     fn check_gate_chain_parity_rejects_stage2_bidir_route_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-bidir-route-class-mismatch");
         write_gate_chain_mise(&temp.path().join(".mise.toml"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/CI-CLOSURE.md"));
+        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["failureClasses"]["drift"] =
             json!("unification.evidence_stage2.kernel_drift");

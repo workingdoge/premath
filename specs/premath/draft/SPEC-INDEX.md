@@ -48,32 +48,38 @@ Premath targets one self-hosted, fail-closed decision spine:
 
 ### 0.3 Current phase and active epic IDs
 
-Current phase (as of 2026-02-24):
+Current phase (as of 2026-04-24):
 
-- KCIR self-hosting phase 3 closure is complete (`bd-287` closed), with active
-  follow-on closure for statement-ID/KCIR projection indexing (`bd-294`).
+- KCIR self-hosting phase 3 is active under `bd-287`.
+- The statement-ID/KCIR projection indexing follow-on is not active until a
+  corresponding issue exists in issue memory.
 
 Active epic IDs:
 
-- `bd-294`: Kernel Statement-ID + KCIR Projection Index v1.
+- `bd-287`: KCIR self-hosting phase 3.
 
 Recently closed epic IDs:
 
-- `bd-287`: KCIR self-hosting phase 3.
+- `bd-262`: KCIR self-hosting phase 2.
 
 Phase-3 dependency spine (ordered):
 
 - `bd-288`: architecture contract (target-state vs transition-state; closed).
 - `bd-289`: spec/index glue (closed).
-- `bd-234`: host-action mapping contract/checker binding (gates `bd-290`; closed).
+- `bd-234`: host-action mapping contract/checker binding (closed).
 - `bd-290`: control-plane parity (closed).
-- `bd-235`: local REPL lease-op parity boundary (gates `bd-291`; closed).
-- `bd-291`: implementation (closed).
-- `bd-292`: conformance (closed).
-- `bd-293`: docs/traceability closure (closed).
+- `bd-235`: local REPL lease-op parity boundary (closed).
+- `bd-291`: implementation (open; next).
+- `bd-292`: conformance (open; blocked on `bd-291`).
+- `bd-293`: docs/traceability closure (open; blocked on `bd-292`).
 
-This section records stable phase milestones only; mutable execution status
-remains issue-memory authority (`premath issue ready|list|blocked`).
+Sidecar issue:
+
+- `bd-294`: docs topology/navigation refactor (closed; authority entrypoints +
+  design lane folders; not a semantic phase-3 dependency).
+
+This section records the phase posture only; mutable execution status remains
+issue-memory authority (`premath issue ready|list|blocked`).
 
 Active non-epic blocker:
 
@@ -242,6 +248,11 @@ Worker-operation doctrine-site routing note:
   operation path boundaries (`tools/ci/*`) and optional
   `controlPlaneKcirMappings` row-shape checks (when mapping rows are present),
   with invariance vectors for profile-permuted route scenarios.
+- REPL host-action transition rows are machine-bound in
+  `draft/CONTROL-PLANE-CONTRACT.json` under `replHostActionBindings`; the
+  control-plane loader and drift-budget checker reject unregistered host IDs,
+  duplicate normalized host IDs, mismatched CLI/MCP bindings, and missing
+  doctrine operation routes.
 - For multithread worker orchestration, routed operation paths MUST be treated
   as operational cover/refinement execution surfaces only (no semantic
   authority transfer). Any acceptance/rejection consumed by runtime/control
@@ -287,6 +298,7 @@ explicitly claimed under §5.4 or §5.6.
   for contract/witness/projection kind families + harness retry/escalation
   bindings + worker mutation authority policy/routes + runtime route bindings
   (`runtimeRouteBindings`) + Stage 2/Stage 3 typed-authority metadata +
+  provider wrapper entrypoint/gate bindings (`providerPipelineWrappers`) +
   control-plane bundle profile (`controlPlaneBundleProfile`) declaring
   `C_cp` (repository-state context family), `E_cp` (control-plane artifact
   family), reindexing/coherence and cover/glue obligations, plus explicit
@@ -488,7 +500,7 @@ If you are implementing multithread worker orchestration:
    (`capabilities.change_morphisms`)
 5) `raw/SQUEAK-SITE` (only when `capabilities.squeak_site` is claimed)
 6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-7) operational companion: `docs/design/MULTITHREAD-LANE-SITE-ADJOINTS.md`
+7) operational companion: `docs/design/control-plane/MULTITHREAD-LANE-SITE-ADJOINTS.md`
 
 If you are implementing the Unified Evidence Plane:
 1) `draft/UNIFICATION-DOCTRINE` (§10, especially §10.6)

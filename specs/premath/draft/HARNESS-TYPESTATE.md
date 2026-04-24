@@ -36,7 +36,7 @@ This specification defines deterministic typestate closure and mutation
 admissibility for tool-calling harness turns.
 
 It provides normative authority for runtime closure gating. Design discussion in
-`docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md` is non-normative commentary.
+`docs/design/control-plane/TOOL-CALLING-HARNESS-TYPESTATE.md` is non-normative commentary.
 
 Semantic admissibility remains in checker/kernel doctrine (`draft/GATE`,
 `draft/BIDIR-DESCENT`, `draft/LLM-INSTRUCTION-DOCTRINE`).
@@ -195,4 +195,4 @@ contract. Canonical surfaces in this repository are:
 - `draft/HARNESS-RETRY-ESCALATION`
 - `draft/DOCTRINE-INF`
 - `draft/CONFORMANCE`
-- `docs/design/TOOL-CALLING-HARNESS-TYPESTATE.md` (non-normative commentary)
+- `docs/design/control-plane/TOOL-CALLING-HARNESS-TYPESTATE.md` (non-normative commentary)

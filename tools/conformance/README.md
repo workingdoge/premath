@@ -94,10 +94,10 @@ Validates critical docs-to-executable coherence invariants:
   - `specs/premath/draft/SPEC-INDEX.md` (§5.4)
 - baseline gate task parity between:
   - `.mise.toml` (`[tasks.baseline]`)
-  - `docs/design/CI-CLOSURE.md` baseline task list
+  - `docs/design/control-plane/CI-CLOSURE.md` baseline task list
 - projected check ID parity between:
   - `tools/ci/change_projection.py` (`CHECK_ORDER`)
-  - `docs/design/CI-CLOSURE.md` projected check list
+  - `docs/design/control-plane/CI-CLOSURE.md` projected check list
 - capability-scoped normative-vs-informative consistency in
   `specs/premath/draft/SPEC-INDEX.md` (§5.4/§5.5 conditional clauses).
 

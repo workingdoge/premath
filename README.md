@@ -19,10 +19,12 @@ Design goals:
 ## Layout
 
 - `specs/premath/draft/` — promoted draft contracts (normative for active claims)
+- `specs/premath/profile/` — optional claim-scoped overlays
 - `specs/premath/raw/` — raw (experimental/informational) documents
 - `specs/process/` — process docs (COSS lifecycle)
 - `docs/foundations/` — explanatory foundations notes (non-normative)
-- `docs/design/` — implementation-facing architecture notes (non-normative)
+- `docs/design/` — implementation-facing notes grouped by runtime,
+  transport, control-plane, and operations lanes (non-normative)
 
 ## Start here
 
@@ -277,7 +279,7 @@ The current repo CI binding runs:
 - `python3 tools/ci/pipeline_required.py`
 
 Provider-specific required-check mappings are documented in
-`docs/design/CI-PROVIDER-BINDINGS.md`.
+`docs/design/control-plane/CI-PROVIDER-BINDINGS.md`.
 
 `ci-verify-required-strict` uses `--compare-delta` and compares witness
 `changedPaths` against `artifacts/ciwitness/latest-delta.json` when present
@@ -379,7 +381,7 @@ mise run ci-check-tf-microvm
 Treat `darwin_microvm_vfkit` as an optional runtime adapter path, not baseline
 CI required flow. Current microvm profile is prototype-level.
 
-Design framing for this control loop: `docs/design/HIGHER-ORDER-CI-CD.md`.
+Design framing for this control loop: `docs/design/control-plane/HIGHER-ORDER-CI-CD.md`.
 
 ### Optional Pitchfork Runtime Orchestration
 

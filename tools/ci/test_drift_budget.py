@@ -12,6 +12,23 @@ import check_drift_budget
 
 
 class DriftBudgetChecksTests(unittest.TestCase):
+    def write_mcp_only_source_fixture(
+        self,
+        root: Path,
+        *,
+        cli_source: str = "",
+        issue_source: str = "",
+        mcp_source: str = 'name = "issue_lease_renew"\nname = "issue_lease_release"\n',
+    ) -> None:
+        cli_path = root / "crates" / "premath-cli" / "src" / "cli.rs"
+        issue_path = root / "crates" / "premath-cli" / "src" / "commands" / "issue.rs"
+        mcp_path = root / "crates" / "premath-cli" / "src" / "commands" / "mcp_serve.rs"
+        cli_path.parent.mkdir(parents=True, exist_ok=True)
+        issue_path.parent.mkdir(parents=True, exist_ok=True)
+        cli_path.write_text(cli_source, encoding="utf-8")
+        issue_path.write_text(issue_source, encoding="utf-8")
+        mcp_path.write_text(mcp_source, encoding="utf-8")
+
     def test_spec_index_capability_map_drift_detects_unknown_capability(self) -> None:
         failed, details = check_drift_budget.check_spec_index_capability_map(
             spec_map={"draft/LLM-INSTRUCTION-DOCTRINE": "capabilities.instruction_typing"},
@@ -183,6 +200,243 @@ class DriftBudgetChecksTests(unittest.TestCase):
         self.assertFalse(failed)
         self.assertEqual(details["missingOperationRoutes"], [])
         self.assertEqual(details["missingRequiredMorphisms"], [])
+
+    def test_repl_host_action_binding_drift_accepts_when_registry_and_docs_bound(self) -> None:
+        loaded_contract = {
+            "replHostActionBindings": {
+                "actions": {
+                    "issue.claim": {
+                        "operationId": "op/mcp.issue_claim",
+                        "mcpTool": "issue_claim",
+                        "cliEntrypoint": ["premath", "issue", "claim"],
+                        "transportMode": "cli-and-mcp",
+                        "authorityMode": "instruction-linked",
+                    },
+                    "issue.lease_renew": {
+                        "operationId": "op/mcp.issue_lease_renew",
+                        "mcpTool": "issue_lease_renew",
+                        "cliEntrypoint": None,
+                        "transportMode": "mcp-only",
+                        "authorityMode": "instruction-linked",
+                    },
+                },
+                "failureClasses": {
+                    "unregisteredHostId": "repl_host_action_unregistered",
+                    "bindingMismatch": "repl_host_action_binding_mismatch",
+                    "duplicateBinding": "repl_host_action_duplicate_binding",
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            REPL_HOST_ACTION_BINDINGS=loaded_contract["replHostActionBindings"][
+                "actions"
+            ],
+            REPL_HOST_ACTION_FAILURE_CLASSES=(
+                "repl_host_action_unregistered",
+                "repl_host_action_binding_mismatch",
+                "repl_host_action_duplicate_binding",
+            ),
+        )
+        doctrine_operations = {
+            "op/mcp.issue_claim": {
+                "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+                "morphisms": ["dm.identity"],
+            },
+            "op/mcp.issue_lease_renew": {
+                "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+                "morphisms": ["dm.identity"],
+            },
+        }
+        docs_action_rows = {
+            "issue.claim": {
+                "cliSurface": "`premath issue claim <issue-id> --assignee <name> --issues <path> --json`",
+                "mcpTool": "`issue_claim`",
+            },
+            "issue.lease_renew": {
+                "cliSurface": "n/a (MCP-only; no CLI surface)",
+                "mcpTool": "`issue_lease_renew`",
+            },
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            self.write_mcp_only_source_fixture(repo_root)
+            failed, details = check_drift_budget.check_repl_host_action_bindings(
+                loaded_contract,
+                control_plane_module,
+                doctrine_operations,
+                docs_action_rows,
+                repo_root=repo_root,
+            )
+        self.assertFalse(failed)
+        self.assertEqual(details["missingOperationBindings"], [])
+        self.assertEqual(details["mcpDocMismatches"], [])
+        self.assertEqual(details["mcpOnlyCliFallbacks"], [])
+        self.assertEqual(details["missingMcpOnlyTools"], [])
+
+    def test_repl_host_action_binding_drift_rejects_mcp_only_cli_fallback(
+        self,
+    ) -> None:
+        loaded_contract = {
+            "replHostActionBindings": {
+                "actions": {
+                    "issue.lease_release": {
+                        "operationId": "op/mcp.issue_lease_release",
+                        "mcpTool": "issue_lease_release",
+                        "cliEntrypoint": None,
+                        "transportMode": "mcp-only",
+                        "authorityMode": "instruction-linked",
+                    },
+                },
+                "failureClasses": {
+                    "unregisteredHostId": "repl_host_action_unregistered",
+                    "bindingMismatch": "repl_host_action_binding_mismatch",
+                    "duplicateBinding": "repl_host_action_duplicate_binding",
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            REPL_HOST_ACTION_BINDINGS=loaded_contract["replHostActionBindings"][
+                "actions"
+            ],
+            REPL_HOST_ACTION_FAILURE_CLASSES=(
+                "repl_host_action_unregistered",
+                "repl_host_action_binding_mismatch",
+                "repl_host_action_duplicate_binding",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            self.write_mcp_only_source_fixture(
+                repo_root,
+                cli_source="enum IssueCommands { LeaseRelease }",
+            )
+            failed, details = check_drift_budget.check_repl_host_action_bindings(
+                loaded_contract,
+                control_plane_module,
+                {
+                    "op/mcp.issue_lease_release": {
+                        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+                        "morphisms": ["dm.identity"],
+                    },
+                },
+                {
+                    "issue.lease_release": {
+                        "cliSurface": "n/a (MCP-only; no CLI surface)",
+                        "mcpTool": "`issue_lease_release`",
+                    },
+                },
+                repo_root=repo_root,
+            )
+        self.assertTrue(failed)
+        self.assertEqual(
+            details["mcpOnlyCliFallbacks"][0]["hostActionId"],
+            "issue.lease_release",
+        )
+
+    def test_repl_host_action_binding_drift_rejects_missing_mcp_only_tool(
+        self,
+    ) -> None:
+        loaded_contract = {
+            "replHostActionBindings": {
+                "actions": {
+                    "issue.lease_renew": {
+                        "operationId": "op/mcp.issue_lease_renew",
+                        "mcpTool": "issue_lease_renew",
+                        "cliEntrypoint": None,
+                        "transportMode": "mcp-only",
+                        "authorityMode": "instruction-linked",
+                    },
+                },
+                "failureClasses": {
+                    "unregisteredHostId": "repl_host_action_unregistered",
+                    "bindingMismatch": "repl_host_action_binding_mismatch",
+                    "duplicateBinding": "repl_host_action_duplicate_binding",
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            REPL_HOST_ACTION_BINDINGS=loaded_contract["replHostActionBindings"][
+                "actions"
+            ],
+            REPL_HOST_ACTION_FAILURE_CLASSES=(
+                "repl_host_action_unregistered",
+                "repl_host_action_binding_mismatch",
+                "repl_host_action_duplicate_binding",
+            ),
+        )
+        with tempfile.TemporaryDirectory() as tmp:
+            repo_root = Path(tmp)
+            self.write_mcp_only_source_fixture(repo_root, mcp_source="")
+            failed, details = check_drift_budget.check_repl_host_action_bindings(
+                loaded_contract,
+                control_plane_module,
+                {
+                    "op/mcp.issue_lease_renew": {
+                        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+                        "morphisms": ["dm.identity"],
+                    },
+                },
+                {
+                    "issue.lease_renew": {
+                        "cliSurface": "n/a (MCP-only; no CLI surface)",
+                        "mcpTool": "`issue_lease_renew`",
+                    },
+                },
+                repo_root=repo_root,
+            )
+        self.assertTrue(failed)
+        self.assertEqual(
+            details["missingMcpOnlyTools"][0]["hostActionId"],
+            "issue.lease_renew",
+        )
+
+    def test_repl_host_action_binding_drift_rejects_doc_tool_mismatch(self) -> None:
+        loaded_contract = {
+            "replHostActionBindings": {
+                "actions": {
+                    "issue.claim": {
+                        "operationId": "op/mcp.issue_claim",
+                        "mcpTool": "issue_claim",
+                        "cliEntrypoint": ["premath", "issue", "claim"],
+                        "transportMode": "cli-and-mcp",
+                        "authorityMode": "instruction-linked",
+                    }
+                },
+                "failureClasses": {
+                    "unregisteredHostId": "repl_host_action_unregistered",
+                    "bindingMismatch": "repl_host_action_binding_mismatch",
+                    "duplicateBinding": "repl_host_action_duplicate_binding",
+                },
+            }
+        }
+        control_plane_module = SimpleNamespace(
+            REPL_HOST_ACTION_BINDINGS=loaded_contract["replHostActionBindings"][
+                "actions"
+            ],
+            REPL_HOST_ACTION_FAILURE_CLASSES=(
+                "repl_host_action_unregistered",
+                "repl_host_action_binding_mismatch",
+                "repl_host_action_duplicate_binding",
+            ),
+        )
+        failed, details = check_drift_budget.check_repl_host_action_bindings(
+            loaded_contract,
+            control_plane_module,
+            {
+                "op/mcp.issue_claim": {
+                    "path": "crates/premath-cli/src/commands/mcp_serve.rs",
+                    "morphisms": ["dm.identity"],
+                }
+            },
+            {
+                "issue.claim": {
+                    "cliSurface": "`premath issue claim <issue-id> --json`",
+                    "mcpTool": "`issue_update`",
+                }
+            },
+        )
+        self.assertTrue(failed)
+        self.assertEqual(details["mcpDocMismatches"][0]["hostActionId"], "issue.claim")
 
     def test_control_plane_kcir_mapping_drift_accepts_when_loader_matches(self) -> None:
         loaded_contract = {
