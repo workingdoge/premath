@@ -69,6 +69,18 @@ Purpose:
 | `HARNESS-TYPESTATE.md` | `cargo test -p premath-tusk`; `cargo test -p premath-cli`; `python3 tools/conformance/run_harness_typestate_vectors.py`; `python3 tools/ci/check_issue_graph.py` | covered | - |
 | `HARNESS-RETRY-ESCALATION.md` | `python3 tools/ci/test_harness_retry_policy.py`; `python3 tools/ci/test_harness_escalation.py`; `mise run ci-pipeline-test`; `mise run doctrine-check` | covered | - |
 | `HARNESS-OPTIMIZATION.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-HARNESS-1 |
+| `PMH-0000-KERNEL.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0001-HARNESS-SPEC.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0002-RUNTIME-CLOSURE.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0003-EVAL-POLICY.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0004-TRACE-EVENT.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0005-EVAL-RECEIPT.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0006-VISIBILITY-RECEIPT.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0007-OBSTRUCTION.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0008-IMPROVEMENT-CLAIM.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0009-HARNESS-MUTATION-INTENT.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0010-ADMISSION-DECISION.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
+| `PMH-0011-UNREPLAYABLE-RECEIPT.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-PMH-1 |
 | `LLM-INSTRUCTION-DOCTRINE.md` | `capabilities.instruction_typing`; `capabilities.ci_witnesses`; `mise run ci-pipeline-test` | covered | - |
 | `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_check_client.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
 | `PREMATH-COHERENCE.md` | `mise run coherence-check`; `cargo test -p premath-coherence`; `coherence-check` CLI smoke test | covered | - |
@@ -86,6 +98,12 @@ Purpose:
   semantic object vocabulary stabilizes. Target vectors: admitted mutation
   intent, sealed-visibility rejection, eval receipt production, trace
   coherence, and obstruction roundtrip rows. Tracking issue: `bd-236`.
+- `T-PMH-1`: add executable coverage for the PMH kernel/object family once the
+  v0 receipt-first evaluation carrier exists. Target vectors: non-kernel
+  evidence write rejection, mediated allowed and denied archive reads,
+  `candidate x runtime closure x eval policy -> receipt`, trace coherence
+  checks TC1-TC10, obstruction emission for invalid runs, and
+  `UnreplayableReceipt` emission for replay failure. Tracking issue: `bd-237`.
 
 ## 5. Maintenance Rules
 

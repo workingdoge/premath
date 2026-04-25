@@ -69,24 +69,34 @@ through `draft/LLM-INSTRUCTION-DOCTRINE` and `draft/LLM-PROPOSAL-CHECKING`.
 Harness operation surfaces remain partitioned by `draft/HARNESS-RUNTIME`,
 `draft/HARNESS-TYPESTATE`, and `draft/HARNESS-RETRY-ESCALATION`.
 
+The PMH draft family refines this document into a kernel and object vocabulary:
+`draft/PMH-0000-KERNEL` defines the harness-kernel axioms; `draft/PMH-0001`
+through `draft/PMH-0011` define the minimal objects needed for receipt-first
+harness evaluation, replay, and later admitted mutation.
+
 ## 2. Harness as a typed domain object
 
 A harness candidate MUST be represented as a typed object before it is treated
 as an executable program.
 
-The canonical shape is:
+The canonical minimal shape is:
 
 ```text
 HarnessSpec :=
   Sigma {
-    task_domain      : TaskDomain
-    model_profile    : ModelProfile
-    context_policy   : ContextPolicy
-    memory_policy    : MemoryPolicy
-    retrieval_policy : RetrievalPolicy
-    tool_policy      : ToolPolicy
-    stop_policy      : StopPolicy
-    eval_contract    : EvalPolicy
+    id                    : CID
+    version               : SemVer
+    name                  : String
+    task_domain_ref       : CID
+    model_profile_refs    : List CID
+    interface_profile_ref : CID
+    context_policy_ref    : CID
+    tool_surface_ref      : CID
+    authority_policy_ref  : CID
+    trace_contract_ref    : CID
+    source_ref            : CID
+    source_digest         : SHA256
+    origin                : HarnessOrigin
   }
 ```
 
@@ -106,6 +116,11 @@ where:
 
 Source code, scripts, prompts, templates, and runtime files are realizers of
 the typed harness. They are not the typed harness by themselves.
+
+`HarnessSpec` names the specimen shape. It MUST NOT inline the whole runtime,
+sandbox, memory system, verifier, provider secret policy, or evaluation suite.
+Those are bound separately by `RuntimeClosure`, `EvalPolicy`, and kernel
+admission.
 
 ## 3. Experience archive as Gamma-material
 
@@ -220,6 +235,39 @@ AdmissionDecision :=
 ```
 
 The agent or LLM is therefore a hypothesis generator, not an authority source.
+
+## 4.1 Evidence nonforgeability
+
+A harness specimen MAY perform actions. The kernel observes those actions. Only
+the kernel or kernel-delegated runner/archive/grader components MAY append
+kernel evidence.
+
+The nonforgeability invariant is:
+
+```text
+A candidate may cause evidence to be produced,
+but may not produce evidence itself.
+```
+
+The specimen-facing archive facade is restricted to mediated capabilities such
+as:
+
+```text
+list_allowed(task_id)
+read_artifact(task_id, artifact_id)
+submit_answer(task_id, answer_json)
+```
+
+The specimen MUST NOT receive evidence-writer capabilities such as:
+
+```text
+append_trace_event
+append_visibility_receipt
+append_eval_receipt
+append_obstruction
+append_score_bundle
+append_outcome_bundle
+```
 
 ## 5. Evaluation as a Pi-operator
 

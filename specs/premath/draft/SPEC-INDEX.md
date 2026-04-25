@@ -233,9 +233,10 @@ Worker-operation doctrine-site routing note:
   paths are forbidden.
 - Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
   `draft/HARNESS-TYPESTATE`, `draft/HARNESS-RETRY-ESCALATION`,
-  `draft/HARNESS-OPTIMIZATION`) MUST reuse the same routed operation IDs above
-  when they touch session/mutation operations and MUST NOT introduce parallel
-  mutation/session authority paths.
+  `draft/HARNESS-OPTIMIZATION`, and the `draft/PMH-*` kernel/object family)
+  MUST reuse the same routed operation IDs above when they touch
+  session/mutation operations and MUST NOT introduce parallel mutation/session
+  authority paths.
 - Instruction/observation/init MCP surfaces are also mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
   (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
@@ -298,6 +299,12 @@ explicitly claimed under §5.4 or §5.6.
   meta-harness search: typed harness candidates, experience archives,
   mutation intents, evaluation receipts, scoped improvement claims, visibility
   laws, trace coherence, and obstruction objects.
+- `draft/PMH-0000-KERNEL` through `draft/PMH-0011-UNREPLAYABLE-RECEIPT` —
+  promoted Premath Meta-Harness kernel/object family refining admitted harness
+  optimization into kernel axioms and minimal typed objects: `HarnessSpec`,
+  `RuntimeClosure`, `EvalPolicy`, `TraceEvent`, `EvalReceipt`,
+  `VisibilityReceipt`, `Obstruction`, `ImprovementClaim`,
+  `HarnessMutationIntent`, `AdmissionDecision`, and `UnreplayableReceipt`.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
@@ -485,13 +492,16 @@ If you are implementing higher-order CI/CD:
 If you are implementing admitted harness optimization:
 1) `draft/PREMATH-KERNEL`
 2) `draft/BIDIR-DESCENT` + `draft/GATE`
-3) `draft/LLM-INSTRUCTION-DOCTRINE`
-4) `draft/LLM-PROPOSAL-CHECKING`
-5) `draft/HARNESS-OPTIMIZATION`
-6) `draft/HARNESS-RUNTIME`
-7) `draft/HARNESS-TYPESTATE`
-8) `draft/HARNESS-RETRY-ESCALATION`
-9) `draft/UNIFICATION-DOCTRINE` (§10 and §12)
+3) `draft/HARNESS-OPTIMIZATION`
+4) `draft/PMH-0000-KERNEL`
+5) `draft/PMH-0001-HARNESS-SPEC` through
+   `draft/PMH-0011-UNREPLAYABLE-RECEIPT`
+6) `draft/LLM-INSTRUCTION-DOCTRINE`
+7) `draft/LLM-PROPOSAL-CHECKING`
+8) `draft/HARNESS-RUNTIME`
+9) `draft/HARNESS-TYPESTATE`
+10) `draft/HARNESS-RETRY-ESCALATION`
+11) `draft/UNIFICATION-DOCTRINE` (§10 and §12)
 
 If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`
