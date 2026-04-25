@@ -232,8 +232,9 @@ Worker-operation doctrine-site routing note:
   a promoted non-MCP authority surface exists; hidden local fallback mutation
   paths are forbidden.
 - Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
-  `draft/HARNESS-TYPESTATE`, `draft/HARNESS-RETRY-ESCALATION`) MUST reuse the
-  same routed operation IDs above and MUST NOT introduce parallel
+  `draft/HARNESS-TYPESTATE`, `draft/HARNESS-RETRY-ESCALATION`,
+  `draft/HARNESS-OPTIMIZATION`) MUST reuse the same routed operation IDs above
+  when they touch session/mutation operations and MUST NOT introduce parallel
   mutation/session authority paths.
 - Instruction/observation/init MCP surfaces are also mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
@@ -293,6 +294,10 @@ explicitly claimed under §5.4 or §5.6.
   contract for CI harness wrappers bound to canonical policy digest and routed
   escalation operations (shared harness partitioning/routes in
   `draft/HARNESS-RUNTIME` §1.1).
+- `draft/HARNESS-OPTIMIZATION` — promoted admitted experience calculus for
+  meta-harness search: typed harness candidates, experience archives,
+  mutation intents, evaluation receipts, scoped improvement claims, visibility
+  laws, trace coherence, and obstruction objects.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
@@ -476,6 +481,17 @@ If you are implementing higher-order CI/CD:
 8) `draft/UNIFICATION-DOCTRINE` (especially §10 and §12)
 9) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
 10) `raw/SQUEAK-SITE`
+
+If you are implementing admitted harness optimization:
+1) `draft/PREMATH-KERNEL`
+2) `draft/BIDIR-DESCENT` + `draft/GATE`
+3) `draft/LLM-INSTRUCTION-DOCTRINE`
+4) `draft/LLM-PROPOSAL-CHECKING`
+5) `draft/HARNESS-OPTIMIZATION`
+6) `draft/HARNESS-RUNTIME`
+7) `draft/HARNESS-TYPESTATE`
+8) `draft/HARNESS-RETRY-ESCALATION`
+9) `draft/UNIFICATION-DOCTRINE` (§10 and §12)
 
 If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`

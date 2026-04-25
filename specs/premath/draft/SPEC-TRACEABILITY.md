@@ -68,6 +68,7 @@ Purpose:
 | `HARNESS-RUNTIME.md` | `cargo test -p premath-cli`; `python3 tools/conformance/run_harness_typestate_vectors.py`; `python3 tools/conformance/check_runtime_orchestration.py` (runtime route presence/morphism coverage + routed CI path boundary + optional `controlPlaneKcirMappings` row-shape checks); `python3 tools/conformance/run_runtime_orchestration_vectors.py` (golden/adversarial + invariance profile-permutation vectors); `python3 tools/ci/check_issue_graph.py`; `mise run docs-coherence-check` | covered | - |
 | `HARNESS-TYPESTATE.md` | `cargo test -p premath-tusk`; `cargo test -p premath-cli`; `python3 tools/conformance/run_harness_typestate_vectors.py`; `python3 tools/ci/check_issue_graph.py` | covered | - |
 | `HARNESS-RETRY-ESCALATION.md` | `python3 tools/ci/test_harness_retry_policy.py`; `python3 tools/ci/test_harness_escalation.py`; `mise run ci-pipeline-test`; `mise run doctrine-check` | covered | - |
+| `HARNESS-OPTIMIZATION.md` | `python3 tools/conformance/check_spec_traceability.py` (index presence only) | gap | T-HARNESS-1 |
 | `LLM-INSTRUCTION-DOCTRINE.md` | `capabilities.instruction_typing`; `capabilities.ci_witnesses`; `mise run ci-pipeline-test` | covered | - |
 | `LLM-PROPOSAL-CHECKING.md` | `capabilities.instruction_typing`; `tools/ci/test_instruction_check_client.py`; `tools/ci/test_instruction_reject_witness.py` | covered | - |
 | `PREMATH-COHERENCE.md` | `mise run coherence-check`; `cargo test -p premath-coherence`; `coherence-check` CLI smoke test | covered | - |
@@ -81,7 +82,10 @@ Purpose:
 
 ## 4. Coverage Targets (Open Gaps/Upgrades)
 
-No open coverage targets currently.
+- `T-HARNESS-1`: add executable coverage for `HARNESS-OPTIMIZATION` once the
+  semantic object vocabulary stabilizes. Target vectors: admitted mutation
+  intent, sealed-visibility rejection, eval receipt production, trace
+  coherence, and obstruction roundtrip rows. Tracking issue: `bd-236`.
 
 ## 5. Maintenance Rules
 

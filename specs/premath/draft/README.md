@@ -43,6 +43,9 @@ Additive control-plane overlays (only when needed):
 - `HARNESS-RETRY-ESCALATION.md` — promoted classify/retry/escalation policy
   contract for harness CI wrappers (shared harness partitioning/routes in
   `HARNESS-RUNTIME.md` §1.1).
+- `HARNESS-OPTIMIZATION.md` — promoted admitted experience calculus for
+  meta-harness search: proposals become typed intents, evaluations become
+  receipts, failures become obstructions, and improvement remains scoped.
 - `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
   by CI projection and coherence parity checks (including schema lifecycle
   alias-window policy for contract/witness/projection kinds, governance-mode
