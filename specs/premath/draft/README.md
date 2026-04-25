@@ -43,14 +43,6 @@ Additive control-plane overlays (only when needed):
 - `HARNESS-RETRY-ESCALATION.md` — promoted classify/retry/escalation policy
   contract for harness CI wrappers (shared harness partitioning/routes in
   `HARNESS-RUNTIME.md` §1.1).
-- `HARNESS-OPTIMIZATION.md` — promoted admitted experience calculus for
-  meta-harness search: proposals become typed intents, evaluations become
-  receipts, failures become obstructions, and improvement remains scoped.
-- `PMH-0000-KERNEL.md` through `PMH-0011-UNREPLAYABLE-RECEIPT.md` — promoted
-  Premath Meta-Harness kernel/object family refining `HARNESS-OPTIMIZATION`:
-  kernel axioms, small `HarnessSpec`, runtime/eval/trace/visibility/receipt
-  objects, obstruction and scoped improvement doctrine, dormant mutation and
-  admission objects, and replay failure receipts.
 - `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
   by CI projection and coherence parity checks (including schema lifecycle
   alias-window policy for contract/witness/projection kinds, governance-mode
@@ -83,6 +75,8 @@ Surface-reduction rule:
 Related:
 
 - `../raw/` — experimental and informational specs not yet promoted.
+  `../raw/MH-SITE-DEPENDENCY.md` records that Meta-Harness object doctrine
+  lives in `fish/sites/mh`, not in Premath.
 - `../profile/` — optional profile overlays (normative only when claimed).
 - `../../process/coss.md` — lifecycle/process policy.
 - `../../process/SCHEMA-LIFECYCLE-GOVERNANCE.md` — lifecycle rollover/freeze

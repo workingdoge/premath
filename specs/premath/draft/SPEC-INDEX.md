@@ -232,11 +232,11 @@ Worker-operation doctrine-site routing note:
   a promoted non-MCP authority surface exists; hidden local fallback mutation
   paths are forbidden.
 - Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
-  `draft/HARNESS-TYPESTATE`, `draft/HARNESS-RETRY-ESCALATION`,
-  `draft/HARNESS-OPTIMIZATION`, and the `draft/PMH-*` kernel/object family)
-  MUST reuse the same routed operation IDs above when they touch
-  session/mutation operations and MUST NOT introduce parallel mutation/session
-  authority paths.
+  `draft/HARNESS-TYPESTATE`, and `draft/HARNESS-RETRY-ESCALATION`) MUST reuse
+  the same routed operation IDs above when they touch session/mutation
+  operations and MUST NOT introduce parallel mutation/session authority paths.
+  Meta-Harness object doctrine is owned by `fish/sites/mh`; Premath is an
+  upstream doctrine dependency for that site, not its owner.
 - Instruction/observation/init MCP surfaces are also mapped in
   `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
   (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
@@ -295,16 +295,9 @@ explicitly claimed under §5.4 or §5.6.
   contract for CI harness wrappers bound to canonical policy digest and routed
   escalation operations (shared harness partitioning/routes in
   `draft/HARNESS-RUNTIME` §1.1).
-- `draft/HARNESS-OPTIMIZATION` — promoted admitted experience calculus for
-  meta-harness search: typed harness candidates, experience archives,
-  mutation intents, evaluation receipts, scoped improvement claims, visibility
-  laws, trace coherence, and obstruction objects.
-- `draft/PMH-0000-KERNEL` through `draft/PMH-0011-UNREPLAYABLE-RECEIPT` —
-  promoted Premath Meta-Harness kernel/object family refining admitted harness
-  optimization into kernel axioms and minimal typed objects: `HarnessSpec`,
-  `RuntimeClosure`, `EvalPolicy`, `TraceEvent`, `EvalReceipt`,
-  `VisibilityReceipt`, `Obstruction`, `ImprovementClaim`,
-  `HarnessMutationIntent`, `AdmissionDecision`, and `UnreplayableReceipt`.
+- `raw/MH-SITE-DEPENDENCY` — informational placement note recording that
+  Meta-Harness object doctrine lives in `fish/sites/mh`, while Premath supplies
+  upstream admissibility/descent/gate/evidence doctrine.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
@@ -489,19 +482,18 @@ If you are implementing higher-order CI/CD:
 9) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
 10) `raw/SQUEAK-SITE`
 
-If you are implementing admitted harness optimization:
-1) `draft/PREMATH-KERNEL`
-2) `draft/BIDIR-DESCENT` + `draft/GATE`
-3) `draft/HARNESS-OPTIMIZATION`
-4) `draft/PMH-0000-KERNEL`
-5) `draft/PMH-0001-HARNESS-SPEC` through
-   `draft/PMH-0011-UNREPLAYABLE-RECEIPT`
-6) `draft/LLM-INSTRUCTION-DOCTRINE`
-7) `draft/LLM-PROPOSAL-CHECKING`
-8) `draft/HARNESS-RUNTIME`
-9) `draft/HARNESS-TYPESTATE`
-10) `draft/HARNESS-RETRY-ESCALATION`
-11) `draft/UNIFICATION-DOCTRINE` (§10 and §12)
+If you are implementing Meta-Harness:
+1) `fish/sites/mh/specs/draft/MH-0000-KERNEL.md`
+2) `fish/sites/mh/specs/draft/MH-0001-HARNESS-SPEC.md` through
+   `fish/sites/mh/specs/draft/MH-0012-ADMITTED-EXPERIENCE-CALCULUS.md`
+3) `draft/PREMATH-KERNEL`
+4) `draft/BIDIR-DESCENT` + `draft/GATE`
+5) `draft/LLM-INSTRUCTION-DOCTRINE`
+6) `draft/LLM-PROPOSAL-CHECKING`
+7) `draft/HARNESS-RUNTIME`
+8) `draft/HARNESS-TYPESTATE`
+9) `draft/HARNESS-RETRY-ESCALATION`
+10) `draft/UNIFICATION-DOCTRINE` (§10 and §12)
 
 If you are implementing the adjoints-and-sites overlay:
 1) `draft/PREMATH-KERNEL`
