@@ -348,6 +348,15 @@ explicitly claimed under §5.4 or §5.6.
   contract for CI harness wrappers bound to canonical policy digest and routed
   escalation operations (shared harness partitioning/routes in
   `draft/HARNESS-RUNTIME` §1.1).
+- `draft/WORKFLOW-FIBRE-PROFILE` — promoted workflow fibre-space profile for
+  base/fibre/support/section/gluing/motion/realization/receipt projection
+  vocabulary (`premath.fibre_space.workflow_profile.v1`). Consumer projections
+  into this profile are evidence views only; Premath owns the law, Tusk may
+  project local governed evidence, and Kurma may later carry/check the stable
+  profile without owning either boundary.
+- `raw/MH-SITE-DEPENDENCY` — informational placement note recording that
+  Meta-Harness object doctrine lives in `fish/sites/mh`, while Premath supplies
+  upstream admissibility/descent/gate/evidence doctrine.
 - `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
   (projection policy/check order + CI witness kinds + schema lifecycle table
   for contract/witness/projection kind families + harness retry/escalation
@@ -570,6 +579,14 @@ If you are implementing multithread worker orchestration:
 5) `raw/SQUEAK-SITE` (only when `capabilities.squeak_site` is claimed)
 6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
 7) operational companion: `docs/design/MULTITHREAD-LANE-SITE-ADJOINTS.md`
+
+If you are implementing workflow fibre-space projections:
+1) `draft/PREMATH-KERNEL`
+2) `draft/WORKFLOW-FIBRE-PROFILE`
+3) `draft/HARNESS-RUNTIME` (when harness trajectory rows are source evidence)
+4) `draft/UNIFICATION-DOCTRINE` (§10 and §12)
+5) `profile/ADJOINTS-AND-SITES` + `draft/SPAN-SQUARE-CHECKING` only when
+   SigPi or pullback/base-change claims are present
 
 If you are implementing the Unified Evidence Plane:
 1) `draft/UNIFICATION-DOCTRINE` (§10, especially §10.6)
