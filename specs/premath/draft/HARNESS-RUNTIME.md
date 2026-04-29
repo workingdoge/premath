@@ -227,7 +227,73 @@ support modes `latest|failed|retry-needed` sorted by:
 2. `stepId`,
 3. `action`.
 
-## 7. Multithread coordinator/worker contract
+## 7. Self-bootstrap promotion contract
+
+A conforming harness MAY run a self-bootstrap promotion loop in which one
+trusted runtime/build surface evaluates a candidate successor.
+
+The loop is operational control only. It MUST NOT make the candidate runtime
+the authority for its own promotion. A candidate MAY emit verification,
+trajectory, and modal-surface evidence, but an `accepted` promotion verdict
+MUST be issued by the trusted builder runtime or an admitted external Gate/
+checker surface over that evidence.
+
+A self-bootstrap run has these roles:
+
+- `builderRef`
+  - stable reference to the trusted runtime, build, or control-plane version
+    that evaluates the candidate.
+- `candidateRef`
+  - stable reference to the proposed successor runtime, build, or control-plane
+    version.
+- `verificationRefs[]`
+  - witness refs for pure checks, builds, conformance, or local proof gates.
+- `trajectoryRefs[]`
+  - refs to `premath.harness.step.v1` rows or projections used in the decision.
+- `modalSurfaceRefs[]`
+  - OPTIONAL refs naming supported downstream execution surfaces such as CLI,
+    daemon, broker, UI, or repo-local wrapper profiles.
+
+Implementations SHOULD record self-bootstrap progress using ordinary
+`premath.harness.step.v1` rows. Recommended action values are:
+
+- `self_bootstrap.started`
+- `self_bootstrap.candidate_verified`
+- `self_bootstrap.promotion_decided`
+
+When an implementation emits a promotion projection, its kind SHOULD be
+`premath.harness.self_bootstrap_promotion.v1` and it SHOULD include:
+
+- `schema: 1`
+- `promotionKind: "premath.harness.self_bootstrap_promotion.v1"`
+- `builderRef`
+- `candidateRef`
+- `promotionVerdict` (`accepted|rejected|handoff|retry-needed`)
+- `decidedAt` (RFC3339)
+- `trajectoryRefs[]`
+- `verificationRefs[]`
+
+Optional fields MAY include `issueId`, `witnessRefs[]`, `lineageRefs[]`,
+`modalSurfaceRefs[]`, `failureClasses[]`, and `reason`.
+
+Promotion decisions MUST be fail-closed:
+
+- `accepted` MUST require non-empty `verificationRefs[]` and
+  `trajectoryRefs[]`.
+- `accepted` MUST include deterministic lineage in `lineageRefs[]` or
+  `witnessRefs[]` linking the verdict to both `builderRef` and `candidateRef`.
+- candidate-only evidence MUST NOT be sufficient to produce `accepted`.
+- `rejected` and `retry-needed` SHOULD include at least one failure class or
+  witness ref.
+- `handoff` SHOULD cite the missing proof, operator, or downstream authority
+  required before promotion can be retried.
+
+Downstream products MAY choose any modal surface exposed by the promoted
+candidate. Premath records modal refs and promotion evidence; it does not
+prescribe whether a consumer uses CLI, daemon, broker, UI, or a repo-local
+wrapper.
+
+## 8. Multithread coordinator/worker contract
 
 The canonical worker loop shape is:
 
@@ -251,7 +317,7 @@ Worker requirements:
 
 Projection artifacts MUST NOT be treated as mutation authority.
 
-## 8. Doctrine-site routing note
+## 9. Doctrine-site routing note
 
 This spec reuses existing operation routing in
 `draft/DOCTRINE-OP-REGISTRY.json` and `draft/DOCTRINE-SITE.json`.
@@ -272,7 +338,7 @@ Inter-world/runtime-placement transport remains in Squeak surfaces
 (`raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`) and MUST compose with Harness routes as
 one operational chain without introducing a parallel authority path.
 
-## 9. Verification surfaces
+## 10. Verification surfaces
 
 Minimum deterministic verification includes:
 
@@ -281,7 +347,7 @@ Minimum deterministic verification includes:
 - `mise run docs-coherence-check`
 - `mise run doctrine-check`
 
-## 10. Related surfaces
+## 11. Related surfaces
 
 - design runbooks:
   - `docs/design/runtime/TUSK-HARNESS-CONTRACT.md`

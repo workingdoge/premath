@@ -35,8 +35,8 @@ Additive control-plane overlays (only when needed):
   from kernel statement IDs to obligations/checkers/vectors (index/query lane;
   not a semantic authority surface).
 - `HARNESS-RUNTIME.md` — promoted harness runtime contract for
-  `boot/step/stop` plus the shared harness surface map used by typestate and
-  retry/escalation contracts.
+  `boot/step/stop`, self-bootstrap promotion, and the shared harness surface
+  map used by typestate and retry/escalation contracts.
 - `HARNESS-TYPESTATE.md` — promoted typestate closure/mutation gate contract
   for tool-calling turns and fail-closed mutation admissibility (shared harness
   partitioning/routes in `HARNESS-RUNTIME.md` §1.1).

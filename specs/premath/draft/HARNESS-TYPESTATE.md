@@ -136,6 +136,10 @@ return-path constraints before closure.
 Instruction-linked mutation surfaces MUST reject mutation when closure evidence
 is missing, including missing join-gate witness linkage.
 
+Self-bootstrap promotion mutations MUST additionally require deterministic
+builder/candidate linkage, trajectory refs, verification refs, and the active
+policy digest that admits the promotion action.
+
 ## 7. Action-mode typing
 
 - `code` mode MAY emit multiple tool invocations in one action; closure still

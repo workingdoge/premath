@@ -284,7 +284,7 @@ explicitly claimed under §5.4 or §5.6.
   binding contract linking kernel statement IDs to obligations/checkers/vectors
   (indexing/query/evidence support only; no semantic admissibility authority).
 - `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
-  `boot/step/stop` and the shared harness surface map
+  `boot/step/stop`, self-bootstrap promotion, and the shared harness surface map
   (`draft/HARNESS-RUNTIME` §1.1) used by typestate and retry/escalation
   contracts.
 - `draft/HARNESS-TYPESTATE` — promoted harness typestate closure/mutation gate
