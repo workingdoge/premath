@@ -58,6 +58,10 @@ Additive control-plane overlays (only when needed):
 - `HARNESS-RETRY-ESCALATION.md` — promoted classify/retry/escalation policy
   contract for harness CI wrappers (shared harness partitioning/routes in
   `HARNESS-RUNTIME.md` §1.1).
+- `WORKFLOW-FIBRE-PROFILE.md` — promoted workflow fibre-space profile
+  vocabulary and projection envelope for base/fibre/support/section/gluing/
+  motion/realization/receipt evidence views. Consumers such as Tusk may project
+  local governed evidence into this profile without owning Premath law.
 - `CONTROL-PLANE-CONTRACT.json` — shared typed control-plane contract consumed
   by CI projection and coherence parity checks (including schema lifecycle
   alias-window policy for contract/witness/projection kinds, governance-mode

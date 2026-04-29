@@ -4091,3 +4091,46 @@ topology warning pressure without increasing semantic coverage.
   and matrix rows are reduced together.
 - semantic authority scope is unchanged; only control-doc classification is
   tightened.
+
+---
+
+## 2026-04-29 — Decision 0133: Add workflow fibre-space profile as Premath-owned consumer contract
+
+### Decision
+Add `draft/WORKFLOW-FIBRE-PROFILE` as the Premath-owned contract for
+`premath.fibre_space.workflow_profile.v1`.
+
+The profile standardizes vocabulary and row shape for:
+
+- base/site context,
+- fibre/local workflow context,
+- support/coverage,
+- sections,
+- gluing,
+- admissible motion,
+- realizations,
+- receipts,
+- deterministic projection envelopes.
+
+It also fixes the ownership boundary:
+
+- Premath owns the meaning contract and SigPi placement.
+- Tusk may project local governed evidence into the profile as a read-only
+  consumer view.
+- Kurma may later carry/check the stable profile and projection envelope.
+- Meta-Harness object doctrine remains outside Premath and may depend on this
+  upstream profile.
+
+### Rationale
+Tusk needs a stable upstream shape before it can expose a read-only
+workflow-fibre projection from run-ledger, receipt, lane, and tracker evidence.
+Keeping the profile in Premath prevents Tusk from becoming the semantic owner
+while still giving downstream orchestrators a deterministic projection target.
+
+### Consequences
+- `draft/WORKFLOW-FIBRE-PROFILE` becomes the canonical profile name and row
+  vocabulary for workflow fibre-space projections.
+- `draft/SPEC-INDEX` reading order now includes a workflow fibre-space path.
+- `draft/SPEC-TRACEABILITY` records the current instrumented coverage state.
+- Tusk follow-up work should consume the profile and emit `writes: []`
+  projection envelopes without redefining the Premath law.
