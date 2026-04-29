@@ -38,8 +38,9 @@ admissibility for tool-calling harness turns.
 It provides normative authority for runtime closure gating. Design discussion in
 `docs/design/control-plane/TOOL-CALLING-HARNESS-TYPESTATE.md` is non-normative commentary.
 
-Semantic admissibility remains in checker/kernel doctrine (`draft/GATE`,
-`draft/BIDIR-DESCENT`, `draft/LLM-INSTRUCTION-DOCTRINE`).
+Semantic admissibility remains in checker/kernel doctrine
+(`draft/OBLIGATION-DISCHARGE`, `draft/GATE`,
+`draft/LLM-INSTRUCTION-DOCTRINE`).
 
 Shared harness-surface partitioning and command-route authority are declared
 once in `draft/HARNESS-RUNTIME` §1.1. This spec defines only typestate closure
@@ -186,8 +187,8 @@ contract. Canonical surfaces in this repository are:
 
 - `premath harness-join-check --input <json> --json`
 - `python3 tools/conformance/run_harness_typestate_vectors.py`
-- `mise run conformance-run`
-- `python3 tools/ci/check_issue_graph.py`
+- `sh tools/ci/run_task.sh conformance-run`
+- `sh tools/ci/run_task.sh ci-hygiene-check`
 
 ## 10. Related surfaces
 

@@ -16,7 +16,7 @@ from delta_snapshot import (
     load_delta_snapshot,
     read_changed_paths,
 )
-from required_witness import verify_required_witness_payload
+from required_witness_verify_client import verify_required_witness_payload
 
 
 def parse_args() -> argparse.Namespace:

@@ -5,17 +5,27 @@ This directory contains promoted **draft** specifications.
 Draft specs are active contracts between editor and implementers and should be
 treated as normative for claimed conformance profiles/capabilities.
 
-Minimal authority path (read first):
+Premath Core authority path (read first):
 
-- `SPEC-INDEX.md` — front door for claims, profiles, and normative scope.
-  - canonical North Star target/invariants/phase posture lives in
-    `SPEC-INDEX.md` §0.
-- `DOCTRINE-INF.md` — doctrine/infinity-layer preservation contract.
+- `SPEC-INDEX.md` — short front door for core/profile/raw/site boundaries.
 - `PREMATH-KERNEL.md` — semantic kernel contract.
-- `BIDIR-DESCENT.md` + `GATE.md` — obligation/discharge and admissibility gate
-  authority.
-- `NORMALIZER.md` + `REF-BINDING.md` — deterministic normalized comparison and
-  identity binding in evidence-bearing paths.
+- `OBLIGATION-DISCHARGE.md` + `GATE.md` — Core obligation/discharge and
+  admissibility gate authority.
+- `WITNESS-ID.md` — deterministic witness identity.
+- `CONFORMANCE.md` §§1-2.1 — Core conformance claim boundary.
+
+Doctrine preservation guard:
+
+- `DOCTRINE-INF.md` — doctrine/infinity-layer preservation contract; promoted,
+  but not part of the minimal Core authority path.
+
+Interop authority path (optional):
+
+- `REF-BINDING.md` + `KCIR-CORE.md`
+- `NF.md` + `NORMALIZER.md`
+- `WIRE-FORMATS.md` + `ERROR-CODES.md`
+- `../profile/interop/BIDIR-DESCENT.md` for full-profile verifier
+  orchestration.
 
 Additive control-plane overlays (only when needed):
 

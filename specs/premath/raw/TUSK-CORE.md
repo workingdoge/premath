@@ -41,7 +41,7 @@ world.
 
 - `draft/PREMATH-KERNEL`
 - `draft/GATE`
-- `draft/BIDIR-DESCENT`
+- `draft/OBLIGATION-DISCHARGE`
 
 This document does not replace kernel semantics and does not define inter-world
 transport (`raw/SQUEAK-CORE`).
@@ -275,7 +275,7 @@ Deterministic runtime-contract vectors live under:
 and are executable through:
 
 - `python3 tools/conformance/run_tusk_core_vectors.py`
-- `mise run conformance-run` (cached suite id: `tusk-core`)
+- `sh tools/ci/run_task.sh conformance-run` (cached suite id: `tusk-core`)
 
 Boundary coverage mapping:
 

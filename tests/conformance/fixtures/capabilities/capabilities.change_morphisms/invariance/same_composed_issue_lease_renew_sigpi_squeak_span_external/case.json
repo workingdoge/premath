@@ -56,12 +56,12 @@
       "runtimeProfile": "external",
       "capabilityVector": [
         "hk",
-        "mise",
+        "ci-script",
         "rust",
         "squeak-site"
       ],
       "substrateBindingRef": "runner://terraform/external"
     },
-    "expectedLocRef": "loc1_8aaff2a49c2c09ed159902aaafe4932a05e62287f03be8c2d7d074cb2e246dc8"
+    "expectedLocRef": "loc1_aff5adb5bcd693e59fe19b2e17567c9c0e200e4da314b103f75dd7265b742223"
   }
 }

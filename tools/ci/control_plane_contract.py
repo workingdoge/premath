@@ -58,9 +58,9 @@ _STAGE2_REQUIRED_KERNEL_OBLIGATIONS = (
     "ext_ambiguous",
 )
 _STAGE2_COMPATIBILITY_ALIAS_ROLE = "projection_only"
-_STAGE2_BIDIR_EVIDENCE_ROUTE_KIND = "direct_checker_discharge"
-_STAGE2_BIDIR_EVIDENCE_OBLIGATION_FIELD_REF = "bidirCheckerObligations"
-_STAGE2_BIDIR_EVIDENCE_FALLBACK_MODE = "profile_gated_sentinel"
+_STAGE2_CORE_OBLIGATION_EVIDENCE_ROUTE_KIND = "direct_checker_discharge"
+_STAGE2_CORE_OBLIGATION_EVIDENCE_FIELD_REF = "coreObligationCheckerKinds"
+_STAGE2_CORE_OBLIGATION_EVIDENCE_FALLBACK_MODE = "profile_gated_sentinel"
 _WORKER_DEFAULT_MUTATION_MODE = "instruction-linked"
 _WORKER_ALLOWED_MUTATION_MODES = (
     "instruction-linked",
@@ -350,7 +350,7 @@ _CONTROL_PLANE_BUNDLE_REQUIRED_MERGE_ARTIFACTS = (
 _CONTROL_PLANE_BUNDLE_SEMANTIC_AUTHORITY = (
     "PREMATH-KERNEL",
     "GATE",
-    "BIDIR-DESCENT",
+    "OBLIGATION-DISCHARGE",
 )
 _CONTROL_PLANE_BUNDLE_CONTROL_PLANE_ROLE = "projection_and_parity_only"
 _CONTROL_PLANE_BUNDLE_FORBIDDEN_ROLES = (
@@ -937,69 +937,72 @@ def _validate_stage2_authority_contract(
             f"supportUntilEpoch={alias_support_until_epoch!r} (activeEpoch={active_epoch!r})"
         )
 
-    bidir_evidence_route = _require_object(
-        stage2.get("bidirEvidenceRoute"),
-        "evidenceStage2Authority.bidirEvidenceRoute",
+    core_obligation_evidence_route = _require_object(
+        stage2.get("coreObligationEvidenceRoute"),
+        "evidenceStage2Authority.coreObligationEvidenceRoute",
     )
-    bidir_route_kind = _require_non_empty_string(
-        bidir_evidence_route.get("routeKind"),
-        "evidenceStage2Authority.bidirEvidenceRoute.routeKind",
+    core_obligation_route_kind = _require_non_empty_string(
+        core_obligation_evidence_route.get("routeKind"),
+        "evidenceStage2Authority.coreObligationEvidenceRoute.routeKind",
     )
-    if bidir_route_kind != _STAGE2_BIDIR_EVIDENCE_ROUTE_KIND:
+    if core_obligation_route_kind != _STAGE2_CORE_OBLIGATION_EVIDENCE_ROUTE_KIND:
         raise ValueError(
-            "evidenceStage2Authority.bidirEvidenceRoute.routeKind must be "
-            f"`{_STAGE2_BIDIR_EVIDENCE_ROUTE_KIND}`"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.routeKind must be "
+            f"`{_STAGE2_CORE_OBLIGATION_EVIDENCE_ROUTE_KIND}`"
         )
     obligation_field_ref = _require_non_empty_string(
-        bidir_evidence_route.get("obligationFieldRef"),
-        "evidenceStage2Authority.bidirEvidenceRoute.obligationFieldRef",
+        core_obligation_evidence_route.get("obligationFieldRef"),
+        "evidenceStage2Authority.coreObligationEvidenceRoute.obligationFieldRef",
     )
-    if obligation_field_ref != _STAGE2_BIDIR_EVIDENCE_OBLIGATION_FIELD_REF:
+    if obligation_field_ref != _STAGE2_CORE_OBLIGATION_EVIDENCE_FIELD_REF:
         raise ValueError(
-            "evidenceStage2Authority.bidirEvidenceRoute.obligationFieldRef must be "
-            f"`{_STAGE2_BIDIR_EVIDENCE_OBLIGATION_FIELD_REF}`"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.obligationFieldRef must be "
+            f"`{_STAGE2_CORE_OBLIGATION_EVIDENCE_FIELD_REF}`"
         )
     required_obligations = _require_string_list(
-        bidir_evidence_route.get("requiredObligations"),
-        "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations",
+        core_obligation_evidence_route.get("requiredObligations"),
+        "evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations",
     )
     if set(required_obligations) != set(_STAGE2_REQUIRED_KERNEL_OBLIGATIONS):
         raise ValueError(
-            "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must match canonical Stage 2 kernel obligations"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations must match canonical Stage 2 Core obligation kinds"
         )
-    bidir_route_failure_classes = _require_object(
-        bidir_evidence_route.get("failureClasses"),
-        "evidenceStage2Authority.bidirEvidenceRoute.failureClasses",
+    core_obligation_route_failure_classes = _require_object(
+        core_obligation_evidence_route.get("failureClasses"),
+        "evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses",
     )
-    parsed_bidir_route_failure_classes = (
+    parsed_core_obligation_route_failure_classes = (
         _require_non_empty_string(
-            bidir_route_failure_classes.get("missing"),
-            "evidenceStage2Authority.bidirEvidenceRoute.failureClasses.missing",
+            core_obligation_route_failure_classes.get("missing"),
+            "evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses.missing",
         ),
         _require_non_empty_string(
-            bidir_route_failure_classes.get("drift"),
-            "evidenceStage2Authority.bidirEvidenceRoute.failureClasses.drift",
+            core_obligation_route_failure_classes.get("drift"),
+            "evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses.drift",
         ),
     )
-    if parsed_bidir_route_failure_classes != _STAGE2_KERNEL_COMPLIANCE_FAILURE_CLASSES:
+    if (
+        parsed_core_obligation_route_failure_classes
+        != _STAGE2_KERNEL_COMPLIANCE_FAILURE_CLASSES
+    ):
         raise ValueError(
-            "evidenceStage2Authority.bidirEvidenceRoute.failureClasses must map to canonical Stage 2 kernel-compliance classes"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses must map to canonical Stage 2 kernel-compliance classes"
         )
-    fallback_raw = bidir_evidence_route.get("fallback")
+    fallback_raw = core_obligation_evidence_route.get("fallback")
     fallback_mode: Optional[str] = None
     fallback_profile_kinds: Tuple[str, ...] = tuple()
     if fallback_raw is not None:
         fallback = _require_object(
-            fallback_raw, "evidenceStage2Authority.bidirEvidenceRoute.fallback"
+            fallback_raw, "evidenceStage2Authority.coreObligationEvidenceRoute.fallback"
         )
         fallback_mode = _require_non_empty_string(
             fallback.get("mode"),
-            "evidenceStage2Authority.bidirEvidenceRoute.fallback.mode",
+            "evidenceStage2Authority.coreObligationEvidenceRoute.fallback.mode",
         )
-        if fallback_mode != _STAGE2_BIDIR_EVIDENCE_FALLBACK_MODE:
+        if fallback_mode != _STAGE2_CORE_OBLIGATION_EVIDENCE_FALLBACK_MODE:
             raise ValueError(
-                "evidenceStage2Authority.bidirEvidenceRoute.fallback.mode must be "
-                f"`{_STAGE2_BIDIR_EVIDENCE_FALLBACK_MODE}`"
+                "evidenceStage2Authority.coreObligationEvidenceRoute.fallback.mode must be "
+                f"`{_STAGE2_CORE_OBLIGATION_EVIDENCE_FALLBACK_MODE}`"
             )
         profile_kinds_raw = fallback.get("profileKinds")
         if profile_kinds_raw is None:
@@ -1008,17 +1011,17 @@ def _validate_stage2_authority_contract(
             fallback_profile_kinds = tuple(
                 _require_non_empty_string(
                     item,
-                    f"evidenceStage2Authority.bidirEvidenceRoute.fallback.profileKinds[{idx}]",
+                    f"evidenceStage2Authority.coreObligationEvidenceRoute.fallback.profileKinds[{idx}]",
                 )
                 for idx, item in enumerate(profile_kinds_raw)
             )
             if len(set(fallback_profile_kinds)) != len(fallback_profile_kinds):
                 raise ValueError(
-                    "evidenceStage2Authority.bidirEvidenceRoute.fallback.profileKinds must not contain duplicates"
+                    "evidenceStage2Authority.coreObligationEvidenceRoute.fallback.profileKinds must not contain duplicates"
                 )
         else:
             raise ValueError(
-                "evidenceStage2Authority.bidirEvidenceRoute.fallback.profileKinds must be a list"
+                "evidenceStage2Authority.coreObligationEvidenceRoute.fallback.profileKinds must be a list"
             )
 
     kernel_compliance_sentinel_raw = stage2.get("kernelComplianceSentinel")
@@ -1034,7 +1037,7 @@ def _validate_stage2_authority_contract(
         )
         if set(sentinel_required_obligations) != set(required_obligations):
             raise ValueError(
-                "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match evidenceStage2Authority.bidirEvidenceRoute.requiredObligations"
+                "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations"
             )
         sentinel_failure_classes = _require_object(
             kernel_compliance_sentinel.get("failureClasses"),
@@ -1050,16 +1053,19 @@ def _validate_stage2_authority_contract(
                 "evidenceStage2Authority.kernelComplianceSentinel.failureClasses.drift",
             ),
         )
-        if parsed_sentinel_failure_classes != parsed_bidir_route_failure_classes:
+        if (
+            parsed_sentinel_failure_classes
+            != parsed_core_obligation_route_failure_classes
+        ):
             raise ValueError(
-                "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must match evidenceStage2Authority.bidirEvidenceRoute.failureClasses"
+                "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must match evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses"
             )
         if (
-            fallback_mode != _STAGE2_BIDIR_EVIDENCE_FALLBACK_MODE
+            fallback_mode != _STAGE2_CORE_OBLIGATION_EVIDENCE_FALLBACK_MODE
             or profile_kind not in fallback_profile_kinds
         ):
             raise ValueError(
-                "evidenceStage2Authority.kernelComplianceSentinel requires bidirEvidenceRoute.fallback.mode=`profile_gated_sentinel` with current profileKind included in fallback.profileKinds"
+                "evidenceStage2Authority.kernelComplianceSentinel requires coreObligationEvidenceRoute.fallback.mode=`profile_gated_sentinel` with current profileKind included in fallback.profileKinds"
             )
         parsed_kernel_sentinel = {
             "requiredObligations": sentinel_required_obligations,
@@ -1107,13 +1113,13 @@ def _validate_stage2_authority_contract(
             "role": alias_role,
             "supportUntilEpoch": alias_support_until_epoch,
         },
-        "bidirEvidenceRoute": {
-            "routeKind": bidir_route_kind,
+        "coreObligationEvidenceRoute": {
+            "routeKind": core_obligation_route_kind,
             "obligationFieldRef": obligation_field_ref,
             "requiredObligations": required_obligations,
             "failureClasses": {
-                "missing": parsed_bidir_route_failure_classes[0],
-                "drift": parsed_bidir_route_failure_classes[1],
+                "missing": parsed_core_obligation_route_failure_classes[0],
+                "drift": parsed_core_obligation_route_failure_classes[1],
             },
             "fallback": {
                 "mode": fallback_mode,
@@ -2723,44 +2729,43 @@ EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH: str = (
     .get("compatibilityAlias", {})
     .get("supportUntilEpoch", "")
 )
-EVIDENCE_STAGE2_BIDIR_ROUTE_KIND: str = (
+EVIDENCE_STAGE2_CORE_OBLIGATION_ROUTE_KIND: str = (
     _CONTRACT.get("evidenceStage2Authority", {})
-    .get("bidirEvidenceRoute", {})
+    .get("coreObligationEvidenceRoute", {})
     .get("routeKind", "")
 )
-EVIDENCE_STAGE2_BIDIR_OBLIGATION_FIELD_REF: str = (
+EVIDENCE_STAGE2_CORE_OBLIGATION_FIELD_REF: str = (
     _CONTRACT.get("evidenceStage2Authority", {})
-    .get("bidirEvidenceRoute", {})
+    .get("coreObligationEvidenceRoute", {})
     .get("obligationFieldRef", "")
 )
-EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS: Tuple[str, ...] = tuple(
+EVIDENCE_STAGE2_CORE_OBLIGATION_REQUIRED_KINDS: Tuple[str, ...] = tuple(
     _CONTRACT.get("evidenceStage2Authority", {})
-    .get("bidirEvidenceRoute", {})
+    .get("coreObligationEvidenceRoute", {})
     .get("requiredObligations", ())
 )
-EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES: Tuple[str, ...] = tuple(
+EVIDENCE_STAGE2_CORE_OBLIGATION_FAILURE_CLASSES: Tuple[str, ...] = tuple(
     _CONTRACT.get("evidenceStage2Authority", {})
-    .get("bidirEvidenceRoute", {})
+    .get("coreObligationEvidenceRoute", {})
     .get("failureClasses", {})
     .get(key, "")
     for key in ("missing", "drift")
 )
-EVIDENCE_STAGE2_BIDIR_FALLBACK_MODE: str = (
+EVIDENCE_STAGE2_CORE_OBLIGATION_FALLBACK_MODE: str = (
     _CONTRACT.get("evidenceStage2Authority", {})
-    .get("bidirEvidenceRoute", {})
+    .get("coreObligationEvidenceRoute", {})
     .get("fallback", {})
     .get("mode", "")
 )
-EVIDENCE_STAGE2_BIDIR_FALLBACK_PROFILE_KINDS: Tuple[str, ...] = tuple(
+EVIDENCE_STAGE2_CORE_OBLIGATION_FALLBACK_PROFILE_KINDS: Tuple[str, ...] = tuple(
     _CONTRACT.get("evidenceStage2Authority", {})
-    .get("bidirEvidenceRoute", {})
+    .get("coreObligationEvidenceRoute", {})
     .get("fallback", {})
     .get("profileKinds", ())
 )
-# Compatibility aliases for transitional readers.
 EVIDENCE_STAGE2_KERNEL_REQUIRED_OBLIGATIONS: Tuple[str, ...] = (
-    EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS
+    EVIDENCE_STAGE2_CORE_OBLIGATION_REQUIRED_KINDS
 )
 EVIDENCE_STAGE2_KERNEL_FAILURE_CLASSES: Tuple[str, ...] = (
-    EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES
+    EVIDENCE_STAGE2_CORE_OBLIGATION_FAILURE_CLASSES
 )

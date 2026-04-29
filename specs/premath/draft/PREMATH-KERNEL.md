@@ -114,8 +114,10 @@ Canonical obligation kinds include:
 - Contractible gluing: effective descent.
 - Refinement invariance: agreement under cover refinement.
 
-The recommended operational interface is specified in `draft/BIDIR-DESCENT`, with deterministic
-interop support specified in `draft/NF`, `draft/NORMALIZER`, and `draft/REF-BINDING`.
+The recommended Core obligation/discharge interface is specified in
+`draft/OBLIGATION-DISCHARGE`, with deterministic interop support specified in
+`draft/NF`, `draft/NORMALIZER`, `draft/REF-BINDING`, and
+`profile/interop/BIDIR-DESCENT`.
 
 Repository conformance additionally exports a canonical obligation-authority
 registry from kernel code (`crates/premath-kernel/src/obligation_registry.rs`)

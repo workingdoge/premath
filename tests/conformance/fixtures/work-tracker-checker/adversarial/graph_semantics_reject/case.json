@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "suiteId": "work-tracker-checker",
+  "vectorId": "adversarial/graph_semantics_reject",
+  "input": {
+    "workClaim": {
+      "coverRef": "atlas://work-tracker.v0",
+      "checkerProfileRef": "premath://raw/WORK-TRACKER-CHECKER-PROFILE",
+      "semanticProfileRef": "work://candidate/work-tracker.v0",
+      "simplexSubstrateRefs": [
+        "simplex://nerve-provisional/sigma/root"
+      ],
+      "workSubjectRef": "work://subject/bd-106",
+      "operationClass": "claim",
+      "declaredOperationClasses": [
+        "claim",
+        "update",
+        "close",
+        "handoff"
+      ],
+      "priorStateRefs": [
+        "work-state://bd-106/open"
+      ],
+      "claimedOutputStateRefs": [
+        "work-state://bd-106/in-progress"
+      ],
+      "boundaryRefs": [],
+      "acceptedBoundaryRefs": [],
+      "evidenceRefs": [
+        "witness://claim/bd-106/001"
+      ],
+      "graphDerivedSemantics": true,
+      "actorRef": "actor://agent/codex"
+    }
+  }
+}

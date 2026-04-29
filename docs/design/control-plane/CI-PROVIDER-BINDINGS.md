@@ -10,10 +10,10 @@ Premath gate contract.
 
 Required semantic surfaces:
 
-- `mise run ci-required`
-- `mise run ci-verify-required-strict`
-- `mise run ci-decide-required`
-- `mise run ci-verify-decision`
+- `sh tools/ci/run_task.sh ci-required`
+- `sh tools/ci/run_task.sh ci-verify-required-strict`
+- `sh tools/ci/run_task.sh ci-decide-required`
+- `sh tools/ci/run_task.sh ci-verify-decision`
 
 Required evidence surfaces:
 
@@ -37,19 +37,15 @@ Binding:
 
 - workflow job name: `ci-required`
 - required status check in branch protection/rulesets: `ci-required`
-- tracked server policy contract:
-  `specs/process/GITHUB-BRANCH-POLICY.json` (checked by
-  `tools/ci/check_branch_policy.py`)
-- adapter step:
-  `python3 tools/ci/providers/export_github_env.py >> "$GITHUB_ENV"`
+- provider ref adapter:
+  `tools/ci/pipeline_required.py` maps GitHub environment refs into
+  `PREMATH_CI_*` internally before running the attested required-gate chain.
 
-Strict-delta verification uses:
-
-- provider-neutral `PREMATH_CI_*` refs after adapter export via
-  `mise run ci-verify-required-strict`
+Strict-delta verification uses provider-neutral `PREMATH_CI_*` refs after the
+pipeline has applied provider ref mapping.
 
 ## Other Providers
 
 Future provider mappings (GitLab, Buildkite, Jenkins, self-hosted orchestration)
 should bind provider-required checks to the same canonical decision surface:
-`mise run ci-decide-required`.
+`sh tools/ci/run_task.sh ci-decide-required`.

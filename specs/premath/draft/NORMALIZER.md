@@ -40,7 +40,7 @@ kernel operations (`raw/OPCODES`-style semantics).
 
 The normalizer exists to make the following operationally meaningful:
 
-- `normalized` comparison mode in `draft/BIDIR-DESCENT`,
+- `normalized` comparison mode in `profile/interop/BIDIR-DESCENT`,
 - deterministic witness binding to a policy and normalizer version,
 - canonicality rejection / normalization behavior.
 
@@ -80,15 +80,19 @@ Normalization is parameterized by the KCIR DAG invariants:
 
 These are treated as fixed for a verification run.
 
-### 3.3 Capabilities
+### 3.3 Policy flags
 
-Normalization is parameterized by an implementation capability set.
+Normalization is parameterized by an implementation policy flag set.
 
 At minimum:
 
 - `adoptPullAtomMor: bool`
 
-If a capability is not claimed, the normalizer MUST reject corresponding NF tags/constructors.
+If a policy flag is false, the normalizer MUST reject corresponding NF
+tags/constructors.
+
+`adoptPullAtomMor` is an internal normalization policy flag. It is not an active
+conformance capability claim unless promoted by `draft/CAPABILITY-REGISTRY.json`.
 
 ## 4. Normalizer identity and policy digest
 
@@ -105,9 +109,12 @@ This MUST change if any normalization behavior that affects comparisons changes.
 A normalization policy is described by the tuple:
 
 - `policyName: string`
-- `capabilityMask: u64` (bit 0 = `adoptPullAtomMor`; higher bits reserved)
+- `policyFlagMask: u64` (bit 0 = `adoptPullAtomMor`; higher bits reserved)
 - `featureMask: u64` (see §4.4)
 - `featureParams: list<(featureId:u16, bytes)>` (OPTIONAL; sorted by `featureId`)
+
+`policyFlagMask` is a normalization-policy namespace. It is not the executable
+capability-claim namespace declared by `draft/CAPABILITY-REGISTRY.json`.
 
 ### 4.3 Policy digest (required)
 
@@ -123,7 +130,7 @@ policyDigest = SHA256(
   0x00 ||
   utf8(normalizerId) || 0x00 ||
   utf8(policyName)   || 0x00 ||
-  le_u64(capabilityMask) ||
+  le_u64(policyFlagMask) ||
   le_u64(featureMask) ||
   encParams(featureParams)
 )
@@ -357,7 +364,7 @@ If `rejectNonCanonicalInputs` is disabled:
 
 ## 8. Normalized equality (normative)
 
-In `normalized` mode (see `draft/BIDIR-DESCENT`), two values are equal iff their
+In `normalized` mode (see `profile/interop/BIDIR-DESCENT`), two values are equal iff their
 normalized comparison refs are equal:
 
 ```text

@@ -1,3 +1,5 @@
+#![allow(clippy::enum_variant_names)]
+
 use super::init::{InitOutcome, init_layout};
 use crate::support::{
     ISSUE_QUERY_PROJECTION_KIND, ISSUE_QUERY_PROJECTION_SCHEMA, IssueQueryProjectionPayload,
@@ -3159,7 +3161,7 @@ mod tests {
                 title: "[EPIC] Missing epic type".to_string(),
                 id: Some("bd-epic".to_string()),
                 description: Some(
-                    "Acceptance:\n- done\n\nVerification commands:\n- `mise run baseline`\n"
+                    "Acceptance:\n- done\n\nVerification commands:\n- `sh tools/ci/run_task.sh baseline`\n"
                         .to_string(),
                 ),
                 status: Some("open".to_string()),

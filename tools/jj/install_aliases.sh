@@ -9,11 +9,6 @@ if ! command -v jj >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v mise >/dev/null 2>&1; then
-  echo "mise is required but not found in PATH" >&2
-  exit 1
-fi
-
 if ! jj root >/dev/null 2>&1; then
   if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
     echo "Initializing colocated jj repo (jj git init --colocate)"
@@ -24,10 +19,10 @@ if ! jj root >/dev/null 2>&1; then
   fi
 fi
 
-jj config set --repo aliases.gate-fast '["util", "exec", "--", "mise", "run", "hk-fix"]'
-jj config set --repo aliases.gate-fix '["util", "exec", "--", "mise", "run", "hk-fix"]'
-jj config set --repo aliases.gate-check '["util", "exec", "--", "mise", "run", "hk-check"]'
-jj config set --repo aliases.gate-pre-commit '["util", "exec", "--", "mise", "run", "hk-pre-commit"]'
+jj config set --repo aliases.gate-fast '["util", "exec", "--", "sh", "tools/ci/run_task.sh", "hk-fix"]'
+jj config set --repo aliases.gate-fix '["util", "exec", "--", "sh", "tools/ci/run_task.sh", "hk-fix"]'
+jj config set --repo aliases.gate-check '["util", "exec", "--", "sh", "tools/ci/run_task.sh", "hk-check"]'
+jj config set --repo aliases.gate-pre-commit '["util", "exec", "--", "sh", "tools/ci/run_task.sh", "hk-pre-commit"]'
 
 echo "Installed repo-local jj aliases:"
 echo "  jj gate-fast         # fast local fixes/hygiene (hk fix: all files, no stage)"

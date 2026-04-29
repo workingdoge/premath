@@ -5,14 +5,14 @@
 It does not compute semantics. It reads from the UX HTTP API exposed by:
 
 ```bash
-mise run ci-observation-serve
+sh tools/ci/run_task.sh ci-observation-serve
 ```
 
 Typical local loop:
 
 ```bash
-mise run ci-observation-build
-mise run ci-observation-serve
+sh tools/ci/run_task.sh ci-observation-build
+sh tools/ci/run_task.sh ci-observation-serve
 python3 -m http.server 43173 --directory docs
 ```
 
@@ -34,7 +34,7 @@ the UI.
 One-command orchestration:
 
 ```bash
-mise run pf-start
+sh tools/ci/run_task.sh pf-start
 ```
 
 `pf-start` starts both `docs-preview` and `observation-api`.

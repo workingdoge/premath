@@ -9,7 +9,7 @@
   "obligations": [
     {
       "id": "scope_noncontradiction",
-      "description": "Ensure normative/informative scope and bidir checker obligation vocabulary remain non-contradictory."
+      "description": "Ensure normative/informative scope and Core obligation vocabulary remain non-contradictory."
     },
     {
       "id": "capability_parity",
@@ -87,7 +87,7 @@
     "tools/ci/run_instruction.sh",
     "tools/ci/verify_required_witness.py",
     "tools/ci/decide_required.py",
-    "tools/conformance/check_stub_invariance.py",
+    "crates/premath-cli/src/commands/conformance_check.rs",
     "tools/conformance/run_capability_vectors.py",
     "tools/conformance/check_doctrine_site.py",
     "tools/conformance/run_doctrine_inf_vectors.py"
@@ -95,7 +95,7 @@
   "overlayDocs": [
     "profile/ADJOINTS-AND-SITES"
   ],
-  "requiredBidirObligations": [
+  "requiredCoreObligationKinds": [
     "stability",
     "locality",
     "descent_exists",
@@ -116,19 +116,19 @@
     "specIndexInformativeHeading": "5.5",
     "specIndexOverlayHeading": "5.6",
     "ciClosurePath": "docs/design/control-plane/CI-CLOSURE.md",
-    "ciClosureBaselineStart": "Current full baseline gate (`mise run baseline`) includes:",
+    "ciClosureBaselineStart": "Current full baseline gate (`sh tools/ci/run_task.sh baseline`) includes:",
     "ciClosureBaselineEnd": "Local command:",
     "ciClosureProjectionStart": "Current deterministic projected check IDs include:",
     "ciClosureProjectionEnd": "## 5. Variants and capability projection",
-    "misePath": ".mise.toml",
-    "miseBaselineTask": "baseline",
+    "baselineManifestPath": "tools/ci/baseline_tasks.json",
+    "baselineTask": "baseline",
     "controlPlaneContractPath": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
     "doctrineSitePath": "specs/premath/draft/DOCTRINE-SITE.json",
     "doctrineRootNodeId": "draft/DOCTRINE-INF",
     "profileReadmePath": "specs/premath/profile/README.md",
-    "bidirSpecPath": "specs/premath/draft/BIDIR-DESCENT.md",
-    "bidirSpecSectionStart": "## 6. Obligation kinds (normative)",
-    "bidirSpecSectionEnd": "### 6.1 Obligation record format (required)",
+    "coreObligationSpecPath": "specs/premath/draft/OBLIGATION-DISCHARGE.md",
+    "coreObligationSpecSectionStart": "<!-- premath:anchor obligation-discharge.core-obligation-kinds.start -->",
+    "coreObligationSpecSectionEnd": "<!-- premath:anchor obligation-discharge.core-obligation-kinds.end -->",
     "coherenceSpecPath": "specs/premath/draft/PREMATH-COHERENCE.md",
     "coherenceSpecObligationStart": "## 3. Obligation Set (normative)",
     "coherenceSpecObligationEnd": "## 4. Obligation Semantics",

@@ -4,27 +4,6 @@
   "doctrineSpecPath": "specs/premath/draft/DOCTRINE-INF.md",
   "nodes": [
     {
-      "id": "draft/BIDIR-DESCENT",
-      "path": "specs/premath/draft/BIDIR-DESCENT.md",
-      "kind": "kernel-obligation",
-      "requiresDeclaration": true,
-      "declares": {
-        "preserved": [
-          "dm.identity",
-          "dm.policy.rebind",
-          "dm.profile.evidence",
-          "dm.refine.context",
-          "dm.refine.cover"
-        ],
-        "notPreserved": [
-          "dm.presentation.projection",
-          "dm.profile.execution",
-          "dm.transport.location",
-          "dm.transport.world"
-        ]
-      }
-    },
-    {
       "id": "draft/CONFORMANCE",
       "path": "specs/premath/draft/CONFORMANCE.md",
       "kind": "conformance",
@@ -110,6 +89,27 @@
           "dm.profile.execution",
           "dm.refine.context",
           "dm.refine.cover",
+          "dm.transport.location",
+          "dm.transport.world"
+        ]
+      }
+    },
+    {
+      "id": "draft/OBLIGATION-DISCHARGE",
+      "path": "specs/premath/draft/OBLIGATION-DISCHARGE.md",
+      "kind": "kernel-obligation",
+      "requiresDeclaration": true,
+      "declares": {
+        "preserved": [
+          "dm.identity",
+          "dm.policy.rebind",
+          "dm.profile.evidence",
+          "dm.refine.context",
+          "dm.refine.cover"
+        ],
+        "notPreserved": [
+          "dm.presentation.projection",
+          "dm.profile.execution",
           "dm.transport.location",
           "dm.transport.world"
         ]
@@ -203,7 +203,7 @@
     },
     {
       "id": "op/conformance.stub",
-      "path": "tools/conformance/check_stub_invariance.py",
+      "path": "crates/premath-cli/src/commands/conformance_check.rs",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -527,7 +527,7 @@
       "id": "cover.runtime",
       "over": "draft/PREMATH-KERNEL",
       "parts": [
-        "draft/BIDIR-DESCENT",
+        "draft/OBLIGATION-DISCHARGE",
         "raw/SQUEAK-CORE",
         "raw/SQUEAK-SITE",
         "raw/TUSK-CORE"
@@ -1013,9 +1013,9 @@
       ]
     },
     {
-      "id": "e.kernel.bidir",
+      "id": "e.kernel.obligation_discharge",
       "from": "draft/PREMATH-KERNEL",
-      "to": "draft/BIDIR-DESCENT",
+      "to": "draft/OBLIGATION-DISCHARGE",
       "morphisms": [
         "dm.identity",
         "dm.policy.rebind",
@@ -1059,9 +1059,9 @@
       ]
     },
     {
-      "id": "e.llm_proposal.bidir",
+      "id": "e.llm_proposal.core_obligation",
       "from": "draft/LLM-PROPOSAL-CHECKING",
-      "to": "draft/BIDIR-DESCENT",
+      "to": "draft/OBLIGATION-DISCHARGE",
       "morphisms": [
         "dm.identity",
         "dm.policy.rebind"

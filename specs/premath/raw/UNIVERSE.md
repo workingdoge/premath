@@ -104,7 +104,7 @@ To avoid paradoxes, implementations SHOULD stratify universes (a tower
 
 This document does not mandate a particular stratification strategy.
 
-## 7. Relationship to Gate and BIDIR-DESCENT
+## 7. Relationship to Gate and OBLIGATION-DISCHARGE
 
 - The base Gate laws continue to apply to `Def`.
 - If a universe extension is present, implementations MAY add Gate checks ensuring
@@ -113,4 +113,3 @@ This document does not mandate a particular stratification strategy.
 Operationally, codes/decoding and universe reasoning live above the kernel and
 SHOULD be treated as Layer-1 “user-space algebra” unless explicitly required by
 a profile.
-

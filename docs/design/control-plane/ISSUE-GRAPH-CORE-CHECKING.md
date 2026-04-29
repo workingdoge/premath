@@ -1,13 +1,13 @@
 # Issue Graph Core Checking (Design)
 
-Status: draft
+Status: implemented
 Scope: design-level, non-normative
 
 ## 1. Why
 
-Current issue-graph checks run in CI/Python wrappers for merge gating speed.
-That is operationally useful, but authority should live in `premath-bd` and be
-projected outward.
+Issue-graph checks now run through native `premath-bd` semantics exposed by the
+Premath CLI. CI wrappers may call the CLI, but they do not define independent
+issue-graph meaning.
 
 Target principle:
 
@@ -40,7 +40,7 @@ Core (`premath-bd`, `premath-cli`):
 
 Wrappers (`tools/ci/*`):
 
-- call core check command,
+- call core check command through `sh tools/ci/run_task.sh ci-hygiene-check`,
 - present output in CI logs,
 - must not add independent issue-graph semantics.
 
@@ -70,20 +70,21 @@ Hard-fail classes:
 - `issue_graph.issue_type.epic_mismatch`
 - `issue_graph.acceptance.missing`
 - `issue_graph.verification_command.missing`
+- `issue_graph.compactness.closed_block_edge`
+- `issue_graph.compactness.transitive_block_edge`
 
 Warning classes:
 
 - `issue_graph.notes.large`
 
-## 6. Migration Plan
+## 6. Migration Result
 
-1. Add core checker in `premath-bd` + tests.
-2. Add CLI command in `premath-cli` + tests.
-3. Add MCP wrapper (`issue_check`) to expose same core result.
-4. Replace `tools/ci/check_issue_graph.py` with compatibility shim that calls
-   `premath issue check` (or remove once callers are migrated).
-5. Keep CI gate unchanged at the task level (`mise run ci-hygiene-check`) but
-   backed by core semantics.
+1. Core checker lives in `premath-bd` with deterministic tests.
+2. CLI command is `premath issue check --issues <path> --json`.
+3. MCP wrapper (`issue_check`) exposes the same core-backed result contract.
+4. Python issue-graph wrappers were removed.
+5. CI gate remains `sh tools/ci/run_task.sh ci-hygiene-check`, backed by native
+   repository hygiene and issue-graph checks.
 
 ## 7. Non-Goals (for this slice)
 

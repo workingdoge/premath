@@ -16,19 +16,11 @@ plugged in without changing the kernel.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
 
-# Tooling-only: make the repo root importable so we can share scheme ids.
-import os
-import sys
-
-_THIS_DIR = os.path.dirname(__file__)
-_REPO_ROOT = os.path.abspath(os.path.join(_THIS_DIR, '..', '..'))
-if _REPO_ROOT not in sys.path:
-    sys.path.append(_REPO_ROOT)
-
-from tools.proof_schemes import SCHEME_TOY_ENUMERATE_V1  # type: ignore
+SCHEME_TOY_ENUMERATE_V1: bytes = hashlib.sha256(b"toy.enumerate.v1").digest()
 
 
 def _bits(mask: int) -> List[int]:

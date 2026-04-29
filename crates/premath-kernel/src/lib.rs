@@ -34,6 +34,7 @@ pub mod gate;
 pub mod obligation_registry;
 pub mod toy;
 pub mod witness;
+pub mod work_tracker_checker;
 
 pub use coherence::CoherenceLevel;
 pub use context::{Context, ContextId, Morphism};
@@ -49,3 +50,7 @@ pub use obligation_registry::{
     obligation_gate_registry_json, obligation_to_failure_class,
 };
 pub use witness::{GateFailure, GateResult};
+pub use work_tracker_checker::{
+    CHECKER_PROFILE_REF, WorkClaim, WorkProjectionCheck, WorkTrackerCheckInput,
+    WorkTrackerCheckOutput, evaluate_work_tracker_checker,
+};

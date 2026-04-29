@@ -6,6 +6,10 @@
     flake-utils.url = "github:numtide/flake-utils";
     tusk.url = "git+file:///Users/arj/irai/tusk?ref=main";
     devenv.follows = "tusk/devenv";
+    devenv-root = {
+      url = "file+file:///dev/null";
+      flake = false;
+    };
     llm-agents.follows = "tusk/llm-agents";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
@@ -19,7 +23,7 @@
   };
 
   outputs =
-    {
+    inputs@{
       self,
       nixpkgs,
       flake-utils,
@@ -29,6 +33,7 @@
       rust-overlay,
       crane,
       jj,
+      ...
     }:
     flake-utils.lib.eachSystem
       [
@@ -113,6 +118,10 @@
             type = "app";
             program = "${premath}/bin/premath";
           };
+          apps.codex = {
+            type = "app";
+            program = tusk.apps.${system}.codex.program;
+          };
 
           checks = {
             inherit premath;
@@ -138,16 +147,25 @@
                 flake-utils
                 tusk
                 devenv
-                llm-agents
                 rust-overlay
                 crane
                 jj
                 ;
+              devenv-root = inputs.devenv-root;
+              llm-agents = inputs.llm-agents;
             };
             modules = [
               (
-                { pkgs, ... }:
+                { lib, pkgs, ... }:
                 {
+                  devenv.root = lib.mkDefault (
+                    let
+                      rootFile = builtins.readFile inputs.devenv-root;
+                      envRoot = builtins.getEnv "DEVENV_ROOT";
+                    in
+                    if rootFile != "" then rootFile else if envRoot != "" then envRoot else toString self
+                  );
+
                   env.PREMATH_TUSK_ROOT = "${tusk}";
 
                   codex.skills.tusk.source = tusk + "/.agents/skills/tusk";
@@ -170,7 +188,6 @@
                       cargo-watch
                       cargo-nextest
                       cargo-insta
-                      mise
                       opentofu
                       tokei
                       python3
@@ -201,7 +218,7 @@
                       echo "  jj:       $(jj --version 2>/dev/null || echo 'not found')"
                       echo "  surreal:  $(surreal version 2>/dev/null || echo 'not found')"
                       echo "  cargo build --workspace"
-                      echo "  mise run baseline"
+                      echo "  sh tools/ci/run_task.sh baseline"
                     '';
                   };
                 }

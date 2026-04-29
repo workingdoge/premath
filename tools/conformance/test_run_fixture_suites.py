@@ -47,6 +47,19 @@ class RunFixtureSuitesTests(unittest.TestCase):
         paths = run_fixture_suites.load_coherence_contract_input_paths()
         self.assertEqual(len(paths), len(set(paths)))
 
+    def test_gate_suite_input_closure_includes_rust_gate_authority(self) -> None:
+        suite = self._suite_by_id("gate")
+        root = run_fixture_suites.ROOT
+
+        self.assertIn(root / "tools" / "conformance" / "run_gate_vectors.py", suite.input_paths)
+        self.assertIn(root / "tools" / "toy", suite.input_paths)
+        self.assertIn(root / "crates" / "premath-kernel" / "src" / "gate.rs", suite.input_paths)
+        self.assertIn(root / "crates" / "premath-kernel" / "src" / "toy.rs", suite.input_paths)
+        self.assertIn(
+            root / "crates" / "premath-cli" / "src" / "commands" / "toy_gate_check.rs",
+            suite.input_paths,
+        )
+
     def test_coherence_contract_cache_ref_changes_when_coherence_spec_changes(self) -> None:
         suite = self._suite_by_id("coherence-contract")
         root = run_fixture_suites.ROOT

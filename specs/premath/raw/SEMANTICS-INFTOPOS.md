@@ -40,7 +40,7 @@ It does **not** change the normative requirements of:
 
 - `draft/PREMATH-KERNEL` (kernel doctrine),
 - `draft/GATE` (admissibility laws),
-- `draft/BIDIR-DESCENT` (operational model), or
+- `draft/OBLIGATION-DISCHARGE` (Core obligation/discharge interface), or
 - `draft/REF-BINDING` (backend-generic commitment boundary).
 
 The intent is to show that Premath’s axioms are exactly the “stack/sheaf laws”
@@ -115,4 +115,3 @@ Premath kernels MAY adopt hyperdescent as an optional capability; see
 - It does not change the backend-generic commitment boundary: operational kernels
   remain free to compile canonical bytes into different commitment schemes via
   `draft/REF-BINDING`.
-

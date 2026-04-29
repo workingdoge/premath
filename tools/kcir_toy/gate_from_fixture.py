@@ -1,16 +1,13 @@
-"""Gate checking for KCIR toy fixtures.
+"""Gate checking adapter for KCIR toy fixtures.
 
-We *decode* the KCIR-shaped fixture back into the semantic case format used by
-`tools/toy/toy_gate_check.py` and reuse that logic.
-
-This keeps the toy suite small and ensures witness IDs match the semantic toy
-suite (by construction).
-
-Non-normative tooling.
+We decode KCIR-shaped fixtures back into the semantic case format, then run the
+Rust-native `premath toy-gate-check` command. KCIR fixture decoding remains
+non-normative tooling; the Gate decision is owned by `premath-kernel`.
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import sys
@@ -26,8 +23,10 @@ from toy_baseapi import decode_map_id
 _THIS_DIR = os.path.dirname(__file__)
 sys.path.append(os.path.join(_THIS_DIR, '..', 'toy'))
 
-from toy_gate_check import run_case  # type: ignore
+from toy_gate_client import run_case  # type: ignore
 from toy_worlds import get_world  # type: ignore
+
+SCHEME_TOY_ENUMERATE_V1: bytes = hashlib.sha256(b"toy.enumerate.v1").digest()
 
 
 def _bytes32(hex_str: str) -> bytes:
@@ -210,6 +209,10 @@ def to_semantic_case(store: FixtureStore, check_json: Dict[str, Any]) -> Dict[st
                 raise ValueError('contractible witness node has wrong (sort,opcode)')
             if len(nd.args) < 32:
                 raise ValueError('contractible witness node args must begin with schemeId:Bytes32')
+            scheme_id = nd.args[:32]
+            proof = nd.args[32:]
+            if scheme_id != SCHEME_TOY_ENUMERATE_V1:
+                raise ValueError('contractible witness node uses unsupported schemeId')
             if len(nd.deps) != 1:
                 raise ValueError('contractible witness node must have exactly one dep')
             dep = nd.deps[0]
@@ -224,6 +227,8 @@ def to_semantic_case(store: FixtureStore, check_json: Dict[str, Any]) -> Dict[st
                 if gnd.out != glue_obj_ref:
                     raise ValueError('contractible witness dep glue out mismatch')
             out_check['contractibleCertified'] = True
+            out_check['contractibleSchemeId'] = 'toy.enumerate.v1'
+            out_check['contractibleProof'] = proof.hex()
         if 'glueObj' in check:
             glue_ref = _bytes32(check['glueObj'])
             out_check['glue'] = _value_for_objref(store, glue_ref, world=w, memo=memo)

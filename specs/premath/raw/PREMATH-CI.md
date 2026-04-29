@@ -70,7 +70,8 @@ control-plane layer:
   checks and witnesses.
 
 Neither role is semantic admissibility authority. Kernel semantic authority
-remains in `draft/PREMATH-KERNEL`, `draft/GATE`, and `draft/BIDIR-DESCENT`.
+remains in `draft/PREMATH-KERNEL`, `draft/OBLIGATION-DISCHARGE`, and
+`draft/GATE`.
 
 ## 3. Control-loop object
 

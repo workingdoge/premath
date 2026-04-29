@@ -63,10 +63,10 @@ Deterministic failure class:
 
 ```text
 edit CONTROL-PLANE-CONTRACT.json
-  -> mise run ci-pipeline-test
-  -> mise run coherence-check
-  -> mise run ci-drift-budget-check
-  -> mise run baseline
+  -> sh tools/ci/run_task.sh ci-pipeline-test
+  -> sh tools/ci/run_task.sh coherence-check
+  -> sh tools/ci/run_task.sh ci-drift-budget-check
+  -> sh tools/ci/run_task.sh baseline
 ```
 
 Rollover update checklist:

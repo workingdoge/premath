@@ -5,6 +5,11 @@ This directory contains **raw** (experimental/informational) specifications.
 Promoted contract specs live in `../draft/` and are the default normative
 surface for active conformance claims.
 
+RFC 2119 language inside raw files is proposal-local and non-promoted unless a
+future promoted profile or explicit capability claim incorporates the relevant
+clauses. Raw files may be executable-checker inputs without becoming Premath
+Core.
+
 Use this directory for:
 
 - experiments not yet promoted,
@@ -17,6 +22,8 @@ Current raw tracks include:
 - operational runtime stack (`TUSK-CORE`, `SQUEAK-CORE`, `SQUEAK-SITE`, `PREMATH-CI`, `CI-TOPOS`),
 - site/semantic geometry notes (`CTX-SITE`, `SHEAF-STACK`, `TORSOR-EXT`),
 - downstream semantic-site placement (`MH-SITE-DEPENDENCY`),
+- provisional tracker checker (`WORK-TRACKER-CHECKER-PROFILE`) for the Atlas
+  `work-tracker.v0` cover,
 - explanatory semantics/presentation notes (`SEMANTICS-INFTOPOS`, `SPLIT-PRESENTATION`).
 
 Recent promotion: `NORMALIZER` moved to `../draft/NORMALIZER.md`.

@@ -1,7 +1,7 @@
 //! Canonical obligation -> Gate failure registry.
 //!
-//! This module is the single semantic authority for mapping BIDIR obligations
-//! to Gate failure classes/law references.
+//! This module is the single semantic authority for mapping Core obligations to
+//! Gate failure classes/law references.
 
 use crate::witness::{failure_class, law_ref};
 use serde::Serialize;
@@ -87,7 +87,7 @@ mod tests {
     use std::collections::BTreeSet;
 
     #[test]
-    fn required_bidir_mapping_is_present_and_gate_aligned() {
+    fn required_core_obligation_mapping_is_present_and_gate_aligned() {
         let expected = [
             (
                 "stability",

@@ -23,7 +23,6 @@ import hashlib
 import json
 import os
 import shutil
-import sys
 from dataclasses import dataclass
 from typing import Any, Dict, List, Tuple
 
@@ -32,12 +31,7 @@ from toy_baseapi import encode_map_id, normalize_cover, cover_sig, CoverData
 from toy_ref import h_node, h_obj
 from nf_codec import build_obj_prim, build_obj_glue
 
-# Tooling-only: make repo root importable so we can share proof scheme ids.
-_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if _REPO_ROOT not in sys.path:
-    sys.path.append(_REPO_ROOT)
-
-from tools.proof_schemes import SCHEME_TOY_ENUMERATE_V1  # type: ignore
+SCHEME_TOY_ENUMERATE_V1: bytes = hashlib.sha256(b"toy.enumerate.v1").digest()
 
 
 def _u32le(x: int) -> bytes:

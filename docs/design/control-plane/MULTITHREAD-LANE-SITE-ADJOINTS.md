@@ -21,7 +21,7 @@ Normative authority remains in:
 
 Worker orchestration MUST preserve this lane split:
 
-1. semantic doctrine lane (`PREMATH-KERNEL`, `GATE`, `BIDIR-DESCENT`):
+1. semantic doctrine lane (`PREMATH-KERNEL`, `OBLIGATION-DISCHARGE`, `GATE`):
    admissibility authority only.
 2. strict checker lane (`PREMATH-COHERENCE`): typed contract parity and
    fail-closed checker obligations only.
@@ -84,4 +84,5 @@ Issue graph discipline:
 Operational entrypoint for this loop:
 
 - `docs/design/runtime/TUSK-HARNESS-MULTITHREAD-RUNBOOK.md`
-- `tools/harness/multithread_loop.py`
+Loop implementations belong in Tusk or another downstream operator surface;
+Premath keeps only the issue/harness projection commands.

@@ -19,6 +19,7 @@ It is non-normative tooling.
 
 from __future__ import annotations
 
+import hashlib
 from dataclasses import dataclass
 from typing import Dict, Optional, Set, Tuple
 
@@ -30,12 +31,7 @@ from nf_codec import build_obj_prim, build_obj_glue, parse_obj_nf, prim_id_of
 from toy_baseapi import CoverData, validate_cover, decode_map_id, cover_len
 from toy_ref import h_node, h_obj
 
-# Tooling-only: make repo root importable so we can share proof scheme ids.
-_REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-if _REPO_ROOT not in sys.path:
-    sys.path.append(_REPO_ROOT)
-
-from tools.proof_schemes import SCHEME_TOY_ENUMERATE_V1  # type: ignore
+SCHEME_TOY_ENUMERATE_V1: bytes = hashlib.sha256(b"toy.enumerate.v1").digest()
 
 # Import the semantic toy worlds.
 _THIS_DIR = os.path.dirname(__file__)

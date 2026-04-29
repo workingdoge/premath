@@ -38,7 +38,12 @@ const SEMANTIC_BASELINE_PREFIXES: [&str; 4] = [
     "tools/infra/terraform/",
     "infra/terraform/",
 ];
-const SEMANTIC_BASELINE_EXACT: [&str; 3] = [".mise.toml", "hk.pkl", "pitchfork.toml"];
+const SEMANTIC_BASELINE_EXACT: [&str; 4] = [
+    ".envrc",
+    "hk.pkl",
+    "pitchfork.toml",
+    "tools/ci/baseline_tasks.json",
+];
 const RUST_PREFIXES: [&str; 1] = ["crates/"];
 const RUST_EXACT: [&str; 4] = [
     "Cargo.toml",
@@ -341,7 +346,8 @@ mod tests {
 
     #[test]
     fn project_required_checks_docs_doctrine_surface_includes_doctrine_check() {
-        let result = project_required_checks(&["specs/premath/draft/BIDIR-DESCENT.md".to_string()]);
+        let result =
+            project_required_checks(&["specs/premath/draft/OBLIGATION-DISCHARGE.md".to_string()]);
         assert_eq!(result.required_checks, vec!["doctrine-check".to_string()]);
         assert!(result.docs_only);
         assert!(

@@ -96,7 +96,7 @@ cat > "$RUN_ROOT/flake.nix" <<EOF
               task="\$(cat /host-control/task)"
               cd /workspace
               rc=0
-              nix --extra-experimental-features "nix-command flakes" develop /workspace -c sh -lc "cd /workspace && mise run \"\$task\"" || rc=\$?
+              nix --extra-experimental-features "nix-command flakes" develop /workspace -c sh -lc "cd /workspace && sh tools/ci/run_task.sh \"\$task\"" || rc=\$?
               printf "%s\n" "\$rc" > /host-out/exit-code
               sync
               poweroff -f

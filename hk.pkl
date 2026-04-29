@@ -49,7 +49,7 @@ local fast_steps = new Mapping<String, Step> {
 
 local baseline_steps = new Mapping<String, Step> {
   ["baseline"] {
-    check = "mise run ci-required-attested"
+    check = "python3 tools/ci/run_required_attested.py"
     exclusive = true
   }
 }

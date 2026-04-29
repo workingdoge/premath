@@ -588,12 +588,12 @@ class DriftBudgetChecksTests(unittest.TestCase):
     def test_required_obligation_drift_detects_contract_checker_mismatch(self) -> None:
         coherence_contract = {
             "obligations": [{"id": "scope_noncontradiction"}, {"id": "gate_chain_parity"}],
-            "requiredBidirObligations": ["stability"],
+            "requiredCoreObligationKinds": ["stability"],
             "surfaces": {"obligationRegistryKind": "premath.obligation_gate_registry.v1"},
         }
         scope_details = {
             "requiredCoherenceObligations": ["scope_noncontradiction"],
-            "requiredBidirObligations": ["locality"],
+            "requiredCoreObligationKinds": ["locality"],
             "obligationRegistryKind": "premath.obligation_gate_registry.v2",
         }
         failed, details = check_drift_budget.check_coherence_required_obligations(
@@ -664,9 +664,9 @@ class DriftBudgetChecksTests(unittest.TestCase):
                 [
                     "## 3. Traceability Matrix",
                     "",
-                    "| Draft spec | Executable check surface | Status | Gap target |",
-                    "| --- | --- | --- | --- |",
-                    "| `A.md` | `test` | covered | - |",
+                    "| Draft spec | Authority class | Executable check surface | Status | Gap target |",
+                    "| --- | --- | --- | --- | --- |",
+                    "| `A.md` | `core` | `test` | covered | - |",
                     "",
                 ]
             )

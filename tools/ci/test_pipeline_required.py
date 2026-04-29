@@ -247,7 +247,7 @@ class PipelineRequiredTests(unittest.TestCase):
             expected_witness = root / "artifacts/ciwitness/latest-required.json"
             policy = self._routing_policy()
             completed = subprocess.CompletedProcess(
-                args=["mise", "run", "ci-required-attested"],
+                args=["python3", "tools/ci/run_required_attested.py"],
                 returncode=1,
                 stdout="",
                 stderr="instruction_envelope_invalid: malformed envelope\n",
@@ -295,7 +295,7 @@ class PipelineRequiredTests(unittest.TestCase):
             root = Path(tmp)
             policy = self._routing_policy()
             completed = subprocess.CompletedProcess(
-                args=["mise", "run", "ci-required-attested"],
+                args=["python3", "tools/ci/run_required_attested.py"],
                 returncode=1,
                 stdout="",
                 stderr="[pipeline-required] command failed\n",
@@ -329,7 +329,7 @@ class PipelineRequiredTests(unittest.TestCase):
             root = Path(tmp)
             policy = self._routing_policy()
             completed = subprocess.CompletedProcess(
-                args=["mise", "run", "ci-required-attested"],
+                args=["python3", "tools/ci/run_required_attested.py"],
                 returncode=0,
                 stdout="all checks passed\n",
                 stderr="",
@@ -402,7 +402,7 @@ class PipelineRequiredTests(unittest.TestCase):
             )
             policy = self._routing_policy()
             completed = subprocess.CompletedProcess(
-                args=["mise", "run", "ci-required-attested"],
+                args=["python3", "tools/ci/run_required_attested.py"],
                 returncode=0,
                 stdout="all checks passed\n",
                 stderr="",

@@ -17,6 +17,8 @@ Current status:
   - `capabilities.adjoints_sites` is executable.
   - `capabilities.change_morphisms` is executable.
   - other capability tracks are currently stub/informational.
+- `fixtures/work-tracker-checker/` is executable for raw
+  `WORK-TRACKER-CHECKER-PROFILE` vectors.
 
 Spec-to-suite traceability is tracked in:
 
@@ -50,4 +52,10 @@ Run executable capability vectors with:
 
 ```bash
 python3 tools/conformance/run_capability_vectors.py
+```
+
+Run executable work-tracker checker vectors with:
+
+```bash
+python3 tools/conformance/run_work_tracker_checker_vectors.py
 ```

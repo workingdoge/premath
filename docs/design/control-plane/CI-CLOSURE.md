@@ -24,7 +24,9 @@ This is the load-bearing invariant for optional capabilities.
 
 Operational source of truth:
 
-- `.mise.toml` (`[tasks.baseline]`, `[tasks.ci-required*]`, `[tasks.doctrine-check]`)
+- `tools/ci/baseline_tasks.json` (baseline composition)
+- `tools/ci/run_task.sh` (local task aliases)
+- `tools/ci/run_required_attested.py` (attested required-gate chain)
 - `tools/ci/pipeline_required.py`
 - `tools/ci/pipeline_instruction.py`
 
@@ -35,17 +37,16 @@ issue context env is present (`PREMATH_ACTIVE_ISSUE_ID` / `PREMATH_ISSUE_ID`).
 Their workflow entrypoints, bound canonical command surfaces, and required
 governance/KCIR mapping gates are declared in
 `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`
-(`providerPipelineWrappers`) and checked by `mise run ci-pipeline-check`.
+(`providerPipelineWrappers`) and checked by `sh tools/ci/run_task.sh ci-pipeline-check`.
 
-Current full baseline gate (`mise run baseline`) includes:
+Current full baseline gate (`sh tools/ci/run_task.sh baseline`) includes:
 
-1. setup + language hygiene (`py-setup`, `rust-setup`, `fmt`, `lint`)
+1. setup + language hygiene (`rust-setup`, `fmt`, `lint`)
 2. build/test closure (`build`, `test`, `test-toy`, `test-kcir-toy`)
 3. conformance/docs closure
    - `conformance-check`
    - `traceability-check`
    - `coherence-check`
-   - `docs-coherence-check`
    - `ci-drift-budget-check`
    - `doctrine-check` (site coherence + runtime orchestration route parity +
      MCP doctrine-operation parity + doctrine-inf vectors)
@@ -53,36 +54,34 @@ Current full baseline gate (`mise run baseline`) includes:
 4. CI/control-plane closure
    - `ci-command-surface-check`
    - `ci-hygiene-check`
-   - `ci-branch-policy-check`
    - `ci-pipeline-check`
    - `ci-pipeline-test`
    - `ci-observation-test`
    - `ci-observation-check`
-   - `ci-wiring-check`
    - `ci-instruction-check`
    - `ci-instruction-smoke`
 
 Local command:
 
 ```bash
-mise run baseline
+sh tools/ci/run_task.sh baseline
 ```
 
 Projected required gate (canonical CI entrypoint):
 
 ```bash
-mise run ci-required
+sh tools/ci/run_task.sh ci-required
 ```
 
-`mise run ci-required` computes deterministic change projection
+`sh tools/ci/run_task.sh ci-required` computes deterministic change projection
 (`Delta -> requiredChecks`) and executes only projected checks.
 
-`mise run ci-verify-required` verifies emitted `ci.required` witness artifacts
+`sh tools/ci/run_task.sh ci-verify-required` verifies emitted `ci.required` witness artifacts
 against deterministic projection semantics.
 
-`mise run ci-required-verified` runs execution + witness verification.
+`sh tools/ci/run_task.sh ci-required-verified` runs execution + witness verification.
 
-`mise run ci-required-attested` is the authoritative local/CI chain
+`sh tools/ci/run_task.sh ci-required-attested` is the authoritative local/CI chain
 (execution + strict verification + decision + decision verification).
 
 Underlying check execution still routes through `tools/ci/run_gate.sh`, so
@@ -92,7 +91,7 @@ executor substrate selection (`PREMATH_SQUEAK_SITE_PROFILE`, legacy
 Optional infra-provisioned path:
 
 ```bash
-mise run ci-check-tf
+sh tools/ci/run_task.sh ci-check-tf
 ```
 
 This resolves external runner binding from Terraform/OpenTofu output first, then
@@ -110,7 +109,7 @@ This executes requested checks through the same gate surface and emits
 Recommended pre-commit gate:
 
 ```bash
-mise run precommit
+sh tools/ci/run_task.sh precommit
 ```
 
 Optional hook install:

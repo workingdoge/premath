@@ -129,8 +129,8 @@ non-empty evidence deterministically.
 
 ## 4. Binding equality (normative)
 
-In `normalized` comparison mode (see `draft/BIDIR-DESCENT`), equality MUST be
-computed as strict equality of projected refs:
+In `normalized` comparison mode (see `profile/interop/BIDIR-DESCENT`), equality
+MUST be computed as strict equality of projected refs:
 
 ```text
 project_ref(domain, payloadA) == project_ref(domain, payloadB)

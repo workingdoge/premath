@@ -105,9 +105,6 @@ Scope: design-level, non-normative
 - Hook/gate runner used to execute check/fix profiles.
 - Executes policy-defined checks; does not define kernel admissibility semantics.
 
-`mise`
-- Runtime/tool pinning and task entrypoint layer for repository-local workflows.
-
 `pitchfork`
 - Optional local daemon/orchestration runtime for long-lived or scheduled dev processes.
 - Operational executor only; does not alter gate semantics.

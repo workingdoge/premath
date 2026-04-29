@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT / "tools" / "toy"))
 sys.path.insert(0, str(ROOT / "tools" / "kcir_toy"))
 
 from gate_from_fixture import run_gate_from_fixture  # type: ignore  # noqa: E402
-from toy_gate_check import run_case as run_toy_case  # type: ignore  # noqa: E402
+from toy_gate_client import run_case as run_toy_case  # type: ignore  # noqa: E402
 
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "kernel-profile"
 DEFAULT_TOY_FIXTURES = ROOT / "tests" / "toy" / "fixtures"

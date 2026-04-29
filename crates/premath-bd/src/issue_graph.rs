@@ -1,10 +1,11 @@
 //! Deterministic issue-graph contract checking.
 
+use crate::dependency::DepType;
 use crate::issue::{ISSUE_TYPE_EPIC, Issue, normalize_issue_type};
 use crate::memory::MemoryStore;
 use regex::Regex;
 use serde::{Deserialize, Serialize};
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::sync::OnceLock;
 
 pub const ISSUE_GRAPH_CHECK_KIND: &str = "premath.issue_graph.check.v1";
@@ -18,6 +19,10 @@ pub const FAILURE_CLASS_EPIC_MISMATCH: &str = "issue_graph.issue_type.epic_misma
 pub const FAILURE_CLASS_ACCEPTANCE_MISSING: &str = "issue_graph.acceptance.missing";
 pub const FAILURE_CLASS_VERIFICATION_COMMAND_MISSING: &str =
     "issue_graph.verification_command.missing";
+pub const FAILURE_CLASS_COMPACTNESS_CLOSED_BLOCK_EDGE: &str =
+    "issue_graph.compactness.closed_block_edge";
+pub const FAILURE_CLASS_COMPACTNESS_TRANSITIVE_BLOCK_EDGE: &str =
+    "issue_graph.compactness.transitive_block_edge";
 pub const WARNING_CLASS_NOTES_LARGE: &str = "issue_graph.notes.large";
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
@@ -67,7 +72,7 @@ fn command_line_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
         Regex::new(
-            r"(?im)^\s*(?:[-*]\s*)?(?:`)?(?:mise run|python3|cargo(?: run)?|premath|sh|nix develop -c|uv run|pytest)\b[^`\n]*(?:`)?\s*$",
+            r"(?im)^\s*(?:[-*]\s*)?(?:`)?(?:python3|cargo(?: run)?|premath|sh|nix develop -c|uv run|pytest)\b[^`\n]*(?:`)?\s*$",
         )
         .expect("command-line regex must compile")
     })
@@ -77,7 +82,7 @@ fn command_inline_re() -> &'static Regex {
     static RE: OnceLock<Regex> = OnceLock::new();
     RE.get_or_init(|| {
         Regex::new(
-            r"(?i)`(?:mise run|python3|cargo(?: run)?|premath|sh|nix develop -c|uv run|pytest)\b[^`]*`",
+            r"(?i)`(?:python3|cargo(?: run)?|premath|sh|nix develop -c|uv run|pytest)\b[^`]*`",
         )
         .expect("command-inline regex must compile")
     })
@@ -102,6 +107,121 @@ fn collect_classes(findings: &[IssueGraphFinding]) -> Vec<String> {
         .collect::<BTreeSet<_>>()
         .into_iter()
         .collect()
+}
+
+fn build_blocks_adjacency(store: &MemoryStore) -> BTreeMap<String, BTreeSet<String>> {
+    let mut adjacency: BTreeMap<String, BTreeSet<String>> = BTreeMap::new();
+    for issue in store.issues() {
+        for dep in &issue.dependencies {
+            if dep.dep_type != DepType::Blocks {
+                continue;
+            }
+            let source = if dep.issue_id.trim().is_empty() {
+                issue.id.as_str()
+            } else {
+                dep.issue_id.trim()
+            };
+            let target = dep.depends_on_id.trim();
+            if source.is_empty() || target.is_empty() {
+                continue;
+            }
+            adjacency
+                .entry(source.to_string())
+                .or_default()
+                .insert(target.to_string());
+        }
+    }
+    adjacency
+}
+
+fn find_path(
+    adjacency: &BTreeMap<String, BTreeSet<String>>,
+    start: &str,
+    target: &str,
+) -> Option<Vec<String>> {
+    if start == target {
+        return Some(vec![start.to_string()]);
+    }
+
+    let mut queue = VecDeque::from([vec![start.to_string()]]);
+    let mut visited = BTreeSet::from([start.to_string()]);
+    while let Some(path) = queue.pop_front() {
+        let node = path.last()?;
+        for next in adjacency.get(node).into_iter().flatten() {
+            if next == target {
+                let mut result = path.clone();
+                result.push(next.clone());
+                return Some(result);
+            }
+            if visited.insert(next.clone()) {
+                let mut next_path = path.clone();
+                next_path.push(next.clone());
+                queue.push_back(next_path);
+            }
+        }
+    }
+
+    None
+}
+
+fn append_compactness_findings(store: &MemoryStore, errors: &mut Vec<IssueGraphFinding>) {
+    let adjacency = build_blocks_adjacency(store);
+    let statuses = store
+        .issues()
+        .map(|issue| (issue.id.clone(), issue_status(issue)))
+        .collect::<BTreeMap<_, _>>();
+
+    for issue in store.issues() {
+        let status = issue_status(issue);
+        if status != STATUS_OPEN && status != STATUS_IN_PROGRESS {
+            continue;
+        }
+
+        let Some(direct_targets) = adjacency.get(&issue.id) else {
+            continue;
+        };
+
+        for target_id in direct_targets {
+            if statuses
+                .get(target_id)
+                .is_some_and(|status| status == "closed")
+            {
+                errors.push(IssueGraphFinding {
+                    issue_id: issue.id.clone(),
+                    class: FAILURE_CLASS_COMPACTNESS_CLOSED_BLOCK_EDGE.to_string(),
+                    message: format!("active blocks edge targets closed issue ({target_id})"),
+                });
+            }
+        }
+
+        for target_id in direct_targets {
+            if statuses
+                .get(target_id)
+                .is_some_and(|status| status == "closed")
+            {
+                continue;
+            }
+            for candidate_start in direct_targets {
+                if candidate_start == target_id {
+                    continue;
+                }
+                let Some(path) = find_path(&adjacency, candidate_start, target_id) else {
+                    continue;
+                };
+                errors.push(IssueGraphFinding {
+                    issue_id: issue.id.clone(),
+                    class: FAILURE_CLASS_COMPACTNESS_TRANSITIVE_BLOCK_EDGE.to_string(),
+                    message: format!(
+                        "transitive-redundant blocks edge {} -> {} (witness={})",
+                        issue.id,
+                        target_id,
+                        path.join(" -> ")
+                    ),
+                });
+                break;
+            }
+        }
+    }
 }
 
 pub fn check_issue_graph(store: &MemoryStore, note_warn_threshold: usize) -> IssueGraphCheckReport {
@@ -162,6 +282,7 @@ pub fn check_issue_graph(store: &MemoryStore, note_warn_threshold: usize) -> Iss
             });
         }
     }
+    append_compactness_findings(store, &mut errors);
 
     let failure_classes = collect_classes(&errors);
     let warning_classes = collect_classes(&warnings);
@@ -220,6 +341,15 @@ mod tests {
         }
     }
 
+    fn blocks(source: &str, target: &str) -> crate::dependency::Dependency {
+        crate::dependency::Dependency {
+            issue_id: source.to_string(),
+            depends_on_id: target.to_string(),
+            dep_type: DepType::Blocks,
+            created_by: String::new(),
+        }
+    }
+
     #[test]
     fn epic_title_requires_epic_issue_type() {
         let store = MemoryStore::from_issues(vec![issue(
@@ -227,7 +357,7 @@ mod tests {
             "[EPIC] Example",
             "task",
             "open",
-            "Acceptance:\n- ok\n\nVerification commands:\n- `mise run baseline`",
+            "Acceptance:\n- ok\n\nVerification commands:\n- `sh tools/ci/run_task.sh baseline`",
         )])
         .expect("store should build");
 
@@ -248,7 +378,7 @@ mod tests {
             "Active issue",
             "task",
             "open",
-            "No acceptance section here.\nVerification commands:\n- `mise run baseline`",
+            "No acceptance section here.\nVerification commands:\n- `sh tools/ci/run_task.sh baseline`",
         )])
         .expect("store should build");
 
@@ -288,7 +418,7 @@ mod tests {
             "Active issue",
             "task",
             "open",
-            "Acceptance:\n- complete work\n\nVerification commands:\n- `python3 tools/ci/check_issue_graph.py`\n",
+            "Acceptance:\n- complete work\n\nVerification commands:\n- `sh tools/ci/run_task.sh ci-hygiene-check`\n",
         )])
         .expect("store should build");
 
@@ -327,5 +457,71 @@ mod tests {
                 .iter()
                 .any(|class| class == WARNING_CLASS_NOTES_LARGE)
         );
+    }
+
+    #[test]
+    fn compactness_rejects_active_blocks_edge_to_closed_issue() {
+        let mut active = issue(
+            "bd-a",
+            "Active issue",
+            "task",
+            "open",
+            "Acceptance:\n- done\n\nVerification commands:\n- `sh tools/ci/run_task.sh ci-hygiene-check`",
+        );
+        active.dependencies.push(blocks("bd-a", "bd-b"));
+        let closed = issue("bd-b", "Closed issue", "task", "closed", "");
+        let store = MemoryStore::from_issues(vec![active, closed]).expect("store should build");
+
+        let report = check_issue_graph(&store, DEFAULT_NOTE_WARN_THRESHOLD);
+        assert!(!report.accepted());
+        assert!(
+            report
+                .failure_classes
+                .iter()
+                .any(|class| class == FAILURE_CLASS_COMPACTNESS_CLOSED_BLOCK_EDGE)
+        );
+    }
+
+    #[test]
+    fn compactness_rejects_transitive_redundant_blocks_edge() {
+        let description = "Acceptance:\n- done\n\nVerification commands:\n- `sh tools/ci/run_task.sh ci-hygiene-check`";
+        let mut issue_a = issue("bd-a", "Issue A", "task", "open", description);
+        issue_a.dependencies.push(blocks("bd-a", "bd-b"));
+        issue_a.dependencies.push(blocks("bd-a", "bd-c"));
+        let mut issue_b = issue("bd-b", "Issue B", "task", "open", description);
+        issue_b.dependencies.push(blocks("bd-b", "bd-c"));
+        let issue_c = issue("bd-c", "Issue C", "task", "open", description);
+        let store =
+            MemoryStore::from_issues(vec![issue_a, issue_b, issue_c]).expect("store should build");
+
+        let report = check_issue_graph(&store, DEFAULT_NOTE_WARN_THRESHOLD);
+        assert!(!report.accepted());
+        assert!(
+            report
+                .failure_classes
+                .iter()
+                .any(|class| class == FAILURE_CLASS_COMPACTNESS_TRANSITIVE_BLOCK_EDGE)
+        );
+        assert!(
+            report
+                .errors
+                .iter()
+                .any(|finding| finding.message.contains("bd-a -> bd-c"))
+        );
+    }
+
+    #[test]
+    fn compactness_accepts_non_redundant_blocks_chain() {
+        let description = "Acceptance:\n- done\n\nVerification commands:\n- `sh tools/ci/run_task.sh ci-hygiene-check`";
+        let mut issue_a = issue("bd-a", "Issue A", "task", "open", description);
+        issue_a.dependencies.push(blocks("bd-a", "bd-b"));
+        let mut issue_b = issue("bd-b", "Issue B", "task", "open", description);
+        issue_b.dependencies.push(blocks("bd-b", "bd-c"));
+        let issue_c = issue("bd-c", "Issue C", "task", "open", description);
+        let store =
+            MemoryStore::from_issues(vec![issue_a, issue_b, issue_c]).expect("store should build");
+
+        let report = check_issue_graph(&store, DEFAULT_NOTE_WARN_THRESHOLD);
+        assert!(report.accepted());
     }
 }

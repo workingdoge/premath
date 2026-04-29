@@ -32,7 +32,7 @@ Historical note:
 Canonical target set (`specs/premath/draft`, delivered by `bd-192`):
 
 - `HARNESS-RUNTIME.md`
-  - includes: boot/step/stop contract, session artifact, feature ledger, trajectory rows, multithread worker/coordinator loop.
+  - includes: boot/step/stop contract, session artifact, feature ledger, and trajectory rows.
 - `HARNESS-RETRY-ESCALATION.md`
   - includes: retry-class table, escalation mapping, active-issue context fallback order, fail-closed classes.
 
@@ -49,9 +49,9 @@ Reason for two targets:
 - `premath harness-session read|write|bootstrap`
 - `premath harness-feature read|write|check|next`
 - `premath harness-trajectory append|query`
-- `python3 tools/harness/multithread_loop.py worker|coordinator`
-- `mise run harness-worker-loop`
-- `mise run harness-coordinator-loop`
+
+Coordinator/worker loops are downstream runtime orchestration and are not
+Premath command anchors.
 
 `HARNESS-RETRY-ESCALATION.md` MUST anchor:
 
@@ -100,7 +100,7 @@ Source of truth:
 - [x] `SPEC-TRACEABILITY.md` updated with coverage rows for promoted docs.
 - [x] `docs/design/README.md` and `specs/premath/draft/README.md` references coherent.
 - [x] Validation passes:
-  - `mise run traceability-check`
-  - `mise run docs-coherence-check`
-  - `mise run doctrine-check`
-  - `python3 tools/ci/check_issue_graph.py`
+  - `sh tools/ci/run_task.sh traceability-check`
+  - `sh tools/ci/run_task.sh ci-drift-budget-check`
+  - `sh tools/ci/run_task.sh doctrine-check`
+  - `sh tools/ci/run_task.sh ci-hygiene-check`

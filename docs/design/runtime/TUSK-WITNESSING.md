@@ -15,7 +15,7 @@ Without this split, SigPi failures get conflated with local Gate failures.
 
 Used for admissibility checks inside one Premath world.
 
-Failure classes align with Gate/Bidir mappings:
+Failure classes align with Gate/Core-obligation mappings:
 
 - `stability_failure`
 - `locality_failure`

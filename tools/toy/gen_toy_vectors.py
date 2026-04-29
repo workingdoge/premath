@@ -10,7 +10,7 @@ import json
 import os
 from typing import Any, Dict, List
 
-from toy_gate_check import run_case
+from toy_gate_client import run_case
 
 
 def _write_case(base_dir: str, case_id: str, case: Dict[str, Any]) -> None:

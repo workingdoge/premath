@@ -35,7 +35,7 @@ EOF
 }
 
 run_local() {
-  mise run "$TASK"
+  sh "$ROOT/tools/ci/run_task.sh" "$TASK"
 }
 
 run_external() {
@@ -72,15 +72,14 @@ emit_gate_witness_if_requested() {
     CTX_REF="${PREMATH_GATE_CTX_REF:-ctx:unknown}"
     DATA_HEAD_REF="${PREMATH_GATE_DATA_HEAD_REF:-HEAD}"
 
-    python3 "$ROOT/tools/ci/emit_gate_witness.py" \
-      --check-id "$CHECK_ID" \
-      --exit-code "$EXIT_CODE" \
-      --projection-digest "$PROJECTION_DIGEST" \
-      --policy-digest "$POLICY_DIGEST" \
-      --ctx-ref "$CTX_REF" \
-      --data-head-ref "$DATA_HEAD_REF" \
-      --source "$SOURCE" \
-      --out "$OUT_PATH" >/dev/null 2>&1 || true
+    cargo run --package premath-cli -- required-gate-ref \
+      --fallback-check-id "$CHECK_ID" \
+      --fallback-exit-code "$EXIT_CODE" \
+      --fallback-projection-digest "$PROJECTION_DIGEST" \
+      --fallback-policy-digest "$POLICY_DIGEST" \
+      --fallback-ctx-ref "$CTX_REF" \
+      --fallback-data-head-ref "$DATA_HEAD_REF" \
+      --gate-payload-out "$OUT_PATH" >/dev/null 2>&1 || true
   fi
 
   if [ -n "$SOURCE_OUT" ]; then

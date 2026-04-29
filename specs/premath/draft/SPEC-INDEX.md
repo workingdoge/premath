@@ -2,9 +2,9 @@
 slug: draft
 shortname: SPEC-INDEX
 title: workingdoge.com/premath/SPEC-INDEX
-name: Spec Index and Conformance Profiles
+name: Premath Spec Index
 status: draft
-category: Informational
+category: Best Current Practice
 tags:
   - premath
   - kernel
@@ -23,154 +23,98 @@ This specification is dedicated to the public domain under **CC0 1.0** (see
 
 This document is governed by the process in `../../process/coss.md`.
 
-## 0. North Star (Canonical Target State)
+## 0. Scope Sentence
 
-This section is the single-source statement of target state and phase posture.
+Premath is not the stack. Premath is the admissibility law that stacks compile
+to.
 
-### 0.1 Target state sentence
+Premath owns a small decision spine:
 
-Premath targets one self-hosted, fail-closed decision spine:
-`compile -> KCIR -> Gate -> witness`, with semantic admissibility owned only by
-`draft/PREMATH-KERNEL`, `draft/GATE`, and `draft/BIDIR-DESCENT`.
+```text
+context/site -> definable/claim -> obligation -> gate -> witness -> receipt/replay
+```
 
-### 0.2 Non-negotiable invariants
-
-1. Single semantic authority lane: no checker/CI/runtime wrapper may introduce
-   a parallel admissibility path.
-2. Single mutation-authority lane: operational mutation is instruction-mediated
-   by default and fail-closed when authority evidence is missing.
-3. Claim-gated normativity: optional capability and profile-overlay requirements
-   are normative only when explicitly claimed.
-4. Deterministic evidence lineage: control-plane/runtime outcomes remain
-   witness-linked, digest-bound, and replay-stable.
-5. Coherence-before-convenience: docs/spec/contracts/checkers must stay
-   synchronized under deterministic parity gates.
-
-### 0.3 Current phase and active epic IDs
-
-Current phase (as of 2026-04-24):
-
-- KCIR self-hosting phase 3 is active under `bd-287`.
-- The statement-ID/KCIR projection indexing follow-on is not active until a
-  corresponding issue exists in issue memory.
-
-Active epic IDs:
-
-- `bd-287`: KCIR self-hosting phase 3.
-
-Recently closed epic IDs:
-
-- `bd-262`: KCIR self-hosting phase 2.
-
-Phase-3 dependency spine (ordered):
-
-- `bd-288`: architecture contract (target-state vs transition-state; closed).
-- `bd-289`: spec/index glue (closed).
-- `bd-234`: host-action mapping contract/checker binding (closed).
-- `bd-290`: control-plane parity (closed).
-- `bd-235`: local REPL lease-op parity boundary (closed).
-- `bd-291`: implementation (open; next).
-- `bd-292`: conformance (open; blocked on `bd-291`).
-- `bd-293`: docs/traceability closure (open; blocked on `bd-292`).
-
-Sidecar issue:
-
-- `bd-294`: docs topology/navigation refactor (closed; authority entrypoints +
-  design lane folders; not a semantic phase-3 dependency).
-
-This section records the phase posture only; mutable execution status remains
-issue-memory authority (`premath issue ready|list|blocked`).
-
-Active non-epic blocker:
-
-- `bd-67` (`blocked`, manual): governance reviewer-pool readiness.
-
-Live status authority:
-
-- `.premath/issues.jsonl` via `premath issue list|ready|blocked`.
+Everything else is a profile, adjacent site, or implementation of that spine.
 
 ## 1. Purpose
 
-This file is the **front door**. It answers:
+This file is the front door for Premath scope. It answers:
 
-- what is normative vs. informative,
-- what claims an implementation may make,
-- and how the ecosystem compiles to a small, checkable kernel.
+- what belongs to Premath Core,
+- what is optional profile material,
+- what is raw or non-normative,
+- and what belongs to adjacent sites rather than Premath.
 
-Premath is designed to be **host-agnostic**. We treat “typechecker” and “∞-cosmos”
-as *examples of external host bases* `B` in which Premath meanings are realized and/or checked.
-Whether `B` is presented as a “type”, “term”, or other meta-object is an implementation detail.
+Mutable implementation state is not authority here. Current project status lives
+in issue memory and non-normative process/design notes.
 
-Normative conformance requirements live in `draft/CONFORMANCE`.
+## 2. Premath Core
 
-## 2. The Premath shape (one total, two bases)
+Premath Core is the admissibility kernel and replayable witness interface:
 
-Premath’s semantic kernel is the fibre-space projection:
+- `draft/PREMATH-KERNEL` — contexts, covers, indexed definables, reindexing
+  stability, locality, descent data, contractible gluing, refinement closure,
+  and rejection criteria.
+- `draft/OBLIGATION-DISCHARGE` — Core obligation records, deterministic
+  discharge, and Gate failure-class mapping for descent-shaped evidence.
+- `draft/GATE` — accepted/rejected gate outcomes and failure classes.
+- `draft/WITNESS-ID` — deterministic witness identity.
+- `draft/CONFORMANCE` §§1-2.1 — Core claim boundary and conformance
+  requirements. Later profile/capability sections do not expand Core.
 
-- `p₀ : E → 𝒞` where `𝒞` is the context world (covers/refinements are declared on it),
-  and `E` is the total space of definables-in-context.
+`draft/DOCTRINE-INF` is a doctrine-preservation guard for implementations that
+carry Premath through infinity-layer or doctrine-preserving contexts. It is part
+of the promoted contract surface, but it is not a control plane.
 
-Implementations additionally choose an external host base `B` and a realization `F`
-into a Premath-shaped bundle over `B`. See `draft/PREMATH-KERNEL` for the exact diagram and roles.
+## 3. Optional Profiles
 
-## 3. Claims and profiles (capability-based)
+Optional profiles add representation, runtime, or application constraints. They
+must not create a second admissibility authority.
 
-Premath avoids prescribing a single internal architecture. Instead, conformance is
-defined by **claims**. An implementation MUST satisfy the requirements of every claim it asserts.
+- Interop profile: `profile/interop/README` maps `KCIR-CORE`, `NF`,
+  `NORMALIZER`, `REF-BINDING`, `WIRE-FORMATS`, and `ERROR-CODES`.
+- Control-plane profile: `PREMATH-COHERENCE`, `COHERENCE-CONTRACT.json`,
+  `CONTROL-PLANE-CONTRACT.json`, `DOCTRINE-SITE*`, `LLM-*`, `HARNESS-*`,
+  `CHANGE-MORPHISMS`, `SPAN-SQUARE-CHECKING`, and the control-plane portions of
+  `UNIFICATION-DOCTRINE`; see `profile/control-plane/README`.
+- Adjoints/sites profile: `profile/ADJOINTS-AND-SITES`.
+- Identity/auth material: currently raw; see `profile/identity/README`.
 
-Claims are grouped into profiles:
+Profiles may be strict. Their strictness is profile-local and claim-scoped.
 
-- **Kernel**: semantic law only (reindexing coherence + contractible descent + refinement invariance).
-- **Interop Core**: deterministic, exchangeable artifacts (KCIR + NF + ref binding + wire/errors).
-- **Interop Full**: `Interop Core` + deterministic normalization, obligations, and gate enforcement.
+## 4. Adjacent Sites
 
-Implementations MAY additionally claim profile overlays published under
-`specs/premath/profile/`. Profile overlays are additive to base claims and are
-normative only when explicitly claimed.
+Premath does not own adjacent site semantics.
 
-Details and required vectors are defined in `draft/CONFORMANCE` and `draft/CAPABILITY-VECTORS`.
+- Atlas owns site-of-sites placement and cross-site cover/factorization rules.
+- Nerve owns its protocol/substrate semantics until a reusable substrate factor
+  is explicitly extracted.
+- Tusk owns operator instruments, projections, runtime bindings, and tracker
+  workflow surfaces over accepted decisions.
+- Work-state meaning is a candidate `work` site role. Premath may check
+  work-claim admissibility, but Premath does not own generic work semantics.
 
-Interop profiles should be read as evidence/representation profiles over one kernel.
-The unifying feature is the kernel law outcome, not the wire representation.
-Profile choice may change portability and artifact form, but must not change kernel meaning.
+## 5. Normative Map
 
-## 4. Reference architecture (optional)
+### 5.1 Core authority
 
-The diagram below is a **reference pathway** for implementations that want deterministic,
-portable interop artifacts (`ObjNF/MorNF`, `cmpRef`, `project_ref`, wire formats). It is not
-the only valid architecture.
+The smallest Premath authority path is:
 
-Conformance is judged at the boundaries an implementation exposes (parsers, normalizers,
-verifiers, obligation checkers), not by whether it contains these exact boxes internally.
+1. `draft/PREMATH-KERNEL`
+2. `draft/OBLIGATION-DISCHARGE`
+3. `draft/GATE`
+4. `draft/WITNESS-ID`
+5. `draft/CONFORMANCE` §§1-2.1
 
-```
-   source syntax / IR
- (DSL, KCIR builders, etc.)
-            |
-            | elaborate / compile (optional)
-            v
-   obligations Ω  +  candidate meaning
-            |              |
-            | discharge     | canonicalize / key (optional)
-            v              v
-      host checker      NF/Normalizer/Refs
-            \              /
-             \            /
-              v          v
-            kernel laws (p₀:E→𝒞)
-     (stability + contractible descent + refinement invariance)
-```
+An implementation claiming Premath Core must preserve the same accepted/rejected
+kernel outcome and deterministic witness/replay behavior at the boundaries it
+exposes.
 
-## 5. What is normative (by claim)
+### 5.2 Interop profile
 
-### 5.1 Always normative (Kernel claim)
+The Interop profile is optional and representation-facing.
 
-- `draft/DOCTRINE-INF` — doctrine/infinity-layer preservation contract;
-  governance-flywheel preservation profile (§9) is conditional normative only
-  when `profile.doctrine_inf_governance.v0` is claimed.
-- `draft/PREMATH-KERNEL` — semantic kernel (contexts/covers + contractible descent).
-
-### 5.2 Normative for Interop Core (only if claimed)
+Interop Core, when claimed, uses:
 
 - `draft/KCIR-CORE`
 - `draft/REF-BINDING`
@@ -178,17 +122,32 @@ verifiers, obligation checkers), not by whether it contains these exact boxes in
 - `draft/WIRE-FORMATS`
 - `draft/ERROR-CODES`
 
-### 5.3 Normative for Interop Full (only if claimed)
-
-Everything in Interop Core, plus:
+Interop Full, when claimed, adds:
 
 - `draft/NORMALIZER`
-- `draft/BIDIR-DESCENT`
-- `draft/GATE`
+- `profile/interop/BIDIR-DESCENT`
 
-### 5.4 Normative for optional evidence capabilities (only if claimed)
+It uses the Core `draft/OBLIGATION-DISCHARGE` and `draft/GATE` interfaces to
+enforce obligations and admissibility over deterministic artifacts.
 
-For capability identifiers and vectors defined in `draft/CAPABILITY-VECTORS`:
+Interop may change artifact form. It must not change kernel meaning.
+
+### 5.3 Control-plane profile
+
+The control-plane profile is optional and implementation-facing.
+
+It may define deterministic wrappers, coherence checks, schema lifecycle tables,
+runtime-route parity, instruction/proposal typing, and harness behavior. Those
+surfaces remain projections or governance over the Premath spine. They do not
+own semantic admissibility.
+
+The long-form control-plane doctrine currently remains in promoted draft files
+while it is being factored. The target shape is a control-plane profile, not a
+larger Premath Core.
+
+### 5.4 Capability-scoped documents
+
+Executable capability identifiers:
 
 - `capabilities.normal_forms`
 - `capabilities.kcir_witnesses`
@@ -199,7 +158,7 @@ For capability identifiers and vectors defined in `draft/CAPABILITY-VECTORS`:
 - `capabilities.adjoints_sites`
 - `capabilities.change_morphisms`
 
-Capability-specific normative specs include:
+Capability-specific document bindings:
 
 - `raw/SQUEAK-SITE` (for `capabilities.squeak_site`)
 - `raw/PREMATH-CI` (for `capabilities.ci_witnesses`)
@@ -209,327 +168,102 @@ Capability-specific normative specs include:
 - `draft/CHANGE-MORPHISMS` (for `capabilities.change_morphisms`)
 - `draft/HARNESS-TYPESTATE` (for `capabilities.change_morphisms`)
 
-Normative requirements apply only when the corresponding capability is claimed.
+Capability requirements apply only when the corresponding capability is claimed.
 
-Worker-operation doctrine-site routing note:
+### 5.5 Raw, informative, and default status
 
-- Mutation/session operation surfaces for
-  `capabilities.change_morphisms` are mapped in
-  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
-  (`op/mcp.issue_add`, `op/mcp.issue_update`, `op/mcp.issue_claim`,
-  `op/mcp.issue_lease_renew`, `op/mcp.issue_lease_release`,
-  `op/mcp.issue_discover`, `op/mcp.dep_add`, `op/mcp.dep_remove`,
-  `op/mcp.dep_replace`,
-  `op/harness.session_read`, `op/harness.session_write`,
-  `op/harness.session_bootstrap`).
-- Read-only dependency integrity projection route is also mapped in
-  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
-  (`op/mcp.issue_list`, `op/mcp.issue_ready`, `op/mcp.issue_blocked`,
-  `op/mcp.issue_check`, `op/mcp.issue_backend_status`,
-  `op/mcp.issue_lease_projection`, `op/mcp.dep_diagnostics`).
-- Phase-3 transition boundary: REPL/control overlays MUST treat
-  `issue.lease_renew` and `issue.lease_release` as MCP-only host actions until
-  a promoted non-MCP authority surface exists; hidden local fallback mutation
-  paths are forbidden.
-- Promoted harness contract surfaces (`draft/HARNESS-RUNTIME`,
-  `draft/HARNESS-TYPESTATE`, and `draft/HARNESS-RETRY-ESCALATION`) MUST reuse
-  the same routed operation IDs above when they touch session/mutation
-  operations and MUST NOT introduce parallel mutation/session authority paths.
-  Meta-Harness object doctrine is owned by `fish/sites/mh`; Premath is an
-  upstream doctrine dependency for that site, not its owner.
-- Instruction/observation/init MCP surfaces are also mapped in
-  `draft/DOCTRINE-OP-REGISTRY.json` / `draft/DOCTRINE-SITE.json`
-  (`op/mcp.instruction_check`, `op/mcp.instruction_run`,
-  `op/mcp.observe_latest`, `op/mcp.observe_needs_attention`,
-  `op/mcp.observe_instruction`, `op/mcp.observe_projection`,
-  `op/mcp.init_tool`).
-- Doctrine-conformance routing also includes explicit runtime orchestration
-  parity (`op/conformance.runtime_orchestration`), binding
-  `runtimeRouteBindings` contract routes to
-  `draft/DOCTRINE-OP-REGISTRY.json` operation nodes, enforcing routed
-  operation path boundaries (`tools/ci/*`) and optional
-  `controlPlaneKcirMappings` row-shape checks (when mapping rows are present),
-  with invariance vectors for profile-permuted route scenarios.
-- REPL host-action transition rows are machine-bound in
-  `draft/CONTROL-PLANE-CONTRACT.json` under `replHostActionBindings`; the
-  control-plane loader and drift-budget checker reject unregistered host IDs,
-  duplicate normalized host IDs, mismatched CLI/MCP bindings, and missing
-  doctrine operation routes.
-- For multithread worker orchestration, routed operation paths MUST be treated
-  as operational cover/refinement execution surfaces only (no semantic
-  authority transfer). Any acceptance/rejection consumed by runtime/control
-  surfaces MUST remain checker/Gate-discharged and factor through Unified
-  Evidence routing (`draft/UNIFICATION-DOCTRINE` §10 and §12).
-- Evaluator/REPL transition surfaces (for example `scheme_eval`-style
-  host-action loops) MUST remain compatibility/control overlays until they are
-  bound to contract rows and doctrine-site routed operation IDs. They MUST NOT
-  introduce unrouted mutation/session authority paths.
-
-### 5.5 Informative and optional
-
-The entries below are informative/default reading surfaces unless they are
+The entries below are informative/default status unless they are
 explicitly claimed under §5.4 or §5.6.
 
-- `draft/DOCTRINE-SITE` — machine-checkable doctrine-to-operation site map
-  (`draft/DOCTRINE-SITE-INPUT.json` -> generated
-  `draft/DOCTRINE-SITE.json` + generated `draft/DOCTRINE-OP-REGISTRY.json`,
-  including worker mutation and harness-session operation routes).
-- `draft/SPEC-TRACEABILITY` — spec-to-check/vector coverage matrix with
-  explicit gap targets.
-- `draft/PREMATH-COHERENCE` — typed coherence-contract checker/witness model
-  for repository control-plane surfaces (`draft/COHERENCE-CONTRACT.json`).
-- `draft/COHERENCE-CONTRACT.json` — machine coherence contract artifact for
-  deterministic checker execution.
-- `draft/KERNEL-STATEMENT-BINDINGS.json` — typed projection-only statement
-  binding contract linking kernel statement IDs to obligations/checkers/vectors
-  (indexing/query/evidence support only; no semantic admissibility authority).
-- `draft/HARNESS-RUNTIME` — promoted harness runtime contract for
-  `boot/step/stop` and the shared harness surface map
-  (`draft/HARNESS-RUNTIME` §1.1) used by typestate and retry/escalation
-  contracts.
-- `draft/HARNESS-TYPESTATE` — promoted harness typestate closure/mutation gate
-  contract for tool-calling turns (normative when
-  `capabilities.change_morphisms` is claimed; shared harness partitioning/routes
-  are declared in `draft/HARNESS-RUNTIME` §1.1).
-- `draft/HARNESS-RETRY-ESCALATION` — promoted classify/retry/escalation control
-  contract for CI harness wrappers bound to canonical policy digest and routed
-  escalation operations (shared harness partitioning/routes in
-  `draft/HARNESS-RUNTIME` §1.1).
-- `raw/MH-SITE-DEPENDENCY` — informational placement note recording that
-  Meta-Harness object doctrine lives in `fish/sites/mh`, while Premath supplies
-  upstream admissibility/descent/gate/evidence doctrine.
-- `draft/CONTROL-PLANE-CONTRACT.json` — shared typed control-plane constants
-  (projection policy/check order + CI witness kinds + schema lifecycle table
-  for contract/witness/projection kind families + harness retry/escalation
-  bindings + worker mutation authority policy/routes + runtime route bindings
-  (`runtimeRouteBindings`) + Stage 2/Stage 3 typed-authority metadata +
-  provider wrapper entrypoint/gate bindings (`providerPipelineWrappers`) +
-  control-plane bundle profile (`controlPlaneBundleProfile`) declaring
-  `C_cp` (repository-state context family), `E_cp` (control-plane artifact
-  family), reindexing/coherence and cover/glue obligations, plus explicit
-  semantic-authority split (`PREMATH-KERNEL`/`GATE`/`BIDIR-DESCENT` remain
-  authority; control-plane is projection/parity only), and canonical KCIR
-  control-plane mapping table (`controlPlaneKcirMappings`) for instruction /
-  proposal / coherence / doctrine-route / required-decision surfaces, including
-  deterministic digest-lineage fields and legacy non-KCIR compatibility
-  deprecation policy)
-  consumed by
-  CI/coherence adapter
-  surfaces; lifecycle semantics follow `draft/UNIFICATION-DOCTRINE` §5.1
-  including governance-mode metadata
-  (`rollover|freeze`) and process contract in
-  `../../process/SCHEMA-LIFECYCLE-GOVERNANCE.md`.
-- `draft/CAPABILITY-REGISTRY.json` — shared typed executable-capability +
-  profile-overlay-claim registry, including capability-to-normative-doc claim
-  bindings (`capabilityDocBindings`) consumed by conformance/docs/coherence
-  parity surfaces.
-- `draft/LLM-INSTRUCTION-DOCTRINE` — doctrine contract for typed LLM
-  instruction flows (normative only when `capabilities.instruction_typing` is
-  claimed).
-- `draft/LLM-PROPOSAL-CHECKING` — proposal ingestion/checking contract for LLM
-  proposal artifacts (normative only when
-  `capabilities.instruction_typing` is claimed).
-- `draft/UNIFICATION-DOCTRINE` — minimum-encoding/maximum-expressiveness
-  architecture doctrine for canonical boundaries and deterministic projections
-  (including Unified Evidence Plane contract in §10 and cross-layer obstruction
-  algebra in §11, plus Grothendieck operationalization routing contract in
-  §12).
-- `draft/SPAN-SQUARE-CHECKING` — typed span/square witness contract for
-  pipeline/base-change commutation plus composition-law (identity,
-  associativity, h/v compatibility, interchange) surfaces in coherence checker
-  paths.
-- `raw/CTX-SITE` — informational site base (`Ctx`) + coverage (`J`) model for
-  context/refinement decomposition.
-- `raw/SHEAF-STACK` — informational presheaf/sheaf/stack rendering of
-  transport/descent obligations.
-- `raw/TORSOR-EXT` — informational torsor/extension/twist-class model for
-  non-canonical split behavior.
-- `raw/SEMANTICS-INFTOPOS` — presentation-free model sketch (informational).
-- `raw/HYPERDESCENT` — optional strengthening: hyperdescent.
-- `raw/UNIVERSE` — optional extension: universe + comprehension (Tarski-style).
-- `raw/SPLIT-PRESENTATION` — guidance: strict IR vs. semantic equality.
-- `raw/TUSK-CORE` — single-world operational runtime contracts (informational/raw).
-- `raw/SQUEAK-CORE` — inter-world transport/composition contracts (informational/raw).
-- `raw/SQUEAK-SITE` — runtime-location site contracts for Squeak/Cheese
-  (normative only when `capabilities.squeak_site` is claimed).
-- `raw/PREMATH-CI` — higher-order CI/CD control-loop contract (normative only
-  when `capabilities.ci_witnesses` is claimed).
-- `raw/CI-TOPOS` — closure-style CI projection discipline (informational/raw).
-- `raw/BEAM-COORDINATION` — BEAM/OTP coordination + lease/sublease profile
-  bound to existing Premath authority/witness lanes (informational/raw).
-- `docs/foundations/` — explanatory notes (non-normative).
+Conditional clauses:
+
+- `raw/SQUEAK-SITE` is normative only when `capabilities.squeak_site` is
+  claimed.
+- `raw/PREMATH-CI` is normative only when `capabilities.ci_witnesses` is
+  claimed.
+- `draft/LLM-INSTRUCTION-DOCTRINE` is normative only when
+  `capabilities.instruction_typing` is claimed.
+- `draft/LLM-PROPOSAL-CHECKING` is normative only when
+  `capabilities.instruction_typing` is claimed.
+- `profile/ADJOINTS-AND-SITES` is normative only when
+  `capabilities.adjoints_sites` is claimed.
+- `draft/CHANGE-MORPHISMS` is normative only when
+  `capabilities.change_morphisms` is claimed.
+- `draft/HARNESS-TYPESTATE` is normative when
+  `capabilities.change_morphisms` is claimed.
 
 Raw capability-spec lifecycle policy:
 
-- Raw capability specs MAY be exercised by executable vectors, but remain
-  lifecycle-raw until promotion criteria are met.
-- Capability claims bind only the capability-scoped normative clauses listed in
-  §5.4; raw status still means the full document text is open to iteration.
+- Raw capability specs may have executable vectors without becoming Premath
+  Core.
 - Promotion from raw to draft for capability-scoped specs requires:
-  1) deterministic golden/adversarial/invariance vectors for every claimed law
+  1. deterministic golden/adversarial/invariance vectors for every claimed law
      boundary;
-  2) deterministic witness/failure-class mapping through checker/run surfaces;
-  3) issue-backed migration plan + decision-log entry for lifecycle change.
+  2. deterministic witness/failure-class mapping through checker/run surfaces;
+  3. issue-backed migration plan and decision-log entry for lifecycle change.
 
 Current raw-retain posture:
 
-- `raw/SQUEAK-SITE` — retained raw per Decision 0040; promote only when
-  criteria are met.
-- `raw/TUSK-CORE` — retained raw per Decision 0041; promote only when criteria
-  are met.
+- `raw/SQUEAK-SITE` — retained raw per Decision 0040.
+- `raw/TUSK-CORE` — retained raw per Decision 0041.
 
-### 5.6 Normative for profile overlays (only if claimed)
+### 5.6 Profile overlays
 
-- `profile/ADJOINTS-AND-SITES` — capability-scoped adjoint/site overlay:
-  admissible-map allowlist policy, Beck-Chevalley obligations, and deterministic
-  `(normalizerId, policyDigest)` discharge binding for profile claims.
+Profile overlays are additive and claim-scoped.
 
-Joint capability note:
+- `profile/ADJOINTS-AND-SITES` defines the adjoints/sites overlay.
+- `profile.doctrine_inf_governance.v0` is an optional doctrine-governance
+  overlay claim defined by `draft/DOCTRINE-INF` and `draft/CONFORMANCE`.
 
-- Implementations MAY jointly claim `capabilities.adjoints_sites` and
-  `capabilities.squeak_site`; composed systems SHOULD also route cross-lane
-  pullback/base-change claims through `draft/SPAN-SQUARE-CHECKING` and MUST
-  follow lane separation/single-authority encoding rules in
-  `draft/UNIFICATION-DOCTRINE` §9 (see `profile/ADJOINTS-AND-SITES` §10 for
-  composed overlay routing).
+Lane ownership:
 
-Notation convention:
-
-- Use `SigPi` in prose/identifiers; render the adjoint triple as
-  `\Sigma_f -| f* -| \Pi_f` (or shorthand `sig\Pi` when compact notation is
-  needed).
-
-Lane ownership note:
-
-- CwF strict substitution/comprehension obligations are checker-core
-  (`draft/PREMATH-COHERENCE`) and are not profile-scoped.
-- CwF<->sig\Pi bridge mapping is normative in
-  `profile/ADJOINTS-AND-SITES` §11 and MUST preserve existing obligation
-  vocabularies (no new bridge-owned obligation IDs).
-- Span/square commutation is a typed witness contract
-  (`draft/SPAN-SQUARE-CHECKING`) that composed profiles MUST route through for
-  cross-lane pullback/base-change claims, including composition-law witness
-  coverage for identity/associativity/h-v/interchange.
 - Unified evidence factoring MUST route control-plane artifact families through
-  one attested surface (`draft/UNIFICATION-DOCTRINE` §10, including fail-closed
-  factorization boundary in §10.5).
-- Grothendieck operationalization of worker concurrency/routing MUST follow
-  `draft/UNIFICATION-DOCTRINE` §12: cover-local execution, deterministic
-  glue-or-obstruction, and no parallel admissibility path.
-- Typed evidence-object migration MUST follow staged internalization gates in
-  `draft/UNIFICATION-DOCTRINE` §10.6 (single authority artifact per stage with
-  deterministic compatibility/rollback boundaries). Stage 1 typed-core parity
-  claims MUST use the fail-closed class boundary in §10.6.2, and Stage 1
-  rollback claims MUST use the deterministic rollback witness boundary in
-  §10.6.3. Stage 2 typed-authority claims MUST use the clause-to-surface
-  mapping in §10.6.4 (including Stage 2 gate-chain parity vectors and
-  `capabilities.ci_witnesses` boundary-authority vectors). Stage 3 typed-first
-  closure claims MUST use §10.6.5 mapping (direct bidir checker/discharge route
-  canonical, sentinel fallback profile-gated only, typed-first consumer
-  lineage).
+  one attested surface.
+- CwF<->sig\Pi bridge mapping is normative in
+  `profile/ADJOINTS-AND-SITES` §11 and must preserve existing obligation
+  vocabularies.
 
-## 6. Suggested reading order
+## 6. Reading Order
 
-Minimal authority path (default for all implementations):
-1) `draft/SPEC-INDEX`
-2) `draft/DOCTRINE-INF`
-3) `draft/PREMATH-KERNEL`
-4) `draft/BIDIR-DESCENT` + `draft/GATE`
-5) `draft/NORMALIZER` + `draft/REF-BINDING` (when normalized evidence paths are used)
+For Premath Core:
 
-Surface-reduction guidance:
+1. `draft/PREMATH-KERNEL`
+2. `draft/OBLIGATION-DISCHARGE`
+3. `draft/GATE`
+4. `draft/WITNESS-ID`
+5. `draft/CONFORMANCE` §§1-2.1
 
-- Treat the minimal authority path above as canonical.
-- Add profile/capability/control-plane docs only when the corresponding claim is
-  implemented.
-- When composing overlays, route composition semantics through
-  `draft/UNIFICATION-DOCTRINE` (single-authority encoding; deterministic
-  projections).
+For Interop:
 
-If you are proving semantics:
-1) `draft/DOCTRINE-INF`
-2) `draft/PREMATH-KERNEL`
-3) `raw/SEMANTICS-INFTOPOS` (optional)
-4) optional extensions (`HYPERDESCENT`, `UNIVERSE`)
+1. Core reading order
+2. `draft/REF-BINDING` + `draft/KCIR-CORE`
+3. `draft/NF` + `draft/NORMALIZER`
+4. `draft/WIRE-FORMATS` + `draft/ERROR-CODES`
 
-If you are implementing Interop Full:
-1) `draft/DOCTRINE-INF`
-2) `draft/PREMATH-KERNEL`
-3) `draft/REF-BINDING` + `draft/KCIR-CORE`
-4) `draft/NF` → `draft/NORMALIZER`
-5) `draft/BIDIR-DESCENT` + `draft/GATE`
-6) `draft/WIRE-FORMATS` + `draft/ERROR-CODES`
-7) `draft/CONFORMANCE` + `draft/CAPABILITY-VECTORS`
-8) `draft/SPEC-TRACEABILITY`
-9) `draft/UNIFICATION-DOCTRINE`
+For control-plane work:
 
-If you are implementing change discipline:
-1) `draft/CHANGE-MORPHISMS`
-2) `draft/CAPABILITY-VECTORS` (`capabilities.change_morphisms`)
-3) conformance fixtures under `tests/conformance/fixtures/capabilities/`
+1. Core reading order
+2. The relevant control-plane profile files
+3. `draft/UNIFICATION-DOCTRINE` only for canonical-boundary and projection
+   discipline
 
-If you are implementing higher-order CI/CD:
-1) `draft/DOCTRINE-INF`
-2) `draft/DOCTRINE-SITE`
-   (`draft/DOCTRINE-SITE-INPUT.json` -> generated `draft/DOCTRINE-SITE.json`
-   + generated `draft/DOCTRINE-OP-REGISTRY.json`)
-3) `draft/LLM-INSTRUCTION-DOCTRINE`
-4) `draft/LLM-PROPOSAL-CHECKING`
-5) `raw/PREMATH-CI`
-6) `raw/CI-TOPOS`
-7) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-8) `draft/UNIFICATION-DOCTRINE` (especially §10 and §12)
-9) `raw/TUSK-CORE` + `raw/SQUEAK-CORE`
-10) `raw/SQUEAK-SITE`
+For adjacent sites:
 
-If you are implementing Meta-Harness:
-1) `fish/sites/mh/specs/draft/MH-0000-KERNEL.md`
-2) `fish/sites/mh/specs/draft/MH-0001-HARNESS-SPEC.md` through
-   `fish/sites/mh/specs/draft/MH-0012-ADMITTED-EXPERIENCE-CALCULUS.md`
-3) `draft/PREMATH-KERNEL`
-4) `draft/BIDIR-DESCENT` + `draft/GATE`
-5) `draft/LLM-INSTRUCTION-DOCTRINE`
-6) `draft/LLM-PROPOSAL-CHECKING`
-7) `draft/HARNESS-RUNTIME`
-8) `draft/HARNESS-TYPESTATE`
-9) `draft/HARNESS-RETRY-ESCALATION`
-10) `draft/UNIFICATION-DOCTRINE` (§10 and §12)
+1. Read the adjacent site's own specs first.
+2. Use Premath only where that site explicitly compiles claims to Premath
+   admissibility, gates, witnesses, or replayable receipts.
 
-If you are implementing the adjoints-and-sites overlay:
-1) `draft/PREMATH-KERNEL`
-2) `draft/GATE`
-3) `draft/BIDIR-DESCENT`
-4) `profile/ADJOINTS-AND-SITES` (§11 for CwF<->sig\Pi bridge)
+## 7. Non-Goals
 
-If you are integrating SigPi + Squeak + spans in one system:
-1) `draft/PREMATH-KERNEL`
-2) `draft/BIDIR-DESCENT` + `draft/GATE`
-3) `profile/ADJOINTS-AND-SITES` (§10)
-4) `raw/SQUEAK-CORE` + `raw/SQUEAK-SITE`
-5) `draft/SPAN-SQUARE-CHECKING`
-6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-7) `draft/UNIFICATION-DOCTRINE` (§9 lane separation)
+Premath Core does not own:
 
-If you are implementing multithread worker orchestration:
-1) `draft/UNIFICATION-DOCTRINE` (§9 lane separation; one authority artifact per boundary)
-2) `raw/CTX-SITE` + `raw/SHEAF-STACK` (refinement/cover + glue-or-witness discipline)
-3) `profile/ADJOINTS-AND-SITES` (§10/§11) (when `capabilities.adjoints_sites` is claimed)
-4) `draft/CHANGE-MORPHISMS` + `draft/CAPABILITY-VECTORS`
-   (`capabilities.change_morphisms`)
-5) `raw/SQUEAK-SITE` (only when `capabilities.squeak_site` is claimed)
-6) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-7) operational companion: `docs/design/control-plane/MULTITHREAD-LANE-SITE-ADJOINTS.md`
+- MCP routes or issue mutation flows;
+- CI wrappers or provider workflow details;
+- harness session lifecycle;
+- LLM proposal policy;
+- JWT/JWKS runtime search behavior;
+- Nerve protocol semantics;
+- Atlas site-of-sites machinery;
+- Tusk operator instruments or projections.
 
-If you are implementing the Unified Evidence Plane:
-1) `draft/UNIFICATION-DOCTRINE` (§10, especially §10.6)
-2) `draft/CONTROL-PLANE-CONTRACT.json`
-3) `draft/PREMATH-COHERENCE` + `draft/COHERENCE-CONTRACT.json`
-4) `draft/SPAN-SQUARE-CHECKING`
-5) `profile/ADJOINTS-AND-SITES` + `raw/SQUEAK-SITE` (only when those capabilities are claimed)
-
-## 7. Notes on restrictiveness
-
-- The kernel is intentionally small and closed.
-- Interop is intentionally strict when claimed: it exists to make independent implementations converge.
-- Implementations that do not exchange artifacts (e.g., proof-assistant-internal models) MAY omit
-  interop machinery, and should simply refrain from making the corresponding interop claims.
+Those surfaces may depend on Premath, but they are not Premath Core.

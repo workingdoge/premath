@@ -95,9 +95,9 @@
           "aliasWindowViolation": "unification.evidence_stage2.alias_window_violation",
           "unbound": "unification.evidence_stage2.unbound"
         },
-        "bidirEvidenceRoute": {
+        "coreObligationEvidenceRoute": {
           "routeKind": "direct_checker_discharge",
-          "obligationFieldRef": "bidirCheckerObligations",
+          "obligationFieldRef": "coreObligationCheckerKinds",
           "requiredObligations": [
             "stability",
             "locality",

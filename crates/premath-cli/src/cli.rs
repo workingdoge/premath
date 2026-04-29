@@ -213,6 +213,29 @@ pub enum Commands {
         json: bool,
     },
 
+    /// Check Observation Surface v0 projection invariance
+    ObserveCheck {
+        /// Repository root used to resolve relative inputs
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// CI witness directory
+        #[arg(long, default_value = "artifacts/ciwitness")]
+        ciwitness_dir: String,
+
+        /// Issue memory JSONL path
+        #[arg(long, default_value = ".premath/issues.jsonl")]
+        issues_path: String,
+
+        /// Observation surface JSON path
+        #[arg(long, default_value = "artifacts/observation/latest.json")]
+        surface: String,
+
+        /// Output check result as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Serve Observation Surface v0 as a tiny HTTP read API
     ObserveServe {
         /// Observation surface JSON path
@@ -268,6 +291,79 @@ pub enum Commands {
         /// Repository root used to resolve contract-relative surfaces
         #[arg(long, default_value = ".")]
         repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate promoted draft traceability matrix and authority-class parity
+    TraceabilityCheck {
+        /// Draft spec directory
+        #[arg(long, default_value = "specs/premath/draft")]
+        draft_dir: String,
+
+        /// Traceability matrix markdown path
+        #[arg(long, default_value = "specs/premath/draft/SPEC-TRACEABILITY.md")]
+        matrix: String,
+
+        /// Machine-readable authority map JSON path
+        #[arg(long, default_value = "specs/premath/AUTHORITY-MAP.json")]
+        authority_map: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate capability fixture stubs and invariance pairs
+    ConformanceCheck {
+        /// Capability fixture root
+        #[arg(long, default_value = "tests/conformance/fixtures/capabilities")]
+        fixtures: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate repository command-surface hygiene
+    CommandSurfaceCheck {
+        /// Repository root to scan
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Validate provider pipeline workflow/wrapper wiring against the control-plane contract
+    PipelineWiringCheck {
+        /// Repository root to check
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Control-plane contract JSON path
+        #[arg(
+            long,
+            default_value = "specs/premath/draft/CONTROL-PLANE-CONTRACT.json"
+        )]
+        contract: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Check repository hygiene guardrails for local/private surfaces
+    RepoHygieneCheck {
+        /// Repository root to check
+        #[arg(long, default_value = ".")]
+        repo_root: String,
+
+        /// Optional explicit paths to check; defaults to the tracked git index
+        paths: Vec<String>,
 
         /// Output as JSON
         #[arg(long)]
@@ -364,7 +460,35 @@ pub enum Commands {
     RequiredGateRef {
         /// Input JSON path (`{checkId,artifactRelPath,source?,gatePayload?|fallback?}`)
         #[arg(long)]
-        input: String,
+        input: Option<String>,
+
+        /// Fallback check identifier. Alternative to --input for fallback gate payload emission.
+        #[arg(long)]
+        fallback_check_id: Option<String>,
+
+        /// Fallback executed check exit code. Required with --fallback-check-id.
+        #[arg(long)]
+        fallback_exit_code: Option<i64>,
+
+        /// Fallback projection digest. Required with --fallback-check-id.
+        #[arg(long)]
+        fallback_projection_digest: Option<String>,
+
+        /// Fallback policy digest. Required with --fallback-check-id.
+        #[arg(long)]
+        fallback_policy_digest: Option<String>,
+
+        /// Fallback context ref. Required with --fallback-check-id.
+        #[arg(long)]
+        fallback_ctx_ref: Option<String>,
+
+        /// Fallback data head ref. Required with --fallback-check-id.
+        #[arg(long)]
+        fallback_data_head_ref: Option<String>,
+
+        /// Optional path to write the generated fallback gate payload.
+        #[arg(long)]
+        gate_payload_out: Option<String>,
 
         /// Output as JSON
         #[arg(long)]
@@ -444,6 +568,28 @@ pub enum Commands {
     /// Evaluate deterministic ToolUse/JoinClosed closure state from normalized evidence
     HarnessJoinCheck {
         /// Join-check input JSON path
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Check one normalized work-tracker claim through Premath checker semantics
+    WorkTrackerCheck {
+        /// Work tracker checker input JSON path
+        #[arg(long)]
+        input: String,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Run one toy Gate vector through Premath kernel semantics
+    ToyGateCheck {
+        /// Toy Gate case JSON path
         #[arg(long)]
         input: String,
 

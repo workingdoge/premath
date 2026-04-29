@@ -3636,3 +3636,609 @@ sufficient for this boundary.
   bypass and mapping-row drift.
 - Doctrine/conformance gates retain one runtime checker entrypoint while
   carrying denser boundary evidence for KCIR phase-2 closure.
+
+---
+
+## 2026-05-02 — Decision 0119: Reduce `SPEC-INDEX` to the Premath authority map
+
+### Decision
+Rewrite `draft/SPEC-INDEX.md` as a short scope and authority map:
+
+1. Premath Core is the admissibility kernel plus witness/replay interface.
+2. Interop, control-plane, adjoints/sites, and identity/auth surfaces are
+   profiles or raw material, not Premath Core.
+3. Adjacent sites such as Atlas, Nerve, Tusk, and candidate `work` own their
+   local semantics or instruments; Premath only owns the checker/kernel role.
+4. Mutable phase and issue-status notes are removed from `SPEC-INDEX` and
+   preserved only as a non-normative process snapshot.
+
+### Rationale
+`SPEC-INDEX` had become a roadmap, governance document, integration doctrine,
+implementation tracker, and front door at once. That made Premath look like the
+owner of every adjacent runtime/control surface. The corrected scope is:
+
+```text
+context/site -> definable/claim -> obligation -> gate -> witness -> receipt/replay
+```
+
+### Consequences
+- The front door no longer embeds live issue IDs or implementation phase state.
+- Control-plane and runtime specifics remain available, but are classified as
+  profiles or implementation-facing contracts.
+- Transitional profile maps under `specs/premath/profile/{interop,control-plane,identity}/`
+  make the intended split visible without moving draft files that are still
+  addressed by conformance, traceability, and generated doctrine artifacts.
+- `specs/premath/AUTHORITY-MAP.json` records the same split in
+  machine-readable form, and `SPEC-TRACEABILITY.md` carries an authority-class
+  column checked against that registry.
+- Future cleanup can move or demote overgrown draft specs without changing the
+  Premath Core definition again.
+
+---
+
+## 2026-05-02 — Decision 0120: Retire prose-heavy docs-coherence checker
+
+### Decision
+Remove the standalone docs-coherence checker lane:
+
+1. Delete `tools/conformance/check_docs_coherence.py`.
+2. Delete `tools/conformance/test_docs_coherence.py`.
+3. Remove `docs-coherence-check` from `mise run baseline` and `ci-pipeline-test`.
+4. Keep authority-class and promoted-spec coverage validation in
+   `traceability-check`.
+5. Keep contract/checker drift sentinels in `ci-drift-budget-check` and
+   semantic/control obligations in `coherence-check`.
+
+### Rationale
+The docs-coherence checker was a migration-era guardrail for prose drift. It
+had grown into marker-level assertions over README/design/spec phrasing, which
+made documentation wording part of the executable authority surface. That is
+the opposite of the current boundary: specs and machine contracts carry
+authority; prose docs are projections.
+
+### Consequences
+- The baseline gate is smaller and less prose-fragile.
+- Authority classification remains machine-checked through
+  `specs/premath/AUTHORITY-MAP.json` plus `SPEC-TRACEABILITY.md`.
+- Any future invariant worth keeping must move into a real contract checker,
+  drift-budget sentinel, conformance fixture, or Rust CLI surface rather than a
+  broad docs-to-executable prose scanner.
+
+---
+
+## 2026-05-02 — Decision 0121: Retire `mise` task-runner workflow
+
+### Decision
+Remove `mise` as a repository workflow dependency:
+
+1. Delete `.mise.toml`.
+2. Use `tools/ci/run_task.sh` for local task aliases.
+3. Use `tools/ci/baseline_tasks.json` as the machine-readable baseline
+   composition authority.
+4. Use `python3 tools/ci/run_required_attested.py` as the canonical required
+   decision command surface in `CONTROL-PLANE-CONTRACT.json`.
+5. Keep Nix/direnv as the environment boundary and direct scripts as the gate
+   boundary.
+
+### Rationale
+`mise` was originally useful as a weak-model coordination layer, but it became
+another control plane: docs, hooks, CI, coherence checks, and workflow wrappers
+had to agree with a task-runner file before they could agree with the actual
+Premath checker surfaces. The direct-script boundary is smaller and easier to
+audit.
+
+### Consequences
+- CI workflows no longer install or trust a task runner before executing
+  provider-neutral pipeline wrappers.
+- The coherence checker reads baseline composition from
+  `tools/ci/baseline_tasks.json`, not from a task-runner config.
+- Hook, JJ, pitchfork, and external-runner paths delegate to direct scripts.
+- Historical decision-log references to `mise` remain as history only.
+
+---
+
+## 2026-05-02 — Decision 0122: Split Core obligation discharge from full-profile bidirectional orchestration
+
+### Decision
+Replace `draft/BIDIR-DESCENT` as a promoted Core authority with
+`draft/OBLIGATION-DISCHARGE`, and move full-profile bidirectional verifier
+orchestration to `profile/interop/BIDIR-DESCENT`.
+
+### Rationale
+`BIDIR-DESCENT` had become both a Core obligation/discharge contract and a
+full-profile verifier orchestration document. That made Premath Core appear to
+require normalized comparison, context API details, and profile-specific
+synthesis/checking machinery. Core only needs finite obligation records,
+deterministic discharge, Gate failure-class mapping, and replay invariance.
+
+### Consequences
+- Premath Core authority is now `PREMATH-KERNEL`,
+  `OBLIGATION-DISCHARGE`, `GATE`, `WITNESS-ID`, and `CONFORMANCE` §§1-2.1.
+- Interop Full may still require `profile/interop/BIDIR-DESCENT`, but that
+  requirement is profile-local and does not expand Core.
+- `COHERENCE-CONTRACT.json` now checks Core obligation vocabulary from
+  `draft/OBLIGATION-DISCHARGE.md` anchors.
+- `DOCTRINE-SITE-INPUT.json` and generated doctrine-site artifacts now use
+  `draft/OBLIGATION-DISCHARGE` as the kernel-obligation node.
+
+---
+
+## 2026-05-02 — Decision 0123: Rename Stage 2 Core-obligation evidence surfaces
+
+### Decision
+Rename the remaining Stage 2 machine fields that used `bidir*` terminology
+while referring to Core obligation discharge:
+
+1. `requiredBidirObligations` becomes `requiredCoreObligationKinds`.
+2. `bidirSpec*` surface fields become `coreObligationSpec*`.
+3. `evidenceStage2Authority.bidirEvidenceRoute` becomes
+   `evidenceStage2Authority.coreObligationEvidenceRoute`.
+4. `bidirCheckerObligations` becomes `coreObligationCheckerKinds`.
+
+### Rationale
+After Decision 0122, `BIDIR-DESCENT` is an Interop Full orchestration profile.
+Keeping `bidir*` names on Core obligation checker and Stage 2 authority
+surfaces made the control-plane contract imply that Core still depended on that
+profile. The renamed fields make the authority boundary explicit: Stage 2 checks
+Core obligation evidence, not bidirectional-profile orchestration.
+
+### Consequences
+- Contract, coherence checker, drift-budget checker, fixtures, and capability
+  vectors use Core-obligation terminology at authority boundaries.
+- The `profile/interop/BIDIR-DESCENT` name remains valid for full-profile
+  orchestration.
+- No compatibility alias is introduced for the old field names; this is an
+  internal draft schema cleanup before public stabilization.
+
+---
+
+## 2026-05-02 — Decision 0124: Move traceability authority check into Premath CLI
+
+### Decision
+Replace the Python traceability checker with a native Premath CLI command:
+
+1. Add `premath traceability-check`.
+2. Route `sh tools/ci/run_task.sh traceability-check` through that CLI command.
+3. Delete `tools/conformance/check_spec_traceability.py`.
+4. Remove the empty `py-setup` baseline step and avoid Python for baseline task
+   expansion.
+
+### Rationale
+Traceability is part of Premath's promoted authority surface: it checks
+`SPEC-TRACEABILITY.md`, `AUTHORITY-MAP.json`, and the promoted draft spec set.
+Keeping that check in Python preserved a second checker stack after Premath had
+already grown native checker surfaces. The Python setup step was also empty and
+made baseline look Python-dependent even when no third-party Python dependencies
+exist.
+
+### Consequences
+- Authority-index parity now composes with the Premath CLI.
+- The baseline no longer has a Python dependency setup stage.
+- Python remains only for remaining CI/helper/conformance surfaces that have
+  not yet been migrated or deleted; those are follow-up shrink lanes, not
+  authority-index blockers.
+
+---
+
+## 2026-05-02 — Decision 0125: Move small CI hygiene guards into Premath CLI
+
+### Decision
+Replace two standalone Python CI guard scripts with native Premath CLI commands:
+
+1. Add `premath command-surface-check`.
+2. Add `premath ci-wiring-check`.
+3. Route `sh tools/ci/run_task.sh ci-command-surface-check` and
+   `sh tools/ci/run_task.sh ci-wiring-check` through those CLI commands.
+4. Delete `tools/ci/check_command_surface.py` and
+   `tools/ci/check_ci_wiring.py`.
+
+### Rationale
+These checks are small deterministic repository-boundary guards. Keeping them
+as Python scripts preserved avoidable second-stack checker code after the
+baseline had already moved to direct shell task dispatch and native Premath
+checker commands.
+
+### Consequences
+- Command-surface and workflow-wiring guardrails now compose with the Premath
+  CLI instead of a Python helper.
+- The remaining Python layer is concentrated in larger CI pipelines,
+  conformance vector runners, and compatibility wrappers that require separate
+  migration or deletion decisions.
+
+---
+
+## 2026-05-02 — Decision 0126: Move capability fixture conformance check into Premath CLI
+
+### Decision
+Replace the Python capability fixture stub/invariance checker with a native
+Premath CLI command:
+
+1. Add `premath conformance-check`.
+2. Route `sh tools/ci/run_task.sh conformance-check` through that CLI command.
+3. Delete `tools/conformance/check_stub_invariance.py`.
+4. Update traceability and doctrine operation path references to the native CLI
+   checker implementation.
+
+### Rationale
+Capability fixture membership and invariance-pair validation are conformance
+authority checks, not ad hoc scripting concerns. Moving the check into the
+Premath CLI keeps the baseline checker stack narrower and avoids preserving a
+Python-only conformance gate beside the native kernel/checker implementation.
+
+### Consequences
+- `conformance-check` now composes with the Premath CLI.
+- Remaining Python conformance code is concentrated in executable vector
+  runners and suite orchestration, which are larger migration lanes.
+
+---
+
+## 2026-05-02 — Decision 0127: Move provider pipeline wiring check into Premath CLI
+
+### Decision
+Replace the Python provider pipeline wiring checker with a native Premath CLI
+command:
+
+1. Add `premath pipeline-wiring-check`.
+2. Route `sh tools/ci/run_task.sh ci-pipeline-check` through that command.
+3. Delete `tools/ci/check_pipeline_wiring.py` and
+   `tools/ci/test_pipeline_wiring.py`.
+4. Update the baseline workflow to call the task wrapper instead of the deleted
+   Python checker directly.
+
+### Rationale
+Provider pipeline wiring is already declared in
+`CONTROL-PLANE-CONTRACT.json`. The checker only needs deterministic
+contract-to-file parity over workflows and wrapper source markers, so keeping a
+standalone Python authority checker created another duplicate control-plane
+surface.
+
+### Consequences
+- `ci-pipeline-check` now composes with the Premath CLI.
+- The remaining Python pipeline files are execution wrappers, not the checker
+  for provider pipeline wiring itself.
+
+---
+
+## 2026-05-02 — Decision 0128: Remove redundant baseline-only CI wiring lane
+
+### Decision
+Remove the separate `ci-wiring-check` task and `premath ci-wiring-check`
+command after `premath pipeline-wiring-check` became the provider workflow
+wiring authority.
+
+### Rationale
+The old `ci-wiring-check` only checked the required-gate workflow command.
+`pipeline-wiring-check` checks both provider workflows and their contract-bound
+wrapper source markers from `providerPipelineWrappers`, so keeping both lanes
+created redundant CI topology.
+
+### Consequences
+- Baseline has one provider workflow wiring lane: `ci-pipeline-check`.
+- Historical instruction envelopes may still request `ci-wiring-check`; the task
+  wrapper treats it as a deprecated compatibility alias that delegates to
+  `ci-pipeline-check`, not as a separate checker authority.
+
+---
+
+## 2026-05-02 — Decision 0129: Remove Python issue/repository hygiene gates
+
+### Decision
+Replace the remaining Python issue/repository hygiene gates with native Premath
+surfaces:
+
+1. Add `premath repo-hygiene-check`.
+2. Move issue-graph compactness drift checks into `premath-bd` and expose them
+   through `premath issue check`.
+3. Route `sh tools/ci/run_task.sh ci-hygiene-check` through the two native
+   commands.
+4. Delete `tools/ci/check_repo_hygiene.py`, `tools/ci/check_issue_graph.py`,
+   `tools/ci/compact_issue_graph.py`, and their Python tests.
+
+### Rationale
+Issue-memory semantics already belong to `premath-bd`; Python wrappers were
+duplicating authority and making the hygiene gate harder to compose with the
+Premath checker stack. Repository hygiene is a small deterministic guard and
+does not need a standalone Python surface.
+
+### Consequences
+- Compactness drift is now part of the canonical issue-graph check.
+- `ci-hygiene-check` remains the operator-facing task, but its implementation is
+  native.
+- Compactness remediation should use explicit `premath dep remove` calls rather
+  than a separate mutation helper.
+
+---
+
+## 2026-05-03 — Decision 0130: Use native instruction-check for envelope validation
+
+### Decision
+Replace the Python instruction-envelope validation wrapper with the native
+Premath CLI command:
+
+1. Make `cargo run --package premath-cli -- instruction-check --instruction`
+   the `instructionEnvelopeCheck.canonicalEntrypoint` in
+   `CONTROL-PLANE-CONTRACT.json`.
+2. Route `sh tools/ci/run_task.sh ci-instruction-check` through native
+   `premath instruction-check`.
+3. Delete `tools/ci/check_instruction_envelope.py` and
+   `tools/ci/test_instruction_envelope_check.py`.
+
+### Rationale
+Instruction envelope semantics are already implemented in the Premath checker
+stack. Keeping a Python wrapper as the canonical command surface preserved an
+extra control-plane entrypoint without adding authority.
+
+### Consequences
+- Provider instruction pipelines still validate envelopes before execution.
+- The command-surface contract now points directly at the native checker.
+- The remaining Python instruction pipeline code is orchestration/execution
+  glue, not envelope-validation authority.
+
+---
+
+## 2026-05-03 — Decision 0131: Move observation projection check into Premath CLI
+
+### Decision
+Replace the Python observation projection-invariance checker with a native
+Premath CLI command:
+
+1. Add `premath observe-check`.
+2. Route `sh tools/ci/run_task.sh ci-observation-check` through
+   `premath observe-build` followed by `premath observe-check`.
+3. Delete `tools/ci/check_observation_semantics.py`.
+
+### Rationale
+Observation Surface v0 is already projected by the native Premath stack. The
+remaining Python checker only rebuilt the surface and compared it with the
+tracked output, so keeping it as a separate semantic guard preserved an
+unnecessary duplicate checker surface.
+
+### Consequences
+- Observation projection invariance is now checked natively.
+- `ci-observation-test` still exercises the Python compatibility/query wrapper
+  until that larger reducer/query test lane is migrated or deleted separately.
+- The Python CI layer shrinks further toward orchestration and compatibility
+  only.
+
+---
+
+## 2026-05-03 — Decision 0132: Remove Python observation compatibility wrapper
+
+### Decision
+Delete the Python Observation Surface compatibility wrapper and route the
+observation reducer/query test lane through native Premath tests:
+
+1. Delete `tools/ci/observation_surface.py`.
+2. Delete `tools/ci/test_observation_surface.py`.
+3. Route `sh tools/ci/run_task.sh ci-observation-test` through
+   `premath-surreal`, `premath-ux`, and `premath-cli` observation tests.
+
+### Rationale
+Observation projection, query, and invariance semantics now live in the native
+Premath stack. The Python wrapper had become a parallel compatibility surface
+around `premath observe-build`/`premath observe` without owning distinct
+semantics.
+
+### Consequences
+- Observation Surface reducer/query coverage stays native.
+- The Python CI layer loses another compatibility-only surface.
+- `premath observe-build`, `premath observe`, and `premath observe-check` are
+  the canonical Observation Surface command surfaces.
+
+---
+
+## 2026-05-03 — Decision 0133: Delete obsolete gate witness envelope helper
+
+### Decision
+Delete `tools/ci/gate_witness_envelope.py`.
+
+### Rationale
+Fallback required-gate witness material is now built through
+`premath required-gate-ref` via `tools/ci/emit_gate_witness.py`. The old helper
+module no longer participates in the execution path and was only imported by a
+unit test for a small canonical-hash helper.
+
+### Consequences
+- Gate witness fallback execution continues to route through the native
+  required-gate-ref semantics.
+- The required-witness lineage unit test keeps its local fixture hash helper.
+- The Python CI layer loses one obsolete module.
+
+---
+
+## 2026-05-03 — Decision 0134: Delete orphan verify-decision wrapper test
+
+### Decision
+Delete `tools/ci/test_verify_decision.py`.
+
+### Rationale
+The test was no longer wired into `sh tools/ci/run_task.sh ci-pipeline-test`.
+The relevant typed-authority validation is covered at the shared
+`required_decision_verify_client` boundary, which calls the native
+`premath required-decision-verify` checker.
+
+### Consequences
+- No canonical gate loses coverage.
+- `tools/ci/verify_decision.py` remains as the provider-neutral pipeline
+  wrapper.
+- The Python CI test surface loses one stale, unowned test file.
+
+---
+
+## 2026-05-03 — Decision 0135: Move fallback gate witness emission into required-gate-ref
+
+### Decision
+Delete `tools/ci/emit_gate_witness.py` and route fallback gate witness emission
+through the existing native `premath required-gate-ref` command.
+
+### Rationale
+Fallback gate witness construction is already part of the native required-gate
+reference semantics. Keeping a Python wrapper solely to construct the request
+and write `gatePayload` preserved an unnecessary execution adapter.
+
+### Consequences
+- `tools/ci/run_gate.sh` now calls `premath required-gate-ref` directly for
+  fallback gate payload emission.
+- `premath required-gate-ref` accepts direct fallback arguments and can write
+  the generated fallback gate payload.
+- The Python CI layer loses another checker-adjacent wrapper.
+
+---
+
+## 2026-05-05 — Decision 0136: Remove ci-project compatibility wrapper
+
+### Decision
+Delete `tools/ci/project_checks.py` and remove the `ci-project` task alias.
+
+### Rationale
+Projection semantics are native in `premath required-projection` and delta
+detection semantics are native in `premath required-delta`. The `ci-project`
+alias was not part of the baseline and preserved a second convenience command
+surface around the same semantics.
+
+### Consequences
+- Projection inspection should call `premath required-projection` directly.
+- CI execution continues to use `tools/ci/run_required_checks.py`, whose
+  projection and delta adapters already delegate to the native checker commands.
+- The Python CI layer loses one compatibility-only command surface.
+
+---
+
+## 2026-05-05 — Decision 0137: Remove GitHub branch-policy governance checker
+
+### Decision
+Delete the Premath-local GitHub branch/ruleset policy checker, its live workflow,
+tracked policy artifact, and branch-policy fixtures.
+
+### Rationale
+Repository branch protection is forge governance, not Premath admissibility or
+checker semantics. Keeping a Python live-API checker in the Premath baseline
+kept a non-semantic ops surface inside the core repo while the canonical CI
+contract already binds to the provider-neutral `ci-required` status check.
+
+### Consequences
+- `sh tools/ci/run_task.sh baseline` no longer includes
+  `ci-branch-policy-check`.
+- `.github/workflows/branch-policy.yml` and `PREMATH_BRANCH_POLICY_TOKEN` are no
+  longer active Premath surfaces.
+- Forge branch-protection administration remains an external repository
+  operation rather than a Premath checker contract.
+
+---
+
+## 2026-05-05 — Decision 0138: Remove MCP process lifecycle helper
+
+### Decision
+Delete `tools/ops/mcp_serve_lifecycle.py` and remove the `mcp-serve-status`,
+`mcp-serve-stop`, and `mcp-serve-restart` task aliases.
+
+### Rationale
+The native `premath mcp-serve` command is the only active MCP surface. The
+Python lifecycle helper was process-management convenience around local shells,
+not checker semantics, conformance evidence, or provider-neutral CI behavior.
+
+### Consequences
+- `sh tools/ci/run_task.sh mcp-serve` remains the supported local MCP server
+  entrypoint.
+- Repo-local process cleanup is an operator concern outside Premath's checker
+  contract.
+- The Python ops surface loses one convenience-only module.
+
+---
+
+## 2026-05-05 — Decision 0139: Remove standalone GitHub env export adapter
+
+### Decision
+Delete `tools/ci/providers/export_github_env.py` and the provider-adapter README.
+
+### Rationale
+Provider ref mapping is already applied inside the provider-neutral required and
+instruction pipelines before strict delta verification. Keeping a separate
+GitHub `GITHUB_ENV` export script preserved an old workflow step surface that
+the workflow checker already treats as forbidden legacy wiring.
+
+### Consequences
+- `.github/workflows/*.yml` continue to call only provider-neutral pipeline
+  entrypoints.
+- `tools/ci/provider_env.py` remains as the shared mapping library used by the
+  pipelines and conformance vectors.
+- The Python CI surface loses one unused provider adapter script.
+
+---
+
+## 2026-05-05 — Decision 0140: Inline toy proof-scheme helper
+
+### Decision
+Delete `tools/proof_schemes.py` and inline the deterministic toy
+`toy.enumerate.v1` scheme identifier in the toy/KCIR adapters that use it.
+
+### Rationale
+The helper was not an executable surface or Premath contract. It only derived a
+single tooling-local SHA-256 label for non-normative toy fixtures.
+
+### Consequences
+- Toy and KCIR toy fixture behavior remains byte-identical for
+  `toy.enumerate.v1`.
+- The root `tools/` Python surface loses one helper module.
+
+---
+
+## 2026-05-05 — Decision 0141: Fold required witness verification helper into client
+
+### Decision
+Delete `tools/ci/required_witness.py` and move its
+`verify_required_witness_payload` helper into
+`tools/ci/required_witness_verify_client.py`.
+
+### Rationale
+`required_witness.py` was not the required-witness builder; it was a thin
+verification adapter around the native `premath required-witness-verify`
+command. Keeping a separate module made the CI Python surface look larger than
+the actual boundary.
+
+### Consequences
+- `tools/ci/verify_required_witness.py`, capability vectors, and lineage tests
+  call the shared verify client directly.
+- Native required-witness construction remains owned by
+  `premath required-witness`.
+- The Python CI layer loses one redundant adapter module.
+
+---
+
+## 2026-05-05 — Decision 0142: Remove harness KPI reporting script
+
+### Decision
+Delete `tools/harness/benchmark_kpi.py` and remove the `harness-kpi-report`
+task alias.
+
+### Rationale
+KPI reporting is an operational projection over harness trajectory rows, not a
+Premath checker surface or baseline conformance gate. Keeping it in Premath made
+the harness/control-plane profile look larger than the active checker boundary.
+
+### Consequences
+- Harness worker/coordinator loop surfaces remain unchanged.
+- KPI/reporting views should live downstream or in an operator dashboard if
+  needed.
+- The Python harness surface loses one optional reporting command.
+
+---
+
+## 2026-05-05 — Decision 0143: Demote harness worker loop from Premath
+
+### Decision
+Delete `tools/harness/multithread_loop.py`, its unit test, and the
+`harness-worker-loop` / `harness-coordinator-loop` task aliases.
+
+### Rationale
+The coordinator/worker loop is runtime orchestration over issue memory and
+harness projection commands. It is not Premath admissibility, witness/replay
+law, or a checker-owned conformance surface. Keeping the loop in Premath made
+the control-plane profile look like Premath owned worker scheduling.
+
+### Consequences
+- Premath keeps native issue, dependency, harness-session, harness-feature, and
+  harness-trajectory commands as projection/checker-adjacent surfaces.
+- Concrete worker/coordinator loops should live in Tusk or another downstream
+  operator site.
+- The Python harness surface loses the remaining orchestration loop module.

@@ -11,7 +11,7 @@ import os
 import sys
 from typing import Any, Dict
 
-from toy_gate_check import run_case
+from toy_gate_client import run_case
 
 
 def _load(path: str) -> Any:

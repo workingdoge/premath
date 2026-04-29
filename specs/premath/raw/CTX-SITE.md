@@ -40,7 +40,7 @@ It does not change normative kernel or Gate authority:
 
 - `draft/PREMATH-KERNEL`
 - `draft/GATE`
-- `draft/BIDIR-DESCENT`
+- `draft/OBLIGATION-DISCHARGE`
 - `draft/PREMATH-COHERENCE`
 
 ## 2. Runtime entities (existing surfaces)

@@ -36,7 +36,7 @@ This specification defines a typed coherence artifact and checker surface for
 repository-level control-plane consistency.
 
 The checker is not a replacement for kernel authority (`draft/PREMATH-KERNEL`,
-`draft/GATE`, `draft/BIDIR-DESCENT`). It is a deterministic adapter that:
+`draft/OBLIGATION-DISCHARGE`, `draft/GATE`). It is a deterministic adapter that:
 
 1. compiles repository coherence claims into finite obligations,
 2. discharges those obligations against declared operational/doc surfaces, and
@@ -94,14 +94,14 @@ Minimum checks:
 - capability-scoped conditional normativity clauses in `draft/SPEC-INDEX`
   remain coherent,
 - informative fallback clause remains present,
-- bidirectional checker surface stays aligned with `draft/BIDIR-DESCENT`
+- obligation/discharge surface stays aligned with `draft/OBLIGATION-DISCHARGE`
   obligation vocabulary for the required set declared in the contract, sourced
   from kernel authority registry export (`premath obligation-registry --json`),
 - this spec's required obligation list in §3 stays aligned with the executable
   required obligation set used by `premath coherence-check`.
 
-The bidirectional checker alignment is a parity check over obligation kinds; it
-does not authorize or alter discharge semantics.
+The Core obligation checker alignment is a parity check over obligation kinds;
+it does not authorize or alter discharge semantics.
 
 ### 4.2 `capability_parity`
 
@@ -121,7 +121,7 @@ MUST reject when documented gate chain surfaces drift from executable sources.
 
 Minimum parity set includes:
 
-- baseline task composition parity (`.mise.toml` vs CI closure docs),
+- baseline task composition parity (`tools/ci/baseline_tasks.json` vs CI closure docs),
 - deterministic projected check ID parity (`draft/CONTROL-PLANE-CONTRACT.json`
   required-gate projection order vs CI closure docs),
 - shared control-plane witness/policy identifiers are present and well-formed
@@ -315,7 +315,7 @@ MAY be used as bridge inputs to semantic obligations (`stability`, `locality`,
 This bridge is vocabulary-preserving:
 
 - checker obligations remain `cwf_*` only in this spec,
-- semantic adjoint/site obligations remain in `draft/BIDIR-DESCENT` and
+- semantic adjoint/site obligations remain in `draft/OBLIGATION-DISCHARGE` and
   `profile/ADJOINTS-AND-SITES`,
 - bridge routing MUST NOT introduce new coherence obligation IDs.
 
@@ -361,17 +361,18 @@ The canonical checker command surface is:
 
 Repository task wrapper:
 
-- `mise run coherence-check`
+- `sh tools/ci/run_task.sh coherence-check`
 
-## 8. Relationship to Kernel and BIDIR
+## 8. Relationship to Kernel and Obligation Discharge
 
 This checker does not synthesize or discharge semantic Gate obligations over
 Premath terms. It validates coherence of repository control-plane surfaces.
 
-`draft/BIDIR-DESCENT` remains the authority for synthesis/checking/discharge of
-semantic obligations.
+`draft/OBLIGATION-DISCHARGE` remains the authority for Core semantic obligation
+discharge. Full-profile synthesis/checking orchestration lives in
+`profile/interop/BIDIR-DESCENT`.
 
-The coherence checker may verify that bidirectional checker operation surfaces
+The coherence checker may verify that Core obligation checker operation surfaces
 remain vocabulary-aligned; this is consistency checking, not semantic
 admissibility.
 
@@ -403,7 +404,7 @@ checker semantics out of Python surfaces and into the Rust
 During and after migration:
 
 - semantic admissibility authority MUST remain in
-  `draft/PREMATH-KERNEL` + `draft/GATE` + `draft/BIDIR-DESCENT`,
+  `draft/PREMATH-KERNEL` + `draft/OBLIGATION-DISCHARGE` + `draft/GATE`,
 - control-plane checker semantics MAY live in `premath-coherence` (or successor
   checker crates),
 - CI execution/attestation semantics MUST remain in

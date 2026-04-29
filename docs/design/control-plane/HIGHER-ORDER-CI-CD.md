@@ -17,9 +17,9 @@ Implemented in this repo:
   `proj1_*.json`, summary digest row)
 - instruction-envelope gate path via `.github/workflows/instruction.yml` ->
   `python3 tools/ci/pipeline_instruction.py --instruction "$INSTRUCTION_PATH"`
-  (local equivalent: `mise run ci-pipeline-instruction`)
-- optional local orchestration via `pitchfork.toml` + `mise run pf-*` tasks
-- optional infra provisioning scaffold via `mise run infra-up|infra-down|ci-check-tf`
+  (local equivalent: `sh tools/ci/run_task.sh ci-pipeline-instruction`)
+- optional local orchestration via `pitchfork.toml` + `sh tools/ci/run_task.sh pf-*` tasks
+- optional infra provisioning scaffold via `sh tools/ci/run_task.sh infra-up|infra-down|ci-check-tf`
 - doctrine-to-operation site map and checker:
   `specs/premath/draft/DOCTRINE-SITE.{md,json}` +
   `python3 tools/conformance/check_doctrine_site.py` +
@@ -56,7 +56,7 @@ This repository already has the right split:
 - runtime-location site plane: Squeak site contracts (`specs/premath/raw/SQUEAK-SITE.md`)
 - context/lineage plane: `jj` (`premath-jj`, `ctx_ref`)
 - data plane: `bd`/JSONL (+ optional query projection like surreal)
-- gate execution plane: `hk` + `mise` + CI runner backend
+- gate execution plane: `hk` + direct CI scripts + CI runner backend
 - infra provisioning plane: Terraform/OpenTofu profile (`tools/infra/terraform`)
 
 `hk`/CI runners execute checks; they do not define semantic admissibility.
@@ -66,22 +66,22 @@ This repository already has the right split:
 Current shape:
 
 - local fast loop: `jj gate-fast` (delegates to `hk fix` profile)
-- local required closure: `jj gate-check` (delegates to `hk check` -> `mise run ci-required`)
+- local required closure: `jj gate-check` (delegates to `hk check` -> `sh tools/ci/run_task.sh ci-required`)
 - optional staged-flow gate: `jj gate-pre-commit` (Git index semantics)
-- canonical projected gate entrypoint: `mise run ci-required` (`tools/ci/run_required_checks.py`)
+- canonical projected gate entrypoint: `sh tools/ci/run_task.sh ci-required` (`tools/ci/run_required_checks.py`)
   - computes `Delta -> requiredChecks` deterministically before execution
   - emits single-source strict-compare snapshot: `artifacts/ciwitness/latest-delta.json`
   - executes each required check through `tools/ci/run_gate.sh`
-- canonical witness verifier: `mise run ci-verify-required`
+- canonical witness verifier: `sh tools/ci/run_task.sh ci-verify-required`
   (`tools/ci/verify_required_witness.py`)
-  - strict CI mode: `mise run ci-verify-required-strict` (`--compare-delta`)
+  - strict CI mode: `sh tools/ci/run_task.sh ci-verify-required-strict` (`--compare-delta`)
   - strict mode refs are provider-neutral:
     `PREMATH_CI_BASE_REF`, `PREMATH_CI_HEAD_REF`
   - phase-in native requirement:
-    `mise run ci-verify-required-strict-native` (`--require-native-check ...`)
-- canonical decision surface: `mise run ci-decide-required`
+    `sh tools/ci/run_task.sh ci-verify-required-strict-native` (`--require-native-check ...`)
+- canonical decision surface: `sh tools/ci/run_task.sh ci-decide-required`
   (`tools/ci/decide_required.py`) -> deterministic `accept|reject`
-- canonical decision-attestation verifier: `mise run ci-verify-decision`
+- canonical decision-attestation verifier: `sh tools/ci/run_task.sh ci-verify-decision`
   (`tools/ci/verify_decision.py`)
 - default profile: `PREMATH_SQUEAK_SITE_PROFILE=local`
   - optional external profile:
@@ -92,14 +92,14 @@ Current shape:
   `python3 tools/ci/pipeline_required.py`
   (the script maps provider refs, runs the attested chain, and emits summary/digests)
   - provider binding details are documented in `CI-PROVIDER-BINDINGS.md`
-- optional infra-provisioned gate: `mise run ci-check-tf`
+- optional infra-provisioned gate: `sh tools/ci/run_task.sh ci-check-tf`
   - default infra runner profile: `local`
   - experimental runtime profile: `darwin_microvm_vfkit` (microvm.nix + vfkit)
 - optional local orchestration runtime: `pitchfork` (`pitchfork.toml`)
-  - `docs-preview` on-demand (`mise run pf-start`)
-  - optional closure loop (`mise run pf-gate-loop-start`, then every 30m)
+  - `docs-preview` on-demand (`sh tools/ci/run_task.sh pf-start`)
+  - optional closure loop (`sh tools/ci/run_task.sh pf-gate-loop-start`, then every 30m)
 
-This gives one gate surface (`hk`/`mise`) with multiple trigger surfaces
+This gives one gate surface (`hk`/direct scripts) with multiple trigger surfaces
 (JJ aliases, Git hooks, CI backend) and multiple execution substrates
 (local host, external runner).
 `pitchfork` can host scheduled/background execution without changing gate semantics.

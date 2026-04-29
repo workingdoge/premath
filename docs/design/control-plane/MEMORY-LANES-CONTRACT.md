@@ -8,6 +8,15 @@ Scope: design-level, non-normative
 Define one operational memory model with explicit lane ownership so agent work
 state stays coherent across CLI/MCP/CI/docs surfaces.
 
+Topology note:
+
+- `ATLAS.md` is the site-of-sites staging note for cross-repo covers and
+  authority boundaries.
+- `TOPOLOGY-V2.md` is the shape-first placement companion for this contract.
+- This document describes the current operational memory lanes.
+- It does not make graph-shaped issue memory the final ontology for future
+  simplex-native tracker work.
+
 Principle:
 
 - minimum canonical encoding,
@@ -18,8 +27,8 @@ Principle:
 | Lane | Authority owner | Canonical substrate | Deterministic query/projection surface | Primary consumers |
 | --- | --- | --- | --- | --- |
 | issue graph lane | `premath-bd` core semantics (`issue/dep` operations) | `.premath/issues.jsonl` (and replay/event projections derived from it) | `premath issue list`, `premath issue ready`, `premath issue blocked`, `premath issue check`, `premath issue backend-status`, `premath dep diagnostics --graph-scope active|full`; MCP `issue_list`, `issue_ready`, `issue_check`, `issue_backend_status`, `dep_diagnostics` | harness boot/step planning, retry/escalation mutation paths, CI hygiene checks |
-| operations lane | operator conventions and rollout evidence (non-semantic authority) | `.premath/OPERATIONS.md` | stable markdown row projection by UTC-date rows (`rg '^\| [0-9]{4}-[0-9]{2}-[0-9]{2} ' .premath/OPERATIONS.md`) plus section anchors | operators, governance audits, branch-policy/release operations |
-| doctrine/decision lane | spec + policy authority | `specs/premath/*`, `specs/process/decision-log.md` | `mise run doctrine-check`, `mise run traceability-check`, `mise run docs-coherence-check`, deterministic decision-log section anchors | checker/coherence contract evolution, capability/lifecycle governance |
+| operations lane | operator conventions and rollout evidence (non-semantic authority) | `.premath/OPERATIONS.md` | stable markdown row projection by UTC-date rows (`rg '^\| [0-9]{4}-[0-9]{2}-[0-9]{2} ' .premath/OPERATIONS.md`) plus section anchors | operators, governance audits, release operations |
+| doctrine/decision lane | spec + policy authority | `specs/premath/*`, `specs/process/decision-log.md` | `sh tools/ci/run_task.sh doctrine-check`, `sh tools/ci/run_task.sh traceability-check`, `sh tools/ci/run_task.sh ci-drift-budget-check`, deterministic decision-log section anchors | checker/coherence contract evolution, capability/lifecycle governance |
 
 ## 3. Lane glue rules
 
@@ -90,5 +99,5 @@ Do not write here:
 - `cargo run --package premath-cli -- issue check --issues .premath/issues.jsonl --json`
 - `cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --graph-scope active --json`
 - `cargo run --package premath-cli -- dep diagnostics --issues .premath/issues.jsonl --graph-scope full --json`
-- `mise run docs-coherence-check`
-- `mise run ci-hygiene-check`
+- `sh tools/ci/run_task.sh ci-drift-budget-check`
+- `sh tools/ci/run_task.sh ci-hygiene-check`

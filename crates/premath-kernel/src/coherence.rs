@@ -15,7 +15,17 @@
 /// what counts as "the same definable," when overlaps are compatible, whether
 /// descent is contractible — depends on V.
 #[derive(
-    Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, serde::Serialize, serde::Deserialize,
+    Debug,
+    Clone,
+    Copy,
+    Default,
+    PartialEq,
+    Eq,
+    PartialOrd,
+    Ord,
+    Hash,
+    serde::Serialize,
+    serde::Deserialize,
 )]
 #[serde(rename_all = "snake_case")]
 pub enum CoherenceLevel {
@@ -24,6 +34,7 @@ pub enum CoherenceLevel {
     /// Two definables are the same iff their content hashes match exactly.
     /// Overlap compatibility requires identical dependency types.
     /// This is the strictest level and the default for deterministic agents.
+    #[default]
     Set,
 
     /// V = Gpd. Sameness is isomorphism.
@@ -47,12 +58,6 @@ impl CoherenceLevel {
     /// Set < Gpd < S∞ in permissiveness.
     pub fn subsumes(self, other: Self) -> bool {
         self >= other
-    }
-}
-
-impl Default for CoherenceLevel {
-    fn default() -> Self {
-        Self::Set
     }
 }
 

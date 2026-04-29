@@ -133,7 +133,7 @@
       "semanticAuthority": [
         "PREMATH-KERNEL",
         "GATE",
-        "BIDIR-DESCENT"
+        "OBLIGATION-DISCHARGE"
       ],
       "controlPlaneRole": "projection_and_parity_only",
       "forbiddenControlPlaneRoles": [
@@ -570,22 +570,20 @@
   "commandSurface": {
     "requiredDecision": {
       "canonicalEntrypoint": [
-        "mise",
-        "run",
-        "ci-required-attested"
+        "python3",
+        "tools/ci/run_required_attested.py"
       ],
-      "compatibilityAliases": [
-        [
-          "mise",
-          "run",
-          "ci-check"
-        ]
-      ]
+      "compatibilityAliases": []
     },
     "instructionEnvelopeCheck": {
       "canonicalEntrypoint": [
-        "python3",
-        "tools/ci/check_instruction_envelope.py"
+        "cargo",
+        "run",
+        "--package",
+        "premath-cli",
+        "--",
+        "instruction-check",
+        "--instruction"
       ],
       "compatibilityAliases": []
     },
@@ -746,9 +744,9 @@
       "role": "projection_only",
       "supportUntilEpoch": "2026-06"
     },
-    "bidirEvidenceRoute": {
+    "coreObligationEvidenceRoute": {
       "routeKind": "direct_checker_discharge",
-      "obligationFieldRef": "bidirCheckerObligations",
+      "obligationFieldRef": "coreObligationCheckerKinds",
       "requiredObligations": [
         "stability",
         "locality",

@@ -2,7 +2,7 @@
 slug: draft
 shortname: CONFORMANCE
 title: workingdoge.com/premath/CONFORMANCE
-name: Conformance and Test Vectors (claims + interop profiles)
+name: Conformance and Claim Registry
 status: draft
 category: Standards Track
 tags:
@@ -35,8 +35,15 @@ Premath is **host-agnostic**. The kernel (`draft/PREMATH-KERNEL`) specifies sema
 (reindexing coherence + contractible descent + refinement invariance) but does not mandate
 a single implementation architecture.
 
-This document defines **conformance claims** and the **canonical vector suites** for claims
-that exchange deterministic artifacts (the “Interop” profiles).
+This document defines **conformance claims** and the **canonical vector suites**
+for claims that exchange deterministic artifacts.
+
+Core boundary:
+
+- Section 2.1 defines the explicit Premath Core claim and the narrower
+  Premath Kernel claim.
+- Sections 2.2 and later define profile/capability claims. Those claims are
+  normative only when explicitly asserted and do not expand Premath Core.
 
 Conformance is established by **running code**: passing canonical test vectors, for the
 Interop profiles described below.
@@ -49,12 +56,55 @@ Spec-level coverage tracking for promoted draft specs is maintained in
 An implementation MAY claim any of the following. It MUST satisfy the requirements of every
 claim it asserts.
 
-### 2.1 Kernel claim (semantic)
+### 2.0 Claim tokens
+
+Conformance claims have both a human-readable claim string and a canonical
+machine token. Any witness, Gate output, or replay artifact that records a
+claimed boundary MUST use the canonical claim token.
+
+| Human claim | Canonical claim token |
+| --- | --- |
+| `Conforms to Premath Core` | `premath.core.v0` |
+| `Conforms to Premath Kernel` | `premath.kernel.v0` |
+| `Conforms to Premath Interop Core` | `premath.interop-core.v0` |
+| `Conforms to Premath Interop Full` | `premath.interop-full.v0` |
+| Governance flywheel preservation profile | `profile.doctrine_inf_governance.v0` |
+
+### 2.1 Core and Kernel claims
+
+- `Conforms to Premath Core`
+
+This claim means the implementation exposes the minimal admissibility spine:
+kernel laws, obligation/discharge, Gate verdicts, deterministic witnesses, and
+replayable boundary behavior.
+
+A `Premath Core` conforming implementation MUST:
+
+1. satisfy the semantic laws in `draft/PREMATH-KERNEL` for its declared
+   host/model,
+2. expose deterministic `accepted`/`rejected` Gate outcomes per `draft/GATE`,
+3. emit deterministic witness IDs per `draft/WITNESS-ID` for rejected checks,
+4. preserve kernel verdict and Gate failure class under replay at exposed
+   boundaries, and
+5. implement the Core obligation/discharge interface in
+   `draft/OBLIGATION-DISCHARGE`, or deterministically reject unsupported
+   obligation forms.
+
+A `Premath Core` implementation MUST support the base obligation classes for
+any boundary where it accepts admissibility judgments. It MAY deterministically
+reject unsupported optional obligation forms or unsupported host/model
+surfaces, but it MUST NOT claim Core for a boundary whose accepted judgments
+bypass stability, locality, descent existence, or contractible-gluing checks.
+
+Core conformance does not imply any optional interop, control-plane, raw, or
+identity profile claim.
 
 - `Conforms to Premath Kernel`
 
-This claim means the implementation’s chosen model/host satisfies the semantic laws in
-`draft/PREMATH-KERNEL`.
+This narrower semantic claim means the implementation's chosen model/host
+satisfies the semantic laws in `draft/PREMATH-KERNEL`. It is not a substitute
+for `Conforms to Premath Core`, because it does not by itself claim Gate,
+obligation/discharge, or witness/replay behavior.
 
 This bundle does not standardize a universal host-independent proof artifact for the kernel
 claim alone. Implementations SHOULD substantiate kernel conformance by one of:
@@ -113,7 +163,7 @@ When this profile claim is asserted, §9 requirements in `draft/DOCTRINE-INF`
 are normative for the claiming surface and MUST be validated through doctrine
 conformance vectors.
 
-## 3. Required behavior (Interop)
+## 3. Required behavior (profiles and capabilities)
 
 ### 3.1 Interop Core
 
@@ -131,7 +181,8 @@ A `Premath Interop Core` conforming verifier MUST:
 A `Premath Interop Full` conforming verifier MUST satisfy all `Interop Core` requirements and MUST also:
 
 6. Implement `draft/NORMALIZER` for `normalized` comparisons and stable comparison keys.
-7. Implement `draft/BIDIR-DESCENT` mode discipline, obligation emission, and discharge.
+7. Implement `profile/interop/BIDIR-DESCENT` mode discipline, obligation
+   emission, and discharge.
 8. Enforce admissibility gate laws (`draft/GATE`) and emit Gate witness classes deterministically.
 
 ### 3.3 Semantic invariance across evidence profiles

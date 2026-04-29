@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "suiteId": "work-tracker-checker",
+  "vectorId": "adversarial/projection_as_authority_reject",
+  "input": {
+    "workClaim": {
+      "coverRef": "atlas://work-tracker.v0",
+      "checkerProfileRef": "premath://raw/WORK-TRACKER-CHECKER-PROFILE",
+      "semanticProfileRef": "work://candidate/work-tracker.v0",
+      "simplexSubstrateRefs": [
+        "simplex://nerve-provisional/sigma/root"
+      ],
+      "workSubjectRef": "work://subject/bd-105",
+      "operationClass": "claim",
+      "declaredOperationClasses": [
+        "claim",
+        "update",
+        "close",
+        "handoff"
+      ],
+      "authorityInputKind": "projection",
+      "priorStateRefs": [
+        "projection://tusk/ready-list/001"
+      ],
+      "claimedOutputStateRefs": [
+        "work-state://bd-105/in-progress"
+      ],
+      "boundaryRefs": [],
+      "acceptedBoundaryRefs": [],
+      "evidenceRefs": [
+        "witness://claim/bd-105/001"
+      ],
+      "actorRef": "actor://agent/codex"
+    }
+  }
+}

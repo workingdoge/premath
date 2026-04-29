@@ -116,6 +116,20 @@ fn main() {
             json,
         }),
 
+        Commands::ObserveCheck {
+            repo_root,
+            ciwitness_dir,
+            issues_path,
+            surface,
+            json,
+        } => commands::observe_check::run(commands::observe_check::Args {
+            repo_root,
+            ciwitness_dir,
+            issues_path,
+            surface,
+            json,
+        }),
+
         Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
 
         Commands::McpServe {
@@ -143,6 +157,38 @@ fn main() {
             repo_root,
             json,
         } => commands::coherence_check::run(contract, repo_root, json),
+
+        Commands::TraceabilityCheck {
+            draft_dir,
+            matrix,
+            authority_map,
+            json,
+        } => commands::traceability_check::run(commands::traceability_check::Args {
+            draft_dir,
+            matrix,
+            authority_map,
+            json,
+        }),
+
+        Commands::ConformanceCheck { fixtures, json } => {
+            commands::conformance_check::run(fixtures, json)
+        }
+
+        Commands::CommandSurfaceCheck { repo_root, json } => {
+            commands::command_surface_check::run(repo_root, json)
+        }
+
+        Commands::PipelineWiringCheck {
+            repo_root,
+            contract,
+            json,
+        } => commands::pipeline_wiring_check::run(repo_root, contract, json),
+
+        Commands::RepoHygieneCheck {
+            repo_root,
+            paths,
+            json,
+        } => commands::repo_hygiene_check::run(repo_root, paths, json),
 
         Commands::ProposalCheck { proposal, json } => commands::proposal_check::run(proposal, json),
 
@@ -178,7 +224,27 @@ fn main() {
 
         Commands::RequiredDelta { input, json } => commands::required_delta::run(input, json),
 
-        Commands::RequiredGateRef { input, json } => commands::required_gate_ref::run(input, json),
+        Commands::RequiredGateRef {
+            input,
+            fallback_check_id,
+            fallback_exit_code,
+            fallback_projection_digest,
+            fallback_policy_digest,
+            fallback_ctx_ref,
+            fallback_data_head_ref,
+            gate_payload_out,
+            json,
+        } => commands::required_gate_ref::run(commands::required_gate_ref::RunOptions {
+            input,
+            fallback_check_id,
+            fallback_exit_code,
+            fallback_projection_digest,
+            fallback_policy_digest,
+            fallback_ctx_ref,
+            fallback_data_head_ref,
+            gate_payload_out,
+            json_output: json,
+        }),
 
         Commands::RequiredWitnessVerify { input, json } => {
             commands::required_witness_verify::run(input, json)
@@ -336,6 +402,12 @@ fn main() {
         Commands::HarnessJoinCheck { input, json } => {
             commands::harness_join_check::run(input, json)
         }
+
+        Commands::WorkTrackerCheck { input, json } => {
+            commands::work_tracker_check::run(input, json)
+        }
+
+        Commands::ToyGateCheck { input, json } => commands::toy_gate_check::run(input, json),
 
         Commands::Dep { command } => commands::dep::run(command),
     }

@@ -90,7 +90,7 @@ The v0 baseline check set is:
 Canonical local command:
 
 ```bash
-mise run baseline
+sh tools/ci/run_task.sh baseline
 ```
 
 If a convenience task runner is unavailable, implementations MUST execute an

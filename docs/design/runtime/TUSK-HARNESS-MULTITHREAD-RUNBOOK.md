@@ -14,13 +14,17 @@ Authority boundary remains unchanged:
 - mutation authority: `.premath/issues.jsonl`,
 - projection artifacts only: harness-session / harness-feature / harness-trajectory.
 
-## 2. Script Surface
+## 2. Runtime Surface
 
-- worker loop: `python3 tools/harness/multithread_loop.py worker`
-- coordinator loop: `python3 tools/harness/multithread_loop.py coordinator`
-- mise aliases:
-  - `mise run harness-worker-loop`
-  - `mise run harness-coordinator-loop`
+The concrete coordinator/worker loop belongs in Tusk or another downstream
+operator surface. Premath exposes only the issue and harness projection commands
+that such a loop consumes:
+
+- `premath issue ready|claim|update`
+- `premath dep diagnostics`
+- `premath harness-session read|write|bootstrap`
+- `premath harness-feature read|write|check|next`
+- `premath harness-trajectory append|query`
 
 Policy gate:
 
@@ -31,21 +35,8 @@ Policy gate:
 
 ## 3. Coordinator Startup (N worktrees)
 
-Example (deterministic round-robin over three worktrees):
-
-```sh
-mise run harness-coordinator-loop -- \
-  --worktree ../premath-w1 \
-  --worktree ../premath-w2 \
-  --worktree ../premath-w3 \
-  --rounds 4 \
-  --worker-prefix lane \
-  --max-steps-per-worker 1 \
-  --mutation-mode human-override \
-  --override-reason 'operator approved local multithread batch' \
-  --work-cmd 'true' \
-  --verify-cmd 'mise run ci-check'
-```
+Example downstream loops should run deterministic round-robin over sorted
+worktree paths and emit Premath harness trajectory rows for handoff.
 
 Determinism contract:
 

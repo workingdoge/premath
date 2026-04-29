@@ -6,8 +6,8 @@ This directory contains lifecycle and governance documents for the Premath spec 
 - `decision-log.md` — recorded decisions and promotion history.
 - `SCHEMA-LIFECYCLE-GOVERNANCE.md` — governance-mode contract for lifecycle
   rollover/freeze transitions in control-plane schema tables.
-- `GITHUB-BRANCH-POLICY.json` — machine policy contract for effective GitHub
-  branch/ruleset enforcement checks on `main`.
+- `IMPLEMENTATION-STATUS.md` — non-normative historical status snapshot moved
+  out of `draft/SPEC-INDEX.md`; live status remains issue-memory authority.
 - `HARNESS-SPEC-PROMOTION-MAP.md` — parallel-safe preflight map/checklist for
   promoting harness design docs into draft spec surfaces.
 - `PREMATH-SPECS-0.1.0-DRAFT-PROMOTION-REVIEW.md` — non-normative review

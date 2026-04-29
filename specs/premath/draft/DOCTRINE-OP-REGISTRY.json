@@ -134,7 +134,7 @@
     {
       "id": "op/conformance.stub",
       "edgeId": "e.ci.op.stub",
-      "path": "tools/conformance/check_stub_invariance.py",
+      "path": "crates/premath-cli/src/commands/conformance_check.rs",
       "kind": "operation",
       "morphisms": [
         "dm.identity",

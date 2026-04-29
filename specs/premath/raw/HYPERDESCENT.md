@@ -83,7 +83,7 @@ Equivalently, the homotopy fiber over any hyperdescent datum MUST be contractibl
 - Base Premath requires contractible descent for `J`-covers (Čech descent).
 - Hyperdescent implies Čech descent (so the capability strictly strengthens the kernel).
 
-## 6. Operational obligations (BIDIR-DESCENT)
+## 6. Operational obligations (OBLIGATION-DISCHARGE)
 
 Implementations claiming `hyperdescent` MUST:
 
@@ -105,4 +105,3 @@ Recommended vectors for the `hyperdescent` capability:
 - a case where Čech descent holds but hyperdescent fails (adversarial),
 - a case where both hold (golden),
 - determinism of witness IDs and ordering.
-

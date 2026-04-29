@@ -30,7 +30,7 @@ from proposal_check_client import (  # type: ignore  # noqa: E402
     run_proposal_check,
 )
 from provider_env import map_github_to_premath_env, resolve_premath_ci_refs  # type: ignore  # noqa: E402
-from required_witness import verify_required_witness_payload  # type: ignore  # noqa: E402
+from required_witness_verify_client import verify_required_witness_payload  # type: ignore  # noqa: E402
 
 CAPABILITY_NORMAL_FORMS = "capabilities.normal_forms"
 CAPABILITY_KCIR_WITNESSES = "capabilities.kcir_witnesses"
@@ -1688,10 +1688,10 @@ def evaluate_ci_boundary_authority_lineage(case: Dict[str, Any]) -> VectorOutcom
     )
     if coherence_registry_kind != registry_kind:
         failures.append("boundary_authority_registry_mismatch")
-    coherence_bidir_obligations = set(
+    coherence_core_obligation_kinds = set(
         canonical_check_set(
-            coherence_raw.get("bidirCheckerObligations", []),
-            "artifacts.coherence.bidirCheckerObligations",
+            coherence_raw.get("coreObligationCheckerKinds", []),
+            "artifacts.coherence.coreObligationCheckerKinds",
         )
     )
 
@@ -1803,7 +1803,7 @@ def evaluate_ci_boundary_authority_lineage(case: Dict[str, Any]) -> VectorOutcom
             failures.append("boundary_authority_lineage_mismatch")
         if ci_semantic_failure_classes != expected_semantic_failure_classes:
             failures.append("boundary_authority_lineage_mismatch")
-        if not set(proposal_obligation_kinds).issubset(coherence_bidir_obligations):
+        if not set(proposal_obligation_kinds).issubset(coherence_core_obligation_kinds):
             failures.append("boundary_authority_lineage_mismatch")
 
     expected_ci_failure_classes = sorted(

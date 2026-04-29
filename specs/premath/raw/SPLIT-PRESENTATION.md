@@ -74,7 +74,8 @@ In this repository bundle:
 - `draft/NF` provides a compact IR (ObjNF / MorNF bytes).
 - `raw/OPCODES` provides the verification contracts that construct/transform those IR forms.
 - `draft/NORMALIZER` specifies the canonicalization policy that turns IR into a comparison key.
-- `draft/BIDIR-DESCENT` specifies how obligations are generated and discharged.
+- `draft/OBLIGATION-DISCHARGE` specifies how obligations are discharged;
+  `profile/interop/BIDIR-DESCENT` specifies full-profile obligation generation.
 
 This combination is an instance of a split presentation:
 
@@ -90,4 +91,3 @@ Implementations SHOULD:
 2. treat semantic equivalence claims as obligations discharged in `normalized` mode via
    `draft/NORMALIZER`, and
 3. record any policy/normalizer versions in emitted artifacts to prevent replay across changes.
-

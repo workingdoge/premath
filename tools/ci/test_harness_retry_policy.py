@@ -122,7 +122,7 @@ class HarnessRetryPolicyTests(unittest.TestCase):
 
     def test_failure_classes_from_completed_process_extracts_typed_classes(self) -> None:
         completed = subprocess.CompletedProcess(
-            args=["mise", "run", "ci-required-attested"],
+            args=["python3", "tools/ci/run_required_attested.py"],
             returncode=2,
             stdout=json.dumps(
                 {

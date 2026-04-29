@@ -140,7 +140,7 @@ operation route or if this table disagrees on the CLI/MCP binding.
 | `observe.instruction` | `premath observe --surface <path> --mode instruction --instruction-id <id> --json` | `observe_instruction` |
 | `observe.projection` | `premath observe --surface <path> --mode projection --projection-digest <digest> --json` | `observe_projection` |
 | `instruction.check` | `premath instruction-check --instruction <path> --repo-root <repo> --json` | `instruction_check` |
-| `instruction.run` | `mise run ci-pipeline-instruction` or `premath mcp-serve` instruction runner path | `instruction_run` |
+| `instruction.run` | `sh tools/ci/run_task.sh ci-pipeline-instruction` or `premath mcp-serve` instruction runner path | `instruction_run` |
 | `coherence.check` | `premath coherence-check --contract <path> --repo-root <repo> --json` | n/a |
 | `required.projection` | `premath required-projection --input <path> --json` | n/a |
 | `required.delta` | `premath required-delta --input <path> --json` | n/a |

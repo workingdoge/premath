@@ -57,7 +57,7 @@ fn ensure_non_empty(value: &str, label: &str) -> Result<String, String> {
 
 fn parse_hex_bytes(value: &str, label: &str) -> Result<Vec<u8>, String> {
     let normalized = value.trim();
-    if normalized.len() % 2 != 0 {
+    if !normalized.len().is_multiple_of(2) {
         return Err(format!("{label} must be even-length hex"));
     }
     if normalized.is_empty() {

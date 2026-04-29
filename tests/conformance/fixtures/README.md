@@ -9,6 +9,7 @@ Suggested layout (from `draft/CONFORMANCE.md`):
 - `doctrine-inf/{golden,adversarial}`
 - `harness-typestate/{golden,adversarial}`
 - `runtime-orchestration/{golden,adversarial,invariance}`
+- `work-tracker-checker/{golden,adversarial}`
 - `coherence-transport/{golden,adversarial,invariance}`
 - `coherence-site/{golden,adversarial,invariance}`
 - `capabilities/<capability-id>/{golden,adversarial,invariance}`
@@ -23,6 +24,9 @@ Executable suite entrypoints include:
 - `runtime-orchestration`: `python3 tools/conformance/run_runtime_orchestration_vectors.py`
   (route/morphism/path-boundary checks + optional KCIR mapping row checks +
   invariance scenario parity)
+- `work-tracker-checker`: `python3 tools/conformance/run_work_tracker_checker_vectors.py`
+  (raw `WORK-TRACKER-CHECKER-PROFILE` checker-input and failure-class vectors;
+  validates Premath checker boundary only)
 - `coherence-contract`: `cargo run --package premath-cli -- coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root . --json`
 - cached multi-suite surface: `python3 tools/conformance/run_fixture_suites.py`
 

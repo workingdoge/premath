@@ -20,7 +20,7 @@ from typing import Any, Dict, List, Sequence, Tuple
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools" / "toy"))
 
-from toy_gate_check import run_case  # type: ignore  # noqa: E402
+from toy_gate_client import run_case  # type: ignore  # noqa: E402
 
 DEFAULT_FIXTURES = ROOT / "tests" / "conformance" / "fixtures" / "gate"
 

@@ -36,7 +36,7 @@ Run base is always:
 Tusk is an instantiation/runtime layer for a Premath world.
 
 - It owns integration contracts across context/version, memory, domain adapters, projections, control, and witnessing.
-- It does not replace `PREMATH-KERNEL`, `GATE`, or `BIDIR-DESCENT`.
+- It does not replace `PREMATH-KERNEL`, `OBLIGATION-DISCHARGE`, or `GATE`.
 
 ## 4. Tusk and SigPi boundary
 

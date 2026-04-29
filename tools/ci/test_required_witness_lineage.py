@@ -3,13 +3,45 @@
 
 from __future__ import annotations
 
+import hashlib
+import json
 import unittest
 from typing import Any, Dict, List, Tuple
 
 from change_projection import PROJECTION_POLICY, project_required_checks
 from delta_snapshot import compute_typed_core_projection_digest
-from gate_witness_envelope import stable_sha256
-from required_witness import verify_required_witness_payload
+from required_witness_verify_client import verify_required_witness_payload
+
+
+def _canonical_json_bytes(value: Any) -> bytes:
+    if value is None:
+        return b"null"
+    if isinstance(value, bool):
+        return b"true" if value else b"false"
+    if isinstance(value, int):
+        return str(value).encode("utf-8")
+    if isinstance(value, float):
+        return format(value).encode("utf-8")
+    if isinstance(value, str):
+        return json.dumps(value, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    if isinstance(value, list):
+        return b"[" + b",".join(_canonical_json_bytes(item) for item in value) + b"]"
+    if isinstance(value, dict):
+        return (
+            b"{"
+            + b",".join(
+                json.dumps(str(key), ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+                + b":"
+                + _canonical_json_bytes(value[key])
+                for key in sorted(value.keys())
+            )
+            + b"}"
+        )
+    raise TypeError(f"unsupported value type for canonical json: {type(value).__name__}")
+
+
+def stable_sha256(value: Any) -> str:
+    return hashlib.sha256(_canonical_json_bytes(value)).hexdigest()
 
 
 def _lineage_fixture() -> Tuple[List[str], Dict[str, Any], Dict[str, Dict[str, Any]]]:

@@ -76,9 +76,8 @@ For every governance transition (`rollover <-> freeze`) or cadence change:
 
 1. edit `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`,
 2. run:
-   - `mise run ci-drift-budget-check`
-   - `mise run coherence-check`
-   - `mise run docs-coherence-check`
+   - `sh tools/ci/run_task.sh ci-drift-budget-check`
+   - `sh tools/ci/run_task.sh coherence-check`
 3. append decision-log entry and update `decisionRef`,
 4. record rollout evidence in `.premath/OPERATIONS.md` when a live system
    transition is executed.

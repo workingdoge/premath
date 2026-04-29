@@ -63,12 +63,12 @@
       "runtimeProfile": "local",
       "capabilityVector": [
         "hk",
-        "mise",
+        "ci-script",
         "rust",
         "squeak-site"
       ],
       "substrateBindingRef": "runner://local/sigpi"
     },
-    "expectedLocRef": "loc1_2cdc17797ec81b86247825f33fb5f9d2250dce463085108643d09c80bb6c7797"
+    "expectedLocRef": "loc1_83e4a180460cefdbf00d495cfce5eae1a2008766266ae631f5ed3c639c9e93c3"
   }
 }

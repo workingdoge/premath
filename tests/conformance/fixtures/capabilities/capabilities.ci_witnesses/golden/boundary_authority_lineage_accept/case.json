@@ -71,7 +71,7 @@
     },
     "coherence": {
       "obligationRegistryKind": "premath.obligation_gate_registry.v1",
-      "bidirCheckerObligations": [
+      "coreObligationCheckerKinds": [
         "stability",
         "locality",
         "descent_exists",

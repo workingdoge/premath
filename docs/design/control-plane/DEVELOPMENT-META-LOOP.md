@@ -76,10 +76,12 @@ Worker mutation authority remains instruction-linked by default.
 
 Never run multi-issue implicit sessions.
 
-Canonical script surface:
+Canonical Premath surfaces:
 
-- `python3 tools/harness/multithread_loop.py worker`
-- `python3 tools/harness/multithread_loop.py coordinator`
+- `premath issue ready|claim|update`
+- `premath harness-session read|write|bootstrap`
+- `premath harness-feature read|write|check|next`
+- `premath harness-trajectory append|query`
 
 Diagnostic convention:
 
@@ -94,8 +96,8 @@ Diagnostic convention:
 
 Operational surfaces:
 
-- `python3 tools/ci/check_issue_graph.py` (gate-level compactness enforcement)
-- `python3 tools/ci/compact_issue_graph.py --mode check|apply` (deterministic remediation)
+- `sh tools/ci/run_task.sh ci-hygiene-check` (gate-level native enforcement)
+- `cargo run --package premath-cli -- dep remove <issue-id> <depends-on-id> --type blocks` (explicit remediation)
 
 ## 5. Lane Discipline
 
@@ -111,14 +113,14 @@ Do not move semantic authority into operations or issue notes.
 
 Minimum gate cadence by change class:
 
-- Docs/spec glue: `mise run docs-coherence-check` + `mise run traceability-check`
-- Control-plane/checker: `mise run coherence-check` + `mise run ci-pipeline-test`
+- Docs/spec glue: `sh tools/ci/run_task.sh traceability-check` + `sh tools/ci/run_task.sh ci-drift-budget-check`
+- Control-plane/checker: `sh tools/ci/run_task.sh coherence-check` + `sh tools/ci/run_task.sh ci-pipeline-test`
 - Mutation/concurrency/core: `cargo test -p premath-bd` + `cargo test -p premath-cli`
-- Capability/conformance: `mise run conformance-run`
+- Capability/conformance: `sh tools/ci/run_task.sh conformance-run`
 
 Always finish with:
 
-- `python3 tools/ci/check_issue_graph.py`
+- `sh tools/ci/run_task.sh ci-hygiene-check`
 
 ## 7. Definition of Done (issue-level)
 

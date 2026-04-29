@@ -30,8 +30,8 @@ Ralph concept -> Premath surface:
 3. "fresh context each iteration"
    -> `harness-session bootstrap` (`attach|resume`) + bounded step loops.
 4. "backpressure via tests/build"
-   -> issue verification commands + `mise` gates (`baseline`, conformance,
-      coherence, docs coherence).
+   -> issue verification commands + direct gates (`baseline`, conformance,
+      coherence, traceability).
 5. "update plan + commit each loop"
    -> update issue status/notes + append trajectory/witness refs, then commit.
 6. "subagents for focused work"
@@ -91,13 +91,13 @@ Ralph concept -> Premath surface:
 ## 5. Recommended Command Surface
 
 - coordinator/worker loop:
-  - `mise run harness-coordinator-loop`
-  - `mise run harness-worker-loop`
+  - use downstream Tusk/operator orchestration over Premath issue and harness
+    projection commands
 - issue graph integrity:
-  - `python3 tools/ci/check_issue_graph.py`
+  - `sh tools/ci/run_task.sh ci-hygiene-check`
   - `cargo run --package premath-cli -- dep diagnostics --graph-scope active --json`
 - baseline backpressure:
-  - `mise run baseline`
+  - `sh tools/ci/run_task.sh baseline`
 
 ## 6. Operational Rule
 

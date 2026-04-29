@@ -53,21 +53,21 @@ Terraform variable controls:
 ## Commands
 
 ```bash
-mise run infra-up
-mise run ci-check-tf
-mise run infra-down
+sh tools/ci/run_task.sh infra-up
+sh tools/ci/run_task.sh ci-check-tf
+sh tools/ci/run_task.sh infra-down
 ```
 
 Convenience local-profile run:
 
 ```bash
-mise run ci-check-tf-local
+sh tools/ci/run_task.sh ci-check-tf-local
 ```
 
 Experimental microvm run:
 
 ```bash
-mise run ci-check-tf-microvm
+sh tools/ci/run_task.sh ci-check-tf-microvm
 ```
 
 Darwin VM runner settings are controlled through env at execution time

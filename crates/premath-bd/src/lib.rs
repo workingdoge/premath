@@ -43,9 +43,11 @@ pub use events::{
 };
 pub use issue::{Issue, IssueLease, IssueLeaseState};
 pub use issue_graph::{
-    DEFAULT_NOTE_WARN_THRESHOLD, FAILURE_CLASS_ACCEPTANCE_MISSING, FAILURE_CLASS_EPIC_MISMATCH,
-    FAILURE_CLASS_VERIFICATION_COMMAND_MISSING, ISSUE_GRAPH_CHECK_KIND, IssueGraphCheckReport,
-    IssueGraphFinding, IssueGraphSummary, WARNING_CLASS_NOTES_LARGE, check_issue_graph,
+    DEFAULT_NOTE_WARN_THRESHOLD, FAILURE_CLASS_ACCEPTANCE_MISSING,
+    FAILURE_CLASS_COMPACTNESS_CLOSED_BLOCK_EDGE, FAILURE_CLASS_COMPACTNESS_TRANSITIVE_BLOCK_EDGE,
+    FAILURE_CLASS_EPIC_MISMATCH, FAILURE_CLASS_VERIFICATION_COMMAND_MISSING,
+    ISSUE_GRAPH_CHECK_KIND, IssueGraphCheckReport, IssueGraphFinding, IssueGraphSummary,
+    WARNING_CLASS_NOTES_LARGE, check_issue_graph,
 };
 pub use memory::{DependencyGraphScope, MemoryStore, MemoryStoreError};
 pub use spec_ir::{

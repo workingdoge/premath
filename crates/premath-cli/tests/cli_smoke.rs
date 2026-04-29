@@ -578,6 +578,55 @@ fn write_harness_join_check_input(path: &Path, governance_mismatch: bool) {
     .expect("join-check payload should be written");
 }
 
+fn write_work_tracker_check_input(dir: &Path) -> PathBuf {
+    let payload = serde_json::json!({
+        "workClaim": {
+            "coverRef": "atlas://work-tracker.v0",
+            "checkerProfileRef": "premath://raw/WORK-TRACKER-CHECKER-PROFILE",
+            "semanticProfileRef": "work://candidate/work-tracker.v0",
+            "simplexSubstrateRefs": ["simplex://nerve-provisional/sigma/root"],
+            "workSubjectRef": "work://subject/bd-101",
+            "operationClass": "claim",
+            "declaredOperationClasses": ["claim", "update", "close", "handoff"],
+            "priorStateRefs": ["work-state://bd-101/open"],
+            "claimedOutputStateRefs": ["work-state://bd-101/in-progress"],
+            "boundaryRefs": ["work-state://bd-100/closed"],
+            "acceptedBoundaryRefs": ["work-state://bd-100/closed"],
+            "evidenceRefs": ["witness://claim/bd-101/001"],
+            "actorRef": "actor://agent/codex"
+        }
+    });
+    let input_path = dir.join("work-tracker-check-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&payload).expect("work-tracker input should serialize"),
+    )
+    .expect("work-tracker input should be written");
+    input_path
+}
+
+fn write_toy_gate_check_input(dir: &Path) -> PathBuf {
+    let payload = serde_json::json!({
+        "schema": 1,
+        "world": "sheaf_bits",
+        "check": {
+            "kind": "stability",
+            "gammaMask": 7,
+            "a": {"0": 1, "1": 0, "2": 1},
+            "f": {"src": 3, "tgt": 7},
+            "g": {"src": 1, "tgt": 3},
+            "tokenPath": null
+        }
+    });
+    let input_path = dir.join("toy-gate-check-input.json");
+    fs::write(
+        &input_path,
+        serde_json::to_vec_pretty(&payload).expect("toy gate input should serialize"),
+    )
+    .expect("toy gate input should be written");
+    input_path
+}
+
 #[test]
 fn check_json_smoke() {
     let tmp = TempDirGuard::new("check-json");
@@ -802,6 +851,46 @@ fn proposal_check_json_smoke() {
             .expect("kcirRef should be string")
             .starts_with("kcir1_")
     );
+}
+
+#[test]
+fn work_tracker_check_json_smoke() {
+    let tmp = TempDirGuard::new("work-tracker-check-json");
+    let input = write_work_tracker_check_input(tmp.path());
+
+    let output = run_premath([
+        OsString::from("work-tracker-check"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["checkKind"], "premath.work_tracker_checker.raw.v1");
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failureClasses"], serde_json::json!([]));
+    assert_eq!(payload["summary"]["checkedClaims"], 1);
+}
+
+#[test]
+fn toy_gate_check_json_smoke() {
+    let tmp = TempDirGuard::new("toy-gate-check-json");
+    let input = write_toy_gate_check_input(tmp.path());
+
+    let output = run_premath([
+        OsString::from("toy-gate-check"),
+        OsString::from("--input"),
+        input.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["witnessSchema"], 1);
+    assert_eq!(payload["profile"], "toy");
+    assert_eq!(payload["result"], "accepted");
+    assert_eq!(payload["failures"], serde_json::json!([]));
 }
 
 #[test]
@@ -1092,6 +1181,46 @@ fn required_gate_ref_json_smoke() {
         serde_json::json!(["descent_failure"])
     );
     assert_eq!(payload["gatePayload"]["result"], "rejected");
+}
+
+#[test]
+fn required_gate_ref_fallback_args_write_gate_payload() {
+    let tmp = TempDirGuard::new("required-gate-ref-fallback-out");
+    let out_path = tmp.path().join("gate.json");
+
+    let output = run_premath([
+        OsString::from("required-gate-ref"),
+        OsString::from("--fallback-check-id"),
+        OsString::from("baseline"),
+        OsString::from("--fallback-exit-code"),
+        OsString::from("1"),
+        OsString::from("--fallback-projection-digest"),
+        OsString::from("proj1_demo"),
+        OsString::from("--fallback-policy-digest"),
+        OsString::from("ci-topos-v0"),
+        OsString::from("--fallback-ctx-ref"),
+        OsString::from("origin/main"),
+        OsString::from("--fallback-data-head-ref"),
+        OsString::from("HEAD"),
+        OsString::from("--gate-payload-out"),
+        out_path.as_os_str().to_os_string(),
+        OsString::from("--json"),
+    ]);
+    assert_success(&output);
+
+    let payload = parse_json_stdout(&output);
+    assert_eq!(payload["gateWitnessRef"]["checkId"], "baseline");
+    assert_eq!(payload["gateWitnessRef"]["source"], "fallback");
+    assert_eq!(
+        payload["gateWitnessRef"]["artifactRelPath"],
+        "gates/proj1_demo/00-baseline.json"
+    );
+    let written =
+        serde_json::from_slice::<Value>(&fs::read(&out_path).expect("gate payload should exist"))
+            .expect("gate payload should parse");
+    assert_eq!(written["witnessKind"], "gate");
+    assert_eq!(written["result"], "rejected");
+    assert_eq!(written["witnessSource"], "fallback");
 }
 
 #[test]
@@ -1599,7 +1728,7 @@ fn issue_check_json_smoke() {
         &issues_ok,
         concat!(
             "{\"id\":\"bd-ok\",\"title\":\"Issue ok\",\"status\":\"open\",\"issue_type\":\"task\",",
-            "\"description\":\"Acceptance:\\n- complete work\\n\\nVerification commands:\\n- `mise run baseline`\"}\n"
+            "\"description\":\"Acceptance:\\n- complete work\\n\\nVerification commands:\\n- `sh tools/ci/run_task.sh baseline`\"}\n"
         ),
     )
     .expect("valid issues should be written");
@@ -1622,7 +1751,7 @@ fn issue_check_json_smoke() {
         &issues_bad,
         concat!(
             "{\"id\":\"bd-epic\",\"title\":\"[EPIC] Broken\",\"status\":\"open\",\"issue_type\":\"task\",",
-            "\"description\":\"Acceptance:\\n- done\\n\\nVerification commands:\\n- `mise run baseline`\"}\n"
+            "\"description\":\"Acceptance:\\n- done\\n\\nVerification commands:\\n- `sh tools/ci/run_task.sh baseline`\"}\n"
         ),
     )
     .expect("invalid issues should be written");

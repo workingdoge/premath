@@ -176,9 +176,15 @@ At minimum, rejection diagnostics MUST classify one of:
 For rejected checks, implementations MUST emit a JSON document with:
 
 - `witnessSchema` (integer schema version; current value `1`)
-- `profile` (`"full"`)
+- `profile` (declared conformance/profile token for the check boundary)
 - `result` (`"rejected"`)
 - `failures` (array of failure witnesses)
+
+The `profile` value MUST identify the asserted boundary that produced the Gate
+witness. It MUST use the canonical claim token declared by `draft/CONFORMANCE`
+for that boundary, such as `premath.core.v0` for Core checks or
+`premath.interop-full.v0` for Interop Full checks. A Core Gate witness MUST NOT
+require a full-profile token unless that profile was explicitly claimed.
 
 Each failure witness MUST include:
 
@@ -202,10 +208,11 @@ Witness arrays MUST be deterministically ordered by:
 4. `context` (if present)
 5. `witnessId`
 
-## 5. Alignment with BIDIR-DESCENT (informative)
+## 5. Alignment with OBLIGATION-DISCHARGE (informative)
 
-`draft/BIDIR-DESCENT` defines how implementations produce and discharge obligations and map them to Gate
-failure classes deterministically.
+`draft/OBLIGATION-DISCHARGE` defines how implementations discharge obligations
+and map them to Gate failure classes deterministically. Full-profile verifier
+orchestration is specified by `profile/interop/BIDIR-DESCENT`.
 
 ## 6. Doctrine Preservation Declaration (v0)
 

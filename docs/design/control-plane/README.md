@@ -12,8 +12,12 @@ by coherence/drift checks as explanatory evidence.
 - `MULTITHREAD-LANE-SITE-ADJOINTS.md` — concurrent-worker and site-adjoint
   contract notes.
 - `LIFECYCLE-COHERENCE-FLOWS.md` — schema lifecycle and gate-chain flow.
+- `ATLAS.md` — site-of-sites staging note for cross-repo covers, seams,
+  authority surfaces, projections, and descent conditions.
 - `ISSUE-GRAPH-CORE-CHECKING.md` — issue-memory authority split and core
   checking plan.
+- `TOPOLOGY-V2.md` — shape-first placement model for authority objects,
+  projections, repo hosts, and simplex-native tracker routing.
 - `MEMORY-LANES-CONTRACT.md` — work-memory lane split and write discipline.
 - `TOOL-CALLING-HARNESS-TYPESTATE.md` — tool-calling typestate design notes.
 - `STEEL-REPL-DESCENT-CONTROL.md` — Scheme/Steel REPL control surface.

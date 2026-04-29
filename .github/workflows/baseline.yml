@@ -17,19 +17,8 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup mise
-        uses: jdx/mise-action@6d1e696aa24c1aa1bcc1adea0212707c71ab78a8 # v3.6.1
-        with:
-          version: 2026.2.17
-          install: false
-
-      - name: Trust and install pinned tools
-        run: |
-          mise trust
-          mise install
-
       - name: Check provider-neutral pipeline wiring
-        run: mise run ci-pipeline-check
+        run: sh tools/ci/run_task.sh ci-pipeline-check
 
       - name: Run provider-neutral required pipeline
         run: python3 tools/ci/pipeline_required.py

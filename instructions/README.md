@@ -48,10 +48,10 @@ Optional doctrine-typing fields:
 Run an envelope:
 
 ```bash
-mise run ci-instruction-check
-INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
+sh tools/ci/run_task.sh ci-instruction-check
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json sh tools/ci/run_task.sh ci-pipeline-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
-mise run ci-instruction-smoke
+sh tools/ci/run_task.sh ci-instruction-smoke
 ```
 
 This writes a witness artifact to `artifacts/ciwitness/<instruction-id>.json`.

@@ -40,6 +40,13 @@ This doctrine defines the architectural rule for Premath evolution:
 It applies to instruction/proposal/checking, issue memory, conformance surfaces,
 and interop artifacts.
 
+Scope note: this document is classified as control-plane doctrine in
+`../AUTHORITY-MAP.json`. It is not Premath Core. The intended future split is:
+`UNIFICATION-CORE` for one-authority/derived-view rules,
+`CONTROL-PLANE-EVIDENCE` for typed evidence, parity, and rollback rules, and
+`WORKER-ORCHESTRATION-SITE` for worker decomposition and cover/descent
+orchestration.
+
 ## 2. Core Principle
 
 For any semantic boundary `B`, implementations MUST prefer:
@@ -224,7 +231,7 @@ keep the following lane split explicit and non-overlapping:
 
 | Lane | Primary role | Canonical references | Non-authority constraints |
 | --- | --- | --- | --- |
-| Semantic doctrine lane | semantic meaning and obligation authority | `draft/PREMATH-KERNEL`, `draft/BIDIR-DESCENT`, `draft/GATE`, `profile/ADJOINTS-AND-SITES` | MAY compile to obligations; MUST NOT be bypassed by planner/projection outputs |
+| Semantic doctrine lane | semantic meaning and obligation authority | `draft/PREMATH-KERNEL`, `draft/OBLIGATION-DISCHARGE`, `draft/GATE`, `profile/ADJOINTS-AND-SITES` | MAY compile to obligations; MUST NOT be bypassed by planner/projection outputs |
 | Strict checker lane | strict operational equalities (`≡`) for deterministic checking | `draft/PREMATH-COHERENCE`, `draft/COHERENCE-CONTRACT.json` | validates control-plane consistency only; MUST NOT redefine kernel admissibility |
 | Witness commutation lane | typed pipeline/base-change commutation artifacts | `draft/SPAN-SQUARE-CHECKING` | checker-facing evidence only; MUST NOT self-authorize acceptance |
 | Runtime transport lane | runtime location/world transport surfaces | `raw/SQUEAK-CORE`, `raw/SQUEAK-SITE` | transport/site checks are capability-scoped; MUST remain bound to canonical witness lineage |
@@ -456,11 +463,11 @@ deterministic checker/vector surfaces as follows.
 
 | Stage 2 clause | Typed contract surface | Checker surface | Executable vectors |
 | --- | --- | --- | --- |
-| typed core is authority; alias is projection-only | `draft/CONTROL-PLANE-CONTRACT.json` `evidenceStage2Authority` (`activeStage=stage2`, `aliasRole=projection_only`) | `mise run coherence-check` (`gate_chain_parity` Stage 2 checks) | `tests/conformance/fixtures/coherence-site/*/gate_chain_parity_stage2_*` |
+| typed core is authority; alias is projection-only | `draft/CONTROL-PLANE-CONTRACT.json` `evidenceStage2Authority` (`activeStage=stage2`, `aliasRole=projection_only`) | `sh tools/ci/run_task.sh coherence-check` (`gate_chain_parity` Stage 2 checks) | `tests/conformance/fixtures/coherence-site/*/gate_chain_parity_stage2_*` |
 | alias-window fail-closed enforcement | lifecycle table in `draft/CONTROL-PLANE-CONTRACT.json` + §5.1 governance | `gate_chain_parity` Stage 2 alias-window checks | `gate_chain_parity_stage2_alias_window_reject` |
 | alias-as-authority rejection | `evidenceStage2Authority.requiredFailureClasses.authorityAliasViolation` | `gate_chain_parity` Stage 2 alias-role checks | `gate_chain_parity_stage2_alias_role_reject` |
 | unbound typed authority rejection | `evidenceStage2Authority.requiredFailureClasses.unbound` | `gate_chain_parity` Stage 2 unbound checks | `gate_chain_parity_stage2_unbound_binding_reject` |
-| direct BIDIR evidence route parity | `evidenceStage2Authority.bidirEvidenceRoute` + canonical obligation set (`routeKind=direct_checker_discharge`, `obligationFieldRef=bidirCheckerObligations`) | `gate_chain_parity` Stage 2 bidir-route checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
+| direct Core obligation evidence route parity | `evidenceStage2Authority.coreObligationEvidenceRoute` + canonical obligation set (`routeKind=direct_checker_discharge`, `obligationFieldRef=coreObligationCheckerKinds`) | `gate_chain_parity` Stage 2 Core-obligation-route checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
 | typed-first consumer lineage (CI/instruction/decision/observation) | typed authority fields carried in witness/decision/snapshot payloads (`typedCoreProjectionDigest`, `authorityPayloadDigest`, `normalizerId`, `policyDigest`) | CI witness validators + observation projection selection | `capabilities.ci_witnesses` boundary-authority vectors (`golden/boundary_authority_lineage_accept`, adversarial/invariance pairs) |
 
 Equivalent implementation-local routes are permitted only when replay-stable
@@ -478,8 +485,8 @@ clauses to deterministic checker/vector surfaces as follows.
 
 | Stage 3 clause | Typed contract surface | Checker surface | Executable vectors/tests |
 | --- | --- | --- | --- |
-| direct checker/discharge route is canonical authority route | `evidenceStage2Authority.bidirEvidenceRoute` (`routeKind=direct_checker_discharge`, `obligationFieldRef=bidirCheckerObligations`) | `gate_chain_parity` Stage 2 bidir-route checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
-| transitional sentinel path is compatibility-only and profile-gated | optional `kernelComplianceSentinel` + `bidirEvidenceRoute.fallback.mode=profile_gated_sentinel` with current `profileKind` in `fallback.profileKinds` | Stage 2 authority fallback-gating checks in `gate_chain_parity` | `cargo test -p premath-coherence` (`check_gate_chain_parity_rejects_stage2_bidir_route_obligation_mismatch`, `check_gate_chain_parity_rejects_stage2_bidir_route_failure_class_mismatch`) |
+| direct checker/discharge route is canonical authority route | `evidenceStage2Authority.coreObligationEvidenceRoute` (`routeKind=direct_checker_discharge`, `obligationFieldRef=coreObligationCheckerKinds`) | `gate_chain_parity` Stage 2 Core-obligation-route checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
+| transitional sentinel path is compatibility-only and profile-gated | optional `kernelComplianceSentinel` + `coreObligationEvidenceRoute.fallback.mode=profile_gated_sentinel` with current `profileKind` in `fallback.profileKinds` | Stage 2 authority fallback-gating checks in `gate_chain_parity` | `cargo test -p premath-coherence` (`check_gate_chain_parity_rejects_stage2_core_obligation_route_obligation_mismatch`, `check_gate_chain_parity_rejects_stage2_core_obligation_route_failure_class_mismatch`) |
 | typed-first consumer lineage is canonical across CI/CLI/MCP/observation | typed authority fields (`typedCoreProjectionDigest`, `normalizerId`, `policyDigest`) are canonical; alias fields are compatibility metadata only | CI witness lineage validators + observation typed-default projection selection | `capabilities.ci_witnesses` boundary-authority vectors + CLI/observation compatibility-mode checks |
 
 Stage 3 closure MUST NOT introduce a second authority artifact. If fallback is
@@ -496,7 +503,7 @@ replace source-layer failure-class authority.
 
 Minimum constructor families:
 
-- `semantic(tag)` for Gate/BIDIR semantic failures,
+- `semantic(tag)` for Gate/Core-obligation semantic failures,
 - `structural(tag)` for checker-structure/parity failures,
 - `lifecycle(tag)` for lifecycle/attestation/authority-chain failures,
 - `commutation(tag)` for typed cross-lane commutation failures.
@@ -515,7 +522,7 @@ functions MUST be replay-stable.
 
 Existing failure vocabularies remain unchanged:
 
-- Gate/BIDIR classes remain source of semantic admissibility failure truth.
+- Gate/Core-obligation classes remain source of semantic admissibility failure truth.
 - Coherence classes remain source of checker parity/shape failure truth.
 - CI/lifecycle classes remain source of control-plane lifecycle failure truth.
 

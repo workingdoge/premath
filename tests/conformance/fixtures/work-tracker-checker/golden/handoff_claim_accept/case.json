@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "suiteId": "work-tracker-checker",
+  "vectorId": "golden/handoff_claim_accept",
+  "input": {
+    "workClaim": {
+      "coverRef": "atlas://work-tracker.v0",
+      "checkerProfileRef": "premath://raw/WORK-TRACKER-CHECKER-PROFILE",
+      "semanticProfileRef": "work://candidate/work-tracker.v0",
+      "simplexSubstrateRefs": [
+        "simplex://nerve-provisional/sigma/root"
+      ],
+      "workSubjectRef": "work://subject/bd-102",
+      "operationClass": "handoff",
+      "declaredOperationClasses": [
+        "claim",
+        "update",
+        "close",
+        "handoff"
+      ],
+      "priorStateRefs": [
+        "work-state://bd-102/in-progress"
+      ],
+      "claimedOutputStateRefs": [
+        "work-state://bd-102/handoff-ready"
+      ],
+      "boundaryRefs": [],
+      "acceptedBoundaryRefs": [],
+      "requiredRecoveryEvidenceRefs": [
+        "evidence://handoff/current-state",
+        "evidence://handoff/pending-boundaries",
+        "evidence://handoff/next-action"
+      ],
+      "evidenceRefs": [
+        "evidence://handoff/current-state",
+        "evidence://handoff/pending-boundaries",
+        "evidence://handoff/next-action"
+      ],
+      "actorRef": "actor://agent/codex"
+    }
+  }
+}

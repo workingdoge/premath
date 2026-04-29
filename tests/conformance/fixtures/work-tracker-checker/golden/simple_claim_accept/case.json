@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "suiteId": "work-tracker-checker",
+  "vectorId": "golden/simple_claim_accept",
+  "input": {
+    "workClaim": {
+      "coverRef": "atlas://work-tracker.v0",
+      "checkerProfileRef": "premath://raw/WORK-TRACKER-CHECKER-PROFILE",
+      "semanticProfileRef": "work://candidate/work-tracker.v0",
+      "simplexSubstrateRefs": [
+        "simplex://nerve-provisional/sigma/root"
+      ],
+      "workSubjectRef": "work://subject/bd-101",
+      "operationClass": "claim",
+      "declaredOperationClasses": [
+        "claim",
+        "update",
+        "close",
+        "handoff"
+      ],
+      "priorStateRefs": [
+        "work-state://bd-101/open"
+      ],
+      "claimedOutputStateRefs": [
+        "work-state://bd-101/in-progress"
+      ],
+      "boundaryRefs": [
+        "work-state://bd-100/closed"
+      ],
+      "acceptedBoundaryRefs": [
+        "work-state://bd-100/closed"
+      ],
+      "evidenceRefs": [
+        "witness://claim/bd-101/001"
+      ],
+      "actorRef": "actor://agent/codex"
+    }
+  }
+}

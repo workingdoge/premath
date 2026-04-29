@@ -358,4 +358,5 @@ Verify prelude:
 ## 9. Relationship to Gate
 
 This document defines execution-level contracts. Admissibility (stability/locality/descent/coherence)
-is enforced by `draft/GATE` using the bidirectional obligation discipline in `draft/BIDIR-DESCENT`.
+is enforced by `draft/GATE` using the Core obligation discipline in
+`draft/OBLIGATION-DISCHARGE`.

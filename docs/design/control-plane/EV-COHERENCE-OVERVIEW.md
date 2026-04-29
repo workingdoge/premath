@@ -66,10 +66,10 @@ Issue-memory posture:
 
 Core checks:
 
-- `mise run coherence-check`
-- `mise run docs-coherence-check`
-- `mise run traceability-check`
-- `python3 tools/ci/check_issue_graph.py`
+- `sh tools/ci/run_task.sh coherence-check`
+- `sh tools/ci/run_task.sh traceability-check`
+- `sh tools/ci/run_task.sh ci-drift-budget-check`
+- `sh tools/ci/run_task.sh ci-hygiene-check`
 
 Issue graph status:
 
@@ -128,7 +128,7 @@ Stage 1 checklist:
 - [x] emit deterministic fail-closed class for missing/mismatch/unbound
 - [x] keep semantic authority unchanged (checker verifies, never authorizes)
 - [x] add/update vectors for accepted/rejected Stage 1 parity paths
-- [x] extend docs-coherence checks for Stage 1 marker language
+- [x] preserve Stage 1 marker language in control-plane specs
 - [x] map Stage 1 clauses to executable checks in traceability
 - [x] define rollback preconditions/postconditions
 - [x] define deterministic rollback witness minimum fields
@@ -136,10 +136,10 @@ Stage 1 checklist:
 
 Validation commands:
 
-- `mise run coherence-check`
-- `mise run docs-coherence-check`
-- `mise run traceability-check`
-- `python3 tools/ci/check_issue_graph.py`
+- `sh tools/ci/run_task.sh coherence-check`
+- `sh tools/ci/run_task.sh traceability-check`
+- `sh tools/ci/run_task.sh ci-drift-budget-check`
+- `sh tools/ci/run_task.sh ci-hygiene-check`
 
 Execution note (2026-02-22):
 
@@ -158,7 +158,7 @@ Normative authority remains in:
 - `specs/premath/draft/UNIFICATION-DOCTRINE.md` (§10.6),
 - `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`,
 - `specs/premath/draft/PREMATH-KERNEL.md`,
-- `specs/premath/draft/BIDIR-DESCENT.md`,
+- `specs/premath/draft/OBLIGATION-DISCHARGE.md`,
 - `specs/premath/draft/GATE.md`.
 
 Historical note:
@@ -175,32 +175,32 @@ Deterministic Stage 3 order:
 4. `bd-155` required-decision verify client adds typed-authority fail-closed checks
 5. `bd-149` typed-first observation/projection query contract
 6. `bd-154` explicit alias compatibility mode for projection queries
-7. `bd-150` replace transitional kernel sentinel with direct bidir evidence path
+7. `bd-150` replace transitional kernel sentinel with direct Core-obligation evidence path
 8. `bd-151` docs/traceability/decision closure
 
 Per-task gate set:
 
 - consumer/runtime checks (`bd-148`, `bd-152`, `bd-153`, `bd-155`):
-  - `mise run ci-pipeline-test`
+  - `sh tools/ci/run_task.sh ci-pipeline-test`
   - `python3 tools/conformance/run_capability_vectors.py --capability capabilities.ci_witnesses`
   - `cargo test -p premath-coherence`
   - `cargo test -p premath-cli`
 - observation/query checks (`bd-149`, `bd-154`):
-  - `mise run ci-observation-test`
+  - `sh tools/ci/run_task.sh ci-observation-test`
   - `cargo test -p premath-surreal`
   - `cargo test -p premath-ux`
-- bidir-handoff checks (`bd-150`):
-  - `mise run coherence-check`
+- Core-obligation handoff checks (`bd-150`):
+  - `sh tools/ci/run_task.sh coherence-check`
   - `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract`
   - `python3 tools/ci/test_drift_budget.py`
 - docs closure (`bd-151`):
-  - `mise run docs-coherence-check`
-  - `mise run traceability-check`
-  - `python3 tools/ci/check_issue_graph.py`
+  - `sh tools/ci/run_task.sh traceability-check`
+  - `sh tools/ci/run_task.sh ci-drift-budget-check`
+  - `sh tools/ci/run_task.sh ci-hygiene-check`
 
 Before push:
 
-- `mise run ci-required-attested`
+- `sh tools/ci/run_task.sh ci-required-attested`
 
 Commit and issue cadence:
 

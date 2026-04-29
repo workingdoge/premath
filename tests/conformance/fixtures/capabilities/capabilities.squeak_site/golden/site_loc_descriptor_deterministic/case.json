@@ -9,13 +9,13 @@
     "leftDescriptor": {
       "worldId": "world.dev",
       "runtimeProfile": "local",
-      "capabilityVector": ["hk", "mise", "rust"],
+      "capabilityVector": ["hk", "ci-script", "rust"],
       "substrateBindingRef": "host://devbox"
     },
     "rightDescriptor": {
       "runtimeProfile": "local",
       "substrateBindingRef": "host://devbox",
-      "capabilityVector": ["rust", "hk", "mise"],
+      "capabilityVector": ["rust", "hk", "ci-script"],
       "worldId": "world.dev"
     }
   }

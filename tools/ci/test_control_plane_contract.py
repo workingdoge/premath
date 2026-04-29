@@ -322,7 +322,7 @@ def _base_payload() -> dict:
                 "semanticAuthority": [
                     "PREMATH-KERNEL",
                     "GATE",
-                    "BIDIR-DESCENT",
+                    "OBLIGATION-DISCHARGE",
                 ],
                 "controlPlaneRole": "projection_and_parity_only",
                 "forbiddenControlPlaneRoles": [
@@ -494,9 +494,9 @@ def _base_payload() -> dict:
                 "role": "projection_only",
                 "supportUntilEpoch": "2026-06",
             },
-            "bidirEvidenceRoute": {
+            "coreObligationEvidenceRoute": {
                 "routeKind": "direct_checker_discharge",
-                "obligationFieldRef": "bidirCheckerObligations",
+                "obligationFieldRef": "coreObligationCheckerKinds",
                 "requiredObligations": [
                     "stability",
                     "locality",
@@ -575,22 +575,20 @@ def _base_payload() -> dict:
         "commandSurface": {
             "requiredDecision": {
                 "canonicalEntrypoint": [
-                    "mise",
-                    "run",
-                    "ci-required-attested",
+                    "python3",
+                    "tools/ci/run_required_attested.py",
                 ],
-                "compatibilityAliases": [
-                    [
-                        "mise",
-                        "run",
-                        "ci-check",
-                    ]
-                ],
+                "compatibilityAliases": [],
             },
             "instructionEnvelopeCheck": {
                 "canonicalEntrypoint": [
-                    "python3",
-                    "tools/ci/check_instruction_envelope.py",
+                    "cargo",
+                    "run",
+                    "--package",
+                    "premath-cli",
+                    "--",
+                    "instruction-check",
+                    "--instruction",
                 ],
                 "compatibilityAliases": [],
             },
@@ -760,7 +758,7 @@ class ControlPlaneContractTests(unittest.TestCase):
         )
         self.assertIn(
             "stability",
-            loaded["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"],
+            loaded["evidenceStage2Authority"]["coreObligationEvidenceRoute"]["requiredObligations"],
         )
         self.assertEqual(
             loaded["workerLaneAuthority"]["mutationPolicy"]["defaultMode"],
@@ -786,7 +784,7 @@ class ControlPlaneContractTests(unittest.TestCase):
         )
         self.assertEqual(
             loaded["commandSurface"]["requiredDecision"]["canonicalEntrypoint"],
-            ["mise", "run", "ci-required-attested"],
+            ["python3", "tools/ci/run_required_attested.py"],
         )
         self.assertEqual(
             loaded["commandSurface"]["instructionDecision"]["compatibilityAliases"],
@@ -919,11 +917,7 @@ class ControlPlaneContractTests(unittest.TestCase):
 
     def test_load_rejects_command_surface_canonical_entrypoint_drift(self) -> None:
         payload = _base_payload()
-        payload["commandSurface"]["requiredDecision"]["canonicalEntrypoint"] = [
-            "mise",
-            "run",
-            "ci-check",
-        ]
+        payload["commandSurface"]["requiredDecision"]["canonicalEntrypoint"] = []
         with self.assertRaisesRegex(ValueError, "canonicalEntrypoint"):
             self._load(payload)
 
@@ -939,7 +933,7 @@ class ControlPlaneContractTests(unittest.TestCase):
         payload = _base_payload()
         payload["providerPipelineWrappers"]["requiredPipeline"][
             "workflowEntrypoint"
-        ] = ["mise", "run", "ci-required-attested"]
+        ] = ["python3", "tools/ci/run_required_attested.py"]
         with self.assertRaisesRegex(ValueError, "workflowEntrypoint"):
             self._load(payload)
 
@@ -1082,12 +1076,12 @@ class ControlPlaneContractTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "canonical Stage 2 classes"):
             self._load(payload)
 
-    def test_load_rejects_stage2_bidir_route_obligation_mismatch(self) -> None:
+    def test_load_rejects_stage2_core_obligation_route_obligation_mismatch(self) -> None:
         payload = _base_payload()
-        payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"] = [
+        payload["evidenceStage2Authority"]["coreObligationEvidenceRoute"]["requiredObligations"] = [
             "stability"
         ]
-        with self.assertRaisesRegex(ValueError, "canonical Stage 2 kernel obligations"):
+        with self.assertRaisesRegex(ValueError, "canonical Stage 2 Core obligation kinds"):
             self._load(payload)
 
     def test_load_rejects_rollover_without_cadence(self) -> None:

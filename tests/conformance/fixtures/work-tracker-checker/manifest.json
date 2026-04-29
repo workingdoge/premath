@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "suiteId": "work-tracker-checker",
+  "vectors": [
+    "golden/simple_claim_accept",
+    "golden/projection_check_accept",
+    "golden/handoff_claim_accept",
+    "adversarial/missing_boundary_reject",
+    "adversarial/projection_as_authority_reject",
+    "adversarial/graph_semantics_reject"
+  ]
+}

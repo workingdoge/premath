@@ -199,7 +199,7 @@ boundaries to deterministic outcomes:
   `invariance/same_semantics_local_profile`,
   `invariance/same_semantics_external_profile`.
 
-These vectors are executable through `mise run conformance-run` and are
+These vectors are executable through `sh tools/ci/run_task.sh conformance-run` and are
 deterministically evaluated by `tools/conformance/run_capability_vectors.py`.
 
 ## 11. Cheese contract (runtime unit term)

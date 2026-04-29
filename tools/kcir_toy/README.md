@@ -2,12 +2,12 @@
 
 This directory contains **non-normative tooling** that compiles the semantic toy
 Gate cases (`tests/toy/fixtures/*/case.json`) into **KCIR-shaped fixtures** and
-then runs a minimal verifier + Gate checker.
+then runs a minimal verifier + the Rust-native Gate checker.
 
 ## Why this exists
 
-The semantic toy suite (`tools/toy/*`) is the fastest way to sanity-check the
-Gate laws.
+The semantic toy suite (`premath toy-gate-check` over `tests/toy/fixtures`) is
+the fastest way to sanity-check the Gate laws.
 
 This KCIR toy suite is the next step: it demonstrates that the same Gate
 failures can be detected when the inputs are carried by the **KCIR/NF** layer
@@ -25,8 +25,8 @@ Covered:
   - `O_ASSERT_OVERLAP` / `O_ASSERT_TRIPLE` (proof-carrying overlap + cocycle checks)
   - `O_ASSERT_CONTRACTIBLE` (proof-carrying contractible gluing witness)
 - ToyViews Base API: mapId encoding + coverSig hashing
-- Gate checks (stability/locality/descent/contractible glue) evaluated in the
-  toy semantic worlds
+- Gate checks (stability/locality/descent/contractible glue) evaluated through
+  `premath-kernel`
 
 Not covered (yet):
 - full opcode registry
@@ -56,4 +56,3 @@ The kernel specs are commitment-backend agnostic.
 The KCIR toy suite uses `tools/kcir_toy/toy_ref.py` (SHA-256 + fixed32 digest encoding)
 ONLY to make fixtures reproducible.
 This does not constrain production backends (Merkle, lattice/R_q, etc.).
-

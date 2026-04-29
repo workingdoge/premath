@@ -89,7 +89,7 @@ def _load_obligation_ids(repo_root: Path) -> Set[str]:
     control_plane = _load_json(control_plane_path)
     stage2 = control_plane.get("evidenceStage2Authority")
     if isinstance(stage2, dict):
-        route = stage2.get("bidirEvidenceRoute")
+        route = stage2.get("coreObligationEvidenceRoute")
         if isinstance(route, dict):
             required = route.get("requiredObligations")
             if isinstance(required, list):

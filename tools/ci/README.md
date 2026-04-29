@@ -4,10 +4,10 @@ Role boundary:
 
 - CI tools in this directory implement control-plane execution/attestation.
 - `premath coherence-check` implements control-plane consistency checking.
-- semantic admissibility authority remains kernel/Gate/BIDIR, not CI wrappers.
+- semantic admissibility authority remains kernel/Gate/Core obligations, not CI wrappers.
 
 `tools/ci/run_required_checks.py` is the canonical closure gate entrypoint used
-by `mise run ci-required`.
+by `sh tools/ci/run_task.sh ci-required`.
 
 It computes deterministic change projection (`Delta -> requiredChecks`) and
 executes only those checks through `tools/ci/run_gate.sh`.
@@ -25,7 +25,7 @@ Gate-ref assembly and fallback gate payload synthesis are core-owned via
 It delegates final `ci.required.v1` witness assembly to core
 `premath required-witness` (Python wrapper is transport only).
 `run_gate.sh` prefers a native runner/task artifact when present; otherwise it
-emits a deterministic fallback envelope (`tools/ci/emit_gate_witness.py`).
+emits a deterministic fallback envelope through `premath required-gate-ref`.
 Each gate ref includes `source: native|fallback` provenance.
 `ci.required.v1` witness summaries expose deterministic failure-lineage split:
 
@@ -36,11 +36,11 @@ Each gate ref includes `source: native|fallback` provenance.
 - `failureClasses`: deterministic union of both surfaces (compatibility field).
 
 `tools/ci/run_gate.sh` is the host-agnostic task executor shim used by both
-`ci-required` and fixed-task flows like `mise run ci-check`.
+`ci-required` and fixed-task flows like `sh tools/ci/run_task.sh ci-check`.
 When `PREMATH_GATE_WITNESS_OUT` is set (by `ci-required`), it also handles
 native-or-fallback gate envelope emission for that check.
 
-`mise run ci-check` remains as legacy compatibility for fixed full-gate routing.
+`sh tools/ci/run_task.sh ci-check` remains as legacy compatibility for fixed full-gate routing.
 
 `tools/ci/verify_required_witness.py` verifies `ci.required` artifacts against
 deterministic projection semantics.
@@ -56,7 +56,7 @@ By default it verifies `artifacts/ciwitness/latest-required.json`.
 verified witness semantics (`accept` or `reject`).
 It delegates decision semantics to core
 `premath required-witness-decide` via a thin adapter.
-`mise run ci-decide-required` writes `artifacts/ciwitness/latest-decision.json`.
+`sh tools/ci/run_task.sh ci-decide-required` writes `artifacts/ciwitness/latest-decision.json`.
 
 `tools/ci/verify_decision.py` verifies the decision attestation chain:
 
@@ -68,23 +68,16 @@ It delegates attestation-chain semantics to core
 `premath required-decision-verify`; Python wrapper logic is path/artifact
 transport only.
 
-`tools/ci/check_ci_wiring.py` validates that CI workflow wiring uses the
-canonical attested gate chain entrypoint and does not split the required gate
-steps.
+`premath command-surface-check` validates the repository command surface is
+direct scripts/Nix and rejects legacy task-runner command/file references
+(`sh tools/ci/run_task.sh ci-command-surface-check`).
 
-`tools/ci/check_command_surface.py` validates the repository command surface is
-`mise`-only and rejects legacy task-runner command/file references
-(`mise run ci-command-surface-check`).
-
-`tools/ci/check_repo_hygiene.py` validates repository hygiene guardrails for
+`premath repo-hygiene-check` validates repository hygiene guardrails for
 private/local-only surfaces (for example `.claude/`, `.serena/`,
-`.premath/cache/`) and required ignore entries
-(`mise run ci-hygiene-check`).
+`.premath/cache/`) and required ignore entries.
 
-`tools/ci/check_issue_graph.py` delegates core contract validation to
-`premath issue check` and then applies deterministic compactness drift checks.
-It uses core issue-memory semantics from `premath-bd` for machine-actionable
-planning surfaces:
+`premath issue check` validates core issue-memory semantics from `premath-bd`
+for machine-actionable planning surfaces:
 
 - `[EPIC]` title rows must use `issue_type=epic`,
 - active issues (`open`/`in_progress`) must carry an `Acceptance:` section,
@@ -93,41 +86,23 @@ planning surfaces:
 - active `blocks` edges that target `closed` issues fail as compactness drift,
 - transitive-redundant active `blocks` edges fail as compactness drift.
 
-For deterministic compactness remediation, use
-`tools/ci/compact_issue_graph.py`:
+`sh tools/ci/run_task.sh ci-hygiene-check` runs both native checks. Remove
+compactness drift with explicit `premath dep remove` commands so issue-memory
+mutation stays auditable.
 
-- `--mode check` reports compactness drift and exits non-zero on findings,
-- `--mode apply` removes redundant `blocks` edges through canonical
-  `premath dep remove` command paths and verifies ready/blocked semantics plus
-  active-scope cycle integrity are preserved.
-
-`tools/ci/check_branch_policy.py` validates effective GitHub `main` branch
-rules against tracked process policy (`specs/process/GITHUB-BRANCH-POLICY.json`)
-with two modes:
-
-- fixture/offline deterministic mode (`mise run ci-branch-policy-check`),
-- live API mode (`mise run ci-branch-policy-check-live`) for server-side drift
-  detection.
-
-Live mode reads `GITHUB_TOKEN` (or an alternate token env via `--token-env`)
-and checks the effective rules API surface:
-`/repos/{owner}/{repo}/rules/branches/{branch}`.
-For this repo policy, bypass actors are fail-closed.
-
-`tools/ci/check_pipeline_wiring.py` validates provider-specific workflow files
+`premath pipeline-wiring-check` validates provider-specific workflow files
 remain thin wrappers around provider-neutral pipeline entrypoints
-(`mise run ci-pipeline-check`).
+(`sh tools/ci/run_task.sh ci-pipeline-check`).
 
 `tools/ci/test_pipeline_required.py`,
 `tools/ci/test_pipeline_instruction.py`, and
 `tools/ci/test_drift_budget.py` are deterministic unit tests for
 provider-neutral pipeline summary/digest logic and drift-budget sentinels
-(`mise run ci-pipeline-test`).
+(`sh tools/ci/run_task.sh ci-pipeline-test`).
 
 Observation projection now routes through one core command surface:
-`premath observe-build` (`mise run ci-observation-build`).
-`tools/ci/observation_surface.py` remains as a thin compatibility wrapper for
-tests/scripts, while `mise run ci-observation-query` uses `premath observe`.
+`premath observe-build` (`sh tools/ci/run_task.sh ci-observation-build`).
+`sh tools/ci/run_task.sh ci-observation-query` uses `premath observe`.
 The summary includes explicit coherence projections for:
 
 - policy drift,
@@ -141,16 +116,17 @@ It writes:
 - `artifacts/observation/events.jsonl` (projection/event feed suitable for
   downstream query stores, including Surreal adapters).
 
-`tools/ci/test_observation_surface.py` validates deterministic reducer/query
-behavior (`mise run ci-observation-test`).
-`tools/ci/check_observation_semantics.py` enforces projection invariance:
-observation output must match a fresh `premath observe-build` projection from
-current CI witness and issue-memory artifacts (`mise run ci-observation-check`).
+`sh tools/ci/run_task.sh ci-observation-test` validates deterministic
+reducer/query behavior through the native `premath-surreal`, `premath-ux`, and
+`premath-cli` tests.
+`premath observe-check` enforces projection invariance: observation output must
+match a fresh `premath observe-build` projection from current CI witness and
+issue-memory artifacts (`sh tools/ci/run_task.sh ci-observation-check`).
 `tools/ci/check_drift_budget.py` enforces fail-closed drift-budget sentinels
 across docs/contracts/checkers/cache-closure surfaces, includes deterministic
 topology-budget metrics from `specs/process/TOPOLOGY-BUDGET.json`, and emits
 deterministic `driftClasses` + `warningClasses` summary output
-(`mise run ci-drift-budget-check`).
+(`sh tools/ci/run_task.sh ci-drift-budget-check`).
 
 `premath observe-serve` (from `premath-cli`) exposes the same observation query
 contract as a tiny HTTP read API for frontend clients:
@@ -165,12 +141,12 @@ only). Alias lookups are compatibility-scoped and require
 `match=compatibility_alias`.
 
 `tools/ci/pipeline_required.py` is the provider-neutral required-gate pipeline
-entrypoint (`mise run ci-pipeline-required`): maps provider refs, runs the
+entrypoint (`sh tools/ci/run_task.sh ci-pipeline-required`): maps provider refs, runs the
 attested required gate chain, enforces governance/KCIR mapping gates, and emits
 summary/sha artifacts.
 
 `tools/ci/pipeline_instruction.py` is the provider-neutral instruction pipeline
-entrypoint (`mise run ci-pipeline-instruction`): validates envelope shape, runs
+entrypoint (`sh tools/ci/run_task.sh ci-pipeline-instruction`): validates envelope shape, runs
 instruction execution, enforces governance/KCIR mapping gates, and emits
 summary/sha artifacts.
 
@@ -180,9 +156,6 @@ Workflow authoring contract:
   `python3 tools/ci/pipeline_required.py`.
 - `.github/workflows/instruction.yml` must call
   `python3 tools/ci/pipeline_instruction.py --instruction "$INSTRUCTION_PATH"`.
-- `.github/workflows/branch-policy.yml` runs live branch/ruleset verification
-  against `specs/process/GITHUB-BRANCH-POLICY.json` and requires secret
-  `PREMATH_BRANCH_POLICY_TOKEN` for admin-read API access.
 - workflow files should not inline attestation/summary logic; keep pipeline
   orchestration in `tools/ci/pipeline_*.py`.
 - wrapper workflow entrypoints and required gates are declared under
@@ -190,15 +163,14 @@ Workflow authoring contract:
   `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`; `ci-pipeline-check`
   derives its expected commands from that contract.
 - validate with:
-  - `mise run ci-pipeline-check`
-  - `mise run ci-pipeline-test`
-  - `mise run ci-wiring-check`
+  - `sh tools/ci/run_task.sh ci-pipeline-check`
+  - `sh tools/ci/run_task.sh ci-pipeline-test`
 
-`tools/ci/check_instruction_envelope.py` validates instruction envelope
-schema/shape before execution (`mise run ci-instruction-check`).
+`premath instruction-check` validates instruction envelope schema/shape before
+execution (`sh tools/ci/run_task.sh ci-instruction-check`).
 
 `tools/ci/test_instruction_smoke.py` runs a deterministic instruction witness
-smoke check against a golden fixture (`mise run ci-instruction-smoke`).
+smoke check against a golden fixture (`sh tools/ci/run_task.sh ci-instruction-smoke`).
 
 It separates:
 
@@ -234,7 +206,7 @@ It separates:
 ## SqueakSite Profiles
 
 - `PREMATH_SQUEAK_SITE_PROFILE=local` (default)
-  - runs `mise run <task>` in the current environment.
+  - runs `sh tools/ci/run_task.sh <task>` in the current environment.
 - `PREMATH_SQUEAK_SITE_PROFILE=external`
   - delegates to `PREMATH_SQUEAK_SITE_RUNNER` (an executable).
   - runner protocol: `<runner> <task>` and exit code passthrough.
@@ -250,17 +222,17 @@ See `tools/ci/executors/README.md` for runner responsibilities.
 
 ## Required Check Mapping
 
-Canonical CI decision surface is `mise run ci-required-attested`.
+Canonical CI decision surface is `python3 tools/ci/run_required_attested.py`.
 Provider-neutral workflow entrypoint is `python3 tools/ci/pipeline_required.py`.
 Instruction decision surface is `python3 tools/ci/run_instruction.py`.
 
 Command-surface contract authority is
 `specs/premath/draft/CONTROL-PLANE-CONTRACT.json` under `commandSurface`:
 
-- `requiredDecision.canonicalEntrypoint`: `mise run ci-required-attested`
-- `requiredDecision.compatibilityAliases`: `mise run ci-check`
+- `requiredDecision.canonicalEntrypoint`: `python3 tools/ci/run_required_attested.py`
+- `requiredDecision.compatibilityAliases`: none
 - `instructionEnvelopeCheck.canonicalEntrypoint`:
-  `python3 tools/ci/check_instruction_envelope.py`
+  `cargo run --package premath-cli -- instruction-check --instruction`
 - `instructionDecision.canonicalEntrypoint`:
   `python3 tools/ci/run_instruction.py`
 - `instructionDecision.compatibilityAliases`:
@@ -285,61 +257,54 @@ Strict compare changed-path source order:
 Examples:
 
 ```bash
-PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD mise run ci-verify-required-strict
-PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD mise run ci-decide-required
+PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD sh tools/ci/run_task.sh ci-verify-required-strict
+PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD sh tools/ci/run_task.sh ci-decide-required
 ```
 
-GitHub adapter export:
-
-```bash
-python3 tools/ci/providers/export_github_env.py
-# emits PREMATH_CI_* assignments derived from GITHUB_* env
-```
+Provider-neutral pipelines map provider refs internally before strict delta
+verification. Workflows should not call standalone provider-env export scripts.
 
 ## Example
 
 ```bash
-PREMATH_SQUEAK_SITE_PROFILE=local mise run ci-required
+PREMATH_SQUEAK_SITE_PROFILE=local sh tools/ci/run_task.sh ci-required
 
 # external runner wrapper (user-provided)
 PREMATH_SQUEAK_SITE_PROFILE=external \
 PREMATH_SQUEAK_SITE_RUNNER=./tools/ci/executors/my_runner.sh \
-mise run ci-required
+sh tools/ci/run_task.sh ci-required
 
-mise run ci-wiring-check
-mise run ci-command-surface-check
-mise run ci-hygiene-check
-mise run ci-branch-policy-check
-mise run ci-pipeline-check
-mise run ci-pipeline-test
-mise run ci-observation-test
-mise run ci-observation-build
-mise run ci-observation-query
-mise run ci-observation-serve
-mise run ci-observation-check
-mise run ci-verify-required
-mise run ci-required-verified
-mise run ci-required-attested
-mise run ci-branch-policy-check-live
-mise run ci-pipeline-required
-mise run ci-decide-required
-mise run ci-verify-decision
+sh tools/ci/run_task.sh ci-command-surface-check
+sh tools/ci/run_task.sh ci-hygiene-check
+sh tools/ci/run_task.sh ci-pipeline-check
+sh tools/ci/run_task.sh ci-pipeline-test
+sh tools/ci/run_task.sh ci-observation-test
+sh tools/ci/run_task.sh ci-observation-build
+sh tools/ci/run_task.sh ci-observation-query
+sh tools/ci/run_task.sh ci-observation-serve
+sh tools/ci/run_task.sh ci-observation-check
+sh tools/ci/run_task.sh ci-verify-required
+sh tools/ci/run_task.sh ci-required-verified
+sh tools/ci/run_task.sh ci-required-attested
+sh tools/ci/run_task.sh ci-pipeline-required
+sh tools/ci/run_task.sh ci-decide-required
+sh tools/ci/run_task.sh ci-verify-decision
 
 # strict mode: compare witness changedPaths to detected delta
-mise run ci-verify-required-strict
+sh tools/ci/run_task.sh ci-verify-required-strict
 
 # strict mode + phase-in native-only requirement
-mise run ci-verify-required-strict-native
+sh tools/ci/run_task.sh ci-verify-required-strict-native
 ```
 
 Instruction envelope run:
 
 ```bash
-mise run ci-instruction-check
-INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
-INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-instruction
+sh tools/ci/run_task.sh ci-instruction-check
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json sh tools/ci/run_task.sh ci-pipeline-instruction
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json sh tools/ci/run_task.sh ci-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
-mise run ci-instruction-smoke
+sh tools/ci/run_task.sh ci-instruction-smoke
 ```
 
 GitHub manual dispatch workflow:
@@ -351,8 +316,8 @@ GitHub manual dispatch workflow:
 Inspect projection plan without executing checks:
 
 ```bash
-python3 tools/ci/project_checks.py
-python3 tools/ci/project_checks.py --changed-file crates/premath-kernel/src/lib.rs
+printf '{"changedPaths":["crates/premath-kernel/src/lib.rs"]}\n' > /tmp/premath-required-projection.json
+cargo run --package premath-cli -- required-projection --input /tmp/premath-required-projection.json --json
 ```
 
 ## Terraform/OpenTofu Shape
@@ -360,7 +325,7 @@ python3 tools/ci/project_checks.py --changed-file crates/premath-kernel/src/lib.
 Optional wrapper:
 
 ```bash
-mise run ci-check-tf
+sh tools/ci/run_task.sh ci-check-tf
 ```
 
 This runs `tools/infra/terraform/up.sh` to resolve `premath_cheese_runner`
@@ -373,9 +338,9 @@ Use:
 
 ```bash
 # default (local profile)
-mise run ci-check-tf
+sh tools/ci/run_task.sh ci-check-tf
 # explicit local
-mise run ci-check-tf-local
+sh tools/ci/run_task.sh ci-check-tf-local
 # experimental
-mise run ci-check-tf-microvm
+sh tools/ci/run_task.sh ci-check-tf-microvm
 ```

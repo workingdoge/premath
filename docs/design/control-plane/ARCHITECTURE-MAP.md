@@ -15,7 +15,7 @@ Scope: design-level, non-normative
 `Kernel` (semantic authority):
 - `specs/premath/draft/PREMATH-KERNEL.md`
 - `specs/premath/draft/GATE.md`
-- `specs/premath/draft/BIDIR-DESCENT.md`
+- `specs/premath/draft/OBLIGATION-DISCHARGE.md`
 
 `Runtime` (execution inside/between worlds):
 - `specs/premath/raw/TUSK-CORE.md`
@@ -94,7 +94,7 @@ Role split inside CI/Control:
 - `tools/conformance/check_doctrine_mcp_parity.py`
 - `tools/conformance/run_doctrine_inf_vectors.py`
 - `premath coherence-check` (`crates/premath-coherence` + `premath-cli`)
-- `hk.pkl`, `.mise.toml`
+- `hk.pkl`, `tools/ci/baseline_tasks.json`, `tools/ci/run_task.sh`
 
 ## 2. Doctrine to Operation Path
 
@@ -114,7 +114,7 @@ DOCTRINE-INF
   -> tools/conformance/check_doctrine_site.py /
      check_runtime_orchestration.py / check_doctrine_mcp_parity.py /
      run_doctrine_inf_vectors.py
-  -> hk/mise tasks (.mise baseline + ci-required-attested)
+  -> hk/direct script tasks (baseline manifest + ci-required-attested)
   -> CIWitness artifacts
   -> conformance + doctrine-site checks
 ```
@@ -173,25 +173,25 @@ Loop intent:
 
 ## 6. Conformance Closure
 
-Baseline gate (`mise run baseline`) enforces:
+Baseline gate (`sh tools/ci/run_task.sh baseline`) enforces:
 - setup/lint/build/test/toy suites,
-- conformance + traceability + coherence-check + docs-coherence + doctrine closure,
+- conformance + traceability + coherence-check + doctrine closure,
 - doctrine closure includes doctrine-site roundtrip/reachability plus MCP
   doctrine-operation parity + runtime-route parity
   (`check_doctrine_site.py`, `check_runtime_orchestration.py`,
   `check_doctrine_mcp_parity.py`),
 - CI/control-plane wiring, pipeline, observation, instruction, and drift-budget checks,
-- executable fixture-suite closure (`mise run conformance-run`).
+- executable fixture-suite closure (`sh tools/ci/run_task.sh conformance-run`).
 
-Operational source of truth for baseline composition is `.mise.toml`
+Operational source of truth for baseline composition is `tools/ci/baseline_tasks.json`
 (`[tasks.baseline]`).
 
-Projected required gate (`mise run ci-required`) enforces:
+Projected required gate (`sh tools/ci/run_task.sh ci-required`) enforces:
 - deterministic `Delta -> requiredChecks` projection,
 - execution of projected checks only,
 - CI closure witness emission (`artifacts/ciwitness/proj1_*.json`).
 
-Authoritative verification (`mise run ci-verify-required`) enforces:
+Authoritative verification (`sh tools/ci/run_task.sh ci-verify-required`) enforces:
 - projection/witness digest consistency,
 - required/executed check-set consistency,
 - verdict/failure-class consistency with check results.

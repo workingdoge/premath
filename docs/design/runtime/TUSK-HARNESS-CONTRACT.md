@@ -162,7 +162,7 @@ Each slice should ship with:
 - Runtime normative candidate (raw): `specs/premath/raw/TUSK-CORE.md`
 - Authority boundaries:
   - `specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md`
-  - `specs/premath/draft/BIDIR-DESCENT.md`
+  - `specs/premath/draft/OBLIGATION-DISCHARGE.md`
   - `specs/premath/draft/GATE.md`
 
 ## 11. Harness Session Artifact (Consolidated)
@@ -298,24 +298,9 @@ where:
 
 Row source: `.premath/harness_trajectory.jsonl` windowed by `finishedAt`.
 
-Deterministic benchmark procedure:
-
-1. choose deterministic window (`window_hours`, default `24`),
-2. load trajectory rows and sort descending by `(finishedAt, stepId, action)`,
-3. classify success rows with canonical success classes,
-4. compute counts/ratios/KPI,
-5. evaluate thresholds and emit one decision state.
-
-Command surface:
-
-- `python3 tools/harness/benchmark_kpi.py --json`
-- `mise run harness-kpi-report`
-
-Thresholds and rollback trigger:
-
-- target KPI: `0.8`
-- rollback KPI: `0.4`
-- minimum sample rows: `3`
+KPI/reporting projections are downstream operational views over
+`.premath/harness_trajectory.jsonl`; they are not part of the Premath checker
+surface.
 
 Decision states:
 
@@ -389,7 +374,7 @@ Mutation (instruction-linked authority required):
 - `dep.add|remove|replace` ->
   `premath dep ... --json`
 - `instruction.run` ->
-  `sh tools/ci/run_instruction.sh ...` or `mise run ci-instruction`
+  `sh tools/ci/run_instruction.sh ...` or `sh tools/ci/run_task.sh ci-instruction`
 - `harness.session.write` ->
   `premath harness-session write ... --json`
 - `harness.feature.write` ->
@@ -399,12 +384,13 @@ Mutation (instruction-linked authority required):
 
 ### 14.3 Harness integration shape
 
-Keep coordinator/worker loop unchanged:
+Downstream coordinator/worker loops should keep this integration shape:
 
 1. worker claims issue,
 2. worker executes one bounded REPL program via `scheme_eval`,
 3. program emits host-effect rows and optional harness trajectory refs,
-4. existing verify/close/escalate logic remains authoritative in harness.
+4. existing verify/close/escalate logic remains authoritative in the downstream
+   runtime surface.
 
 This preserves the current durability lanes:
 

@@ -141,9 +141,9 @@ const EVIDENCE_FACTORIZATION_CLASS_AMBIGUOUS: &str = "unification.evidence_facto
 const EVIDENCE_FACTORIZATION_CLASS_UNBOUND: &str = "unification.evidence_factorization.unbound";
 const EVIDENCE_FACTORIZATION_ROUTE_KIND: &str = "eta_F_to_Ev";
 const STAGE2_AUTHORITY_ALIAS_ROLE: &str = "projection_only";
-const STAGE2_BIDIR_ROUTE_KIND: &str = "direct_checker_discharge";
-const STAGE2_BIDIR_OBLIGATION_FIELD_REF: &str = "bidirCheckerObligations";
-const STAGE2_BIDIR_FALLBACK_MODE: &str = "profile_gated_sentinel";
+const STAGE2_CORE_OBLIGATION_ROUTE_KIND: &str = "direct_checker_discharge";
+const STAGE2_CORE_OBLIGATION_FIELD_REF: &str = "coreObligationCheckerKinds";
+const STAGE2_CORE_OBLIGATION_FALLBACK_MODE: &str = "profile_gated_sentinel";
 const WORKER_MUTATION_DEFAULT_MODE: &str = "instruction-linked";
 const WORKER_ALLOWED_MUTATION_MODES: &[&str] = &["instruction-linked", "human-override"];
 const WORKER_ROUTE_ISSUE_CLAIM: &str = "capabilities.change_morphisms.issue_claim";
@@ -194,13 +194,6 @@ pub enum CoherenceError {
         source: serde_json::Error,
     },
 
-    #[error("invalid toml at {path}: {source}")]
-    ParseToml {
-        path: String,
-        #[source]
-        source: toml::de::Error,
-    },
-
     #[error("{0}")]
     Contract(String),
 }
@@ -246,15 +239,15 @@ pub struct CoherenceSurfaces {
     pub ci_closure_baseline_end: String,
     pub ci_closure_projection_start: String,
     pub ci_closure_projection_end: String,
-    pub mise_path: String,
-    pub mise_baseline_task: String,
+    pub baseline_manifest_path: String,
+    pub baseline_task: String,
     pub control_plane_contract_path: String,
     pub doctrine_site_path: String,
     pub doctrine_root_node_id: String,
     pub profile_readme_path: String,
-    pub bidir_spec_path: String,
-    pub bidir_spec_section_start: String,
-    pub bidir_spec_section_end: String,
+    pub core_obligation_spec_path: String,
+    pub core_obligation_spec_section_start: String,
+    pub core_obligation_spec_section_end: String,
     pub coherence_spec_path: String,
     pub coherence_spec_obligation_start: String,
     pub coherence_spec_obligation_end: String,
@@ -574,7 +567,7 @@ struct ControlPlaneStage2Authority {
     #[serde(default)]
     compatibility_alias: ControlPlaneStage2CompatibilityAlias,
     #[serde(default)]
-    bidir_evidence_route: ControlPlaneStage2BidirEvidenceRoute,
+    core_obligation_evidence_route: ControlPlaneStage2CoreObligationEvidenceRoute,
     #[serde(default)]
     kernel_compliance_sentinel: Option<ControlPlaneStage2KernelComplianceSentinel>,
     #[serde(default)]
@@ -620,7 +613,7 @@ struct ControlPlaneStage2FailureClasses {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct ControlPlaneStage2BidirEvidenceRoute {
+struct ControlPlaneStage2CoreObligationEvidenceRoute {
     #[serde(default)]
     route_kind: String,
     #[serde(default)]
@@ -628,14 +621,14 @@ struct ControlPlaneStage2BidirEvidenceRoute {
     #[serde(default)]
     required_obligations: Vec<String>,
     #[serde(default)]
-    failure_classes: ControlPlaneStage2BidirEvidenceFailureClasses,
+    failure_classes: ControlPlaneStage2CoreObligationEvidenceFailureClasses,
     #[serde(default)]
-    fallback: Option<ControlPlaneStage2BidirEvidenceFallback>,
+    fallback: Option<ControlPlaneStage2CoreObligationEvidenceFallback>,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct ControlPlaneStage2BidirEvidenceFailureClasses {
+struct ControlPlaneStage2CoreObligationEvidenceFailureClasses {
     #[serde(default)]
     missing: String,
     #[serde(default)]
@@ -644,7 +637,7 @@ struct ControlPlaneStage2BidirEvidenceFailureClasses {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct ControlPlaneStage2BidirEvidenceFallback {
+struct ControlPlaneStage2CoreObligationEvidenceFallback {
     #[serde(default)]
     mode: String,
     #[serde(default)]
@@ -657,7 +650,7 @@ struct ControlPlaneStage2KernelComplianceSentinel {
     #[serde(default)]
     required_obligations: Vec<String>,
     #[serde(default)]
-    failure_classes: ControlPlaneStage2BidirEvidenceFailureClasses,
+    failure_classes: ControlPlaneStage2CoreObligationEvidenceFailureClasses,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -676,7 +669,7 @@ pub struct CoherenceContract {
     #[serde(default)]
     pub overlay_docs: Vec<String>,
     #[serde(default)]
-    pub required_bidir_obligations: Vec<String>,
+    pub required_core_obligation_kinds: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -1044,14 +1037,21 @@ fn check_scope_noncontradiction(
             .push("coherence.scope_noncontradiction.profile_overlay_claim_mismatch".to_string());
     }
 
-    let bidir_spec_path = resolve_path(repo_root, contract.surfaces.bidir_spec_path.as_str());
-    let bidir_spec_text = read_text(&bidir_spec_path)?;
-    let bidir_spec_section = extract_section_between(
-        &bidir_spec_text,
-        contract.surfaces.bidir_spec_section_start.as_str(),
-        contract.surfaces.bidir_spec_section_end.as_str(),
+    let core_obligation_spec_path = resolve_path(
+        repo_root,
+        contract.surfaces.core_obligation_spec_path.as_str(),
+    );
+    let core_obligation_spec_text = read_text(&core_obligation_spec_path)?;
+    let core_obligation_spec_section = extract_section_between(
+        &core_obligation_spec_text,
+        contract
+            .surfaces
+            .core_obligation_spec_section_start
+            .as_str(),
+        contract.surfaces.core_obligation_spec_section_end.as_str(),
     )?;
-    let bidir_spec_obligations = parse_backtick_obligation_tokens(bidir_spec_section)?;
+    let core_obligation_spec_kinds =
+        parse_backtick_obligation_tokens(core_obligation_spec_section)?;
     let obligation_registry_json = obligation_gate_registry_json();
     let obligation_registry_kind = obligation_registry_json
         .get("registryKind")
@@ -1059,21 +1059,24 @@ fn check_scope_noncontradiction(
         .map(str::trim)
         .unwrap_or_default();
     if obligation_registry_kind != contract.surfaces.obligation_registry_kind {
-        failures.push("coherence.scope_noncontradiction.bidir_registry_kind_mismatch".to_string());
+        failures.push(
+            "coherence.scope_noncontradiction.core_obligation_registry_kind_mismatch".to_string(),
+        );
     }
-    let bidir_checker_obligations: BTreeSet<String> = obligation_gate_registry()
+    let core_obligation_checker_kinds: BTreeSet<String> = obligation_gate_registry()
         .into_iter()
         .map(|row| row.obligation_kind.to_string())
         .collect();
 
-    for required in &contract.required_bidir_obligations {
-        if !bidir_spec_obligations.contains(required) {
-            failures
-                .push("coherence.scope_noncontradiction.bidir_spec_missing_obligation".to_string());
-        }
-        if !bidir_checker_obligations.contains(required) {
+    for required in &contract.required_core_obligation_kinds {
+        if !core_obligation_spec_kinds.contains(required) {
             failures.push(
-                "coherence.scope_noncontradiction.bidir_checker_missing_obligation".to_string(),
+                "coherence.scope_noncontradiction.core_obligation_spec_missing_kind".to_string(),
+            );
+        }
+        if !core_obligation_checker_kinds.contains(required) {
+            failures.push(
+                "coherence.scope_noncontradiction.core_obligation_checker_missing_kind".to_string(),
             );
         }
     }
@@ -1104,9 +1107,9 @@ fn check_scope_noncontradiction(
             "specIndexCapabilityDocMap": spec_index_doc_map,
             "registryProfileOverlayClaims": registry_profile_claims,
             "conformanceProfileOverlayClaims": conformance_profile_claims,
-            "requiredBidirObligations": contract.required_bidir_obligations,
-            "bidirSpecObligations": bidir_spec_obligations,
-            "bidirCheckerObligations": bidir_checker_obligations,
+            "requiredCoreObligationKinds": contract.required_core_obligation_kinds,
+            "coreObligationSpecKinds": core_obligation_spec_kinds,
+            "coreObligationCheckerKinds": core_obligation_checker_kinds,
             "requiredCoherenceObligations": required_coherence_obligations,
             "coherenceSpecObligations": coherence_spec_obligations,
             "obligationRegistryKind": obligation_registry_kind,
@@ -1617,12 +1620,13 @@ fn check_gate_chain_parity(
     repo_root: &Path,
     contract: &CoherenceContract,
 ) -> Result<ObligationCheck, CoherenceError> {
-    let mise_path = resolve_path(repo_root, contract.surfaces.mise_path.as_str());
-    let mise_text = read_text(&mise_path)?;
-    let baseline_tasks = parse_baseline_task_ids_from_toml(
-        &mise_text,
-        contract.surfaces.mise_baseline_task.as_str(),
-        &mise_path,
+    let baseline_manifest_path =
+        resolve_path(repo_root, contract.surfaces.baseline_manifest_path.as_str());
+    let baseline_manifest_text = read_text(&baseline_manifest_path)?;
+    let baseline_tasks = parse_baseline_task_ids_from_manifest(
+        &baseline_manifest_text,
+        contract.surfaces.baseline_task.as_str(),
+        &baseline_manifest_path,
     )?;
     let baseline_set: BTreeSet<String> = baseline_tasks.iter().cloned().collect();
 
@@ -1727,7 +1731,7 @@ fn check_gate_chain_parity(
 
     let stage2_authority_check = evaluate_control_plane_stage2_authority(
         &control_plane_contract,
-        &contract.required_bidir_obligations,
+        &contract.required_core_obligation_kinds,
     );
     failures.extend(stage2_authority_check.failure_classes.clone());
     let evidence_factorization_check =
@@ -1761,7 +1765,7 @@ fn check_gate_chain_parity(
     Ok(ObligationCheck {
         failure_classes: dedupe_sorted(failures),
         details: json!({
-            "baselineFromMise": baseline_tasks,
+            "baselineFromManifest": baseline_tasks,
             "baselineFromCiClosure": sorted_vec_from_set(&ci_baseline_set),
             "projectionPolicy": control_plane_contract.required_gate_projection.projection_policy,
             "projectionFromControlPlane": projection_checks,
@@ -2081,14 +2085,14 @@ fn schema_lifecycle_rollover_epoch(
 
 fn evaluate_control_plane_stage2_authority(
     control_plane_contract: &ControlPlaneProjectionContract,
-    required_bidir_obligations_input: &[String],
+    required_core_obligation_kinds_input: &[String],
 ) -> ObligationCheck {
     let required_failure_classes = json!({
         "authorityAliasViolation": STAGE2_AUTHORITY_CLASS_ALIAS_VIOLATION,
         "aliasWindowViolation": STAGE2_AUTHORITY_CLASS_ALIAS_WINDOW_VIOLATION,
         "unbound": STAGE2_AUTHORITY_CLASS_UNBOUND,
     });
-    let required_bidir_failure_classes = json!({
+    let required_core_obligation_failure_classes = json!({
         "missing": STAGE2_KERNEL_CLASS_MISSING,
         "drift": STAGE2_KERNEL_CLASS_DRIFT,
     });
@@ -2096,14 +2100,15 @@ fn evaluate_control_plane_stage2_authority(
         .iter()
         .map(|obligation| (*obligation).to_string())
         .collect();
-    let required_bidir_obligations = dedupe_sorted(
-        required_bidir_obligations_input
+    let required_core_obligation_kinds = dedupe_sorted(
+        required_core_obligation_kinds_input
             .iter()
             .map(|obligation| obligation.trim().to_string())
             .filter(|obligation| !obligation.is_empty())
             .collect(),
     );
-    let required_bidir_set: BTreeSet<String> = required_bidir_obligations.iter().cloned().collect();
+    let required_core_obligation_set: BTreeSet<String> =
+        required_core_obligation_kinds.iter().cloned().collect();
     let canonical_kernel_set: BTreeSet<String> =
         canonical_kernel_obligations.iter().cloned().collect();
     let kernel_registry_obligations: BTreeSet<String> = obligation_gate_registry()
@@ -2123,14 +2128,14 @@ fn evaluate_control_plane_stage2_authority(
         "activeStage": null,
         "typedAuthority": null,
         "compatibilityAlias": null,
-        "bidirEvidenceRoute": null,
+        "coreObligationEvidenceRoute": null,
         "failureClasses": null,
         "kernelComplianceSentinel": null,
         "lifecycleActiveEpoch": active_epoch,
         "lifecycleRolloverEpoch": lifecycle_rollover_epoch,
         "requiredFailureClasses": required_failure_classes,
-        "requiredBidirEvidenceFailureClasses": required_bidir_failure_classes,
-        "requiredBidirObligations": required_bidir_obligations,
+        "requiredCoreObligationEvidenceFailureClasses": required_core_obligation_failure_classes,
+        "requiredCoreObligationKinds": required_core_obligation_kinds,
         "canonicalKernelObligations": canonical_kernel_obligations,
         "kernelRegistryObligations": sorted_vec_from_set(&kernel_registry_obligations),
         "reasons": [],
@@ -2147,7 +2152,7 @@ fn evaluate_control_plane_stage2_authority(
     details["activeStage"] = json!(&stage2.active_stage);
     details["typedAuthority"] = json!(&stage2.typed_authority);
     details["compatibilityAlias"] = json!(&stage2.compatibility_alias);
-    details["bidirEvidenceRoute"] = json!(&stage2.bidir_evidence_route);
+    details["coreObligationEvidenceRoute"] = json!(&stage2.core_obligation_evidence_route);
     details["failureClasses"] = json!(&stage2.failure_classes);
     if let Some(sentinel) = &stage2.kernel_compliance_sentinel {
         details["kernelComplianceSentinel"] = json!(sentinel);
@@ -2300,82 +2305,82 @@ fn evaluate_control_plane_stage2_authority(
         ));
     }
 
-    if stage2.bidir_evidence_route.route_kind.trim() != STAGE2_BIDIR_ROUTE_KIND {
+    let core_obligation_route = &stage2.core_obligation_evidence_route;
+    if core_obligation_route.route_kind.trim() != STAGE2_CORE_OBLIGATION_ROUTE_KIND {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(format!(
-            "evidenceStage2Authority.bidirEvidenceRoute.routeKind must be `{STAGE2_BIDIR_ROUTE_KIND}`"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.routeKind must be `{STAGE2_CORE_OBLIGATION_ROUTE_KIND}`"
         ));
     }
-    if stage2.bidir_evidence_route.obligation_field_ref.trim() != STAGE2_BIDIR_OBLIGATION_FIELD_REF
-    {
+    if core_obligation_route.obligation_field_ref.trim() != STAGE2_CORE_OBLIGATION_FIELD_REF {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(format!(
-            "evidenceStage2Authority.bidirEvidenceRoute.obligationFieldRef must be `{STAGE2_BIDIR_OBLIGATION_FIELD_REF}`"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.obligationFieldRef must be `{STAGE2_CORE_OBLIGATION_FIELD_REF}`"
         ));
     }
 
-    let bidir_required = dedupe_sorted(
-        stage2
-            .bidir_evidence_route
+    let core_obligation_required = dedupe_sorted(
+        core_obligation_route
             .required_obligations
             .iter()
             .map(|obligation| obligation.trim().to_string())
             .filter(|obligation| !obligation.is_empty())
             .collect(),
     );
-    let bidir_required_set: BTreeSet<String> = bidir_required.iter().cloned().collect();
-    if bidir_required.is_empty() {
+    let core_obligation_required_set: BTreeSet<String> =
+        core_obligation_required.iter().cloned().collect();
+    if core_obligation_required.is_empty() {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE.to_string());
         reasons.push(
-            "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must be non-empty"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations must be non-empty"
                 .to_string(),
         );
     } else {
-        for required in &required_bidir_obligations {
-            if !bidir_required_set.contains(required) {
+        for required in &required_core_obligation_kinds {
+            if !core_obligation_required_set.contains(required) {
                 failures.push(GATE_CHAIN_STAGE2_KERNEL_MISSING_FAILURE.to_string());
                 reasons.push(format!(
-                    "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations missing required BIDIR obligation `{required}`"
+                    "evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations missing required Core obligation kind `{required}`"
                 ));
             }
         }
     }
-    if bidir_required_set != required_bidir_set {
+    if core_obligation_required_set != required_core_obligation_set {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(
-            "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must match requiredBidirObligations"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations must match requiredCoreObligationKinds"
                 .to_string(),
         );
     }
-    if bidir_required_set != canonical_kernel_set {
+    if core_obligation_required_set != canonical_kernel_set {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(
-            "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations must match canonical Stage 2 kernel obligations"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations must match canonical Stage 2 Core obligation kinds"
                 .to_string(),
         );
     }
-    for obligation in &bidir_required {
+    for obligation in &core_obligation_required {
         if !kernel_registry_obligations.contains(obligation) {
             failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
             reasons.push(format!(
-                "evidenceStage2Authority.bidirEvidenceRoute.requiredObligations contains unknown kernel obligation `{obligation}`"
+                "evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations contains unknown Core obligation kind `{obligation}`"
             ));
         }
     }
 
-    let bidir_missing_class = stage2.bidir_evidence_route.failure_classes.missing.trim();
-    let bidir_drift_class = stage2.bidir_evidence_route.failure_classes.drift.trim();
-    if bidir_missing_class != STAGE2_KERNEL_CLASS_MISSING
-        || bidir_drift_class != STAGE2_KERNEL_CLASS_DRIFT
+    let core_obligation_missing_class = core_obligation_route.failure_classes.missing.trim();
+    let core_obligation_drift_class = core_obligation_route.failure_classes.drift.trim();
+    if core_obligation_missing_class != STAGE2_KERNEL_CLASS_MISSING
+        || core_obligation_drift_class != STAGE2_KERNEL_CLASS_DRIFT
     {
         failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
         reasons.push(format!(
-            "evidenceStage2Authority.bidirEvidenceRoute.failureClasses must map to canonical classes ({STAGE2_KERNEL_CLASS_MISSING}, {STAGE2_KERNEL_CLASS_DRIFT})"
+            "evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses must map to canonical classes ({STAGE2_KERNEL_CLASS_MISSING}, {STAGE2_KERNEL_CLASS_DRIFT})"
         ));
     }
 
     if let Some(sentinel) = &stage2.kernel_compliance_sentinel {
-        let fallback = stage2.bidir_evidence_route.fallback.as_ref();
+        let fallback = core_obligation_route.fallback.as_ref();
         let fallback_mode = fallback.map(|value| value.mode.trim()).unwrap_or_default();
         let fallback_profile_kinds: BTreeSet<String> = fallback
             .map(|value| {
@@ -2387,12 +2392,12 @@ fn evaluate_control_plane_stage2_authority(
                     .collect()
             })
             .unwrap_or_default();
-        if fallback_mode != STAGE2_BIDIR_FALLBACK_MODE
+        if fallback_mode != STAGE2_CORE_OBLIGATION_FALLBACK_MODE
             || !fallback_profile_kinds.contains(stage2.profile_kind.trim())
         {
             failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
             reasons.push(
-                "evidenceStage2Authority.kernelComplianceSentinel requires bidirEvidenceRoute.fallback.mode=`profile_gated_sentinel` with current profileKind included in fallback.profileKinds"
+                "evidenceStage2Authority.kernelComplianceSentinel requires coreObligationEvidenceRoute.fallback.mode=`profile_gated_sentinel` with current profileKind included in fallback.profileKinds"
                     .to_string(),
             );
         }
@@ -2405,21 +2410,21 @@ fn evaluate_control_plane_stage2_authority(
                 .collect(),
         );
         let sentinel_required_set: BTreeSet<String> = sentinel_required.iter().cloned().collect();
-        if sentinel_required_set != bidir_required_set {
+        if sentinel_required_set != core_obligation_required_set {
             failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
             reasons.push(
-                "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match evidenceStage2Authority.bidirEvidenceRoute.requiredObligations"
+                "evidenceStage2Authority.kernelComplianceSentinel.requiredObligations must match evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations"
                     .to_string(),
             );
         }
         let sentinel_missing_class = sentinel.failure_classes.missing.trim();
         let sentinel_drift_class = sentinel.failure_classes.drift.trim();
-        if sentinel_missing_class != bidir_missing_class
-            || sentinel_drift_class != bidir_drift_class
+        if sentinel_missing_class != core_obligation_missing_class
+            || sentinel_drift_class != core_obligation_drift_class
         {
             failures.push(GATE_CHAIN_STAGE2_KERNEL_DRIFT_FAILURE.to_string());
             reasons.push(
-                "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must match evidenceStage2Authority.bidirEvidenceRoute.failureClasses"
+                "evidenceStage2Authority.kernelComplianceSentinel.failureClasses must match evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses"
                     .to_string(),
             );
         }
@@ -2915,13 +2920,13 @@ fn evaluate_site_case_gate_chain_parity(
 
     let stage1_parity_check = evaluate_control_plane_stage1_parity(&control_plane_contract);
     let stage1_rollback_check = evaluate_control_plane_stage1_rollback(&control_plane_contract);
-    let required_bidir_obligations: Vec<String> = STAGE2_REQUIRED_KERNEL_OBLIGATIONS
+    let required_core_obligation_kinds: Vec<String> = STAGE2_REQUIRED_KERNEL_OBLIGATIONS
         .iter()
         .map(|obligation| (*obligation).to_string())
         .collect();
     let stage2_authority_check = evaluate_control_plane_stage2_authority(
         &control_plane_contract,
-        &required_bidir_obligations,
+        &required_core_obligation_kinds,
     );
     let evidence_factorization_check =
         evaluate_control_plane_evidence_factorization(&control_plane_contract);
@@ -5223,48 +5228,48 @@ fn parse_backtick_obligation_tokens(text: &str) -> Result<BTreeSet<String>, Cohe
         .collect())
 }
 
-fn parse_baseline_task_ids_from_toml(
-    toml_text: &str,
+fn parse_baseline_task_ids_from_manifest(
+    manifest_text: &str,
     task_name: &str,
     path: &Path,
 ) -> Result<Vec<String>, CoherenceError> {
-    let parsed: toml::Value = toml_text
-        .parse()
-        .map_err(|source| CoherenceError::ParseToml {
+    let parsed: serde_json::Value =
+        serde_json::from_str(manifest_text).map_err(|source| CoherenceError::ParseJson {
             path: display_path(path),
             source,
         })?;
-    let tasks = parsed
+    let baseline_task = parsed
+        .get("baselineTask")
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| {
+            CoherenceError::Contract("baseline manifest missing baselineTask".to_string())
+        })?;
+    if baseline_task != task_name {
+        return Err(CoherenceError::Contract(format!(
+            "baseline manifest task mismatch: expected {task_name:?}, actual {baseline_task:?}"
+        )));
+    }
+    let run = parsed
         .get("tasks")
-        .and_then(toml::Value::as_table)
-        .ok_or_else(|| CoherenceError::Contract("missing [tasks] table".to_string()))?;
-    let task = tasks
-        .get(task_name)
-        .and_then(toml::Value::as_table)
-        .ok_or_else(|| CoherenceError::Contract(format!("missing [tasks.{task_name}] table")))?;
-    let run = task
-        .get("run")
-        .and_then(toml::Value::as_array)
+        .and_then(serde_json::Value::as_array)
         .ok_or_else(|| {
             CoherenceError::Contract(format!(
-                "[tasks.{task_name}] must have run = [\"...\"] list"
+                "baseline manifest {task_name:?} must have tasks = [\"...\"] list"
             ))
         })?;
-    let command_re = compile_regex(r"^mise run ([a-z][a-z0-9-]*)$")?;
     let mut out = Vec::new();
     for item in run {
         let command = item.as_str().ok_or_else(|| {
-            CoherenceError::Contract(format!("[tasks.{task_name}] run entries must be strings"))
+            CoherenceError::Contract(format!(
+                "baseline manifest {task_name:?} task entries must be strings"
+            ))
         })?;
-        let captured = command_re
-            .captures(command)
-            .and_then(|caps| caps.get(1))
-            .ok_or_else(|| {
-                CoherenceError::Contract(format!(
-                    "[tasks.{task_name}] unsupported command shape: {command:?}"
-                ))
-            })?;
-        out.push(captured.as_str().to_string());
+        if command.trim().is_empty() {
+            return Err(CoherenceError::Contract(format!(
+                "baseline manifest {task_name:?} task entry must be non-empty"
+            )));
+        }
+        out.push(command.to_string());
     }
     Ok(out)
 }
@@ -5535,15 +5540,18 @@ mod tests {
         fs::write(path, content).expect("text fixture should be writable");
     }
 
-    fn write_gate_chain_mise(path: &Path) {
+    fn write_gate_chain_baseline_manifest(path: &Path) {
         write_text_file(
             path,
-            r#"[tasks.baseline]
-run = [
-  "mise run baseline",
-  "mise run build",
-  "mise run test",
-]
+            r#"{
+  "schema": 1,
+  "baselineTask": "baseline",
+  "tasks": [
+    "baseline",
+    "build",
+    "test"
+  ]
+}
 "#,
         );
     }
@@ -5551,7 +5559,7 @@ run = [
     fn write_gate_chain_ci_closure(path: &Path) {
         write_text_file(
             path,
-            r#"Current full baseline gate (`mise run baseline`) includes:
+            r#"Current full baseline gate (`sh tools/ci/run_task.sh baseline`) includes:
 - `baseline`
 - `build`
 - `test`
@@ -5716,9 +5724,9 @@ Current deterministic projected check IDs include:
                     "role": "projection_only",
                     "supportUntilEpoch": "2026-06"
                 },
-                "bidirEvidenceRoute": {
+                "coreObligationEvidenceRoute": {
                     "routeKind": "direct_checker_discharge",
-                    "obligationFieldRef": "bidirCheckerObligations",
+                    "obligationFieldRef": "coreObligationCheckerKinds",
                     "requiredObligations": [
                         "stability",
                         "locality",
@@ -5819,11 +5827,11 @@ Current deterministic projected check IDs include:
 
     fn test_contract_for_gate_chain(control_plane_contract_path: &str) -> CoherenceContract {
         let mut contract = test_contract_with_fixture_roots("", "");
-        contract.surfaces.mise_path = ".mise.toml".to_string();
-        contract.surfaces.mise_baseline_task = "baseline".to_string();
+        contract.surfaces.baseline_manifest_path = "tools/ci/baseline_tasks.json".to_string();
+        contract.surfaces.baseline_task = "baseline".to_string();
         contract.surfaces.ci_closure_path = "docs/design/control-plane/CI-CLOSURE.md".to_string();
         contract.surfaces.ci_closure_baseline_start =
-            "Current full baseline gate (`mise run baseline`) includes:".to_string();
+            "Current full baseline gate (`sh tools/ci/run_task.sh baseline`) includes:".to_string();
         contract.surfaces.ci_closure_baseline_end = "Local command:".to_string();
         contract.surfaces.ci_closure_projection_start =
             "Current deterministic projected check IDs include:".to_string();
@@ -6087,15 +6095,15 @@ Current deterministic projected check IDs include:
                 ci_closure_baseline_end: String::new(),
                 ci_closure_projection_start: String::new(),
                 ci_closure_projection_end: String::new(),
-                mise_path: String::new(),
-                mise_baseline_task: String::new(),
+                baseline_manifest_path: String::new(),
+                baseline_task: String::new(),
                 control_plane_contract_path: String::new(),
                 doctrine_site_path: String::new(),
                 doctrine_root_node_id: String::new(),
                 profile_readme_path: String::new(),
-                bidir_spec_path: String::new(),
-                bidir_spec_section_start: String::new(),
-                bidir_spec_section_end: String::new(),
+                core_obligation_spec_path: String::new(),
+                core_obligation_spec_section_start: String::new(),
+                core_obligation_spec_section_end: String::new(),
                 coherence_spec_path: String::new(),
                 coherence_spec_obligation_start: String::new(),
                 coherence_spec_obligation_end: String::new(),
@@ -6107,7 +6115,7 @@ Current deterministic projected check IDs include:
             conditional_capability_docs: Vec::new(),
             expected_operation_paths: Vec::new(),
             overlay_docs: Vec::new(),
-            required_bidir_obligations: vec![
+            required_core_obligation_kinds: vec![
                 "stability".to_string(),
                 "locality".to_string(),
                 "descent_exists".to_string(),
@@ -6140,7 +6148,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_accepts_valid_lane_registry() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-valid");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         write_json_file(
             &temp
@@ -6159,7 +6167,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_missing_schema_lifecycle() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-missing");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload
@@ -6187,7 +6195,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_expired_schema_alias() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-expired-alias");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["requiredWitness"]["witnessKind"] = json!("ci.required.v0");
@@ -6213,7 +6221,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_freeze_with_active_aliases() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-with-aliases");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["schemaLifecycle"]["governance"] = json!({
@@ -6243,7 +6251,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_accepts_freeze_without_aliases() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-no-aliases");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["schemaLifecycle"]["governance"] = json!({
@@ -6278,7 +6286,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_duplicate_lane_ids() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-duplicate-ids");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceLanes"]["runtimeTransport"] = json!("strict_checker");
@@ -6303,7 +6311,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_unknown_lane_artifact_kind_mapping() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-unknown-lane-kind");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["laneArtifactKinds"]["unknown_lane"] = json!(["opaque_kind"]);
@@ -6328,7 +6336,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_missing_cross_lane_route() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-missing-route");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["laneOwnership"]["requiredCrossLaneWitnessRoute"] = Value::Null;
@@ -6353,7 +6361,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_checker_core_ownership_violation() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-ownership-violation");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["laneOwnership"]["checkerCoreOnlyObligations"] =
@@ -6379,7 +6387,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_worker_lane_default_mode_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-default-mode-drift");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationPolicy"]["defaultMode"] = json!("human-override");
@@ -6404,7 +6412,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_worker_lane_route_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-route-drift");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = json!("issue_discover");
@@ -6429,7 +6437,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_worker_lane_policy_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-policy-drift");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationPolicy"]["compatibilityOverrides"][0]["supportUntilEpoch"] =
@@ -6455,7 +6463,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_evidence_factorization_missing_route() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-missing-route");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["factorizationRoutes"] = json!([]);
@@ -6480,7 +6488,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_evidence_factorization_ambiguous_routes() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-ambiguous-routes");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["factorizationRoutes"] =
@@ -6506,7 +6514,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_evidence_factorization_unbound_binding() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-unbound-binding");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["binding"]["policyDigestRef"] = json!("policy");
@@ -6531,7 +6539,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_missing_route() {
         let temp = TempDirGuard::new("gate-chain-stage1-missing-route");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["authorityToTypedCoreRoute"] = json!("");
@@ -6556,7 +6564,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage1-unbound-binding");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["comparisonTuple"]["normalizerIdRef"] = json!("normalizer");
@@ -6581,7 +6589,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage1-failure-class-mismatch");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["failureClasses"]["mismatch"] = json!("ev.parity.mismatch");
@@ -6606,7 +6614,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_missing_profile_kind() {
         let temp = TempDirGuard::new("gate-chain-stage1-missing-profile-kind");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["profileKind"] = json!("");
@@ -6631,7 +6639,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_rollback_missing_trigger_classes() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-missing-triggers");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["triggerFailureClasses"] =
@@ -6657,7 +6665,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_rollback_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-unbound-binding");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["identityRefs"]["policyDigestRef"] = json!("policy");
@@ -6682,7 +6690,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_rollback_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-class-mismatch");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["failureClasses"]["identityDrift"] =
@@ -6708,7 +6716,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_alias_role_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-alias-role-mismatch");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["compatibilityAlias"]["role"] = json!("authority");
@@ -6733,7 +6741,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_alias_window_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-alias-window-mismatch");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["compatibilityAlias"]["supportUntilEpoch"] =
@@ -6759,7 +6767,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage2-unbound-binding");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["typedAuthority"]["policyDigestRef"] = json!("policy");
@@ -6784,7 +6792,7 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-failure-class-mismatch");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["failureClasses"]["unbound"] =
@@ -6808,12 +6816,12 @@ Current deterministic projected check IDs include:
     }
 
     #[test]
-    fn check_gate_chain_parity_rejects_stage2_bidir_route_obligation_mismatch() {
-        let temp = TempDirGuard::new("gate-chain-stage2-bidir-route-obligation-mismatch");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+    fn check_gate_chain_parity_rejects_stage2_core_obligation_route_obligation_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-core-obligation-route-mismatch");
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
-        payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["requiredObligations"] =
+        payload["evidenceStage2Authority"]["coreObligationEvidenceRoute"]["requiredObligations"] =
             json!(["stability"]);
         write_json_file(
             &temp
@@ -6834,12 +6842,12 @@ Current deterministic projected check IDs include:
     }
 
     #[test]
-    fn check_gate_chain_parity_rejects_stage2_bidir_route_failure_class_mismatch() {
-        let temp = TempDirGuard::new("gate-chain-stage2-bidir-route-class-mismatch");
-        write_gate_chain_mise(&temp.path().join(".mise.toml"));
+    fn check_gate_chain_parity_rejects_stage2_core_obligation_route_failure_class_mismatch() {
+        let temp = TempDirGuard::new("gate-chain-stage2-core-obligation-route-class-mismatch");
+        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
         write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
         let mut payload = base_control_plane_contract_payload();
-        payload["evidenceStage2Authority"]["bidirEvidenceRoute"]["failureClasses"]["drift"] =
+        payload["evidenceStage2Authority"]["coreObligationEvidenceRoute"]["failureClasses"]["drift"] =
             json!("unification.evidence_stage2.kernel_drift");
         write_json_file(
             &temp

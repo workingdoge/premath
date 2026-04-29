@@ -48,7 +48,7 @@
       "runtimeProfile": "local",
       "capabilityVector": [
         "hk",
-        "mise",
+        "ci-script",
         "rust",
         "squeak-site"
       ],

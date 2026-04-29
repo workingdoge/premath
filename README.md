@@ -11,7 +11,7 @@ Design goals:
 
 ## System in 30 seconds
 
-- **Semantic authority**: kernel + gate specs decide admissibility (`PREMATH-KERNEL`, `GATE`, `BIDIR-DESCENT`).
+- **Semantic authority**: kernel + obligation/gate specs decide admissibility (`PREMATH-KERNEL`, `OBLIGATION-DISCHARGE`, `GATE`).
 - **Control-plane consistency**: coherence checker enforces spec/docs/contract parity and emits deterministic checker witnesses.
 - **Operational runtime**: harness contracts govern typed runtime loops, typestate closure, and retry/escalation behavior without adding semantic authority.
 - **Regression discipline**: claim-gated conformance vectors and doctrine/coherence checks keep behavior stable as capabilities evolve.
@@ -53,13 +53,13 @@ capability claim today).
 
 This repo includes two small, executable suites that exercise the **Gate laws**:
 
-- **Semantic toy suite**: `tools/toy/` + `tests/toy/fixtures/`
-  - Fastest way to sanity-check stability/locality/descent.
-  - Run: `python tools/toy/run_toy_vectors.py --fixtures tests/toy/fixtures`
+- **Semantic toy suite**: `premath toy-gate-check` + `tests/toy/fixtures/`
+  - Fastest way to sanity-check stability/locality/descent through the Rust kernel.
+  - Run: `cargo test -p premath-kernel --test toy_vectors`
 
 - **KCIR toy suite**: `tools/kcir_toy/` + `tests/kcir_toy/fixtures/`
   - Compiles the semantic cases into **KCIR/NF-shaped fixtures**, then runs a
-    minimal KCIR verifier + the same Gate checks.
+    minimal KCIR verifier + the Rust-native Gate check.
   - Compile: `python tools/kcir_toy/compile_kcir_toy_fixtures.py --in tests/toy/fixtures --out tests/kcir_toy/fixtures`
   - Run: `python tools/kcir_toy/run_kcir_toy_vectors.py --fixtures tests/kcir_toy/fixtures`
 
@@ -71,41 +71,43 @@ Python tooling dependency convention:
 - `requirements.txt` is the authoritative dependency list for `tools/` scripts.
 - It is currently stdlib-only (intentionally empty), but any future third-party imports must be declared there.
 
-## Dev Environment (Nix + mise)
+## Dev Environment (Nix + Direct Scripts)
 
-This repo supports a hybrid setup:
+This repo supports a Nix-first setup:
 
-- `nix develop` provides system/native dependencies and shell tooling.
-- `mise` pins repo runtime versions and provides task entrypoints.
+- `direnv` + `nix develop` provide system/native dependencies and shell tooling.
+- `tools/ci/run_task.sh` provides repo-local task entrypoints.
+- `tools/ci/baseline_tasks.json` is the baseline composition manifest.
 
 Tracked files:
 
 - `flake.nix` (system layer)
-- `.mise.toml` (runtime/task layer)
-- `.envrc` (`use flake` + `use mise`)
+- `.envrc` (repo-root-aware `use flake`)
+- `tools/ci/run_task.sh` (task alias layer)
+- `tools/ci/baseline_tasks.json` (baseline manifest)
 
-One-time direnv helper setup:
+Direnv setup:
 
 ```bash
-mise direnv activate > ~/.config/direnv/lib/use_mise.sh
 direnv allow
 ```
 
 Typical workflows:
 
 ```bash
-# Nix-first lane
-nix develop
-mise install
-mise run baseline
+# Nix-first lane (after direnv allow)
+sh tools/ci/run_task.sh baseline
+
+# One-shot lane without entering the shell
+direnv exec . sh tools/ci/run_task.sh baseline
 
 # Non-Nix lane
-mise install
-mise run baseline
+sh tools/ci/run_task.sh baseline
 ```
 
-`nix develop` also provides Terraform-compatible tooling (`opentofu`,
-`terraform`) for optional infra-profile workflows.
+The flake shell uses `devenv.root`, so raw `nix develop` needs the same root
+override that `.envrc` supplies automatically. Prefer `direnv exec . <cmd>` for
+one-shot commands outside an activated shell.
 
 ## Workspace layering
 
@@ -165,13 +167,13 @@ Premath semantics and KCIR-style representation should stay decoupled:
 Run the local baseline closure gate before commit:
 
 ```bash
-mise run baseline
+sh tools/ci/run_task.sh baseline
 ```
 
 Recommended pre-commit gate (includes format check):
 
 ```bash
-mise run precommit
+sh tools/ci/run_task.sh precommit
 ```
 
 Optional repo-managed git hook:
@@ -189,7 +191,7 @@ This enforces the current invariant gate:
 - KCIR toy vectors,
 - conformance capability invariance-stub validation,
 - coherence-contract obligation discharge validation,
-- docs-to-executable coherence validation,
+- authority-map/traceability validation,
 - drift-budget sentinel validation across docs/contracts/checkers/cache-closure,
 - doctrine-to-operation site coherence validation (including MCP
   doctrine-operation parity),
@@ -202,49 +204,47 @@ This enforces the current invariant gate:
 Optional `hk` hook runner (configured in `hk.pkl`):
 
 ```bash
-mise install
-mise run hk-install
+sh tools/ci/run_task.sh hk-install
 ```
 
 Manual runs:
 
 ```bash
-mise run hk-pre-commit
-mise run hk-pre-push
-mise run hk-check
-mise run ci-wiring-check
-mise run ci-command-surface-check
-mise run ci-pipeline-check
-mise run ci-pipeline-test
-mise run ci-observation-test
-mise run ci-observation-build
-mise run ci-observation-query
-mise run ci-observation-serve
-mise run mcp-serve
-mise run ci-observation-check
-mise run ci-drift-budget-check
-mise run ci-required
-mise run ci-verify-required
-mise run ci-verify-required-strict
-mise run ci-verify-required-strict-native
-mise run ci-decide-required
-mise run ci-verify-decision
-mise run ci-required-verified
-mise run ci-required-attested
-mise run ci-pipeline-required
-mise run coherence-check
-mise run doctrine-check
-mise run ci-check
-mise run ci-instruction-check
-mise run ci-instruction-smoke
-INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
+sh tools/ci/run_task.sh hk-pre-commit
+sh tools/ci/run_task.sh hk-pre-push
+sh tools/ci/run_task.sh hk-check
+sh tools/ci/run_task.sh ci-command-surface-check
+sh tools/ci/run_task.sh ci-pipeline-check
+sh tools/ci/run_task.sh ci-pipeline-test
+sh tools/ci/run_task.sh ci-observation-test
+sh tools/ci/run_task.sh ci-observation-build
+sh tools/ci/run_task.sh ci-observation-query
+sh tools/ci/run_task.sh ci-observation-serve
+sh tools/ci/run_task.sh mcp-serve
+sh tools/ci/run_task.sh ci-observation-check
+sh tools/ci/run_task.sh ci-drift-budget-check
+sh tools/ci/run_task.sh ci-required
+sh tools/ci/run_task.sh ci-verify-required
+sh tools/ci/run_task.sh ci-verify-required-strict
+sh tools/ci/run_task.sh ci-verify-required-strict-native
+sh tools/ci/run_task.sh ci-decide-required
+sh tools/ci/run_task.sh ci-verify-decision
+sh tools/ci/run_task.sh ci-required-verified
+sh tools/ci/run_task.sh ci-required-attested
+sh tools/ci/run_task.sh ci-pipeline-required
+sh tools/ci/run_task.sh coherence-check
+sh tools/ci/run_task.sh doctrine-check
+sh tools/ci/run_task.sh ci-check
+sh tools/ci/run_task.sh ci-instruction-check
+sh tools/ci/run_task.sh ci-instruction-smoke
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json sh tools/ci/run_task.sh ci-pipeline-instruction
 ```
 
 `hk` keeps fast hygiene checks in `pre-commit` and runs the required projected
-closure gate (`mise run ci-required-attested`) on `pre-push`/`check`. This is optional and can coexist
+closure gate (`sh tools/ci/run_task.sh ci-required-attested`) on `pre-push`/`check`. This is optional and can coexist
 with `.githooks`-based local hooks.
 
-`mise run ci-required` is the canonical SqueakSite gate entrypoint:
+`sh tools/ci/run_task.sh ci-required` is the canonical SqueakSite gate entrypoint:
 
 - computes deterministic change projection (`Delta -> requiredChecks`)
 - executes only required checks through `tools/ci/run_gate.sh`
@@ -257,10 +257,10 @@ with `.githooks`-based local hooks.
 - labels each gate ref with provenance source (`native` or `fallback`)
 - prefers native runner/task gate envelope artifacts when present, with
   deterministic fallback emission when unavailable
-- `mise run ci-verify-required` verifies witness determinism/binding
-- `mise run ci-required-verified` runs both execution and verification
-- `mise run ci-decide-required` emits deterministic `accept|reject` from verified witness
-- `mise run ci-required-attested` runs the authoritative local/CI gate chain
+- `sh tools/ci/run_task.sh ci-verify-required` verifies witness determinism/binding
+- `sh tools/ci/run_task.sh ci-required-verified` runs both execution and verification
+- `sh tools/ci/run_task.sh ci-decide-required` emits deterministic `accept|reject` from verified witness
+- `sh tools/ci/run_task.sh ci-required-attested` runs the authoritative local/CI gate chain
   (`ci-required` + strict verify + decision + decision attestation)
 
 - default: local execution (`PREMATH_SQUEAK_SITE_PROFILE=local`)
@@ -274,8 +274,8 @@ See `tools/ci/README.md` for runner protocol details.
 
 The current repo CI binding runs:
 
-- `mise run ci-pipeline-check`
-- `mise run ci-pipeline-test`
+- `sh tools/ci/run_task.sh ci-pipeline-check`
+- `sh tools/ci/run_task.sh ci-pipeline-test`
 - `python3 tools/ci/pipeline_required.py`
 
 Provider-specific required-check mappings are documented in
@@ -301,20 +301,20 @@ CI also publishes:
 
 Observation surface (frontend/query projection):
 
-- `mise run ci-observation-build` builds
+- `sh tools/ci/run_task.sh ci-observation-build` builds
   - `artifacts/observation/latest.json` (deterministic read model),
   - `artifacts/observation/events.jsonl` (append-friendly projection feed).
 - projection now routes through one core command surface:
   - `cargo run --package premath-cli -- observe-build --repo-root .`
-- `mise run ci-observation-query` returns judgment-oriented views
+- `sh tools/ci/run_task.sh ci-observation-query` returns judgment-oriented views
   (`latest`, `needs_attention`, `instruction`, `projection`).
-- `mise run ci-observation-serve` starts a tiny UX HTTP read API over the same
+- `sh tools/ci/run_task.sh ci-observation-serve` starts a tiny UX HTTP read API over the same
   semantics (`GET /latest`, `GET /needs-attention`,
   `GET /instruction?id=<instruction_id>`,
   `GET /projection?digest=<projection_digest>[&match=typed|compatibility_alias]`).
   Projection lookup defaults to typed authority matching.
-- `mise run ci-observation-check` enforces that observation output is a pure
-  projection of CI witness artifacts (no semantic drift).
+- `sh tools/ci/run_task.sh ci-observation-check` enforces that observation output is a pure
+  projection of CI witness artifacts through `premath observe-check`.
 - `docs/observation/index.html` is a lightweight human-facing dashboard view
   over the same API.
 - This projection layer is where a Surreal-backed UI/read API should attach;
@@ -323,8 +323,8 @@ Observation surface (frontend/query projection):
 Dashboard quickstart:
 
 ```bash
-mise run ci-observation-build
-mise run ci-observation-serve
+sh tools/ci/run_task.sh ci-observation-build
+sh tools/ci/run_task.sh ci-observation-serve
 python3 -m http.server 43173 --directory docs
 ```
 
@@ -334,22 +334,22 @@ Open `http://127.0.0.1:43173/observation/` (default API:
 One-command orchestration alternative:
 
 ```bash
-mise run pf-start
+sh tools/ci/run_task.sh pf-start
 ```
 
 This starts both `docs-preview` and `observation-api`.
 
-`mise run ci-check` is retained as a compatibility task for fixed full-gate
+`sh tools/ci/run_task.sh ci-check` is retained as a compatibility task for fixed full-gate
 execution via `hk-check`.
 
 Instruction-envelope flow:
 
 ```bash
-mise run ci-instruction-check
-INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-pipeline-instruction
-INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json mise run ci-instruction
+sh tools/ci/run_task.sh ci-instruction-check
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json sh tools/ci/run_task.sh ci-pipeline-instruction
+INSTRUCTION=instructions/20260221T000000Z-bootstrap-gate.json sh tools/ci/run_task.sh ci-instruction
 sh tools/ci/run_instruction.sh instructions/20260221T000000Z-bootstrap-gate.json
-mise run ci-instruction-smoke
+sh tools/ci/run_task.sh ci-instruction-smoke
 ```
 
 This executes requested checks through the same gate surface and writes a CI
@@ -362,9 +362,9 @@ then runs the instruction and uploads the witness artifact.
 Optional Terraform/OpenTofu provisioning shape:
 
 ```bash
-mise run infra-up
-mise run ci-check-tf
-mise run infra-down
+sh tools/ci/run_task.sh infra-up
+sh tools/ci/run_task.sh ci-check-tf
+sh tools/ci/run_task.sh infra-down
 ```
 
 This keeps admissibility/gate semantics in `hk` while moving substrate startup
@@ -374,8 +374,8 @@ Default infra profile is `local` (same semantics, Terraform-bound runner).
 An experimental Darwin microVM runtime profile is available:
 
 ```bash
-mise run ci-check-tf-local
-mise run ci-check-tf-microvm
+sh tools/ci/run_task.sh ci-check-tf-local
+sh tools/ci/run_task.sh ci-check-tf-microvm
 ```
 
 Treat `darwin_microvm_vfkit` as an optional runtime adapter path, not baseline
@@ -389,17 +389,16 @@ Design framing for this control loop: `docs/design/control-plane/HIGHER-ORDER-CI
 or scheduled dev processes; it does not replace hk gate semantics.
 
 ```bash
-mise install
-mise run pf-start
-mise run pf-status
-mise run pf-stop
+sh tools/ci/run_task.sh pf-start
+sh tools/ci/run_task.sh pf-status
+sh tools/ci/run_task.sh pf-stop
 ```
 
 Optional scheduled gate loop:
 
 ```bash
-mise run pf-gate-loop-start
-mise run pf-gate-loop-stop
+sh tools/ci/run_task.sh pf-gate-loop-start
+sh tools/ci/run_task.sh pf-gate-loop-stop
 ```
 
 Current `pitchfork.toml` daemons:
@@ -407,14 +406,14 @@ Current `pitchfork.toml` daemons:
 - `docs-preview`: serves `docs/` on `http://127.0.0.1:43173`
 - `observation-api`: runs the Observation Surface HTTP API on
   `http://127.0.0.1:43174` (with a deterministic pre-build step)
-- `gate-check-loop`: optional local closure loop (`mise run ci-required-attested`, then sleep 30m)
+- `gate-check-loop`: optional local closure loop (`sh tools/ci/run_task.sh ci-required-attested`, then sleep 30m)
 
 ### JJ Glue (control plane)
 
 If you want JJ-native command flow while keeping the same gate semantics:
 
 ```bash
-mise run jj-alias-install
+sh tools/ci/run_task.sh jj-alias-install
 ```
 
 This installs repo-local aliases:
@@ -479,7 +478,7 @@ surface.
 - `premath issue list --issues .premath/issues.jsonl --json`
   - lists issues with optional status/assignee filters.
 - `premath issue check --issues .premath/issues.jsonl --json`
-  - runs deterministic issue-memory contract checks (`epic` typing, active acceptance/verification sections, note-size warnings).
+  - runs deterministic issue-memory contract checks (`epic` typing, active acceptance/verification sections, note-size warnings, compactness drift).
 - `premath issue ready --issues .premath/issues.jsonl --json`
   - returns open issues with no unresolved blocking dependencies.
 - `premath issue blocked --issues .premath/issues.jsonl --json`
@@ -508,7 +507,7 @@ Claude Desktop (`claude_desktop_config.json`):
       "command": "sh",
       "args": [
         "-lc",
-        "cd <ABS_REPO_ROOT> && mise run mcp-serve"
+        "cd <ABS_REPO_ROOT> && sh tools/ci/run_task.sh mcp-serve"
       ]
     }
   }
@@ -522,7 +521,7 @@ Codex (`~/.codex/config.toml`):
 command = "sh"
 args = [
   "-lc",
-  "cd <ABS_REPO_ROOT> && mise run mcp-serve"
+  "cd <ABS_REPO_ROOT> && sh tools/ci/run_task.sh mcp-serve"
 ]
 startup_timeout_sec = 180
 ```
@@ -530,8 +529,7 @@ startup_timeout_sec = 180
 After updating client config:
 
 ```bash
-mise install
-mise run mcp-serve
+sh tools/ci/run_task.sh mcp-serve
 ```
 
 Then restart the MCP client so it re-reads configuration.

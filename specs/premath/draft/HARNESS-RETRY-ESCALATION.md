@@ -38,7 +38,7 @@ provider-neutral harness execution wrappers.
 
 This policy classifies operational outcomes only. It MUST NOT authorize
 semantic admissibility. Semantic authority remains in checker/discharge
-surfaces (`draft/BIDIR-DESCENT.md`, `draft/GATE.md`).
+surfaces (`draft/OBLIGATION-DISCHARGE.md`, `draft/GATE.md`).
 
 Shared harness-surface partitioning and command-route authority are declared
 once in `draft/HARNESS-RUNTIME` §1.1. This spec defines retry/escalation policy
@@ -173,8 +173,8 @@ Minimum deterministic verification:
 - `python3 tools/ci/test_harness_escalation.py`
 - `python3 tools/ci/test_pipeline_required.py`
 - `python3 tools/ci/test_pipeline_instruction.py`
-- `mise run ci-pipeline-test`
-- `mise run doctrine-check`
+- `sh tools/ci/run_task.sh ci-pipeline-test`
+- `sh tools/ci/run_task.sh doctrine-check`
 
 ## 9. Related surfaces
 

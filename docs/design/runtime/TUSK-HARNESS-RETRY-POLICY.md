@@ -150,4 +150,4 @@ Mutation command failures are fail-closed:
 - `python3 tools/ci/test_harness_retry_policy.py`
 - `python3 tools/ci/test_pipeline_required.py`
 - `python3 tools/ci/test_pipeline_instruction.py`
-- `mise run ci-pipeline-test`
+- `sh tools/ci/run_task.sh ci-pipeline-test`

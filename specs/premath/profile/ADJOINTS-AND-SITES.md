@@ -43,8 +43,8 @@ All operational behavior MUST compile into finite obligations discharged by a
 deterministic normalizer bound to `(normalizerId, policyDigest)`.
 
 This profile is an additive overlay on `draft/PREMATH-KERNEL`,
-`draft/GATE`, and `draft/BIDIR-DESCENT`. It does not change the kernel
-accept/reject criterion or Gate failure-class vocabulary.
+`draft/OBLIGATION-DISCHARGE`, and `draft/GATE`. It does not change the
+kernel accept/reject criterion or Gate failure-class vocabulary.
 
 ### 0.1 Naming and notation
 
@@ -206,7 +206,7 @@ The checker MUST:
 - NEVER treat a proposal (human or LLM) as authoritative without discharge
 
 For failure-class mapping and witness ordering at the Gate boundary, use
-`draft/BIDIR-DESCENT` and `draft/GATE`.
+`draft/OBLIGATION-DISCHARGE` and `draft/GATE`.
 
 ## 7. Deterministic discharge and identity binding
 
@@ -290,7 +290,7 @@ For composed overlays:
 
 | Surface | Owns admissibility? | Primary role |
 | --- | --- | --- |
-| Kernel + Gate (`draft/PREMATH-KERNEL`, `draft/GATE`, `draft/BIDIR-DESCENT`) | Yes | semantic obligation/discharge authority |
+| Kernel + Gate (`draft/PREMATH-KERNEL`, `draft/OBLIGATION-DISCHARGE`, `draft/GATE`) | Yes | semantic obligation/discharge authority |
 | Coherence checker (`draft/PREMATH-COHERENCE`) | No | deterministic control-plane parity and strict checker obligations |
 | Span/square layer (`draft/SPAN-SQUARE-CHECKING`) | No | typed commutation evidence for cross-lane pullback/base-change claims |
 | Profile overlay (`profile/ADJOINTS-AND-SITES`) | No | capability-scoped SigPi adjoint/site obligations routed to checker discharge |
@@ -357,7 +357,7 @@ obligations.
 - Bridge violations MUST map to existing deterministic classes; implementations
   MUST NOT introduce bridge-only admissibility classes.
 - Checker-side strict failures stay under `coherence.cwf_*` classes.
-- Semantic failures stay under Gate/BIDIR mappings (`stability_failure`,
+- Semantic failures stay under Gate/Core-obligation mappings (`stability_failure`,
   `locality_failure`, `descent_failure`, `glue_non_contractible`,
   `adjoint_triple_coherence_failure`).
 - Ownership boundaries remain unchanged: bridge rules MUST NOT add new coherence

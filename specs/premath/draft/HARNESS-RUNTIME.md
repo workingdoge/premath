@@ -38,8 +38,8 @@ operation.
 
 The harness is operational control only. It MUST NOT introduce semantic
 authority. Authoritative admissibility remains in
-`draft/BIDIR-DESCENT.md` and `draft/GATE.md`; instruction authority boundaries
-remain in `draft/LLM-INSTRUCTION-DOCTRINE.md`.
+`draft/OBLIGATION-DISCHARGE.md` and `draft/GATE.md`; instruction authority
+boundaries remain in `draft/LLM-INSTRUCTION-DOCTRINE.md`.
 
 ### 1.1 Shared harness surface map (authoritative)
 
@@ -48,9 +48,9 @@ authority map:
 
 | Concern | Normative surface | Shared bindings and routes | Primary executable anchors |
 | --- | --- | --- | --- |
-| Runtime loop/session/trajectory | `draft/HARNESS-RUNTIME` | canonical artifacts (`.premath/harness_session.json`, `.premath/harness_feature_ledger.json`, `.premath/harness_trajectory.jsonl`) and routed operation IDs (`op/harness.session_*`, issue lease routes) | `premath harness-session ...`, `premath harness-feature ...`, `premath harness-trajectory ...`, `mise run harness-worker-loop`, `mise run harness-coordinator-loop` |
+| Runtime session/trajectory projections | `draft/HARNESS-RUNTIME` | canonical artifacts (`.premath/harness_session.json`, `.premath/harness_feature_ledger.json`, `.premath/harness_trajectory.jsonl`) and routed operation IDs (`op/harness.session_*`, issue lease routes) | `premath harness-session ...`, `premath harness-feature ...`, `premath harness-trajectory ...` |
 | Tool-calling closure/mutation gate | `draft/HARNESS-TYPESTATE` | typestate binding digests (`mutationPolicyDigest`, `governancePolicyDigest`, context/decomposition digests), fail-closed join/mutation classes, claim-gated governance provenance classes | `premath harness-join-check --input <json> --json`, `python3 tools/conformance/run_harness_typestate_vectors.py` |
-| Retry/escalation wrappers | `draft/HARNESS-RETRY-ESCALATION` | canonical retry policy artifact + digest binding (`policies/control/harness-retry-policy-v1.json`), deterministic escalation action mapping and issue-context resolution order | `python3 tools/ci/test_harness_retry_policy.py`, `python3 tools/ci/test_harness_escalation.py`, `mise run ci-pipeline-test` |
+| Retry/escalation wrappers | `draft/HARNESS-RETRY-ESCALATION` | canonical retry policy artifact + digest binding (`policies/control/harness-retry-policy-v1.json`), deterministic escalation action mapping and issue-context resolution order | `python3 tools/ci/test_harness_retry_policy.py`, `python3 tools/ci/test_harness_escalation.py`, `sh tools/ci/run_task.sh ci-pipeline-test` |
 
 `draft/HARNESS-TYPESTATE` and `draft/HARNESS-RETRY-ESCALATION` MUST reference
 this section for shared harness surface partitioning and MUST NOT introduce
@@ -86,9 +86,10 @@ A conforming command surface MUST include:
 - `premath harness-session read|write|bootstrap`
 - `premath harness-feature read|write|check|next`
 - `premath harness-trajectory append|query`
-- `python3 tools/harness/multithread_loop.py worker|coordinator`
-- `mise run harness-worker-loop`
-- `mise run harness-coordinator-loop`
+
+Coordinator/worker loops are downstream runtime orchestration. A surface MAY
+consume these projections to build a loop, but the loop implementation is not a
+Premath command anchor.
 
 ## 3. Hook contract (`boot` / `step` / `stop`)
 
@@ -227,19 +228,19 @@ support modes `latest|failed|retry-needed` sorted by:
 2. `stepId`,
 3. `action`.
 
-## 7. Multithread coordinator/worker contract
+## 7. Downstream coordinator/worker loop shape
 
-The canonical worker loop shape is:
+Downstream runtime sites MAY implement a worker loop with this shape:
 
 - `issue_ready -> claim -> work -> verify -> release/update`
 
-Coordinator requirements:
+Recommended coordinator requirements:
 
 - dispatch worktrees in sorted path order,
 - run `dep_diagnostics(graph_scope=active)` before each scheduling pass,
 - re-evaluate `issue_ready` each round.
 
-Worker requirements:
+Recommended worker requirements:
 
 - claim with deterministic lease semantics,
 - project `session` + `feature` state,
@@ -276,10 +277,9 @@ one operational chain without introducing a parallel authority path.
 
 Minimum deterministic verification includes:
 
-- `mise run ci-hygiene-check`
-- `python3 tools/ci/check_issue_graph.py`
-- `mise run docs-coherence-check`
-- `mise run doctrine-check`
+- `sh tools/ci/run_task.sh ci-hygiene-check`
+- `sh tools/ci/run_task.sh ci-drift-budget-check`
+- `sh tools/ci/run_task.sh doctrine-check`
 
 ## 10. Related surfaces
 

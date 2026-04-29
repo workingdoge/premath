@@ -38,51 +38,59 @@ deterministically (no silent fallback).
 
 ## 2. Capability matrix
 
-Capability identifiers are exact claim tokens.
+Active capability identifiers are exact claim tokens declared in
+`draft/CAPABILITY-REGISTRY.json`.
 Implementations MAY expose them as namespaced manifest keys (for example
 `capabilities.normal_forms`), but conformance checks them as exact identifiers.
 
-### 2.1 `adoptPullAtomMor`
+Sections 2.1-2.3 are inactive extension notes retained to preserve pre-registry
+design intent. They are not active capability claim tokens and MUST NOT be
+asserted as conformance claims unless a future `draft/CAPABILITY-REGISTRY.json`
+entry promotes them.
+
+### 2.1 Inactive extension note: `capabilities.pull_atom_mor`
 
 Meaning:
 
 - MorNF tag `0x16` (`PullAtom`) is accepted (see `draft/NF`).
 - MOR pull classification may use `PullAtom` fusion (see `draft/NORMALIZER`).
+- Former draft flag: `adoptPullAtomMor`.
+- Current status: not an active conformance claim.
 
-Required vectors when NOT claimed:
+Future vectors if promoted and NOT claimed:
 
 - adversarial: MorNF tag `0x16` rejected.
 - adversarial: MOR pull steps that require PullAtom reject deterministically.
 
-Required vectors when claimed:
+Future vectors if promoted and claimed:
 
 - golden: MorNF tag `0x16` parses and binds.
 - golden: normalization and pull-fusion behavior is deterministic.
 - adversarial: malformed PullAtom payloads reject.
 
-### 2.2 `hyperdescent`
+### 2.2 Inactive extension note: `hyperdescent`
 
 Meaning:
 
-- The implementation claims the optional hyperdescent strengthening specified in
-  `raw/HYPERDESCENT`.
+- The optional hyperdescent strengthening specified in `raw/HYPERDESCENT`.
+- Current status: raw proposal, not an active conformance claim.
 
-Required vectors when NOT claimed:
+Future vectors if promoted and NOT claimed:
 
 - none beyond base kernel vectors (hypercovers are out-of-scope unless claimed).
 
-Required vectors when claimed:
+Future vectors if promoted and claimed:
 
 - golden: at least one case where a represented hypercover descent check succeeds.
 - adversarial: at least one case where Čech descent holds but hyperdescent fails.
 - determinism: witness IDs and ordering are stable across runs.
 
-### 2.3 `universe`
+### 2.3 Inactive extension note: `universe`
 
 Meaning:
 
-- The implementation claims the optional universe/comprehension extension specified in
-  `raw/UNIVERSE`.
+- The optional universe/comprehension extension specified in `raw/UNIVERSE`.
+- Current status: raw proposal, not an active conformance claim.
 
 This repository bundle does not yet standardize an operational code format for universes.
 Vectors for this capability are deferred until a code/cert format is specified.
@@ -94,7 +102,7 @@ Meaning:
 - The implementation supports an explicit normalized-comparison capability for
   witness/discharge flows.
 - In normalized mode, outputs are bound to `normalizerId` and `policyDigest`
-  per `draft/NORMALIZER` and `draft/BIDIR-DESCENT`.
+  per `draft/NORMALIZER` and `profile/interop/BIDIR-DESCENT`.
 
 Required vectors when NOT claimed:
 

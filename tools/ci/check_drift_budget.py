@@ -191,15 +191,15 @@ def parse_required_obligation_ids(coherence_contract: Dict[str, Any]) -> List[st
     return out
 
 
-def parse_required_bidir_obligations(coherence_contract: Dict[str, Any]) -> List[str]:
-    values = coherence_contract.get("requiredBidirObligations")
+def parse_required_core_obligation_kinds(coherence_contract: Dict[str, Any]) -> List[str]:
+    values = coherence_contract.get("requiredCoreObligationKinds")
     if not isinstance(values, list) or not values:
-        raise ValueError("coherence contract requiredBidirObligations must be non-empty")
+        raise ValueError("coherence contract requiredCoreObligationKinds must be non-empty")
     out: List[str] = []
     for idx, value in enumerate(values):
         if not isinstance(value, str) or not value.strip():
             raise ValueError(
-                f"requiredBidirObligations[{idx}] must be a non-empty string"
+                f"requiredCoreObligationKinds[{idx}] must be a non-empty string"
             )
         out.append(value.strip())
     return out
@@ -720,17 +720,21 @@ def check_control_plane_lane_bindings(
     if not isinstance(contract_stage2_classes_obj, dict):
         contract_stage2_classes_obj = {}
     contract_stage2_failure_classes = as_sorted_strings(contract_stage2_classes_obj.values())
-    contract_stage2_bidir_route = contract_stage2_authority.get("bidirEvidenceRoute", {})
-    if not isinstance(contract_stage2_bidir_route, dict):
-        contract_stage2_bidir_route = {}
-    contract_stage2_bidir_required_obligations = as_sorted_strings(
-        contract_stage2_bidir_route.get("requiredObligations", ())
+    contract_stage2_core_obligation_route = contract_stage2_authority.get(
+        "coreObligationEvidenceRoute", {}
     )
-    contract_stage2_bidir_classes_obj = contract_stage2_bidir_route.get("failureClasses", {})
-    if not isinstance(contract_stage2_bidir_classes_obj, dict):
-        contract_stage2_bidir_classes_obj = {}
-    contract_stage2_bidir_failure_classes = as_sorted_strings(
-        contract_stage2_bidir_classes_obj.values()
+    if not isinstance(contract_stage2_core_obligation_route, dict):
+        contract_stage2_core_obligation_route = {}
+    contract_stage2_core_obligation_required_kinds = as_sorted_strings(
+        contract_stage2_core_obligation_route.get("requiredObligations", ())
+    )
+    contract_stage2_core_obligation_classes_obj = (
+        contract_stage2_core_obligation_route.get("failureClasses", {})
+    )
+    if not isinstance(contract_stage2_core_obligation_classes_obj, dict):
+        contract_stage2_core_obligation_classes_obj = {}
+    contract_stage2_core_obligation_failure_classes = as_sorted_strings(
+        contract_stage2_core_obligation_classes_obj.values()
     )
 
     checker_expected_core = as_sorted_strings(
@@ -781,33 +785,35 @@ def check_control_plane_lane_bindings(
     checker_stage2_required_classes = as_sorted_strings(
         checker_stage2_required_classes_obj.values()
     )
-    checker_stage2_bidir_route = checker_stage2_authority.get("bidirEvidenceRoute", {})
-    if not isinstance(checker_stage2_bidir_route, dict):
-        checker_stage2_bidir_route = {}
-    checker_stage2_bidir_required_obligations = as_sorted_strings(
-        checker_stage2_bidir_route.get("requiredObligations", ())
+    checker_stage2_core_obligation_route = checker_stage2_authority.get(
+        "coreObligationEvidenceRoute", {}
     )
-    if not checker_stage2_bidir_required_obligations:
+    if not isinstance(checker_stage2_core_obligation_route, dict):
+        checker_stage2_core_obligation_route = {}
+    checker_stage2_core_obligation_required_kinds = as_sorted_strings(
+        checker_stage2_core_obligation_route.get("requiredObligations", ())
+    )
+    if not checker_stage2_core_obligation_required_kinds:
         checker_stage2_kernel_sentinel = checker_stage2_authority.get(
             "kernelComplianceSentinel", {}
         )
         if isinstance(checker_stage2_kernel_sentinel, dict):
-            checker_stage2_bidir_required_obligations = as_sorted_strings(
+            checker_stage2_core_obligation_required_kinds = as_sorted_strings(
                 checker_stage2_kernel_sentinel.get("requiredObligations", ())
             )
-    checker_stage2_bidir_required_classes_obj = checker_stage2_authority.get(
-        "requiredBidirEvidenceFailureClasses", {}
+    checker_stage2_core_obligation_required_classes_obj = checker_stage2_authority.get(
+        "requiredCoreObligationEvidenceFailureClasses", {}
     )
-    if not isinstance(checker_stage2_bidir_required_classes_obj, dict):
-        checker_stage2_bidir_required_classes_obj = {}
-    if not checker_stage2_bidir_required_classes_obj:
+    if not isinstance(checker_stage2_core_obligation_required_classes_obj, dict):
+        checker_stage2_core_obligation_required_classes_obj = {}
+    if not checker_stage2_core_obligation_required_classes_obj:
         kernel_classes_fallback = checker_stage2_authority.get(
             "requiredKernelComplianceFailureClasses", {}
         )
         if isinstance(kernel_classes_fallback, dict):
-            checker_stage2_bidir_required_classes_obj = kernel_classes_fallback
-    checker_stage2_bidir_required_classes = as_sorted_strings(
-        checker_stage2_bidir_required_classes_obj.values()
+            checker_stage2_core_obligation_required_classes_obj = kernel_classes_fallback
+    checker_stage2_core_obligation_required_classes = as_sorted_strings(
+        checker_stage2_core_obligation_required_classes_obj.values()
     )
     checker_lane_values = lane_registry.get("evidenceLanes")
     if isinstance(checker_lane_values, dict) and checker_lane_values != contract_evidence_lanes:
@@ -853,19 +859,19 @@ def check_control_plane_lane_bindings(
         reasons.append(
             "CONTROL-PLANE-CONTRACT evidenceStage2Authority.failureClasses differ from checker-required classes"
         )
-    if checker_stage2_bidir_required_obligations and (
-        checker_stage2_bidir_required_obligations
-        != contract_stage2_bidir_required_obligations
+    if checker_stage2_core_obligation_required_kinds and (
+        checker_stage2_core_obligation_required_kinds
+        != contract_stage2_core_obligation_required_kinds
     ):
         reasons.append(
-            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.bidirEvidenceRoute.requiredObligations differ from checker-observed values"
+            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.coreObligationEvidenceRoute.requiredObligations differ from checker-observed values"
         )
-    if checker_stage2_bidir_required_classes and (
-        checker_stage2_bidir_required_classes
-        != contract_stage2_bidir_failure_classes
+    if checker_stage2_core_obligation_required_classes and (
+        checker_stage2_core_obligation_required_classes
+        != contract_stage2_core_obligation_failure_classes
     ):
         reasons.append(
-            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.bidirEvidenceRoute.failureClasses differ from checker-required classes"
+            "CONTROL-PLANE-CONTRACT evidenceStage2Authority.coreObligationEvidenceRoute.failureClasses differ from checker-required classes"
         )
 
     loader_evidence_lanes = dict(getattr(control_plane_module, "EVIDENCE_LANES", {}))
@@ -950,11 +956,11 @@ def check_control_plane_lane_bindings(
     loader_stage2_alias_support_until_epoch = str(
         getattr(control_plane_module, "EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH", "")
     )
-    loader_stage2_bidir_required_obligations = as_sorted_strings(
-        getattr(control_plane_module, "EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS", ())
+    loader_stage2_core_obligation_required_kinds = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_CORE_OBLIGATION_REQUIRED_KINDS", ())
     )
-    loader_stage2_bidir_failure_classes = as_sorted_strings(
-        getattr(control_plane_module, "EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES", ())
+    loader_stage2_core_obligation_failure_classes = as_sorted_strings(
+        getattr(control_plane_module, "EVIDENCE_STAGE2_CORE_OBLIGATION_FAILURE_CLASSES", ())
     )
 
     if loader_evidence_lanes != contract_evidence_lanes:
@@ -1072,18 +1078,20 @@ def check_control_plane_lane_bindings(
             "control_plane_contract.py EVIDENCE_STAGE2_ALIAS_SUPPORT_UNTIL_EPOCH drift from contract payload"
         )
     if (
-        contract_stage2_bidir_required_obligations
-        and loader_stage2_bidir_required_obligations != contract_stage2_bidir_required_obligations
+        contract_stage2_core_obligation_required_kinds
+        and loader_stage2_core_obligation_required_kinds
+        != contract_stage2_core_obligation_required_kinds
     ):
         reasons.append(
-            "control_plane_contract.py EVIDENCE_STAGE2_BIDIR_REQUIRED_OBLIGATIONS drift from contract payload"
+            "control_plane_contract.py EVIDENCE_STAGE2_CORE_OBLIGATION_REQUIRED_KINDS drift from contract payload"
         )
     if (
-        contract_stage2_bidir_failure_classes
-        and loader_stage2_bidir_failure_classes != contract_stage2_bidir_failure_classes
+        contract_stage2_core_obligation_failure_classes
+        and loader_stage2_core_obligation_failure_classes
+        != contract_stage2_core_obligation_failure_classes
     ):
         reasons.append(
-            "control_plane_contract.py EVIDENCE_STAGE2_BIDIR_FAILURE_CLASSES drift from contract payload"
+            "control_plane_contract.py EVIDENCE_STAGE2_CORE_OBLIGATION_FAILURE_CLASSES drift from contract payload"
         )
 
     details = {
@@ -1125,8 +1133,8 @@ def check_control_plane_lane_bindings(
                 "aliasRole": contract_stage2_alias_role,
                 "aliasSupportUntilEpoch": contract_stage2_alias_support_until_epoch,
                 "authorityFailureClasses": contract_stage2_failure_classes,
-                "bidirRequiredObligations": contract_stage2_bidir_required_obligations,
-                "bidirFailureClasses": contract_stage2_bidir_failure_classes,
+                "coreObligationRequiredKinds": contract_stage2_core_obligation_required_kinds,
+                "coreObligationFailureClasses": contract_stage2_core_obligation_failure_classes,
             },
         },
         "checker": {
@@ -1142,8 +1150,8 @@ def check_control_plane_lane_bindings(
             },
             "stage2": {
                 "authorityRequiredFailureClasses": checker_stage2_required_classes,
-                "bidirRequiredObligations": checker_stage2_bidir_required_obligations,
-                "bidirRequiredFailureClasses": checker_stage2_bidir_required_classes,
+                "coreObligationRequiredKinds": checker_stage2_core_obligation_required_kinds,
+                "coreObligationRequiredFailureClasses": checker_stage2_core_obligation_required_classes,
             },
         },
         "loader": {
@@ -1182,8 +1190,8 @@ def check_control_plane_lane_bindings(
                 "aliasRole": loader_stage2_alias_role,
                 "aliasSupportUntilEpoch": loader_stage2_alias_support_until_epoch,
                 "authorityFailureClasses": loader_stage2_failure_classes,
-                "bidirRequiredObligations": loader_stage2_bidir_required_obligations,
-                "bidirFailureClasses": loader_stage2_bidir_failure_classes,
+                "coreObligationRequiredKinds": loader_stage2_core_obligation_required_kinds,
+                "coreObligationFailureClasses": loader_stage2_core_obligation_failure_classes,
             },
         },
     }
@@ -1540,8 +1548,8 @@ def check_coherence_required_obligations(
     contract_required_obligations = as_sorted_strings(
         parse_required_obligation_ids(coherence_contract)
     )
-    contract_required_bidir = as_sorted_strings(
-        parse_required_bidir_obligations(coherence_contract)
+    contract_required_core_obligation_kinds = as_sorted_strings(
+        parse_required_core_obligation_kinds(coherence_contract)
     )
     contract_registry_kind = (
         coherence_contract.get("surfaces", {}).get("obligationRegistryKind")
@@ -1552,15 +1560,15 @@ def check_coherence_required_obligations(
     checker_required_obligations = as_sorted_strings(
         scope_noncontradiction_details.get("requiredCoherenceObligations", ())
     )
-    checker_required_bidir = as_sorted_strings(
-        scope_noncontradiction_details.get("requiredBidirObligations", ())
+    checker_required_core_obligation_kinds = as_sorted_strings(
+        scope_noncontradiction_details.get("requiredCoreObligationKinds", ())
     )
     checker_registry_kind = scope_noncontradiction_details.get("obligationRegistryKind")
 
     if contract_required_obligations != checker_required_obligations:
         reasons.append("coherence required obligation set drifts between contract and checker")
-    if contract_required_bidir != checker_required_bidir:
-        reasons.append("requiredBidirObligations drifts between contract and checker")
+    if contract_required_core_obligation_kinds != checker_required_core_obligation_kinds:
+        reasons.append("requiredCoreObligationKinds drifts between contract and checker")
     if contract_registry_kind != checker_registry_kind:
         reasons.append("obligation registry kind drifts between contract and checker")
 
@@ -1568,8 +1576,8 @@ def check_coherence_required_obligations(
         "reasons": reasons,
         "contractRequiredObligations": contract_required_obligations,
         "checkerRequiredObligations": checker_required_obligations,
-        "contractRequiredBidirObligations": contract_required_bidir,
-        "checkerRequiredBidirObligations": checker_required_bidir,
+        "contractRequiredCoreObligationKinds": contract_required_core_obligation_kinds,
+        "checkerRequiredCoreObligationKinds": checker_required_core_obligation_kinds,
         "contractObligationRegistryKind": contract_registry_kind,
         "checkerObligationRegistryKind": checker_registry_kind,
     }
@@ -1684,10 +1692,10 @@ def count_traceability_rows(matrix_path: Path) -> int:
             continue
         if stripped.startswith("| Draft spec"):
             continue
-        if re.match(r"^\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|\s*-+\s*\|$", stripped):
-            continue
         parts = [cell.strip() for cell in stripped.strip("|").split("|")]
-        if len(parts) != 4:
+        if parts and all(re.match(r"^-+$", part.replace(" ", "")) for part in parts):
+            continue
+        if len(parts) != 5:
             continue
         if not CODE_REF_RE.search(parts[0]):
             continue

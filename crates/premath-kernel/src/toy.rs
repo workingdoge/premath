@@ -1,8 +1,8 @@
 //! Toy bit-worlds for Gate conformance testing.
 //!
-//! These implement the exact same semantics as the Python toy worlds
-//! in the spec's `tools/toy/toy_worlds.py`, allowing us to run the
-//! spec's test vectors and produce identical witness IDs.
+//! These are the Rust-native toy semantics used by Gate conformance vectors.
+//! The Python toy-world helpers are now adapter-only and must preserve this
+//! behavior when decoding KCIR-shaped fixtures.
 //!
 //! ## Argument conventions
 //!

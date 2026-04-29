@@ -95,7 +95,8 @@ Tags:
 | 0x18 | `TensorAtom`| `src:encDigest(objDigest) || tgt:encDigest(objDigest) || encListDigest(parts:[morDigest])` |
 | 0x19 | `GlueAtom`  | `src:encDigest(objDigest) || tgt:encDigest(objDigest) || wSig:Bytes32 || encListDigest(locals:[morDigest])` |
 
-Optional extension tag (enabled only if the implementation claims `adoptPullAtomMor`):
+Optional extension tag (enabled only if the implementation declares the
+`adoptPullAtomMor` normalization policy flag):
 
 | Tag  | Constructor | Payload |
 |------|-------------|---------|

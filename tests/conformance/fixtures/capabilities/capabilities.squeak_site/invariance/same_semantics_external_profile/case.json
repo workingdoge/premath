@@ -19,7 +19,7 @@
     "locationDescriptor": {
       "worldId": "world.dev",
       "runtimeProfile": "external_runner",
-      "capabilityVector": ["hk", "mise", "rust"],
+      "capabilityVector": ["hk", "ci-script", "rust"],
       "substrateBindingRef": "runner://terraform/local"
     }
   }

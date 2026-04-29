@@ -18,12 +18,19 @@ Placement rule:
   `draft/SPAN-SQUARE-CHECKING`; profiles MAY reference it when composing
   overlays, but do not own it.
 
-Current overlays:
+Current overlays and profile maps:
 
 - `ADJOINTS-AND-SITES.md` — capability-scoped adjoint/site obligations over the
   kernel context-site base, discharged under `(normalizerId, policyDigest)`,
   with composed SigPi + spans + Squeak routing guidance in Section 10 and
   CwF<->sig\Pi bridge mapping in Section 11.
+- `interop/README.md` — map for the optional deterministic artifact/interchange
+  profile. Current authority files still live under `../draft/` for path
+  stability.
+- `control-plane/README.md` — map for the optional governance/runtime checker
+  profile. This is not Premath Core.
+- `identity/README.md` — holding map for absorbed raw ASP/IDENT/JWT material.
+  It is not a promoted Premath profile yet.
 
 Related:
 

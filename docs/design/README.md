@@ -60,8 +60,12 @@ Design docs below remain implementation-facing runbooks.
   site-adjoint contract notes.
 - `control-plane/LIFECYCLE-COHERENCE-FLOWS.md`: schema lifecycle and gate-chain
   flow.
+- `control-plane/ATLAS.md`: site-of-sites staging note for cross-repo covers,
+  seams, authority surfaces, projections, and descent conditions.
 - `control-plane/ISSUE-GRAPH-CORE-CHECKING.md`: issue-memory authority split
   and core checking plan.
+- `control-plane/TOPOLOGY-V2.md`: shape-first placement model for authority
+  objects, projections, repo hosts, and simplex-native tracker routing.
 - `control-plane/MEMORY-LANES-CONTRACT.md`: work-memory lane split and
   write-discipline rules.
 - `control-plane/TOOL-CALLING-HARNESS-TYPESTATE.md`: tool-calling typestate
@@ -87,7 +91,7 @@ Design docs below remain implementation-facing runbooks.
 Design docs do not replace normative specs.
 
 - Semantic authority: `specs/premath/draft/PREMATH-KERNEL.md`,
-  `specs/premath/draft/GATE.md`, `specs/premath/draft/BIDIR-DESCENT.md`.
+  `specs/premath/draft/OBLIGATION-DISCHARGE.md`, `specs/premath/draft/GATE.md`.
 - Runtime/transport normative candidates:
   - `specs/premath/raw/TUSK-CORE.md`
   - `specs/premath/raw/SQUEAK-CORE.md`

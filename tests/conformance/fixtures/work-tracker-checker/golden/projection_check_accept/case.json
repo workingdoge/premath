@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "suiteId": "work-tracker-checker",
+  "vectorId": "golden/projection_check_accept",
+  "input": {
+    "projectionCheck": {
+      "projectionRef": "projection://tusk/ready-list/001",
+      "authorityDecisionRef": "decision://premath/work-check/bd-101/001",
+      "derivesFrom": "work-state://patch/active/001",
+      "usedAsAuthority": false
+    }
+  }
+}

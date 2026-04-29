@@ -2,4 +2,5 @@
 set -eu
 
 TASK="${1:-hk-check}"
-exec mise run "$TASK"
+ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/../../.." && pwd)"
+exec sh "$ROOT/tools/ci/run_task.sh" "$TASK"

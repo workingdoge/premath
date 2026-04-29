@@ -40,7 +40,7 @@ Normative authority remains in:
 
 - `draft/PREMATH-KERNEL`
 - `draft/GATE`
-- `draft/BIDIR-DESCENT`
+- `draft/OBLIGATION-DISCHARGE`
 - `draft/PREMATH-COHERENCE`
 
 ## 2. Presheaf contract

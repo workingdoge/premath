@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "mapKind": "premath.authority_map.v1",
+  "coreAuthorityPath": [
+    {
+      "path": "specs/premath/draft/PREMATH-KERNEL.md",
+      "scope": "Core semantic kernel law"
+    },
+    {
+      "path": "specs/premath/draft/OBLIGATION-DISCHARGE.md",
+      "scope": "Core obligation/discharge interface"
+    },
+    {
+      "path": "specs/premath/draft/GATE.md",
+      "scope": "Core accept/reject gate interface"
+    },
+    {
+      "path": "specs/premath/draft/WITNESS-ID.md",
+      "scope": "Core deterministic witness identity"
+    },
+    {
+      "path": "specs/premath/draft/CONFORMANCE.md",
+      "scope": "Sections 1-2.1 define the Core claim; profile and capability claims do not expand Core"
+    }
+  ],
+  "classes": {
+    "core": {
+      "description": "Admissibility kernel plus witness/replay interface.",
+      "draftSpecs": [
+        "PREMATH-KERNEL.md",
+        "OBLIGATION-DISCHARGE.md",
+        "GATE.md",
+        "WITNESS-ID.md"
+      ]
+    },
+    "conformance": {
+      "description": "Claim registry. Only the explicitly marked Core sections apply to Premath Core.",
+      "draftSpecs": [
+        "CONFORMANCE.md"
+      ]
+    },
+    "doctrine-preservation": {
+      "description": "Doctrine/infinity-layer preservation guard, promoted but not minimal Core.",
+      "draftSpecs": [
+        "DOCTRINE-INF.md"
+      ]
+    },
+    "interop": {
+      "description": "Optional deterministic artifact and interchange profile.",
+      "draftSpecs": [
+        "KCIR-CORE.md",
+        "REF-BINDING.md",
+        "NF.md",
+        "NORMALIZER.md",
+        "WIRE-FORMATS.md",
+        "ERROR-CODES.md"
+      ],
+      "profileSpecs": [
+        "specs/premath/profile/interop/BIDIR-DESCENT.md"
+      ]
+    },
+    "kernel-index": {
+      "description": "Projection-only kernel statement indexing and evidence lookup support.",
+      "draftSpecs": [
+        "KERNEL-STATEMENT-BINDINGS.json"
+      ]
+    },
+    "capability-registry": {
+      "description": "Executable capability and profile-overlay claim registry surfaces.",
+      "draftSpecs": [
+        "CAPABILITY-VECTORS.md",
+        "CAPABILITY-REGISTRY.json"
+      ]
+    },
+    "control-plane": {
+      "description": "Optional governance, runtime, route, lifecycle, and coherence profile.",
+      "draftSpecs": [
+        "CHANGE-MORPHISMS.md",
+        "COHERENCE-CONTRACT.json",
+        "CONTROL-PLANE-CONTRACT.json",
+        "DOCTRINE-SITE.md",
+        "DOCTRINE-SITE-INPUT.json",
+        "DOCTRINE-SITE.json",
+        "DOCTRINE-OP-REGISTRY.json",
+        "HARNESS-RUNTIME.md",
+        "HARNESS-TYPESTATE.md",
+        "HARNESS-RETRY-ESCALATION.md",
+        "LLM-INSTRUCTION-DOCTRINE.md",
+        "LLM-PROPOSAL-CHECKING.md",
+        "PREMATH-COHERENCE.md",
+        "SPAN-SQUARE-CHECKING.md",
+        "UNIFICATION-DOCTRINE.md"
+      ]
+    },
+    "authority-index": {
+      "description": "Authority front door, classification, and traceability map.",
+      "draftSpecs": [
+        "SPEC-INDEX.md",
+        "SPEC-TRACEABILITY.md"
+      ]
+    },
+    "adjoints-sites": {
+      "description": "Optional profile overlay outside the promoted draft directory.",
+      "profileSpecs": [
+        "specs/premath/profile/ADJOINTS-AND-SITES.md"
+      ]
+    },
+    "raw-experimental": {
+      "description": "Premath raw material; RFC 2119 language is proposal-local until promoted or claimed.",
+      "rawGlobs": [
+        "specs/premath/raw/**"
+      ]
+    },
+    "identity-holding": {
+      "description": "Absorbed ASP/IDENT/JWT and cover-terminality material; not Premath Core.",
+      "rawGlobs": [
+        "specs/raw/**"
+      ]
+    }
+  }
+}

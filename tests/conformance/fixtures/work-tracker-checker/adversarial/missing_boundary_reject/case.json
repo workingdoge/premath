@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "suiteId": "work-tracker-checker",
+  "vectorId": "adversarial/missing_boundary_reject",
+  "input": {
+    "workClaim": {
+      "coverRef": "atlas://work-tracker.v0",
+      "checkerProfileRef": "premath://raw/WORK-TRACKER-CHECKER-PROFILE",
+      "semanticProfileRef": "work://candidate/work-tracker.v0",
+      "simplexSubstrateRefs": [
+        "simplex://nerve-provisional/sigma/root"
+      ],
+      "workSubjectRef": "work://subject/bd-103",
+      "operationClass": "claim",
+      "declaredOperationClasses": [
+        "claim",
+        "update",
+        "close",
+        "handoff"
+      ],
+      "priorStateRefs": [
+        "work-state://bd-103/open"
+      ],
+      "claimedOutputStateRefs": [
+        "work-state://bd-103/in-progress"
+      ],
+      "boundaryRefs": [
+        "work-state://bd-104/closed"
+      ],
+      "acceptedBoundaryRefs": [],
+      "evidenceRefs": [
+        "witness://claim/bd-103/001"
+      ],
+      "actorRef": "actor://agent/codex"
+    }
+  }
+}

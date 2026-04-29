@@ -39,7 +39,8 @@ Premath checking/discharge pipelines.
 It complements:
 
 - `draft/LLM-INSTRUCTION-DOCTRINE` (authority split + typed/unknown handling),
-- `draft/BIDIR-DESCENT` (obligation/discharge contract),
+- `draft/OBLIGATION-DISCHARGE` (Core obligation/discharge contract),
+- `profile/interop/BIDIR-DESCENT` (full-profile verifier orchestration),
 - `draft/GATE` (admissibility witness outcomes).
 
 Normative intent:
@@ -112,7 +113,7 @@ MUST be explicit and auditable.
 For typed proposal routes, the checker MUST:
 
 1. treat proposal payloads as untrusted input,
-2. compile proposal claims into obligations under `draft/BIDIR-DESCENT`,
+2. compile proposal claims into obligations under `draft/OBLIGATION-DISCHARGE`,
 3. discharge obligations deterministically,
 4. map rejection outcomes into Gate witness classes,
 5. preserve provenance (`source = llm_proposed`) without granting authority.

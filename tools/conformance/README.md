@@ -19,6 +19,7 @@ Runs the executable conformance fixture suites through one command surface:
 - `tusk-core` (`run_tusk_core_vectors.py`)
 - `harness-typestate` (`run_harness_typestate_vectors.py`)
 - `runtime-orchestration` (`run_runtime_orchestration_vectors.py`)
+- `work-tracker-checker` (`run_work_tracker_checker_vectors.py`)
 - `capabilities` (`run_capability_vectors.py`)
 
 The runner computes a deterministic KCIR-style cache binding per suite using:
@@ -43,7 +44,7 @@ Disable cache for one run:
 PREMATH_CONFORMANCE_CACHE=0 python3 tools/conformance/run_fixture_suites.py --no-cache
 ```
 
-## `check_stub_invariance.py`
+## `premath conformance-check`
 
 Validates capability fixture stubs in:
 
@@ -60,19 +61,22 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_stub_invariance.py
+sh tools/ci/run_task.sh conformance-check
 ```
 
-## `check_spec_traceability.py`
+## `premath traceability-check`
 
 Validates promoted draft spec coverage matrix integrity using:
 
 - `specs/premath/draft/SPEC-TRACEABILITY.md`
+- `specs/premath/AUTHORITY-MAP.json`
 - `specs/premath/draft/` promoted draft spec set
 
 Checks include:
 
 - every promoted draft spec appears exactly once in the matrix,
+- every promoted draft spec appears exactly once in the authority map,
+- matrix authority classes match the authority map,
 - status is one of `covered|instrumented|gap`,
 - `gap` rows carry target IDs (`T-*-*`),
 - matrix rows do not reference unknown draft specs.
@@ -80,31 +84,7 @@ Checks include:
 Run:
 
 ```bash
-python3 tools/conformance/check_spec_traceability.py
-```
-
-## `check_docs_coherence.py`
-
-Validates critical docs-to-executable coherence invariants:
-
-- executable capability list parity across:
-  - `specs/premath/draft/CAPABILITY-REGISTRY.json` (`executableCapabilities`)
-  - `README.md`
-  - `tools/conformance/README.md`
-  - `specs/premath/draft/SPEC-INDEX.md` (§5.4)
-- baseline gate task parity between:
-  - `.mise.toml` (`[tasks.baseline]`)
-  - `docs/design/control-plane/CI-CLOSURE.md` baseline task list
-- projected check ID parity between:
-  - `tools/ci/change_projection.py` (`CHECK_ORDER`)
-  - `docs/design/control-plane/CI-CLOSURE.md` projected check list
-- capability-scoped normative-vs-informative consistency in
-  `specs/premath/draft/SPEC-INDEX.md` (§5.4/§5.5 conditional clauses).
-
-Run:
-
-```bash
-python3 tools/conformance/check_docs_coherence.py
+sh tools/ci/run_task.sh traceability-check
 ```
 
 ## `premath coherence-check`
@@ -114,7 +94,7 @@ using machine artifact `specs/premath/draft/COHERENCE-CONTRACT.json`.
 
 Checks include:
 
-- scope non-contradiction (including bidir checker vocabulary alignment),
+- scope non-contradiction (including Core obligation vocabulary alignment),
 - capability parity across executable/docs/manifest surfaces,
 - baseline and projected gate-chain parity,
 - doctrine operation reachability for required operation paths,
@@ -126,7 +106,7 @@ Checks include:
 Run via task:
 
 ```bash
-mise run coherence-check
+sh tools/ci/run_task.sh coherence-check
 ```
 
 ## `run_capability_vectors.py`
@@ -340,6 +320,32 @@ Run:
 
 ```bash
 python3 tools/conformance/run_runtime_orchestration_vectors.py
+```
+
+## `run_work_tracker_checker_vectors.py`
+
+Runs deterministic raw work-tracker checker vectors through
+`premath work-tracker-check` in:
+
+- `tests/conformance/fixtures/work-tracker-checker/`
+
+Checks include deterministic accept/reject behavior for:
+
+- canonical `WorkClaimNF` inputs with explicit authority references,
+- projection checks that cite accepted authority,
+- handoff recovery-evidence checks,
+- boundary-evidence rejection,
+- projection-as-authority rejection, and
+- graph-shape-as-work-semantics rejection.
+
+This suite validates the Rust Premath checker endpoint only. Python is only the
+fixture runner; it does not define checker semantics. The suite does not define
+work semantics, tracker runtime, storage, CLI, MCP, daemon, or UI behavior.
+
+Run:
+
+```bash
+python3 tools/conformance/run_work_tracker_checker_vectors.py
 ```
 
 ## `check_doctrine_site.py`

@@ -14,6 +14,9 @@ node_modules/
 .codex/
 .serena/
 .devenv/
+.direnv/
+artifacts/specs-bundle-*.manifest.txt
+artifacts/specs-bundle-*.zip
 .beads/
 .beads.server-bad-*/
 .git-worktrees/
