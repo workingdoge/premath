@@ -136,8 +136,8 @@
       }
     },
     {
-      "id": "op/ci.decide_required",
-      "path": "tools/ci/decide_required.py",
+      "id": "op/ci.required_attested",
+      "path": "tools/ci/run_required_attested.py",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -156,12 +156,6 @@
     {
       "id": "op/ci.run_instruction",
       "path": "tools/ci/run_instruction.sh",
-      "kind": "operation",
-      "requiresDeclaration": false
-    },
-    {
-      "id": "op/ci.verify_required_witness",
-      "path": "tools/ci/verify_required_witness.py",
       "kind": "operation",
       "requiresDeclaration": false
     },
@@ -473,11 +467,10 @@
       "parts": [
         "draft/LLM-INSTRUCTION-DOCTRINE",
         "draft/LLM-PROPOSAL-CHECKING",
-        "op/ci.decide_required",
+        "op/ci.required_attested",
         "op/ci.run_gate",
         "op/ci.run_gate_terraform",
         "op/ci.run_instruction",
-        "op/ci.verify_required_witness",
         "op/conformance.capability",
         "op/conformance.doctrine",
         "op/conformance.doctrine_inf",
@@ -564,16 +557,6 @@
         "dm.identity",
         "dm.presentation.projection",
         "dm.profile.evidence"
-      ]
-    },
-    {
-      "id": "e.ci.op.decide_required",
-      "from": "raw/PREMATH-CI",
-      "to": "op/ci.decide_required",
-      "morphisms": [
-        "dm.commitment.attest",
-        "dm.identity",
-        "dm.presentation.projection"
       ]
     },
     {
@@ -864,6 +847,16 @@
       ]
     },
     {
+      "id": "e.ci.op.required_attested",
+      "from": "raw/PREMATH-CI",
+      "to": "op/ci.required_attested",
+      "morphisms": [
+        "dm.commitment.attest",
+        "dm.identity",
+        "dm.presentation.projection"
+      ]
+    },
+    {
       "id": "e.ci.op.run_gate",
       "from": "raw/PREMATH-CI",
       "to": "op/ci.run_gate",
@@ -909,16 +902,6 @@
       "from": "raw/PREMATH-CI",
       "to": "op/conformance.stub",
       "morphisms": [
-        "dm.identity",
-        "dm.presentation.projection"
-      ]
-    },
-    {
-      "id": "e.ci.op.verify_required_witness",
-      "from": "raw/PREMATH-CI",
-      "to": "op/ci.verify_required_witness",
-      "morphisms": [
-        "dm.commitment.attest",
         "dm.identity",
         "dm.presentation.projection"
       ]

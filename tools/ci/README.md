@@ -15,8 +15,7 @@ Projection + delta detection semantics are core-owned
 (`premath required-projection`, `premath required-delta`);
 `tools/ci/change_projection.py` is a thin adapter over those command surfaces.
 It writes `artifacts/ciwitness/latest-delta.json` as a single-source delta
-snapshot for strict compare phases (`ci-verify-required-strict`,
-`ci-decide-required`).
+snapshot for the attested required chain.
 For each executed check it requests a per-check gate envelope artifact under
 `artifacts/ciwitness/gates/<projection-digest>/` and links it from
 `ci.required.v1` via `gateWitnessRefs`.
@@ -42,31 +41,21 @@ native-or-fallback gate envelope emission for that check.
 
 `sh tools/ci/run_task.sh ci-check` remains as legacy compatibility for fixed full-gate routing.
 
-`tools/ci/verify_required_witness.py` verifies `ci.required` artifacts against
-deterministic projection semantics.
-It delegates semantic verification to core
-`premath required-witness-verify` via a thin adapter.
-When `gateWitnessRefs` are present, verification also enforces linkage integrity
-(check ordering, artifact digest, and payload/result consistency).
-`--require-native-check <id>` can phase in native-only requirements for selected
-checks.
-By default it verifies `artifacts/ciwitness/latest-required.json`.
+`tools/ci/run_required_attested.py` runs the authoritative required-gate
+attestation chain:
 
-`tools/ci/decide_required.py` emits deterministic merge/promotion decisions from
-verified witness semantics (`accept` or `reject`).
-It delegates decision semantics to core
-`premath required-witness-decide` via a thin adapter.
-`sh tools/ci/run_task.sh ci-decide-required` writes `artifacts/ciwitness/latest-decision.json`.
-
-`tools/ci/verify_decision.py` verifies the decision attestation chain:
-
+- run projected required checks,
+- verify `ci.required` artifacts against deterministic projection semantics,
+- compare witness `changedPaths` against `artifacts/ciwitness/latest-delta.json`,
+- emit deterministic merge/promotion decisions from verified witness semantics,
+- write `artifacts/ciwitness/latest-decision.json`,
+- verify the decision attestation chain:
 - decision references the current witness and delta snapshot,
 - decision hash bindings (`witnessSha256`, `deltaSha256`) match artifact bytes,
 - projection/required-check semantics align across decision, witness, and snapshot.
 
-It delegates attestation-chain semantics to core
-`premath required-decision-verify`; Python wrapper logic is path/artifact
-transport only.
+The semantic steps delegate to core `premath required-witness-verify`,
+`premath required-witness-decide`, and `premath required-decision-verify`.
 
 `premath command-surface-check` validates the repository command surface is
 direct scripts/Nix and rejects legacy task-runner command/file references
@@ -257,8 +246,7 @@ Strict compare changed-path source order:
 Examples:
 
 ```bash
-PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD sh tools/ci/run_task.sh ci-verify-required-strict
-PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD sh tools/ci/run_task.sh ci-decide-required
+PREMATH_CI_BASE_REF=origin/main PREMATH_CI_HEAD_REF=HEAD sh tools/ci/run_task.sh ci-required-attested
 ```
 
 Provider-neutral pipelines map provider refs internally before strict delta
@@ -283,18 +271,8 @@ sh tools/ci/run_task.sh ci-observation-build
 sh tools/ci/run_task.sh ci-observation-query
 sh tools/ci/run_task.sh ci-observation-serve
 sh tools/ci/run_task.sh ci-observation-check
-sh tools/ci/run_task.sh ci-verify-required
-sh tools/ci/run_task.sh ci-required-verified
 sh tools/ci/run_task.sh ci-required-attested
 sh tools/ci/run_task.sh ci-pipeline-required
-sh tools/ci/run_task.sh ci-decide-required
-sh tools/ci/run_task.sh ci-verify-decision
-
-# strict mode: compare witness changedPaths to detected delta
-sh tools/ci/run_task.sh ci-verify-required-strict
-
-# strict mode + phase-in native-only requirement
-sh tools/ci/run_task.sh ci-verify-required-strict-native
 ```
 
 Instruction envelope run:

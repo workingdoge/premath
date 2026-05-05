@@ -169,25 +169,6 @@ case "$TASK" in
   ci-required)
     python3 tools/ci/run_required_checks.py "$@"
     ;;
-  ci-verify-required)
-    python3 tools/ci/verify_required_witness.py "$@"
-    ;;
-  ci-verify-required-strict)
-    python3 tools/ci/verify_required_witness.py --compare-delta "$@"
-    ;;
-  ci-verify-required-strict-native)
-    python3 tools/ci/verify_required_witness.py --compare-delta --require-native-check baseline "$@"
-    ;;
-  ci-decide-required)
-    python3 tools/ci/decide_required.py --compare-delta --out artifacts/ciwitness/latest-decision.json "$@"
-    ;;
-  ci-verify-decision)
-    python3 tools/ci/verify_decision.py "$@"
-    ;;
-  ci-required-verified)
-    sh "$ROOT/tools/ci/run_task.sh" ci-required
-    sh "$ROOT/tools/ci/run_task.sh" ci-verify-required
-    ;;
   ci-required-attested|precommit)
     python3 tools/ci/run_required_attested.py "$@"
     ;;

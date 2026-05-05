@@ -10,9 +10,9 @@
   ],
   "operations": [
     {
-      "id": "op/ci.decide_required",
-      "edgeId": "e.ci.op.decide_required",
-      "path": "tools/ci/decide_required.py",
+      "id": "op/ci.required_attested",
+      "edgeId": "e.ci.op.required_attested",
+      "path": "tools/ci/run_required_attested.py",
       "kind": "operation",
       "morphisms": [
         "dm.commitment.attest",
@@ -53,17 +53,6 @@
         "dm.commitment.attest",
         "dm.identity",
         "dm.profile.execution"
-      ]
-    },
-    {
-      "id": "op/ci.verify_required_witness",
-      "edgeId": "e.ci.op.verify_required_witness",
-      "path": "tools/ci/verify_required_witness.py",
-      "kind": "operation",
-      "morphisms": [
-        "dm.commitment.attest",
-        "dm.identity",
-        "dm.presentation.projection"
       ]
     },
     {

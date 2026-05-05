@@ -76,11 +76,6 @@ sh tools/ci/run_task.sh ci-required
 `sh tools/ci/run_task.sh ci-required` computes deterministic change projection
 (`Delta -> requiredChecks`) and executes only projected checks.
 
-`sh tools/ci/run_task.sh ci-verify-required` verifies emitted `ci.required` witness artifacts
-against deterministic projection semantics.
-
-`sh tools/ci/run_task.sh ci-required-verified` runs execution + witness verification.
-
 `sh tools/ci/run_task.sh ci-required-attested` is the authoritative local/CI chain
 (execution + strict verification + decision + decision verification).
 

@@ -112,7 +112,7 @@ Repository v0 note:
 
 - CI operation nodes currently include `tools/ci/run_gate.sh`,
   `tools/ci/run_gate_terraform.sh`, `tools/ci/run_instruction.sh`,
-  `tools/ci/verify_required_witness.py`, and `tools/ci/decide_required.py`.
+  and `tools/ci/run_required_attested.py`.
   Squeak runtime transport/placement routing for gate execution is explicit on
   `run_gate*` operation nodes via `dm.transport.world` +
   `dm.transport.location`.

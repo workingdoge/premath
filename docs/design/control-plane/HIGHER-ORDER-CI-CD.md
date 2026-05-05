@@ -72,17 +72,12 @@ Current shape:
   - computes `Delta -> requiredChecks` deterministically before execution
   - emits single-source strict-compare snapshot: `artifacts/ciwitness/latest-delta.json`
   - executes each required check through `tools/ci/run_gate.sh`
-- canonical witness verifier: `sh tools/ci/run_task.sh ci-verify-required`
-  (`tools/ci/verify_required_witness.py`)
-  - strict CI mode: `sh tools/ci/run_task.sh ci-verify-required-strict` (`--compare-delta`)
-  - strict mode refs are provider-neutral:
-    `PREMATH_CI_BASE_REF`, `PREMATH_CI_HEAD_REF`
-  - phase-in native requirement:
-    `sh tools/ci/run_task.sh ci-verify-required-strict-native` (`--require-native-check ...`)
-- canonical decision surface: `sh tools/ci/run_task.sh ci-decide-required`
-  (`tools/ci/decide_required.py`) -> deterministic `accept|reject`
-- canonical decision-attestation verifier: `sh tools/ci/run_task.sh ci-verify-decision`
-  (`tools/ci/verify_decision.py`)
+- canonical attested decision surface:
+  `sh tools/ci/run_task.sh ci-required-attested`
+  (`tools/ci/run_required_attested.py`) -> strict witness verification,
+  deterministic `accept|reject`, and decision-attestation verification.
+- strict mode refs are provider-neutral:
+  `PREMATH_CI_BASE_REF`, `PREMATH_CI_HEAD_REF`
 - default profile: `PREMATH_SQUEAK_SITE_PROFILE=local`
   - optional external profile:
     `PREMATH_SQUEAK_SITE_PROFILE=external` + `PREMATH_SQUEAK_SITE_RUNNER=<path>`

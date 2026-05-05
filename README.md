@@ -224,12 +224,6 @@ sh tools/ci/run_task.sh mcp-serve
 sh tools/ci/run_task.sh ci-observation-check
 sh tools/ci/run_task.sh ci-drift-budget-check
 sh tools/ci/run_task.sh ci-required
-sh tools/ci/run_task.sh ci-verify-required
-sh tools/ci/run_task.sh ci-verify-required-strict
-sh tools/ci/run_task.sh ci-verify-required-strict-native
-sh tools/ci/run_task.sh ci-decide-required
-sh tools/ci/run_task.sh ci-verify-decision
-sh tools/ci/run_task.sh ci-required-verified
 sh tools/ci/run_task.sh ci-required-attested
 sh tools/ci/run_task.sh ci-pipeline-required
 sh tools/ci/run_task.sh coherence-check
@@ -257,9 +251,6 @@ with `.githooks`-based local hooks.
 - labels each gate ref with provenance source (`native` or `fallback`)
 - prefers native runner/task gate envelope artifacts when present, with
   deterministic fallback emission when unavailable
-- `sh tools/ci/run_task.sh ci-verify-required` verifies witness determinism/binding
-- `sh tools/ci/run_task.sh ci-required-verified` runs both execution and verification
-- `sh tools/ci/run_task.sh ci-decide-required` emits deterministic `accept|reject` from verified witness
 - `sh tools/ci/run_task.sh ci-required-attested` runs the authoritative local/CI gate chain
   (`ci-required` + strict verify + decision + decision attestation)
 
@@ -281,9 +272,10 @@ The current repo CI binding runs:
 Provider-specific required-check mappings are documented in
 `docs/design/control-plane/CI-PROVIDER-BINDINGS.md`.
 
-`ci-verify-required-strict` uses `--compare-delta` and compares witness
-`changedPaths` against `artifacts/ciwitness/latest-delta.json` when present
-(fallback: detected VCS delta).
+`ci-required-attested` verifies witness determinism/binding, compares witness
+`changedPaths` against `artifacts/ciwitness/latest-delta.json`, emits the
+deterministic `accept|reject` decision, and verifies the decision attestation
+chain.
 Provider-neutral CI refs:
 - `PREMATH_CI_BASE_REF` (optional)
 - `PREMATH_CI_HEAD_REF` (optional, default `HEAD`)

@@ -85,8 +85,7 @@
   "expectedOperationPaths": [
     "tools/ci/run_gate.sh",
     "tools/ci/run_instruction.sh",
-    "tools/ci/verify_required_witness.py",
-    "tools/ci/decide_required.py",
+    "tools/ci/run_required_attested.py",
     "crates/premath-cli/src/commands/conformance_check.rs",
     "tools/conformance/run_capability_vectors.py",
     "tools/conformance/check_doctrine_site.py",

@@ -86,7 +86,7 @@ Role split inside CI/Control:
 - `tools/ci/pipeline_required.py`
 - `tools/ci/pipeline_instruction.py`
 - `tools/ci/run_required_checks.py`
-- `tools/ci/verify_required_witness.py`
+- `tools/ci/run_required_attested.py`
 - `tools/ci/run_instruction.py` / `tools/ci/run_instruction.sh`
 - `tools/ci/run_gate.sh`
 - `tools/conformance/check_doctrine_site.py`
@@ -109,7 +109,7 @@ DOCTRINE-INF
      -> execute/attest role: PREMATH-CI / CI-TOPOS
         -> tools/ci/pipeline_required.py / tools/ci/pipeline_instruction.py
         -> tools/ci/run_required_checks.py
-        -> tools/ci/verify_required_witness.py
+        -> tools/ci/run_required_attested.py
         -> tools/ci/run_gate.sh
   -> tools/conformance/check_doctrine_site.py /
      check_runtime_orchestration.py / check_doctrine_mcp_parity.py /
@@ -191,7 +191,7 @@ Projected required gate (`sh tools/ci/run_task.sh ci-required`) enforces:
 - execution of projected checks only,
 - CI closure witness emission (`artifacts/ciwitness/proj1_*.json`).
 
-Authoritative verification (`sh tools/ci/run_task.sh ci-verify-required`) enforces:
+Authoritative verification (`sh tools/ci/run_task.sh ci-required-attested`) enforces:
 - projection/witness digest consistency,
 - required/executed check-set consistency,
 - verdict/failure-class consistency with check results.

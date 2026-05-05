@@ -276,24 +276,6 @@ fn forbidden_hits(text: &str) -> Vec<(&'static str, bool)> {
             lines.contains(&"run: python3 tools/ci/run_required_checks.py"),
         ),
         (
-            "split strict verify call",
-            lines
-                .iter()
-                .any(|line| line.starts_with("run: python3 tools/ci/verify_required_witness.py")),
-        ),
-        (
-            "split decision call",
-            lines
-                .iter()
-                .any(|line| line.starts_with("run: python3 tools/ci/decide_required.py")),
-        ),
-        (
-            "split decision verify call",
-            lines
-                .iter()
-                .any(|line| line.starts_with("run: python3 tools/ci/verify_decision.py")),
-        ),
-        (
             "legacy instruction check call",
             lines.contains(&"run: sh tools/ci/run_task.sh ci-instruction-check"),
         ),

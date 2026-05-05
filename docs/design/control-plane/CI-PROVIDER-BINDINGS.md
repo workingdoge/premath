@@ -11,9 +11,7 @@ Premath gate contract.
 Required semantic surfaces:
 
 - `sh tools/ci/run_task.sh ci-required`
-- `sh tools/ci/run_task.sh ci-verify-required-strict`
-- `sh tools/ci/run_task.sh ci-decide-required`
-- `sh tools/ci/run_task.sh ci-verify-decision`
+- `sh tools/ci/run_task.sh ci-required-attested`
 
 Required evidence surfaces:
 
@@ -48,4 +46,4 @@ pipeline has applied provider ref mapping.
 
 Future provider mappings (GitLab, Buildkite, Jenkins, self-hosted orchestration)
 should bind provider-required checks to the same canonical decision surface:
-`sh tools/ci/run_task.sh ci-decide-required`.
+`sh tools/ci/run_task.sh ci-required-attested`.

@@ -4242,3 +4242,32 @@ the control-plane profile look like Premath owned worker scheduling.
 - Concrete worker/coordinator loops should live in Tusk or another downstream
   operator site.
 - The Python harness surface loses the remaining orchestration loop module.
+
+---
+
+## 2026-05-05 — Decision 0144: Collapse required attestation split wrappers
+
+### Decision
+Delete `tools/ci/verify_required_witness.py`, `tools/ci/decide_required.py`,
+and `tools/ci/verify_decision.py`, and fold their path/artifact plumbing into
+`tools/ci/run_required_attested.py`.
+
+### Rationale
+The three deleted files were split command wrappers around native checker
+commands:
+
+- `premath required-witness-verify`,
+- `premath required-witness-decide`,
+- `premath required-decision-verify`.
+
+Keeping them as separate Premath command surfaces made the control-plane profile
+look larger while the authoritative CI path already flows through the attested
+required chain.
+
+### Consequences
+- `sh tools/ci/run_task.sh ci-required-attested` is the single required-gate
+  attestation surface.
+- Split aliases (`ci-verify-required*`, `ci-decide-required`,
+  `ci-verify-decision`, `ci-required-verified`) are removed.
+- Doctrine operation routing now binds required attestation to
+  `tools/ci/run_required_attested.py`.
