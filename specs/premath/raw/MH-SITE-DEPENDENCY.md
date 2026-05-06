@@ -13,10 +13,10 @@ is not Premath kernel law. The harness umbrella lives in:
 fish/sites/harness
 ```
 
-The canonical MH object doctrine remains the concrete subline:
+The canonical MH object doctrine is the concrete subline:
 
 ```text
-fish/sites/mh
+fish/sites/harness/mh
 ```
 
 Premath supplies upstream doctrine for admissibility, descent, gates, receipt
@@ -27,9 +27,11 @@ lineage, and scoped claims. It does not own MH-specific objects such as
 
 ## Boundary
 
-- `fish/sites/mh` owns Meta-Harness semantic/domain law.
 - `fish/sites/harness` owns umbrella harness placement, namespace migration,
   and realization-boundary doctrine.
+- `fish/sites/harness/mh` owns Meta-Harness semantic/domain law.
+- `fish/sites/mh` is retained only as a compatibility pointer for older
+  workspace references.
 - `fish/sites/premath` owns generic definability, admissibility, descent, gate,
   and evidence doctrine used by MH.
 - `kurma` should carry MH into schemas, content addressing, validators,
@@ -41,5 +43,5 @@ lineage, and scoped claims. It does not own MH-specific objects such as
 
 The MH draft stack was first crystallized in Premath under the temporary
 `PMH-*` name, then moved to `fish/sites/mh` to keep Premath generic. The later
-`fish/sites/harness` umbrella records broader harness placement without
-renaming the concrete `mh` line.
+`fish/sites/harness` umbrella consolidated the concrete `mh` line at
+`fish/sites/harness/mh` without renaming `MH-*` or `mh.receipt_first.v0`.
