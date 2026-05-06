@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "executable",
-  "result": "accepted",
-  "assertions": [
-    "claim transitions open work to in_progress with deterministic assignee binding"
-  ]
-}

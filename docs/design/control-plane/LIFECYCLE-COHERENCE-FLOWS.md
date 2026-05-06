@@ -14,7 +14,7 @@ Normative anchors:
 
 ```text
 CONTROL-PLANE-CONTRACT.schemaLifecycle
-  -> tools/ci/control_plane_contract.py::load_control_plane_contract
+  -> premath coherence-check / premath drift-budget-check
      -> validate activeEpoch format (YYYY-MM)
      -> validate required kind families
      -> resolve alias kinds -> canonical kinds
@@ -27,7 +27,7 @@ CONTROL-PLANE-CONTRACT.schemaLifecycle
         - decisionRef + owner required
         - rollover: cadence required, aliases required, runway <= cadence
         - freeze: freezeReason required, aliases forbidden
-  -> CI client validators consume canonical kinds only
+  -> checker validators consume canonical kinds only
   -> emitted required/instruction witness payloads stay canonical
 ```
 
@@ -63,10 +63,9 @@ Deterministic failure class:
 
 ```text
 edit CONTROL-PLANE-CONTRACT.json
-  -> sh tools/ci/run_task.sh ci-pipeline-test
-  -> sh tools/ci/run_task.sh coherence-check
-  -> sh tools/ci/run_task.sh ci-drift-budget-check
-  -> sh tools/ci/run_task.sh baseline
+  -> premath coherence-check
+  -> premath drift-budget-check
+  -> cargo test --workspace
 ```
 
 Rollover update checklist:

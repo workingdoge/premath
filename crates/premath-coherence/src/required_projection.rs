@@ -4,46 +4,30 @@ use sha2::{Digest, Sha256};
 use std::collections::BTreeSet;
 
 pub const PROJECTION_SCHEMA: u32 = 1;
-pub const PROJECTION_POLICY: &str = "ci-topos-v0";
+pub const PROJECTION_POLICY: &str = "premath-local-checks-v0";
 
 const CHECK_BASELINE: &str = "baseline";
 const CHECK_BUILD: &str = "build";
 const CHECK_TEST: &str = "test";
 const CHECK_TEST_TOY: &str = "test-toy";
 const CHECK_TEST_KCIR_TOY: &str = "test-kcir-toy";
-const CHECK_CONFORMANCE: &str = "conformance-check";
-const CHECK_CONFORMANCE_RUN: &str = "conformance-run";
-const CHECK_DOCTRINE: &str = "doctrine-check";
+const CHECK_TRACEABILITY: &str = "traceability-check";
+const CHECK_COHERENCE: &str = "coherence-check";
+const CHECK_DRIFT_BUDGET: &str = "drift-budget-check";
 const CHECK_ORDER: [&str; 8] = [
     CHECK_BASELINE,
     CHECK_BUILD,
     CHECK_TEST,
     CHECK_TEST_TOY,
     CHECK_TEST_KCIR_TOY,
-    CHECK_CONFORMANCE,
-    CHECK_CONFORMANCE_RUN,
-    CHECK_DOCTRINE,
+    CHECK_TRACEABILITY,
+    CHECK_COHERENCE,
+    CHECK_DRIFT_BUDGET,
 ];
-const DOC_FILE_NAMES: [&str; 5] = [
-    "AGENTS.md",
-    "COMMITMENT.md",
-    "README.md",
-    "RELEASE_NOTES.md",
-    "LICENSE",
-];
+const DOC_FILE_NAMES: [&str; 3] = ["AGENTS.md", "README.md", "LICENSE"];
 const DOC_EXTENSIONS: [&str; 5] = [".md", ".mdx", ".rst", ".txt", ".adoc"];
-const SEMANTIC_BASELINE_PREFIXES: [&str; 4] = [
-    ".github/workflows/",
-    "tools/ci/",
-    "tools/infra/terraform/",
-    "infra/terraform/",
-];
-const SEMANTIC_BASELINE_EXACT: [&str; 4] = [
-    ".envrc",
-    "hk.pkl",
-    "pitchfork.toml",
-    "tools/ci/baseline_tasks.json",
-];
+const SEMANTIC_BASELINE_PREFIXES: [&str; 0] = [];
+const SEMANTIC_BASELINE_EXACT: [&str; 2] = [".envrc", "flake.nix"];
 const RUST_PREFIXES: [&str; 1] = ["crates/"];
 const RUST_EXACT: [&str; 4] = [
     "Cargo.toml",
@@ -52,15 +36,14 @@ const RUST_EXACT: [&str; 4] = [
     "rust-toolchain.toml",
 ];
 const KERNEL_PREFIX: &str = "crates/premath-kernel/";
-const CONFORMANCE_PREFIXES: [&str; 6] = [
-    "tests/conformance/",
+const FIXTURE_PREFIXES: [&str; 5] = [
+    "tests/checker/",
     "tests/toy/fixtures/",
     "tests/kcir_toy/fixtures/",
-    "tools/conformance/",
     "tools/toy/",
     "tools/kcir_toy/",
 ];
-const RAW_DOC_TRIGGER_PREFIXES: [&str; 2] = ["specs/premath/raw/", "tests/conformance/"];
+const RAW_DOC_TRIGGER_PREFIXES: [&str; 2] = ["specs/premath/raw/", "tests/checker/"];
 const DOCTRINE_DOC_PREFIXES: [&str; 3] = [
     "specs/premath/draft/",
     "specs/premath/raw/",
@@ -153,15 +136,15 @@ fn is_rust_path(path: &str) -> bool {
     RUST_EXACT.contains(&path) || starts_with_any(path, &RUST_PREFIXES)
 }
 
-fn is_conformance_path(path: &str) -> bool {
-    starts_with_any(path, &CONFORMANCE_PREFIXES)
+fn is_fixture_path(path: &str) -> bool {
+    starts_with_any(path, &FIXTURE_PREFIXES)
 }
 
 fn is_known_projection_surface(path: &str) -> bool {
     is_doc_like_path(path)
         || is_semantic_baseline_path(path)
         || is_rust_path(path)
-        || is_conformance_path(path)
+        || is_fixture_path(path)
 }
 
 fn projection_digest(changed_paths: &[String], required_checks: &[String]) -> String {
@@ -227,13 +210,13 @@ pub fn project_required_checks(changed_paths: &[String]) -> RequiredProjectionRe
         checks.insert(CHECK_TEST_KCIR_TOY.to_string());
     }
 
-    let conformance_touched = paths.iter().any(|path| is_conformance_path(path));
-    if conformance_touched {
-        reasons.insert("conformance_surface_changed".to_string());
-        checks.insert(CHECK_CONFORMANCE.to_string());
-        checks.insert(CHECK_CONFORMANCE_RUN.to_string());
+    let fixtures_touched = paths.iter().any(|path| is_fixture_path(path));
+    if fixtures_touched {
+        reasons.insert("fixture_surface_changed".to_string());
+        checks.insert(CHECK_TEST.to_string());
         checks.insert(CHECK_TEST_TOY.to_string());
         checks.insert(CHECK_TEST_KCIR_TOY.to_string());
+        checks.insert(CHECK_COHERENCE.to_string());
     }
 
     let unknown_non_doc_paths: Vec<&String> = paths
@@ -253,12 +236,16 @@ pub fn project_required_checks(changed_paths: &[String]) -> RequiredProjectionRe
             .iter()
             .any(|path| starts_with_any(path, &DOCTRINE_DOC_PREFIXES));
         if raw_docs_touched {
-            reasons.insert("docs_only_raw_or_conformance_touched".to_string());
-            checks.insert(CHECK_CONFORMANCE.to_string());
+            reasons.insert("docs_only_raw_or_fixture_touched".to_string());
+            checks.insert(CHECK_TRACEABILITY.to_string());
+            checks.insert(CHECK_COHERENCE.to_string());
+            checks.insert(CHECK_DRIFT_BUDGET.to_string());
         }
         if doctrine_docs_touched {
             reasons.insert("docs_only_doctrine_surface_touched".to_string());
-            checks.insert(CHECK_DOCTRINE.to_string());
+            checks.insert(CHECK_TRACEABILITY.to_string());
+            checks.insert(CHECK_COHERENCE.to_string());
+            checks.insert(CHECK_DRIFT_BUDGET.to_string());
         }
     }
 
@@ -345,10 +332,17 @@ mod tests {
     }
 
     #[test]
-    fn project_required_checks_docs_doctrine_surface_includes_doctrine_check() {
+    fn project_required_checks_docs_doctrine_surface_includes_checker_surface() {
         let result =
             project_required_checks(&["specs/premath/draft/OBLIGATION-DISCHARGE.md".to_string()]);
-        assert_eq!(result.required_checks, vec!["doctrine-check".to_string()]);
+        assert_eq!(
+            result.required_checks,
+            vec![
+                "traceability-check".to_string(),
+                "coherence-check".to_string(),
+                "drift-budget-check".to_string()
+            ]
+        );
         assert!(result.docs_only);
         assert!(
             result

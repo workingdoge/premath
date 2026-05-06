@@ -37,8 +37,9 @@ This doctrine defines the architectural rule for Premath evolution:
 - minimum canonical encoding at authority boundaries,
 - maximum expressiveness via typed projections, overlays, and capability claims.
 
-It applies to instruction/proposal/checking, issue memory, conformance surfaces,
-and interop artifacts.
+It applies to instruction/proposal/checking, checker surfaces, and interop
+artifacts. Tracker memory is an adjacent-site authority and may compile
+normalized claims into Premath checker inputs.
 
 Scope note: this document is classified as control-plane doctrine in
 `../AUTHORITY-MAP.json`. It is not Premath Core. The intended future split is:
@@ -68,7 +69,8 @@ Examples:
 
 - instruction proposals: canonical proposal payload + deterministic
   `proposalDigest`/`proposalKcirRef`,
-- issue memory: `issue.event.v1` append-only substrate + deterministic replay.
+- tracker memory: adjacent-site event substrate + deterministic replay outside
+  Premath, with normalized checker claims at the Premath boundary.
 
 ### 3.2 Derived view discipline
 
@@ -131,7 +133,7 @@ For each kind family:
 5. compatibility aliases participating in one lifecycle table MUST share one
    deterministic rollover epoch,
 6. rollover runway (`supportUntilEpoch - activeEpoch`) MUST be positive and
-   bounded (CI implementation profile: max 12 months),
+   bounded (runtime implementation profile: max 12 months),
 7. lifecycle tables MUST declare governance mode metadata under
    `schemaLifecycle.governance` with at least:
    - `mode` (`rollover` or `freeze`),
@@ -157,7 +159,7 @@ Process-level governance shape and operator flow are defined in:
 
 - `specs/process/SCHEMA-LIFECYCLE-GOVERNANCE.md`.
 
-## 6. Conformance Expectations
+## 6. Checker Expectations
 
 Implementations following this doctrine SHOULD:
 
@@ -207,7 +209,7 @@ KCIRProposalProjection {
 | instruction envelope proposal field | `LLMProposal` canonical payload | `proposalKcirRef` (preferred) + `proposalDigest` (compatibility alias) |
 | proposal ingest witness | canonical proposal + obligation/discharge projection | `proposalKcirRef` in witness lineage |
 | coherence parity and migration witnesses | deterministic parity tuple containing proposal identity keys when present | `proposalKcirRef` |
-| capability/conformance vectors | deterministic replay payload over the same canonical proposal | `proposalKcirRef` and deterministic reject on mismatch |
+| capability/checker vectors | deterministic replay payload over the same canonical proposal | `proposalKcirRef` and deterministic reject on mismatch |
 
 Derived profiles MAY add projection metadata, but MUST NOT fork this canonical
 proposal KCIR projection.
@@ -298,7 +300,7 @@ checker outcomes.
 ### 10.2 Universal factoring rule
 
 For every control-plane artifact family `F : Ctx^op -> V` that carries
-attestable output (instruction/proposal/coherence/CI/observation projections),
+attestable output (instruction/proposal/coherence/runtime projections),
 there MUST be one deterministic natural transformation:
 
 - `eta_F : F => Ev`
@@ -463,20 +465,18 @@ deterministic checker/vector surfaces as follows.
 
 | Stage 2 clause | Typed contract surface | Checker surface | Executable vectors |
 | --- | --- | --- | --- |
-| typed core is authority; alias is projection-only | `draft/CONTROL-PLANE-CONTRACT.json` `evidenceStage2Authority` (`activeStage=stage2`, `aliasRole=projection_only`) | `sh tools/ci/run_task.sh coherence-check` (`gate_chain_parity` Stage 2 checks) | `tests/conformance/fixtures/coherence-site/*/gate_chain_parity_stage2_*` |
+| typed core is authority; alias is projection-only | `draft/CONTROL-PLANE-CONTRACT.json` `evidenceStage2Authority` (`activeStage=stage2`, `aliasRole=projection_only`) | `premath coherence-check` (`gate_chain_parity` Stage 2 checks) | `tests/checker/fixtures/coherence-site/*/gate_chain_parity_stage2_*` |
 | alias-window fail-closed enforcement | lifecycle table in `draft/CONTROL-PLANE-CONTRACT.json` + §5.1 governance | `gate_chain_parity` Stage 2 alias-window checks | `gate_chain_parity_stage2_alias_window_reject` |
 | alias-as-authority rejection | `evidenceStage2Authority.requiredFailureClasses.authorityAliasViolation` | `gate_chain_parity` Stage 2 alias-role checks | `gate_chain_parity_stage2_alias_role_reject` |
 | unbound typed authority rejection | `evidenceStage2Authority.requiredFailureClasses.unbound` | `gate_chain_parity` Stage 2 unbound checks | `gate_chain_parity_stage2_unbound_binding_reject` |
 | direct Core obligation evidence route parity | `evidenceStage2Authority.coreObligationEvidenceRoute` + canonical obligation set (`routeKind=direct_checker_discharge`, `obligationFieldRef=coreObligationCheckerKinds`) | `gate_chain_parity` Stage 2 Core-obligation-route checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
-| typed-first consumer lineage (CI/instruction/decision/observation) | typed authority fields carried in witness/decision/snapshot payloads (`typedCoreProjectionDigest`, `authorityPayloadDigest`, `normalizerId`, `policyDigest`) | CI witness validators + observation projection selection | `capabilities.ci_witnesses` boundary-authority vectors (`golden/boundary_authority_lineage_accept`, adversarial/invariance pairs) |
 
 Equivalent implementation-local routes are permitted only when replay-stable
 and mapped deterministically to these clause-level surfaces.
 
-Observation/projection consumers MUST treat typed digests as canonical by
-default. Compatibility alias lookup MAY exist only behind an explicit
-compatibility mode (for example `match=compatibility_alias`), and MUST NOT be
-the default projection-selection path.
+Projection consumers MUST treat typed digests as canonical by default.
+Compatibility alias lookup MAY exist only behind an explicit compatibility
+mode and MUST NOT be the default projection-selection path.
 
 #### 10.6.5 Stage 3 typed-first closure mapping (normative)
 
@@ -487,7 +487,6 @@ clauses to deterministic checker/vector surfaces as follows.
 | --- | --- | --- | --- |
 | direct checker/discharge route is canonical authority route | `evidenceStage2Authority.coreObligationEvidenceRoute` (`routeKind=direct_checker_discharge`, `obligationFieldRef=coreObligationCheckerKinds`) | `gate_chain_parity` Stage 2 Core-obligation-route checks | `gate_chain_parity_stage2_kernel_missing_reject`, `gate_chain_parity_stage2_kernel_drift_reject` |
 | transitional sentinel path is compatibility-only and profile-gated | optional `kernelComplianceSentinel` + `coreObligationEvidenceRoute.fallback.mode=profile_gated_sentinel` with current `profileKind` in `fallback.profileKinds` | Stage 2 authority fallback-gating checks in `gate_chain_parity` | `cargo test -p premath-coherence` (`check_gate_chain_parity_rejects_stage2_core_obligation_route_obligation_mismatch`, `check_gate_chain_parity_rejects_stage2_core_obligation_route_failure_class_mismatch`) |
-| typed-first consumer lineage is canonical across CI/CLI/MCP/observation | typed authority fields (`typedCoreProjectionDigest`, `normalizerId`, `policyDigest`) are canonical; alias fields are compatibility metadata only | CI witness lineage validators + observation typed-default projection selection | `capabilities.ci_witnesses` boundary-authority vectors + CLI/observation compatibility-mode checks |
 
 Stage 3 closure MUST NOT introduce a second authority artifact. If fallback is
 temporarily re-enabled for a profile, rollback/re-promotion MUST follow
@@ -524,7 +523,7 @@ Existing failure vocabularies remain unchanged:
 
 - Gate/Core-obligation classes remain source of semantic admissibility failure truth.
 - Coherence classes remain source of checker parity/shape failure truth.
-- CI/lifecycle classes remain source of control-plane lifecycle failure truth.
+- lifecycle classes remain source of control-plane lifecycle failure truth.
 
 The obstruction algebra MUST be vocabulary-preserving:
 
@@ -576,8 +575,8 @@ as one indexed family/fibration over contexts:
 - semantic authority projection: `p0 : E -> C` (kernel/Gate path),
 - attested control-plane evidence family: `Ev : Ctx^op -> V` (§10).
 
-Operational surfaces (instruction, coherence, CI witness, harness trajectory,
-observation projections, issue-memory projections) MAY vary by workflow, but
+Operational surfaces (instruction, coherence, runtime witness, harness trajectory,
+issue-memory projections) MAY vary by workflow, but
 MUST remain deterministic projections over one authority path and MUST NOT
 introduce a second admissibility schema.
 
@@ -637,7 +636,7 @@ Conforming implementations SHOULD:
 
 1. encode worker decomposition in cover/refinement terms (`Ctx`, `J`),
 2. verify overlap/base-change claims via span/square witnesses,
-3. keep harness/coherence/CI surfaces as projections into `Ev`,
+3. keep harness/coherence/runtime surfaces as projections into `Ev`,
 4. keep admissibility decisions checker/Gate-owned only,
 5. reject deterministically on missing/ambiguous/unbound evidence factorization
    routes.

@@ -10,7 +10,7 @@ tags:
   - doctrine
   - site
   - operation
-  - conformance
+  - checker-claims
 editor: arj <arj@workingdoge.com>
 contributors: []
 ---
@@ -68,7 +68,7 @@ The canonical machine-readable artifacts for this site are:
 
 - `draft/DOCTRINE-SITE-INPUT.json` (single authoritative input contract),
 - `draft/DOCTRINE-SITE.json` (generated canonical map),
-- `draft/DOCTRINE-OP-REGISTRY.json` (generated operation-node + CI edge view).
+- `draft/DOCTRINE-OP-REGISTRY.json` (operation-node + checker edge view).
 
 Conforming repositories MUST generate `draft/DOCTRINE-SITE.json` and
 `draft/DOCTRINE-OP-REGISTRY.json`
@@ -86,22 +86,19 @@ output under deterministic canonicalization.
 The site map MUST include at least:
 
 - doctrine root (`draft/DOCTRINE-INF`),
-- kernel/gate/conformance contract nodes (`draft/*`),
+- kernel/gate/checker claim nodes (`draft/*`),
 - instruction doctrine nodes when instruction-envelope control loops are exposed
   (for example `draft/LLM-INSTRUCTION-DOCTRINE` and
   `draft/LLM-PROPOSAL-CHECKING`),
-- runtime transport/site nodes (`raw/TUSK-CORE`, `raw/SQUEAK-CORE`,
-  `raw/SQUEAK-SITE`),
-- CI/projection nodes (`raw/PREMATH-CI`, `raw/CI-TOPOS`),
-- operational entrypoint nodes (`tools/ci/*`, `tools/conformance/*`,
-  `crates/premath-cli/src/commands/*` for worker-memory and harness session
-  surfaces).
+- runtime transport/site nodes (`raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`),
+- operational entrypoint nodes
+  (`crates/premath-cli/src/commands/*` for checker command surfaces).
 
 Operational nodes are not semantic authorities. They are execution/projection
 surfaces bound to upstream declarations.
 
-When implementations expose multithread worker orchestration, repositories
-SHOULD include route guidance linking these operation nodes to:
+When adjacent runtime sites expose multithread worker orchestration, those sites
+SHOULD include route guidance linking their operation nodes to:
 
 - cover/refinement decomposition semantics (`raw/CTX-SITE`),
 - deterministic glue-or-obstruction boundary (`raw/SHEAF-STACK`),
@@ -110,34 +107,16 @@ SHOULD include route guidance linking these operation nodes to:
 
 Repository v0 note:
 
-- CI operation nodes currently include `tools/ci/run_gate.sh`,
-  `tools/ci/run_gate_terraform.sh`, `tools/ci/run_instruction.sh`,
-  and `tools/ci/run_required_attested.py`.
-  Squeak runtime transport/placement routing for gate execution is explicit on
-  `run_gate*` operation nodes via `dm.transport.world` +
-  `dm.transport.location`.
-- worker-memory operation nodes include MCP mutation paths for
-  `issue_add`, `issue_update`, `issue_claim`, `issue_lease_renew`,
-  `issue_lease_release`, `issue_discover`, `dep_add`, `dep_remove`, and
-  `dep_replace` in `crates/premath-cli/src/commands/mcp_serve.rs`.
-- worker-memory read/projection nodes include
-  `issue_list`, `issue_ready`, `issue_blocked`, `issue_check`,
-  `issue_backend_status`, `issue_lease_projection`, and `dep_diagnostics`
-  in `crates/premath-cli/src/commands/mcp_serve.rs`.
-- MCP instruction/doctrine and observation projection nodes include
-  `instruction_check`, `instruction_run`, `observe_latest`,
-  `observe_needs_attention`, `observe_instruction`, and
-  `observe_projection` in `crates/premath-cli/src/commands/mcp_serve.rs`.
-- MCP initialization node includes `init_tool` in
-  `crates/premath-cli/src/commands/mcp_serve.rs`.
-- harness-session operation nodes include `read`, `write`, and `bootstrap`
-  paths in `crates/premath-cli/src/commands/harness_session.rs`.
-- doctrine-conformance operation nodes currently include
-  `tools/conformance/check_doctrine_site.py`,
-  `tools/conformance/check_runtime_orchestration.py`,
-  `tools/conformance/check_doctrine_mcp_parity.py`, and
-  `tools/conformance/run_doctrine_inf_vectors.py` (including claim-gated
-  governance-profile vectors).
+- Gate execution and instruction execution are runtime/control-site concerns,
+  not Premath doctrine-site operation nodes.
+- Hook management, retry/escalation, and provider artifact publication are
+  runtime/control-site concerns, not Premath doctrine-site operation nodes.
+- issue/dependency CLI commands are tracker utilities owned outside Premath,
+  not doctrine-site operation nodes.
+- doctrine checker operation nodes currently include
+  `crates/premath-cli/src/commands/coherence_check.rs`,
+  `crates/premath-cli/src/commands/traceability_check.rs`,
+  and `crates/premath-cli/src/commands/drift_budget_check.rs`.
 
 ## 5. Edge discipline
 
@@ -160,19 +139,11 @@ doctrine ancestry.
 
 ### 6.1 Operational cover/refinement routing boundary
 
-For routed worker-memory and harness operation paths
-(`op/mcp.issue_*`, `op/mcp.dep_*`, `op/harness.session_*`):
-
-1. decomposition/routing MUST remain operational projection material only,
-2. semantic admissibility MUST remain checker/Gate-owned,
-3. control-plane acceptance/rejection outputs MUST remain bound to one
-   deterministic evidence route (no parallel authority path).
-
 Cross-lane pullback/base-change commutation claims SHOULD be routed through the
 typed span/square witness surface (`draft/SPAN-SQUARE-CHECKING`) when surfaced
 by control-plane tooling.
 
-## 7. Conformance tooling
+## 7. Checker Tooling
 
 Repositories SHOULD provide a deterministic checker that validates:
 
@@ -182,18 +153,11 @@ Repositories SHOULD provide a deterministic checker that validates:
 - edge and cover coherence,
 - doctrine-to-operation reachability.
 
-In this repository, that checker is:
+In this repository, checker entrypoints are:
 
-- `tools/conformance/check_doctrine_site.py`
-- `tools/conformance/check_runtime_orchestration.py`
-- `tools/conformance/check_doctrine_mcp_parity.py` (MCP operation parity
-  against `draft/DOCTRINE-OP-REGISTRY.json`)
-- `tools/conformance/run_doctrine_inf_vectors.py` (semantic-boundary +
-  claim-gated governance-profile vectors)
-
-And the canonical map generator is:
-
-- `tools/conformance/generate_doctrine_site.py`
+- `crates/premath-cli/src/commands/coherence_check.rs`
+- `crates/premath-cli/src/commands/traceability_check.rs`
+- `crates/premath-cli/src/commands/drift_budget_check.rs`
 
 ## 8. Security and robustness
 
@@ -203,4 +167,4 @@ Implementations SHOULD:
 
 - fail closed on missing declaration-bearing nodes,
 - reject unknown morphism IDs,
-- keep map and declarations in lockstep under review/CI.
+- keep map and declarations in lockstep under review.

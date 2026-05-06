@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "executable",
-  "result": "accepted",
-  "assertions": [
-    "conformance-surface changes project executable conformance and toy checks"
-  ]
-}

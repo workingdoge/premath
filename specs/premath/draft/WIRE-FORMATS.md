@@ -91,4 +91,4 @@ Profiles that use this format MUST define how digest-only payloads are lifted to
 New entries SHOULD include:
 - a canonical binary grammar,
 - malformed-input rejection requirements,
-- conformance vectors.
+- checker vectors.

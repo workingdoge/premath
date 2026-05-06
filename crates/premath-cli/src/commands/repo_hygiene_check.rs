@@ -11,8 +11,6 @@ const FORBIDDEN_PREFIX_REASONS: &[(&str, &str)] = &[
     (".serena/", "private_agent_surface"),
     (".premath/cache/", "local_cache_surface"),
     (".premath/sessions/", "local_runtime_surface"),
-    ("artifacts/ciwitness/", "ephemeral_ci_artifact_surface"),
-    ("artifacts/observation/", "ephemeral_ci_artifact_surface"),
 ];
 
 const REQUIRED_GITIGNORE_ENTRIES: &[&str] = &[".claude/", ".serena/", ".premath/cache/"];
@@ -55,7 +53,7 @@ fn emit(report: Report, json: bool) {
     if json {
         let outcome = Outcome {
             schema: 1,
-            check_kind: "ci.repo_hygiene.v1",
+            check_kind: "premath.repo_hygiene.v1",
             result: if accepted { "accepted" } else { "rejected" },
             source: report.source,
             scanned: report.scanned,
@@ -210,12 +208,12 @@ mod tests {
             Some("private_agent_surface")
         );
         assert_eq!(
-            classify_forbidden_path(".premath/cache/conformance/cache.json"),
+            classify_forbidden_path(".premath/cache/checker/cache.json"),
             Some("local_cache_surface")
         );
         assert_eq!(
-            classify_forbidden_path("artifacts/ciwitness/latest-required.json"),
-            Some("ephemeral_ci_artifact_surface")
+            classify_forbidden_path("artifacts/witness/latest.json"),
+            None
         );
         assert_eq!(
             classify_forbidden_path("specs/premath/draft/README.md"),
@@ -239,7 +237,7 @@ mod tests {
     #[test]
     fn reports_forbidden_entries() {
         let violations = check_paths(&[
-            "specs/premath/draft/CONFORMANCE.md".to_string(),
+            "specs/premath/draft/CHECKER-CLAIMS.md".to_string(),
             ".serena/memory.md".to_string(),
         ]);
         assert_eq!(violations.len(), 1);

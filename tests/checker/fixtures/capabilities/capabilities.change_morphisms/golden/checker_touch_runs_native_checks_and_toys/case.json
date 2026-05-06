@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.change_morphisms",
+  "vectorId": "golden/checker_touch_runs_native_checks_and_toys",
+  "description": "Checker-surface delta projects native checker and toy suites.",
+  "semanticScenarioId": "change_projection_checker_touch_01",
+  "artifacts": {
+    "changedPaths": [
+      "crates/premath-cli/src/commands/coherence_check.rs"
+    ],
+    "expectedRequiredChecks": [
+      "traceability-check",
+      "coherence-check",
+      "drift-budget-check",
+      "test-toy",
+      "test-kcir-toy"
+    ]
+  }
+}

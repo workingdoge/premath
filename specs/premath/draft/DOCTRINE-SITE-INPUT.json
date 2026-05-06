@@ -33,27 +33,27 @@
         "requiresDeclaration": true
       },
       {
-        "id": "draft/CONFORMANCE",
-        "path": "specs/premath/draft/CONFORMANCE.md",
-        "kind": "conformance",
+        "id": "draft/CHECKER-CLAIMS",
+        "path": "specs/premath/draft/CHECKER-CLAIMS.md",
+        "kind": "checker-claims",
         "requiresDeclaration": true
       },
       {
-        "id": "draft/LLM-INSTRUCTION-DOCTRINE",
-        "path": "specs/premath/draft/LLM-INSTRUCTION-DOCTRINE.md",
-        "kind": "instruction-doctrine",
+        "id": "draft/PREMATH-COHERENCE",
+        "path": "specs/premath/draft/PREMATH-COHERENCE.md",
+        "kind": "checker-coherence",
         "requiresDeclaration": true
       },
       {
-        "id": "draft/LLM-PROPOSAL-CHECKING",
-        "path": "specs/premath/draft/LLM-PROPOSAL-CHECKING.md",
-        "kind": "instruction-proposal-checking",
+        "id": "draft/SPEC-TRACEABILITY",
+        "path": "specs/premath/draft/SPEC-TRACEABILITY.md",
+        "kind": "authority-index",
         "requiresDeclaration": true
       },
       {
-        "id": "raw/TUSK-CORE",
-        "path": "specs/premath/raw/TUSK-CORE.md",
-        "kind": "runtime-local",
+        "id": "draft/CONTROL-PLANE-CONTRACT",
+        "path": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
+        "kind": "control-plane-contract",
         "requiresDeclaration": true
       },
       {
@@ -67,18 +67,6 @@
         "path": "specs/premath/raw/SQUEAK-SITE.md",
         "kind": "runtime-location-site",
         "requiresDeclaration": true
-      },
-      {
-        "id": "raw/PREMATH-CI",
-        "path": "specs/premath/raw/PREMATH-CI.md",
-        "kind": "ci-control-loop",
-        "requiresDeclaration": true
-      },
-      {
-        "id": "raw/CI-TOPOS",
-        "path": "specs/premath/raw/CI-TOPOS.md",
-        "kind": "ci-projection",
-        "requiresDeclaration": true
       }
     ],
     "covers": [
@@ -88,7 +76,16 @@
         "parts": [
           "draft/PREMATH-KERNEL",
           "draft/GATE",
-          "draft/CONFORMANCE"
+          "draft/CHECKER-CLAIMS"
+        ]
+      },
+      {
+        "id": "cover.checkers",
+        "over": "draft/DOCTRINE-INF",
+        "parts": [
+          "draft/PREMATH-COHERENCE",
+          "draft/SPEC-TRACEABILITY",
+          "draft/CONTROL-PLANE-CONTRACT"
         ]
       },
       {
@@ -96,7 +93,6 @@
         "over": "draft/PREMATH-KERNEL",
         "parts": [
           "draft/OBLIGATION-DISCHARGE",
-          "raw/TUSK-CORE",
           "raw/SQUEAK-CORE",
           "raw/SQUEAK-SITE"
         ]
@@ -127,9 +123,9 @@
         ]
       },
       {
-        "id": "e.doctrine.conformance",
+        "id": "e.doctrine.checker_claims",
         "from": "draft/DOCTRINE-INF",
-        "to": "draft/CONFORMANCE",
+        "to": "draft/CHECKER-CLAIMS",
         "morphisms": [
           "dm.identity",
           "dm.profile.evidence",
@@ -138,26 +134,13 @@
         ]
       },
       {
-        "id": "e.doctrine.llm_instruction",
+        "id": "e.doctrine.coherence",
         "from": "draft/DOCTRINE-INF",
-        "to": "draft/LLM-INSTRUCTION-DOCTRINE",
+        "to": "draft/PREMATH-COHERENCE",
         "morphisms": [
           "dm.identity",
-          "dm.policy.rebind",
-          "dm.profile.execution",
           "dm.presentation.projection",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "e.doctrine.llm_proposal",
-        "from": "draft/DOCTRINE-INF",
-        "to": "draft/LLM-PROPOSAL-CHECKING",
-        "morphisms": [
-          "dm.identity",
-          "dm.policy.rebind",
-          "dm.presentation.projection",
-          "dm.commitment.attest"
+          "dm.profile.evidence"
         ]
       },
       {
@@ -173,21 +156,8 @@
         ]
       },
       {
-        "id": "e.kernel.tusk",
+        "id": "e.kernel.squeak_core",
         "from": "draft/PREMATH-KERNEL",
-        "to": "raw/TUSK-CORE",
-        "morphisms": [
-          "dm.identity",
-          "dm.refine.context",
-          "dm.refine.cover",
-          "dm.profile.execution",
-          "dm.profile.evidence",
-          "dm.policy.rebind"
-        ]
-      },
-      {
-        "id": "e.tusk.squeak_core",
-        "from": "raw/TUSK-CORE",
         "to": "raw/SQUEAK-CORE",
         "morphisms": [
           "dm.identity",
@@ -206,436 +176,24 @@
           "dm.profile.execution",
           "dm.profile.evidence"
         ]
-      },
-      {
-        "id": "e.gate.ci",
-        "from": "draft/GATE",
-        "to": "raw/PREMATH-CI",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.profile.evidence",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "e.conformance.ci",
-        "from": "draft/CONFORMANCE",
-        "to": "raw/PREMATH-CI",
-        "morphisms": [
-          "dm.identity",
-          "dm.commitment.attest",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "e.ci.topos",
-        "from": "raw/PREMATH-CI",
-        "to": "raw/CI-TOPOS",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "e.ci.llm_instruction",
-        "from": "raw/PREMATH-CI",
-        "to": "draft/LLM-INSTRUCTION-DOCTRINE",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.presentation.projection",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "e.ci.llm_proposal",
-        "from": "raw/PREMATH-CI",
-        "to": "draft/LLM-PROPOSAL-CHECKING",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "e.llm_instruction.llm_proposal",
-        "from": "draft/LLM-INSTRUCTION-DOCTRINE",
-        "to": "draft/LLM-PROPOSAL-CHECKING",
-        "morphisms": [
-          "dm.identity",
-          "dm.policy.rebind",
-          "dm.presentation.projection",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "e.llm_proposal.core_obligation",
-        "from": "draft/LLM-PROPOSAL-CHECKING",
-        "to": "draft/OBLIGATION-DISCHARGE",
-        "morphisms": [
-          "dm.identity",
-          "dm.policy.rebind"
-        ]
-      },
-      {
-        "id": "e.llm_instruction.op.run_instruction",
-        "from": "draft/LLM-INSTRUCTION-DOCTRINE",
-        "to": "op/ci.run_instruction",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
       }
     ]
   },
   "operationRegistry": {
     "schema": 1,
     "registryKind": "premath.doctrine_operation_registry.v1",
-    "parentNodeId": "raw/PREMATH-CI",
-    "coverId": "cover.ci",
+    "parentNodeId": "draft/PREMATH-COHERENCE",
+    "coverId": "cover.checkers",
     "baseCoverParts": [
-      "draft/LLM-INSTRUCTION-DOCTRINE",
-      "draft/LLM-PROPOSAL-CHECKING",
-      "raw/CI-TOPOS"
+      "draft/PREMATH-COHERENCE",
+      "draft/SPEC-TRACEABILITY",
+      "draft/CONTROL-PLANE-CONTRACT"
     ],
     "operations": [
       {
-        "id": "op/ci.run_gate",
-        "edgeId": "e.ci.op.run_gate",
-        "path": "tools/ci/run_gate.sh",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.transport.location",
-          "dm.transport.world"
-        ]
-      },
-      {
-        "id": "op/ci.run_gate_terraform",
-        "edgeId": "e.ci.op.run_gate_terraform",
-        "path": "tools/ci/run_gate_terraform.sh",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.transport.location",
-          "dm.transport.world"
-        ]
-      },
-      {
-        "id": "op/ci.run_instruction",
-        "edgeId": "e.ci.op.run_instruction",
-        "path": "tools/ci/run_instruction.sh",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/ci.required_attested",
-        "edgeId": "e.ci.op.required_attested",
-        "path": "tools/ci/run_required_attested.py",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_claim",
-        "edgeId": "e.ci.op.issue_claim",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_lease_renew",
-        "edgeId": "e.ci.op.issue_lease_renew",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_lease_release",
-        "edgeId": "e.ci.op.issue_lease_release",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_discover",
-        "edgeId": "e.ci.op.issue_discover",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.presentation.projection",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_add",
-        "edgeId": "e.ci.op.issue_add",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_update",
-        "edgeId": "e.ci.op.issue_update",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.dep_add",
-        "edgeId": "e.ci.op.dep_add",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.dep_remove",
-        "edgeId": "e.ci.op.dep_remove",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.dep_replace",
-        "edgeId": "e.ci.op.dep_replace",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_list",
-        "edgeId": "e.ci.op.issue_list",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_ready",
-        "edgeId": "e.ci.op.issue_ready",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_blocked",
-        "edgeId": "e.ci.op.issue_blocked",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_check",
-        "edgeId": "e.ci.op.issue_check",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_backend_status",
-        "edgeId": "e.ci.op.issue_backend_status",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.issue_lease_projection",
-        "edgeId": "e.ci.op.issue_lease_projection",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.dep_diagnostics",
-        "edgeId": "e.ci.op.dep_diagnostics",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.init_tool",
-        "edgeId": "e.ci.op.init_tool",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution"
-        ]
-      },
-      {
-        "id": "op/mcp.observe_latest",
-        "edgeId": "e.ci.op.observe_latest",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.observe_needs_attention",
-        "edgeId": "e.ci.op.observe_needs_attention",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.observe_instruction",
-        "edgeId": "e.ci.op.observe_instruction",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.observe_projection",
-        "edgeId": "e.ci.op.observe_projection",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.instruction_check",
-        "edgeId": "e.ci.op.instruction_check",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/mcp.instruction_run",
-        "edgeId": "e.ci.op.instruction_run",
-        "path": "crates/premath-cli/src/commands/mcp_serve.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/harness.session_read",
-        "edgeId": "e.ci.op.harness_session_read",
-        "path": "crates/premath-cli/src/commands/harness_session.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/harness.session_write",
-        "edgeId": "e.ci.op.harness_session_write",
-        "path": "crates/premath-cli/src/commands/harness_session.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.commitment.attest"
-        ]
-      },
-      {
-        "id": "op/harness.session_bootstrap",
-        "edgeId": "e.ci.op.harness_session_bootstrap",
-        "path": "crates/premath-cli/src/commands/harness_session.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/conformance.stub",
-        "edgeId": "e.ci.op.stub",
-        "path": "crates/premath-cli/src/commands/conformance_check.rs",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/conformance.capability",
-        "edgeId": "e.ci.op.capability",
-        "path": "tools/conformance/run_capability_vectors.py",
+        "id": "op/check.coherence",
+        "edgeId": "e.check.coherence",
+        "path": "crates/premath-cli/src/commands/coherence_check.rs",
         "kind": "operation",
         "morphisms": [
           "dm.identity",
@@ -644,9 +202,9 @@
         ]
       },
       {
-        "id": "op/conformance.doctrine",
-        "edgeId": "e.ci.op.doctrine",
-        "path": "tools/conformance/check_doctrine_site.py",
+        "id": "op/check.traceability",
+        "edgeId": "e.check.traceability",
+        "path": "crates/premath-cli/src/commands/traceability_check.rs",
         "kind": "operation",
         "morphisms": [
           "dm.identity",
@@ -654,47 +212,14 @@
         ]
       },
       {
-        "id": "op/conformance.runtime_orchestration",
-        "edgeId": "e.ci.op.runtime_orchestration",
-        "path": "tools/conformance/check_runtime_orchestration.py",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/conformance.doctrine_mcp_parity",
-        "edgeId": "e.ci.op.doctrine_mcp_parity",
-        "path": "tools/conformance/check_doctrine_mcp_parity.py",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/conformance.doctrine_inf",
-        "edgeId": "e.ci.op.doctrine_inf",
-        "path": "tools/conformance/run_doctrine_inf_vectors.py",
-        "kind": "operation",
-        "morphisms": [
-          "dm.identity",
-          "dm.presentation.projection"
-        ]
-      },
-      {
-        "id": "op/conformance.doctrine_inf_governance",
-        "edgeId": "e.ci.op.doctrine_inf_governance",
-        "path": "tools/conformance/run_doctrine_inf_vectors.py",
+        "id": "op/check.drift_budget",
+        "edgeId": "e.check.drift_budget",
+        "path": "crates/premath-cli/src/commands/drift_budget_check.rs",
         "kind": "operation",
         "morphisms": [
           "dm.identity",
           "dm.presentation.projection",
-          "dm.policy.rebind",
-          "dm.profile.execution",
-          "dm.profile.evidence",
-          "dm.commitment.attest"
+          "dm.policy.rebind"
         ]
       }
     ]

@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "result": "rejected",
-  "expectedJoinClosed": false,
-  "expectedFailureClasses": [
-    "context.injection_point_missing"
-  ]
-}

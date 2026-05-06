@@ -5,18 +5,7 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-const MISE_SURFACE_PATHS: &[&str] = &[
-    ".envrc",
-    ".github/workflows/baseline.yml",
-    ".github/workflows/instruction.yml",
-    "flake.nix",
-    "hk.pkl",
-    "pitchfork.toml",
-    "tools/ci/executors/darwin_microvm_vfkit_runner.sh",
-    "tools/ci/executors/local_runner.sh",
-    "tools/ci/run_gate.sh",
-    "tools/jj/install_aliases.sh",
-];
+const MISE_SURFACE_PATHS: &[&str] = &[".envrc", "flake.nix"];
 
 const SELF_PATH: &str = "crates/premath-cli/src/commands/command_surface_check.rs";
 
@@ -45,7 +34,7 @@ fn emit(checked_files: usize, violations: Vec<String>, json: bool) {
     if json {
         let outcome = Outcome {
             schema: 1,
-            check_kind: "ci.command_surface.v1",
+            check_kind: "premath.command_surface.v1",
             result: if accepted { "accepted" } else { "rejected" },
             checked_files,
             violations: &violations,

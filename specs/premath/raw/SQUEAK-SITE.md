@@ -45,7 +45,8 @@ Intent:
 
 Boundary:
 
-- `raw/TUSK-CORE` governs local admissibility checks inside one world.
+- `draft/PREMATH-KERNEL` and `draft/GATE` govern local admissibility checks
+  inside one world.
 - `raw/SQUEAK-CORE` governs transport/composition and handoff.
 - `raw/SQUEAK-SITE` governs runtime location objects, covers, overlaps, and
   glue contracts for runtime evidence.
@@ -84,7 +85,7 @@ LocationDescriptor {
 `loc_id` MUST be deterministic for fixed descriptor contents.
 
 `runtime_profile` MAY include values such as `local`, `ci`, `remote-worker`,
-`darwin_microvm_vfkit`, or implementation-defined equivalents.
+or implementation-defined equivalents.
 
 ## 4. Morphisms and transport on locations
 
@@ -163,12 +164,12 @@ Squeak owns:
 - runtime orchestration (`Cheese`),
 - transport and site-level witness glue.
 
-Tusk owns:
+Destination checker/Gate owns:
 
 - destination-local admissibility checks and Gate-class witnesses.
 
-Infrastructure providers (Terraform/OpenTofu, microvm profiles, etc.) are
-location constructors/binders only. They MUST NOT define semantic admissibility.
+Infrastructure providers are location constructors/binders only. They MUST NOT
+define semantic admissibility.
 
 ## 9. Invariance requirements
 
@@ -178,10 +179,10 @@ For fixed `RunFrame` and fixed policy bindings:
 - representation/profile changes MAY change evidence shape but not Gate class,
 - retry/replay across locations MUST remain deterministic and auditable.
 
-## 10. Conformance mapping (`capabilities.squeak_site`)
+## 10. Checker mapping (`capabilities.squeak_site`)
 
-When `capabilities.squeak_site` is claimed, conformance vectors under
-`tests/conformance/fixtures/capabilities/capabilities.squeak_site/` map site
+When `capabilities.squeak_site` is claimed, checker vectors under
+`tests/checker/fixtures/capabilities/capabilities.squeak_site/` map site
 boundaries to deterministic outcomes:
 
 - location descriptor determinism (§3): `golden/site_loc_descriptor_deterministic`.
@@ -199,8 +200,8 @@ boundaries to deterministic outcomes:
   `invariance/same_semantics_local_profile`,
   `invariance/same_semantics_external_profile`.
 
-These vectors are executable through `sh tools/ci/run_task.sh conformance-run` and are
-deterministically evaluated by `tools/conformance/run_capability_vectors.py`.
+These vectors are retained as checker fixtures and are evaluated through native
+Premath checker surfaces when the corresponding capability is claimed.
 
 ## 11. Cheese contract (runtime unit term)
 
@@ -221,7 +222,7 @@ attribution.
 A reasonable v0 profile set is:
 
 - required/default: `local`,
-- optional: CI-hosted runner profile,
+- optional: external-hosted runner profile,
 - experimental: microvm-backed runtime profile.
 
 Experimental profiles MUST remain non-required until site invariance vectors
@@ -253,5 +254,5 @@ Preserved morphisms:
 Not preserved:
 
 - `dm.transport.world` (handled by `raw/SQUEAK-CORE`)
-- `dm.refine.context` (handled by kernel/Tusk layer)
+- `dm.refine.context` (handled by kernel/Gate layer)
 - `dm.presentation.projection` (handled by projection layer)

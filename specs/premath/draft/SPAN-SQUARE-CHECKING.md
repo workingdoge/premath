@@ -199,7 +199,7 @@ horizontal/vertical compatibility and interchange rows are deterministic.
 - `span_square_commutation`
 
 Executable vectors are carried in the site fixture root
-(`tests/conformance/fixtures/coherence-site`).
+(`tests/checker/fixtures/coherence-site`).
 
 ## 6. Deterministic Failure Class
 

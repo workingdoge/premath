@@ -5,9 +5,9 @@
 //!
 //! Def: C^op → V is a pseudo/∞-functor appropriate to V.
 //!
-//! In the bd realization: definables are content-hashed issue states.
-//! Reindexing is pulling an issue into a different branch/context.
-//! The content hash is the identity criterion.
+//! In a downstream realization, definables may be content-hashed domain states
+//! and reindexing may transport those states into a different context. The
+//! content hash is the identity criterion at the Set-level model.
 
 use crate::coherence::CoherenceLevel;
 use crate::context::ContextId;
@@ -97,7 +97,7 @@ impl ContentHashBuilder {
 /// in context Γ. It must be content-addressable and carry enough structure
 /// for reindexing and descent checking.
 ///
-/// In the bd realization: an Issue with its dependencies is a definable.
+/// Downstream profiles decide which domain objects instantiate this trait.
 pub trait Definable: Send + Sync {
     /// The context in which this definable lives.
     fn context(&self) -> &ContextId;

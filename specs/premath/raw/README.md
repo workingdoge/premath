@@ -3,7 +3,7 @@
 This directory contains **raw** (experimental/informational) specifications.
 
 Promoted contract specs live in `../draft/` and are the default normative
-surface for active conformance claims.
+surface for active checker claims.
 
 RFC 2119 language inside raw files is proposal-local and non-promoted unless a
 future promoted profile or explicit capability claim incorporates the relevant
@@ -19,9 +19,8 @@ Use this directory for:
 Current raw tracks include:
 
 - kernel-oriented extensions (`DSL`, `OPCODES`, `HYPERDESCENT`, `UNIVERSE`),
-- operational runtime stack (`TUSK-CORE`, `SQUEAK-CORE`, `SQUEAK-SITE`, `PREMATH-CI`, `CI-TOPOS`),
+- operational transport/site stack (`SQUEAK-CORE`, `SQUEAK-SITE`),
 - site/semantic geometry notes (`CTX-SITE`, `SHEAF-STACK`, `TORSOR-EXT`),
-- downstream semantic-site placement (`MH-SITE-DEPENDENCY`),
 - provisional tracker checker (`WORK-TRACKER-CHECKER-PROFILE`) for the Atlas
   `work-tracker.v0` cover,
 - explanatory semantics/presentation notes (`SEMANTICS-INFTOPOS`, `SPLIT-PRESENTATION`).

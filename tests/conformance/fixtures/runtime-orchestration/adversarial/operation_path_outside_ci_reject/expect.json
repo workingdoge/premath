@@ -1,7 +1,0 @@
-{
-  "schema": 1,
-  "result": "rejected",
-  "expectedFailureClasses": [
-    "runtime_route_contract_unbound"
-  ]
-}

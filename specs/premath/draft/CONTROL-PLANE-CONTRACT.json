@@ -21,63 +21,13 @@
           }
         ]
       },
-      "requiredWitnessKind": {
-        "canonicalKind": "ci.required.v1",
-        "compatibilityAliases": [
-          {
-            "aliasKind": "ci.required.v0",
-            "supportUntilEpoch": "2026-06",
-            "replacementKind": "ci.required.v1"
-          }
-        ]
-      },
-      "requiredDecisionKind": {
-        "canonicalKind": "ci.required.decision.v1",
-        "compatibilityAliases": [
-          {
-            "aliasKind": "ci.required.decision.v0",
-            "supportUntilEpoch": "2026-06",
-            "replacementKind": "ci.required.decision.v1"
-          }
-        ]
-      },
-      "instructionWitnessKind": {
-        "canonicalKind": "ci.instruction.v1",
-        "compatibilityAliases": [
-          {
-            "aliasKind": "ci.instruction.v0",
-            "supportUntilEpoch": "2026-06",
-            "replacementKind": "ci.instruction.v1"
-          }
-        ]
-      },
-      "instructionPolicyKind": {
-        "canonicalKind": "ci.instruction.policy.v1",
-        "compatibilityAliases": [
-          {
-            "aliasKind": "ci.instruction.policy.v0",
-            "supportUntilEpoch": "2026-06",
-            "replacementKind": "ci.instruction.policy.v1"
-          }
-        ]
-      },
       "requiredProjectionPolicy": {
-        "canonicalKind": "ci-topos-v0",
+        "canonicalKind": "premath-local-checks-v0",
         "compatibilityAliases": [
           {
-            "aliasKind": "ci-topos-v0-preview",
+            "aliasKind": "premath-local-checks-v0-preview",
             "supportUntilEpoch": "2026-06",
-            "replacementKind": "ci-topos-v0"
-          }
-        ]
-      },
-      "requiredDeltaKind": {
-        "canonicalKind": "ci.required.delta.v1",
-        "compatibilityAliases": [
-          {
-            "aliasKind": "ci.delta.v1",
-            "supportUntilEpoch": "2026-06",
-            "replacementKind": "ci.required.delta.v1"
+            "replacementKind": "premath-local-checks-v0"
           }
         ]
       }
@@ -124,8 +74,6 @@
       "workerCoverKind": "worktree_partition_cover",
       "mergeCompatibilityWitness": "span_square_commutation",
       "requiredMergeArtifacts": [
-        "ci.required.v1",
-        "ci.instruction.v1",
         "coherence_witness"
       ]
     },
@@ -145,20 +93,10 @@
   "controlPlaneKcirMappings": {
     "profileId": "cp.kcir.mapping.v0",
     "mappingTable": {
-      "instructionEnvelope": {
-        "sourceKind": "ci.instruction.envelope.v1",
-        "targetDomain": "kcir.node",
-        "targetKind": "ci.instruction.v1",
-        "identityFields": [
-          "instructionDigest",
-          "normalizerId",
-          "policyDigest"
-        ]
-      },
       "proposalPayload": {
-        "sourceKind": "ci.proposal.payload.v1",
+        "sourceKind": "premath.proposal.payload.v1",
         "targetDomain": "kcir.node",
-        "targetKind": "ci.proposal.check.v1",
+        "targetKind": "premath.proposal.check.v1",
         "identityFields": [
           "proposalDigest",
           "proposalKcirRef",
@@ -192,16 +130,6 @@
         "identityFields": [
           "operationId",
           "siteDigest",
-          "policyDigest"
-        ]
-      },
-      "requiredDecisionInput": {
-        "sourceKind": "ci.required.decision.input.v1",
-        "targetDomain": "kcir.node",
-        "targetKind": "ci.required.decision.v1",
-        "identityFields": [
-          "requiredDigest",
-          "decisionDigest",
           "policyDigest"
         ]
       }
@@ -278,399 +206,22 @@
         }
       ]
     },
-    "mutationRoutes": {
-      "issueClaim": "capabilities.change_morphisms.issue_claim",
-      "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
-      "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
-      "issueDiscover": "capabilities.change_morphisms.issue_discover"
-    },
     "failureClasses": {
       "policyDrift": "worker_lane_policy_drift",
-      "mutationModeDrift": "worker_lane_mutation_mode_drift",
-      "routeUnbound": "worker_lane_route_unbound"
+      "mutationModeDrift": "worker_lane_mutation_mode_drift"
     }
-  },
-  "runtimeRouteBindings": {
-    "requiredOperationRoutes": {
-      "runGate": {
-        "operationId": "op/ci.run_gate",
-        "requiredMorphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.transport.location",
-          "dm.transport.world"
-        ]
-      },
-      "runGateTerraform": {
-        "operationId": "op/ci.run_gate_terraform",
-        "requiredMorphisms": [
-          "dm.identity",
-          "dm.profile.execution",
-          "dm.transport.location",
-          "dm.transport.world"
-        ]
-      }
-    },
-    "failureClasses": {
-      "missingRoute": "runtime_route_missing",
-      "morphismDrift": "runtime_route_morphism_drift",
-      "contractUnbound": "runtime_route_contract_unbound"
-    }
-  },
-  "replHostActionBindings": {
-    "surfaceKind": "premath.repl_host_action.bindings.v0",
-    "evaluatorToolId": "scheme_eval",
-    "actions": {
-      "dep.add": {
-        "operationId": "op/mcp.dep_add",
-        "mcpTool": "dep_add",
-        "cliEntrypoint": [
-          "premath",
-          "dep",
-          "add"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "instruction-linked"
-      },
-      "dep.diagnostics": {
-        "operationId": "op/mcp.dep_diagnostics",
-        "mcpTool": "dep_diagnostics",
-        "cliEntrypoint": [
-          "premath",
-          "dep",
-          "diagnostics"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "dep.remove": {
-        "operationId": "op/mcp.dep_remove",
-        "mcpTool": "dep_remove",
-        "cliEntrypoint": [
-          "premath",
-          "dep",
-          "remove"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "instruction-linked"
-      },
-      "dep.replace": {
-        "operationId": "op/mcp.dep_replace",
-        "mcpTool": "dep_replace",
-        "cliEntrypoint": [
-          "premath",
-          "dep",
-          "replace"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "instruction-linked"
-      },
-      "harness.session.bootstrap": {
-        "operationId": "op/harness.session_bootstrap",
-        "mcpTool": null,
-        "cliEntrypoint": [
-          "premath",
-          "harness-session",
-          "bootstrap"
-        ],
-        "transportMode": "cli-only",
-        "authorityMode": "session-linked"
-      },
-      "harness.session.read": {
-        "operationId": "op/harness.session_read",
-        "mcpTool": null,
-        "cliEntrypoint": [
-          "premath",
-          "harness-session",
-          "read"
-        ],
-        "transportMode": "cli-only",
-        "authorityMode": "read-only"
-      },
-      "harness.session.write": {
-        "operationId": "op/harness.session_write",
-        "mcpTool": null,
-        "cliEntrypoint": [
-          "premath",
-          "harness-session",
-          "write"
-        ],
-        "transportMode": "cli-only",
-        "authorityMode": "session-linked"
-      },
-      "instruction.check": {
-        "operationId": "op/mcp.instruction_check",
-        "mcpTool": "instruction_check",
-        "cliEntrypoint": [
-          "premath",
-          "instruction-check"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "instruction.run": {
-        "operationId": "op/mcp.instruction_run",
-        "mcpTool": "instruction_run",
-        "cliEntrypoint": [
-          "premath",
-          "mcp-serve"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "instruction-linked"
-      },
-      "issue.backend_status": {
-        "operationId": "op/mcp.issue_backend_status",
-        "mcpTool": "issue_backend_status",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "backend-status"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "issue.blocked": {
-        "operationId": "op/mcp.issue_blocked",
-        "mcpTool": "issue_blocked",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "blocked"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "issue.check": {
-        "operationId": "op/mcp.issue_check",
-        "mcpTool": "issue_check",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "check"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "issue.claim": {
-        "operationId": "op/mcp.issue_claim",
-        "mcpTool": "issue_claim",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "claim"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "instruction-linked"
-      },
-      "issue.discover": {
-        "operationId": "op/mcp.issue_discover",
-        "mcpTool": "issue_discover",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "discover"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "instruction-linked"
-      },
-      "issue.lease_release": {
-        "operationId": "op/mcp.issue_lease_release",
-        "mcpTool": "issue_lease_release",
-        "cliEntrypoint": null,
-        "transportMode": "mcp-only",
-        "authorityMode": "instruction-linked"
-      },
-      "issue.lease_renew": {
-        "operationId": "op/mcp.issue_lease_renew",
-        "mcpTool": "issue_lease_renew",
-        "cliEntrypoint": null,
-        "transportMode": "mcp-only",
-        "authorityMode": "instruction-linked"
-      },
-      "issue.list": {
-        "operationId": "op/mcp.issue_list",
-        "mcpTool": "issue_list",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "list"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "issue.ready": {
-        "operationId": "op/mcp.issue_ready",
-        "mcpTool": "issue_ready",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "ready"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "issue.update": {
-        "operationId": "op/mcp.issue_update",
-        "mcpTool": "issue_update",
-        "cliEntrypoint": [
-          "premath",
-          "issue",
-          "update"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "instruction-linked"
-      },
-      "observe.instruction": {
-        "operationId": "op/mcp.observe_instruction",
-        "mcpTool": "observe_instruction",
-        "cliEntrypoint": [
-          "premath",
-          "observe"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "observe.latest": {
-        "operationId": "op/mcp.observe_latest",
-        "mcpTool": "observe_latest",
-        "cliEntrypoint": [
-          "premath",
-          "observe"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "observe.needs_attention": {
-        "operationId": "op/mcp.observe_needs_attention",
-        "mcpTool": "observe_needs_attention",
-        "cliEntrypoint": [
-          "premath",
-          "observe"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      },
-      "observe.projection": {
-        "operationId": "op/mcp.observe_projection",
-        "mcpTool": "observe_projection",
-        "cliEntrypoint": [
-          "premath",
-          "observe"
-        ],
-        "transportMode": "cli-and-mcp",
-        "authorityMode": "read-only"
-      }
-    },
-    "failureClasses": {
-      "unregisteredHostId": "repl_host_action_unregistered",
-      "bindingMismatch": "repl_host_action_binding_mismatch",
-      "duplicateBinding": "repl_host_action_duplicate_binding"
-    }
-  },
-  "commandSurface": {
-    "requiredDecision": {
-      "canonicalEntrypoint": [
-        "python3",
-        "tools/ci/run_required_attested.py"
-      ],
-      "compatibilityAliases": []
-    },
-    "instructionEnvelopeCheck": {
-      "canonicalEntrypoint": [
-        "cargo",
-        "run",
-        "--package",
-        "premath-cli",
-        "--",
-        "instruction-check",
-        "--instruction"
-      ],
-      "compatibilityAliases": []
-    },
-    "instructionDecision": {
-      "canonicalEntrypoint": [
-        "python3",
-        "tools/ci/run_instruction.py"
-      ],
-      "compatibilityAliases": [
-        [
-          "sh",
-          "tools/ci/run_instruction.sh"
-        ]
-      ]
-    },
-    "failureClasses": {
-      "unbound": "control_plane_command_surface_unbound"
-    }
-  },
-  "providerPipelineWrappers": {
-    "requiredPipeline": {
-      "workflowPath": ".github/workflows/baseline.yml",
-      "wrapperPath": "tools/ci/pipeline_required.py",
-      "workflowEntrypoint": [
-        "python3",
-        "tools/ci/pipeline_required.py"
-      ],
-      "boundCommandSurfaces": [
-        "requiredDecision"
-      ],
-      "enforcedGates": [
-        "governance",
-        "kcirMapping"
-      ]
-    },
-    "instructionPipeline": {
-      "workflowPath": ".github/workflows/instruction.yml",
-      "wrapperPath": "tools/ci/pipeline_instruction.py",
-      "workflowEntrypoint": [
-        "python3",
-        "tools/ci/pipeline_instruction.py",
-        "--instruction",
-        "$INSTRUCTION_PATH"
-      ],
-      "boundCommandSurfaces": [
-        "instructionEnvelopeCheck",
-        "instructionDecision"
-      ],
-      "enforcedGates": [
-        "governance",
-        "kcirMapping"
-      ]
-    },
-    "failureClasses": {
-      "workflowDrift": "provider_pipeline_workflow_drift",
-      "canonicalEntrypointDrift": "provider_pipeline_canonical_entrypoint_drift",
-      "gateDrift": "provider_pipeline_gate_drift"
-    }
-  },
-  "harnessRetry": {
-    "policyKind": "ci.harness.retry.policy.v1",
-    "policyPath": "policies/control/harness-retry-policy-v1.json",
-    "escalationActions": [
-      "issue_discover",
-      "mark_blocked",
-      "stop"
-    ],
-    "activeIssueEnvKeys": [
-      "PREMATH_ACTIVE_ISSUE_ID",
-      "PREMATH_ISSUE_ID"
-    ],
-    "issuesPathEnvKey": "PREMATH_ISSUES_PATH",
-    "sessionPathEnvKey": "PREMATH_HARNESS_SESSION_PATH",
-    "sessionPathDefault": ".premath/harness_session.json",
-    "sessionIssueField": "issueId"
   },
   "requiredGateProjection": {
-    "projectionPolicy": "ci-topos-v0",
+    "projectionPolicy": "premath-local-checks-v0",
     "checkIds": {
       "baseline": "baseline",
       "build": "build",
       "test": "test",
       "testToy": "test-toy",
       "testKcirToy": "test-kcir-toy",
-      "conformanceCheck": "conformance-check",
-      "conformanceRun": "conformance-run",
-      "doctrineCheck": "doctrine-check"
+      "traceabilityCheck": "traceability-check",
+      "coherenceCheck": "coherence-check",
+      "driftBudgetCheck": "drift-budget-check"
     },
     "checkOrder": [
       "baseline",
@@ -678,19 +229,10 @@
       "test",
       "test-toy",
       "test-kcir-toy",
-      "conformance-check",
-      "conformance-run",
-      "doctrine-check"
+      "traceability-check",
+      "coherence-check",
+      "drift-budget-check"
     ]
-  },
-  "requiredWitness": {
-    "witnessKind": "ci.required.v1",
-    "decisionKind": "ci.required.decision.v1"
-  },
-  "instructionWitness": {
-    "witnessKind": "ci.instruction.v1",
-    "policyKind": "ci.instruction.policy.v1",
-    "policyDigestPrefix": "pol1_"
   },
   "evidenceStage1Parity": {
     "profileKind": "ev.stage1.core.v1",

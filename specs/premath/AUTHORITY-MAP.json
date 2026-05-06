@@ -19,7 +19,7 @@
       "scope": "Core deterministic witness identity"
     },
     {
-      "path": "specs/premath/draft/CONFORMANCE.md",
+      "path": "specs/premath/draft/CHECKER-CLAIMS.md",
       "scope": "Sections 1-2.1 define the Core claim; profile and capability claims do not expand Core"
     }
   ],
@@ -33,10 +33,10 @@
         "WITNESS-ID.md"
       ]
     },
-    "conformance": {
+    "checker-claims": {
       "description": "Claim registry. Only the explicitly marked Core sections apply to Premath Core.",
       "draftSpecs": [
-        "CONFORMANCE.md"
+        "CHECKER-CLAIMS.md"
       ]
     },
     "doctrine-preservation": {
@@ -46,7 +46,7 @@
       ]
     },
     "interop": {
-      "description": "Optional deterministic artifact and interchange profile.",
+      "description": "Optional deterministic artifact and interchange profile. KCIR substrate authority belongs to fish/sites/kcir; these Premath files are adapter/profile surfaces for Premath claim acceptance.",
       "draftSpecs": [
         "KCIR-CORE.md",
         "REF-BINDING.md",
@@ -56,6 +56,7 @@
         "ERROR-CODES.md"
       ],
       "profileSpecs": [
+        "specs/premath/profile/kcir/README.md",
         "specs/premath/profile/interop/BIDIR-DESCENT.md"
       ]
     },
@@ -82,9 +83,6 @@
         "DOCTRINE-SITE-INPUT.json",
         "DOCTRINE-SITE.json",
         "DOCTRINE-OP-REGISTRY.json",
-        "HARNESS-RUNTIME.md",
-        "HARNESS-TYPESTATE.md",
-        "HARNESS-RETRY-ESCALATION.md",
         "LLM-INSTRUCTION-DOCTRINE.md",
         "LLM-PROPOSAL-CHECKING.md",
         "PREMATH-COHERENCE.md",

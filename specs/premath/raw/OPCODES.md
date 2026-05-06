@@ -316,7 +316,7 @@ Verify prelude:
 
 `classify_obj_pull` MUST be deterministic and MUST depend only on `pId` and the parsed ObjNF constructor.
 
-*(This bundle does not fix the complete step tag taxonomy; implementations MAY use the step tags from the legacy opcode set, provided they publish conformance vectors and keep determinism.)*
+*(This bundle does not fix the complete step tag taxonomy; implementations MAY use the step tags from the legacy opcode set, provided they publish checker vectors and keep determinism.)*
 
 ## 8. MOR opcodes (minimal)
 

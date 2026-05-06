@@ -53,7 +53,7 @@ obligations and vectors:
 
 These are executed through `premath coherence-check` using
 `specs/premath/draft/COHERENCE-CONTRACT.json` and fixtures under
-`tests/conformance/fixtures/coherence-site`.
+`tests/checker/fixtures/coherence-site`.
 
 This keeps the foundation principle intact: minimum encoding, maximum
 expressiveness. Site/torsor terminology compresses reasoning while acceptance

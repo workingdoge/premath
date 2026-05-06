@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "executable",
-  "result": "accepted",
-  "assertions": [
-    "composed issue-claim semantics hold under deterministic span/square routing"
-  ]
-}

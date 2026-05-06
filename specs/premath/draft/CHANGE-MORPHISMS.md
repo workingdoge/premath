@@ -7,7 +7,7 @@ status: draft
 category: Standards Track
 tags:
   - premath
-  - conformance
+  - checker-claims
   - change-management
 editor: arj <arj@workingdoge.com>
 contributors: []
@@ -139,22 +139,22 @@ An implementation MUST reject a change record when any of the following holds:
 - `morphismKind` classification is invalid for declared maps,
 - required preservation claims are absent.
 
-## 8. Conformance linkage
+## 8. Checker linkage
 
 Vector requirements for this capability are defined in:
 
 - `draft/CAPABILITY-VECTORS` (`capabilities.change_morphisms`)
 
-Conformance profile requirements are defined in:
+Checker profile requirements are defined in:
 
-- `draft/CONFORMANCE`
+- `draft/CHECKER-CLAIMS`
 
 ## 9. Non-goals
 
 This document does not prescribe:
 
 - branch or forge policy,
-- specific CI vendor integration,
+- specific workflow vendor integration,
 - specific proof object formats for witness internals.
 
 It prescribes only authority, shape, and invariance constraints for changes.

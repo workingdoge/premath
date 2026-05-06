@@ -154,7 +154,7 @@ If an implementation advertises adjoint-triple support, failure of any required
 coherence MUST be rejection.
 
 If an implementation does **not** expose adjoint-triple structure, it MUST
-declare this profile explicitly in conformance output.
+declare this profile explicitly in checker output.
 
 ## 4. Gate result and witnessing
 
@@ -176,12 +176,12 @@ At minimum, rejection diagnostics MUST classify one of:
 For rejected checks, implementations MUST emit a JSON document with:
 
 - `witnessSchema` (integer schema version; current value `1`)
-- `profile` (declared conformance/profile token for the check boundary)
+- `profile` (declared checker/profile token for the check boundary)
 - `result` (`"rejected"`)
 - `failures` (array of failure witnesses)
 
 The `profile` value MUST identify the asserted boundary that produced the Gate
-witness. It MUST use the canonical claim token declared by `draft/CONFORMANCE`
+witness. It MUST use the canonical claim token declared by `draft/CHECKER-CLAIMS`
 for that boundary, such as `premath.core.v0` for Core checks or
 `premath.interop-full.v0` for Interop Full checks. A Core Gate witness MUST NOT
 require a full-profile token unless that profile was explicitly claimed.
@@ -230,5 +230,5 @@ Not preserved:
 
 - `dm.transport.world` (handled by `raw/SQUEAK-CORE`)
 - `dm.transport.location` (handled by `raw/SQUEAK-SITE`)
-- `dm.profile.execution` (handled by runtime/CI layer)
+- `dm.profile.execution` (handled by runtime layer)
 - `dm.presentation.projection` (handled by projection layer)

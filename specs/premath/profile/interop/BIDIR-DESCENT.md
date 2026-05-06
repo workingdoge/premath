@@ -247,7 +247,7 @@ schema compatibility.
 
 Witness arrays MUST be deterministically ordered as required by `draft/GATE`.
 
-## 8. Conformance requirements
+## 8. Checker requirements
 
 Full-profile implementations MUST:
 
@@ -266,7 +266,7 @@ Implementations SHOULD:
 
 - bound recursion/graph depth and obligation expansion,
 - fail closed on malformed or incomplete mode/provenance metadata,
-- produce deterministic machine-readable error codes for CI.
+- produce deterministic machine-readable error codes for checker adapters.
 
 ## 10. Doctrine Preservation Declaration (v0)
 
@@ -284,5 +284,5 @@ Not preserved:
 
 - `dm.transport.world` (handled by `raw/SQUEAK-CORE`)
 - `dm.transport.location` (handled by `raw/SQUEAK-SITE`)
-- `dm.profile.execution` (handled by runtime/CI layer)
+- `dm.profile.execution` (handled by runtime layer)
 - `dm.presentation.projection` (handled by projection layer)

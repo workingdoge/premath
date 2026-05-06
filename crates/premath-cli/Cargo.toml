@@ -11,17 +11,9 @@ path = "src/main.rs"
 
 [dependencies]
 premath-kernel = { workspace = true }
-premath-tusk = { workspace = true }
-premath-bd = { workspace = true }
-premath-jj = { workspace = true }
 premath-coherence = { workspace = true }
-premath-surreal = { workspace = true }
-premath-ux = { workspace = true }
 clap = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
 sha2 = { workspace = true }
 chrono = { workspace = true }
-tokio = { workspace = true }
-async-trait = "0.1"
-rust-mcp-sdk = { version = "0.8.3", default-features = false, features = ["server", "stdio", "macros"] }

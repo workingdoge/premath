@@ -36,7 +36,7 @@ This document defines an **optional capability** that strengthens the Premath
 kernel and Gate descent requirements from Čech descent on covers to **hyperdescent
 on hypercovers**.
 
-This capability is OPTIONAL. Not claiming it MUST NOT weaken conformance to the
+This capability is OPTIONAL. Not claiming it MUST NOT weaken checker compatibility with the
 base Premath kernel.
 
 
@@ -98,7 +98,7 @@ Implementations MAY choose any deterministic strategy to select which hypercover
 are checked (e.g. bounded dimension, policy-selected generators), but MUST bind
 that strategy into `policyDigest` when operating in `normalized` mode.
 
-## 7. Conformance vectors (informative)
+## 7. Checker vectors (informative)
 
 Recommended vectors for the `hyperdescent` capability:
 

@@ -20,8 +20,8 @@ This document is the operational meta contract for:
 1. Minimum encoding, maximum expressiveness.
 2. One authority artifact per boundary (no parallel semantics).
 3. Architecture/spec glue before implementation.
-4. Implementation before conformance vectors.
-5. Conformance before docs/traceability closure.
+4. Implementation before checker fixtures.
+5. Checker fixtures before docs/traceability closure.
 6. Context is treated as typed bounded state, not transcript carryover.
 
 Authority references:
@@ -30,8 +30,7 @@ Authority references:
 - `specs/premath/draft/UNIFICATION-DOCTRINE.md`
 - `specs/premath/draft/PREMATH-COHERENCE.md`
 - `docs/design/control-plane/MEMORY-LANES-CONTRACT.md`
-- `docs/design/operations/RALPH-PLAYBOOK-PREMATH.md` (external loop adaptation)
-- `docs/design/control-plane/STEEL-REPL-DESCENT-CONTROL.md` (REPL/descent control surface)
+- Tusk/downstream tracker docs for execution-loop policy
 
 ## 3. Canonical Work Order (per epic)
 
@@ -41,8 +40,8 @@ Default order for any non-trivial epic:
 2. Spec/index/doctrine-site glue slice
 3. Control-plane typed contract + parity slice
 4. Core implementation slice
-5. Conformance vector slice
-6. Observation/UX projection slice (if needed)
+5. Checker fixture slice
+6. Downstream projection slice (if needed)
 7. Docs/traceability closure slice
 
 If an epic skips a layer, record why in issue notes and keep dependency edges
@@ -52,41 +51,36 @@ explicit.
 
 ### 4.1 Roles
 
-- Coordinator: owns prioritization and dependency updates in issue memory.
-- Worker: executes one bounded issue at a time.
+- Coordinator: owns prioritization and dependency updates in the owning tracker.
+- Worker: executes one bounded tracker item at a time.
 
 ### 4.2 Current write discipline
 
-Until lock-safe distributed claim primitives are fully shipped, prefer one
-coordinator as the effective writer for issue-graph sequencing updates.
+Tracker write discipline is owned outside Premath. Premath only checks
+normalized work claims at the boundary.
 
 Worker mutation authority remains instruction-linked by default.
 
-### 4.3 Worker loop (single-issue discipline)
+### 4.3 Worker loop
 
-1. `dep_diagnostics(graph_scope=active)` preflight (fail closed on cycles)
-2. `issue_ready` (select target via dependency/priority order)
-3. claim/lease target
+1. Select target in the owning Tusk/downstream tracker.
+2. Check tracker-provided normalized work claim with `premath work-tracker-check`
+   when a Premath boundary witness is needed.
+3. claim target
 4. reconstruct bounded working context from typed state views/handoff refs
    before mutation-capable steps
 5. execute bounded change
 6. run required verification commands
-7. if new work discovered: `issue_discover` + dependency edge
-8. write concise notes + refs, then close/release
+7. if new work discovered: record it in the owning Tusk/downstream tracker
+8. write concise notes + refs in the owning tracker, then close/release there
 
-Never run multi-issue implicit sessions.
+Never run multi-item implicit sessions.
 
-Canonical Premath surfaces:
+Canonical Premath surface:
 
-- `premath issue ready|claim|update`
-- `premath harness-session read|write|bootstrap`
-- `premath harness-feature read|write|check|next`
-- `premath harness-trajectory append|query`
+- `premath work-tracker-check`
 
-Diagnostic convention:
-
-- use `active` scope to gate scheduling (`ready` integrity),
-- use `full` scope for historical/forensic cycle review.
+Tracker scheduling and dependency diagnostics are outside Premath.
 
 ### 4.4 Dependency compactness discipline
 
@@ -94,15 +88,12 @@ Diagnostic convention:
 - Active `blocks` edges that point to `closed` issues are drift and should be removed.
 - Active transitive-redundant `blocks` edges are drift and should be removed.
 
-Operational surfaces:
-
-- `sh tools/ci/run_task.sh ci-hygiene-check` (gate-level native enforcement)
-- `cargo run --package premath-cli -- dep remove <issue-id> <depends-on-id> --type blocks` (explicit remediation)
+Operational hygiene is checked with `premath repo-hygiene-check`.
 
 ## 5. Lane Discipline
 
-- Issue lane (`.premath/issues.jsonl`): task state, dependencies, acceptance,
-  verification commands.
+- Tracker lane: task state, dependencies, acceptance, and verification commands
+  owned outside Premath.
 - Operations lane (`.premath/OPERATIONS.md`): runbooks and rollout evidence.
 - Doctrine/decision lane (`specs/*`, `decision-log.md`): contract authority and
   lifecycle decisions.
@@ -113,14 +104,14 @@ Do not move semantic authority into operations or issue notes.
 
 Minimum gate cadence by change class:
 
-- Docs/spec glue: `sh tools/ci/run_task.sh traceability-check` + `sh tools/ci/run_task.sh ci-drift-budget-check`
-- Control-plane/checker: `sh tools/ci/run_task.sh coherence-check` + `sh tools/ci/run_task.sh ci-pipeline-test`
-- Mutation/concurrency/core: `cargo test -p premath-bd` + `cargo test -p premath-cli`
-- Capability/conformance: `sh tools/ci/run_task.sh conformance-run`
+- Docs/spec glue: `premath traceability-check` + `premath drift-budget-check`
+- Control-plane/checker: `premath coherence-check` + `premath drift-budget-check`
+- Checker/core: `cargo test --workspace`
+- Checker fixtures: `cargo test --workspace`
 
 Always finish with:
 
-- `sh tools/ci/run_task.sh ci-hygiene-check`
+- `premath repo-hygiene-check`
 
 ## 7. Definition of Done (issue-level)
 
@@ -161,4 +152,4 @@ Consistency constraints:
   §10,
 - topology budget thresholds remain contract-driven in
   `specs/process/TOPOLOGY-BUDGET.json`,
-- issue-graph updates remain authoritative in `.premath/issues.jsonl`.
+- tracker updates remain authoritative in the owning Tusk/downstream tracker.

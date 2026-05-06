@@ -269,9 +269,9 @@ This section applies when implementations compose:
 Composed systems SHOULD run the following merge-gated checks:
 
 - `coherence-check` for checker-core and cross-lane witness obligations,
-- `conformance-run` for capability vectors (including adjoint/site and Squeak
+- `drift-budget-check` for capability vectors (including adjoint/site and Squeak
   vectors, including composed cross-lane route/transport invariance vectors),
-- `doctrine-check` for doctrine-to-operation site reachability.
+- `coherence-check` for doctrine-to-operation site reachability.
 
 ### 10.2 Composed obligation boundary
 

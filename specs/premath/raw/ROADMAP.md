@@ -31,11 +31,11 @@ authoritative source of active work**.
 
 Authoritative planning surfaces are:
 
-- `.premath/issues.jsonl` (query/mutate through `premath issue ...` surfaces)
+- Tusk/downstream tracker state for live work ordering
 - `specs/process/decision-log.md` (binding architecture/process decisions)
 
 If this file conflicts with those surfaces, treat this file as stale and follow
-the issue graph + decision log.
+the owning tracker + decision log.
 
 ## 2. Current status
 
@@ -44,15 +44,15 @@ As of 2026-02-22:
 - Core kernel + interop contract surfaces have been promoted to `draft`.
 - Coherence and instruction/proposal checking surfaces are executable and
   merge-gated.
-- Forward planning is tracked as issue graph epics/tasks (`bd-*`) with
-  dependency edges.
+- Forward planning is tracked outside Premath in the owning tracker; Premath
+  records only boundary decisions and checker evidence.
 
 ## 3. Phase model (historical heuristic)
 
 ### Phase A — Raw publication
 
 - Publish raw specs for the kernel bundle.
-- Publish raw operational companions (`raw/TUSK-CORE`, `raw/SQUEAK-CORE`, `raw/CI-TOPOS`) without making them normative for kernel claims.
+- Publish raw operational companions (`raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`) without making them normative for kernel claims.
 - Start a decision log.
 - Accept breaking changes freely.
 
@@ -65,7 +65,7 @@ As of 2026-02-22:
 ### Phase C — Draft 1 (first contract)
 
 - Copy raw specs to numbered drafts.
-- Freeze witness formats and conformance taxonomy.
+- Freeze witness formats and checker taxonomy.
 
 ### Phase D — Stable
 
@@ -78,6 +78,6 @@ Use this file for high-level orientation only.
 
 For execution ordering, ownership, blocking analysis, and acceptance evidence:
 
-1. use `.premath/issues.jsonl` as the canonical task memory substrate;
+1. use the owning Tusk/downstream tracker as the canonical task memory substrate;
 2. use `specs/process/decision-log.md` as the canonical architectural intent log;
 3. require deterministic witnesses/checks for any promoted contract changes.

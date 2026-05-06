@@ -218,7 +218,7 @@
                       echo "  jj:       $(jj --version 2>/dev/null || echo 'not found')"
                       echo "  surreal:  $(surreal version 2>/dev/null || echo 'not found')"
                       echo "  cargo build --workspace"
-                      echo "  sh tools/ci/run_task.sh baseline"
+                      echo "  cargo test --workspace"
                     '';
                   };
                 }

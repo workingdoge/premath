@@ -36,9 +36,6 @@
     }
   },
   "deprecatedDesignFragments": [
-    "docs/design/TUSK-HARNESS-SESSION.md",
-    "docs/design/TUSK-HARNESS-TRAJECTORY.md",
-    "docs/design/TUSK-HARNESS-KPI-BENCHMARK.md",
     "docs/design/EV-STAGE1-CHECKLIST.md",
     "docs/design/EV-STAGE3-EXECUTION-RUNBOOK.md",
     "docs/design/TUSK-SIGPI.md"

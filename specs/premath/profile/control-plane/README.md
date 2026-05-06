@@ -14,22 +14,20 @@ Current authority files remain in `../../draft/` for path stability:
 - `DOCTRINE-OP-REGISTRY.json`
 - `LLM-INSTRUCTION-DOCTRINE.md`
 - `LLM-PROPOSAL-CHECKING.md`
-- `HARNESS-RUNTIME.md`
-- `HARNESS-TYPESTATE.md`
-- `HARNESS-RETRY-ESCALATION.md`
 - `CHANGE-MORPHISMS.md`
 - `SPAN-SQUARE-CHECKING.md`
 - control-plane sections of `UNIFICATION-DOCTRINE.md`
+- normalized work-tracker checker command surfaces
 
 Profile rule:
 
 - This profile owns deterministic projection, route parity, lifecycle,
-  instruction/proposal typing, harness behavior, and coherence evidence for the
-  implementation control plane.
+  instruction/proposal typing, normalized work-claim checking, and coherence
+  evidence for the implementation control plane.
 - It does not own Premath Core admissibility.
 - Tusk owns operator instruments and workflow surfaces over these contracts.
   Premath owns only the checker/kernel contracts those surfaces compile to.
 
 Physical moves into this directory should be a separate migration with updated
 contract paths, generated doctrine-site artifacts, traceability rows,
-conformance fixtures, and decision-log evidence.
+checker fixtures, and decision-log evidence.

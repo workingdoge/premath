@@ -8,7 +8,7 @@ category: Best Current Practice
 tags:
   - premath
   - kernel
-  - conformance
+  - checker-claims
   - index
 editor: arj <arj@workingdoge.com>
 contributors: []
@@ -46,7 +46,7 @@ This file is the front door for Premath scope. It answers:
 - and what belongs to adjacent sites rather than Premath.
 
 Mutable implementation state is not authority here. Current project status lives
-in issue memory and non-normative process/design notes.
+in the owning tracker and non-normative process/design notes.
 
 ## 2. Premath Core
 
@@ -59,7 +59,7 @@ Premath Core is the admissibility kernel and replayable witness interface:
   discharge, and Gate failure-class mapping for descent-shaped evidence.
 - `draft/GATE` — accepted/rejected gate outcomes and failure classes.
 - `draft/WITNESS-ID` — deterministic witness identity.
-- `draft/CONFORMANCE` §§1-2.1 — Core claim boundary and conformance
+- `draft/CHECKER-CLAIMS` §§1-2.1 — Core claim boundary and checker claims
   requirements. Later profile/capability sections do not expand Core.
 
 `draft/DOCTRINE-INF` is a doctrine-preservation guard for implementations that
@@ -71,12 +71,16 @@ of the promoted contract surface, but it is not a control plane.
 Optional profiles add representation, runtime, or application constraints. They
 must not create a second admissibility authority.
 
-- Interop profile: `profile/interop/README` maps `KCIR-CORE`, `NF`,
-  `NORMALIZER`, `REF-BINDING`, `WIRE-FORMATS`, and `ERROR-CODES`.
+- KCIR profile adapter: `profile/kcir/README` maps Premath acceptance of
+  KCIR-carried artifacts to the KCIR site authority in `fish/sites/kcir`.
+- Interop profile: `profile/interop/README` maps the transitional Premath
+  adapter files `KCIR-CORE`, `NF`, `NORMALIZER`, `REF-BINDING`,
+  `WIRE-FORMATS`, and `ERROR-CODES`.
 - Control-plane profile: `PREMATH-COHERENCE`, `COHERENCE-CONTRACT.json`,
-  `CONTROL-PLANE-CONTRACT.json`, `DOCTRINE-SITE*`, `LLM-*`, `HARNESS-*`,
-  `CHANGE-MORPHISMS`, `SPAN-SQUARE-CHECKING`, and the control-plane portions of
-  `UNIFICATION-DOCTRINE`; see `profile/control-plane/README`.
+  `CONTROL-PLANE-CONTRACT.json`, `DOCTRINE-SITE*`, `LLM-*`,
+  `CHANGE-MORPHISMS`, `SPAN-SQUARE-CHECKING`, normalized work-tracker checker
+  surfaces, and the control-plane portions of `UNIFICATION-DOCTRINE`; see
+  `profile/control-plane/README`.
 - Adjoints/sites profile: `profile/ADJOINTS-AND-SITES`.
 - Identity/auth material: currently raw; see `profile/identity/README`.
 
@@ -87,12 +91,16 @@ Profiles may be strict. Their strictness is profile-local and claim-scoped.
 Premath does not own adjacent site semantics.
 
 - Atlas owns site-of-sites placement and cross-site cover/factorization rules.
+- KCIR owns generic artifact substrate meaning: refs, rows, nodes, dependency
+  vocabulary, carrier profiles, normal-form records, witness records, and
+  failure reports.
 - Nerve owns its protocol/substrate semantics until a reusable substrate factor
   is explicitly extracted.
 - Tusk owns operator instruments, projections, runtime bindings, and tracker
   workflow surfaces over accepted decisions.
-- Work-state meaning is a candidate `work` site role. Premath may check
-  work-claim admissibility, but Premath does not own generic work semantics.
+- Work-state meaning is a candidate `work` site role. Premath may expose
+  profile/control-plane checks over normalized work claims, but Premath Core
+  does not own generic work semantics or tracker mutation authority.
 
 ## 5. Normative Map
 
@@ -104,7 +112,7 @@ The smallest Premath authority path is:
 2. `draft/OBLIGATION-DISCHARGE`
 3. `draft/GATE`
 4. `draft/WITNESS-ID`
-5. `draft/CONFORMANCE` §§1-2.1
+5. `draft/CHECKER-CLAIMS` §§1-2.1
 
 An implementation claiming Premath Core must preserve the same accepted/rejected
 kernel outcome and deterministic witness/replay behavior at the boundaries it
@@ -112,10 +120,13 @@ exposes.
 
 ### 5.2 Interop profile
 
-The Interop profile is optional and representation-facing.
+The Interop profile is optional and representation-facing. KCIR substrate
+authority belongs to `fish/sites/kcir`; the Premath interop profile only
+defines when KCIR-carried artifacts are acceptable for Premath claims.
 
 Interop Core, when claimed, uses:
 
+- `profile/kcir/README`
 - `draft/KCIR-CORE`
 - `draft/REF-BINDING`
 - `draft/NF`
@@ -131,15 +142,18 @@ It uses the Core `draft/OBLIGATION-DISCHARGE` and `draft/GATE` interfaces to
 enforce obligations and admissibility over deterministic artifacts.
 
 Interop may change artifact form. It must not change kernel meaning.
+KCIR compatibility alone is not Premath acceptance; Premath acceptance requires
+Core verdict and Gate failure-class preservation at the claimed boundary.
 
 ### 5.3 Control-plane profile
 
 The control-plane profile is optional and implementation-facing.
 
-It may define deterministic wrappers, coherence checks, schema lifecycle tables,
-runtime-route parity, instruction/proposal typing, and harness behavior. Those
-surfaces remain projections or governance over the Premath spine. They do not
-own semantic admissibility.
+It may define coherence checks, schema lifecycle tables, deterministic
+projections, and instruction/proposal typing. Runtime route execution, hook
+management, retry/escalation, and worker orchestration are external operational
+site concerns. They may consume Premath checker contracts, but they do not
+extend Premath Core.
 
 The long-form control-plane doctrine currently remains in promoted draft files
 while it is being factored. The target shape is a control-plane profile, not a
@@ -153,7 +167,6 @@ Executable capability identifiers:
 - `capabilities.kcir_witnesses`
 - `capabilities.commitment_checkpoints`
 - `capabilities.squeak_site`
-- `capabilities.ci_witnesses`
 - `capabilities.instruction_typing`
 - `capabilities.adjoints_sites`
 - `capabilities.change_morphisms`
@@ -161,12 +174,10 @@ Executable capability identifiers:
 Capability-specific document bindings:
 
 - `raw/SQUEAK-SITE` (for `capabilities.squeak_site`)
-- `raw/PREMATH-CI` (for `capabilities.ci_witnesses`)
 - `draft/LLM-INSTRUCTION-DOCTRINE` (for `capabilities.instruction_typing`)
 - `draft/LLM-PROPOSAL-CHECKING` (for `capabilities.instruction_typing`)
 - `profile/ADJOINTS-AND-SITES` (for `capabilities.adjoints_sites`)
 - `draft/CHANGE-MORPHISMS` (for `capabilities.change_morphisms`)
-- `draft/HARNESS-TYPESTATE` (for `capabilities.change_morphisms`)
 
 Capability requirements apply only when the corresponding capability is claimed.
 
@@ -179,8 +190,6 @@ Conditional clauses:
 
 - `raw/SQUEAK-SITE` is normative only when `capabilities.squeak_site` is
   claimed.
-- `raw/PREMATH-CI` is normative only when `capabilities.ci_witnesses` is
-  claimed.
 - `draft/LLM-INSTRUCTION-DOCTRINE` is normative only when
   `capabilities.instruction_typing` is claimed.
 - `draft/LLM-PROPOSAL-CHECKING` is normative only when
@@ -188,8 +197,6 @@ Conditional clauses:
 - `profile/ADJOINTS-AND-SITES` is normative only when
   `capabilities.adjoints_sites` is claimed.
 - `draft/CHANGE-MORPHISMS` is normative only when
-  `capabilities.change_morphisms` is claimed.
-- `draft/HARNESS-TYPESTATE` is normative when
   `capabilities.change_morphisms` is claimed.
 
 Raw capability-spec lifecycle policy:
@@ -205,7 +212,6 @@ Raw capability-spec lifecycle policy:
 Current raw-retain posture:
 
 - `raw/SQUEAK-SITE` — retained raw per Decision 0040.
-- `raw/TUSK-CORE` — retained raw per Decision 0041.
 
 ### 5.6 Profile overlays
 
@@ -213,7 +219,7 @@ Profile overlays are additive and claim-scoped.
 
 - `profile/ADJOINTS-AND-SITES` defines the adjoints/sites overlay.
 - `profile.doctrine_inf_governance.v0` is an optional doctrine-governance
-  overlay claim defined by `draft/DOCTRINE-INF` and `draft/CONFORMANCE`.
+  overlay claim defined by `draft/DOCTRINE-INF` and `draft/CHECKER-CLAIMS`.
 
 Lane ownership:
 
@@ -231,12 +237,12 @@ For Premath Core:
 2. `draft/OBLIGATION-DISCHARGE`
 3. `draft/GATE`
 4. `draft/WITNESS-ID`
-5. `draft/CONFORMANCE` §§1-2.1
+5. `draft/CHECKER-CLAIMS` §§1-2.1
 
 For Interop:
 
 1. Core reading order
-2. `draft/REF-BINDING` + `draft/KCIR-CORE`
+2. `profile/kcir/README` + `draft/REF-BINDING` + `draft/KCIR-CORE`
 3. `draft/NF` + `draft/NORMALIZER`
 4. `draft/WIRE-FORMATS` + `draft/ERROR-CODES`
 
@@ -258,8 +264,9 @@ For adjacent sites:
 Premath Core does not own:
 
 - MCP routes or issue mutation flows;
-- CI wrappers or provider workflow details;
+- workflow wrappers or provider workflow details;
 - harness session lifecycle;
+- local hook orchestration;
 - LLM proposal policy;
 - JWT/JWKS runtime search behavior;
 - Nerve protocol semantics;

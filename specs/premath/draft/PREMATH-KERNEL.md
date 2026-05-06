@@ -119,7 +119,7 @@ The recommended Core obligation/discharge interface is specified in
 `draft/NF`, `draft/NORMALIZER`, `draft/REF-BINDING`, and
 `profile/interop/BIDIR-DESCENT`.
 
-Repository conformance additionally exports a canonical obligation-authority
+Repository checker support additionally exports a canonical obligation-authority
 registry from kernel code (`crates/premath-kernel/src/obligation_registry.rs`)
 and machine output (`premath obligation-registry --json`). Downstream layers
 MUST treat that export as read-only authority for obligation->Gate mapping.
@@ -255,5 +255,5 @@ Not preserved:
 
 - `dm.transport.world` (handled by `raw/SQUEAK-CORE`)
 - `dm.transport.location` (handled by `raw/SQUEAK-SITE`)
-- `dm.profile.execution` (handled by runtime/CI layer)
+- `dm.profile.execution` (handled by runtime layer)
 - `dm.presentation.projection` (handled by projection layer)

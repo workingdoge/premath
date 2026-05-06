@@ -17,7 +17,7 @@
     },
     {
       "id": "gate_chain_parity",
-      "description": "Ensure baseline and projected gate-chain documentation matches executable command surfaces."
+      "description": "Ensure local checker projection documentation matches executable checker surfaces."
     },
     {
       "id": "operation_reachability",
@@ -76,20 +76,12 @@
     {
       "docRef": "raw/SQUEAK-SITE",
       "capabilityId": "capabilities.squeak_site"
-    },
-    {
-      "docRef": "raw/PREMATH-CI",
-      "capabilityId": "capabilities.ci_witnesses"
     }
   ],
   "expectedOperationPaths": [
-    "tools/ci/run_gate.sh",
-    "tools/ci/run_instruction.sh",
-    "tools/ci/run_required_attested.py",
-    "crates/premath-cli/src/commands/conformance_check.rs",
-    "tools/conformance/run_capability_vectors.py",
-    "tools/conformance/check_doctrine_site.py",
-    "tools/conformance/run_doctrine_inf_vectors.py"
+    "crates/premath-cli/src/commands/coherence_check.rs",
+    "crates/premath-cli/src/commands/traceability_check.rs",
+    "crates/premath-cli/src/commands/drift_budget_check.rs"
   ],
   "overlayDocs": [
     "profile/ADJOINTS-AND-SITES"
@@ -106,21 +98,21 @@
   "surfaces": {
     "capabilityRegistryPath": "specs/premath/draft/CAPABILITY-REGISTRY.json",
     "capabilityRegistryKind": "premath.capability_registry.v1",
-    "capabilityManifestRoot": "tests/conformance/fixtures/capabilities",
-    "readmePath": "README.md",
-    "conformanceReadmePath": "tools/conformance/README.md",
-    "conformancePath": "specs/premath/draft/CONFORMANCE.md",
+    "capabilityManifestRoot": "tests/checker/fixtures/capabilities",
+    "readmePath": "tests/checker/fixtures/capabilities/README.md",
+    "checkerClaimsReadmePath": "",
+    "checkerClaimsPath": "specs/premath/draft/CHECKER-CLAIMS.md",
     "specIndexPath": "specs/premath/draft/SPEC-INDEX.md",
     "specIndexCapabilityHeading": "5.4",
     "specIndexInformativeHeading": "5.5",
     "specIndexOverlayHeading": "5.6",
-    "ciClosurePath": "docs/design/control-plane/CI-CLOSURE.md",
-    "ciClosureBaselineStart": "Current full baseline gate (`sh tools/ci/run_task.sh baseline`) includes:",
-    "ciClosureBaselineEnd": "Local command:",
-    "ciClosureProjectionStart": "Current deterministic projected check IDs include:",
-    "ciClosureProjectionEnd": "## 5. Variants and capability projection",
-    "baselineManifestPath": "tools/ci/baseline_tasks.json",
-    "baselineTask": "baseline",
+    "localCheckPath": "",
+    "localCheckBaselineStart": "",
+    "localCheckBaselineEnd": "",
+    "localCheckProjectionStart": "",
+    "localCheckProjectionEnd": "",
+    "baselineManifestPath": "",
+    "baselineTask": "",
     "controlPlaneContractPath": "specs/premath/draft/CONTROL-PLANE-CONTRACT.json",
     "doctrineSitePath": "specs/premath/draft/DOCTRINE-SITE.json",
     "doctrineRootNodeId": "draft/DOCTRINE-INF",
@@ -133,7 +125,7 @@
     "coherenceSpecObligationEnd": "## 4. Obligation Semantics",
     "obligationRegistryKind": "premath.obligation_gate_registry.v1",
     "informativeClauseNeedle": "unless they are\nexplicitly claimed under §5.4 or §5.6",
-    "transportFixtureRootPath": "tests/conformance/fixtures/coherence-transport",
-    "siteFixtureRootPath": "tests/conformance/fixtures/coherence-site"
+    "transportFixtureRootPath": "tests/checker/fixtures/coherence-transport",
+    "siteFixtureRootPath": "tests/checker/fixtures/coherence-site"
   }
 }

@@ -112,5 +112,5 @@ Implementations MUST compute `witnessId` before sorting.
 
 - This spec is compatible with both set-level and higher-level Gate models.
 - Implementations that cannot or do not wish to implement full RFC 8785 MAY
-  implement an equivalent canonicalization procedure, but conformance suites
+  implement an equivalent canonicalization procedure, but checker suites
   MUST treat RFC 8785 behavior as the source of truth.

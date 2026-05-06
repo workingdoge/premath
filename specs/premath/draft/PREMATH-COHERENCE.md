@@ -42,9 +42,9 @@ The checker is not a replacement for kernel authority (`draft/PREMATH-KERNEL`,
 2. discharges those obligations against declared operational/doc surfaces, and
 3. emits a deterministic witness (`premath.coherence.v1`).
 
-Within the control-plane layer, this checker is the **check role**. Execution
-and attestation transport roles are defined by `raw/PREMATH-CI` and
-`raw/CI-TOPOS`.
+Within the control-plane layer, this checker is the **check role**. Runtime
+execution and attestation transport roles belong to downstream/control sites,
+not to Premath Core.
 
 ## 2. Coherence Contract Artifact
 
@@ -121,16 +121,13 @@ MUST reject when documented gate chain surfaces drift from executable sources.
 
 Minimum parity set includes:
 
-- baseline task composition parity (`tools/ci/baseline_tasks.json` vs CI closure docs),
 - deterministic projected check ID parity (`draft/CONTROL-PLANE-CONTRACT.json`
-  required-gate projection order vs CI closure docs),
+  required-gate projection order vs documented local checker gates),
+- optional local gate composition parity when a repository declares an explicit
+  gate manifest and local-checks document,
 - shared control-plane witness/policy identifiers are present and well-formed
   in `draft/CONTROL-PLANE-CONTRACT.json` (`requiredWitness`,
   `instructionWitness`),
-- shared harness retry/escalation bindings are present and well-formed in
-  `draft/CONTROL-PLANE-CONTRACT.json` (`harnessRetry` policy kind/path,
-  escalation action set, active-issue env keys, harness-session path bindings,
-  session issue-field binding, issues-path env key),
 - control-plane schema lifecycle table is present and deterministic
   (`schemaLifecycle`): canonical kind families + alias windows +
   fail-closed expiry semantics for contract/witness/projection kinds +
@@ -359,10 +356,6 @@ The canonical checker command surface is:
 
 - `premath coherence-check --contract specs/premath/draft/COHERENCE-CONTRACT.json --repo-root .`
 
-Repository task wrapper:
-
-- `sh tools/ci/run_task.sh coherence-check`
-
 ## 8. Relationship to Kernel and Obligation Discharge
 
 This checker does not synthesize or discharge semantic Gate obligations over
@@ -393,30 +386,32 @@ Not preserved:
 - `dm.transport.location`
 - `dm.transport.world`
 
-## 10. Migration Profile: Python Adapters -> `premath-coherence` Core
+## 10. Retired Wrapper Surfaces
 
-This section defines the phased migration contract for moving control-plane
-checker semantics out of Python surfaces and into the Rust
-`premath-coherence` core.
+Premath no longer owns a repository task runner, provider workflow, or Python
+checker wrapper layer. The promoted checker authority is the Rust
+`premath-coherence` core plus native Premath CLI commands.
 
 ### 10.1 Authority boundary
 
-During and after migration:
+The authority boundary is:
 
 - semantic admissibility authority MUST remain in
   `draft/PREMATH-KERNEL` + `draft/OBLIGATION-DISCHARGE` + `draft/GATE`,
 - control-plane checker semantics MAY live in `premath-coherence` (or successor
   checker crates),
-- CI execution/attestation semantics MUST remain in
-  `raw/PREMATH-CI` + `raw/CI-TOPOS` and their operational command surfaces,
-- Python surfaces under `tools/ci/` MUST remain orchestration adapters
-  (argument/env binding, command dispatch, summary shaping),
-- adapters MUST NOT define parallel canonicalization/typing/discharge logic.
+- execution/attestation semantics, where retained, belong to a downstream site
+  or explicitly claimed profile,
+- task dispatch, provider workflows, runner wrappers, and suite orchestration
+  MUST NOT be promoted as Premath authority surfaces,
+- adapters in downstream sites MUST NOT define parallel
+  canonicalization/typing/discharge logic for Premath claims.
 
 ### 10.2 Parity contract
 
-For identical input envelope + repository state + bindings, dual-path execution
-MUST preserve the same authoritative outcome class and checker lineage.
+For identical input envelope + repository state + bindings, any downstream
+adapter MUST preserve the same authoritative Premath outcome class and checker
+lineage as the native checker.
 
 Minimum parity keys:
 

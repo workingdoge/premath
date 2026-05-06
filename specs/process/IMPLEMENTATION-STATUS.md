@@ -5,15 +5,11 @@ Status: non-normative process snapshot
 This file preserves phase notes that were removed from
 `specs/premath/draft/SPEC-INDEX.md` during the scope-diet cleanup.
 
-Current live status authority is issue memory:
+Current live status authority is external to Premath. Tusk or the downstream
+operator tracker owns live tracker memory and ready queues.
 
-- `.premath/issues.jsonl`
-- `premath issue list`
-- `premath issue ready`
-- `premath issue blocked`
-
-Do not treat this file as current project authority if it conflicts with issue
-memory.
+Do not treat this file as current project authority if it conflicts with the
+owning tracker.
 
 ## Snapshot From 2026-04-24
 
@@ -21,7 +17,7 @@ Current phase at the time of the snapshot:
 
 - KCIR self-hosting phase 3 was active under `bd-287`.
 - The statement-ID/KCIR projection indexing follow-on was not active until a
-  corresponding issue existed in issue memory.
+  corresponding tracker item existed in the owning tracker.
 
 Active epic IDs:
 

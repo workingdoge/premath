@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "result": "rejected",
-  "kernelVerdict": "rejected",
-  "gateFailureClasses": [
-    "decision_delta_sha_mismatch"
-  ]
-}

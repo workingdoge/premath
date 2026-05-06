@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 
 /// Opaque identifier for a context.
 ///
-/// In practice this is a content-addressed hash (JJ change ID,
-/// SurrealDB record ID, or a composite of both).
+/// In practice this is a content-addressed hash, workspace ref, or
+/// domain-specific context key.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct ContextId(pub String);
 
@@ -49,8 +49,8 @@ pub trait Context: Send + Sync {
 
     /// Parent contexts (contexts this one was derived from).
     ///
-    /// In JJ terms: the predecessor changes.
-    /// In bd terms: the dependency sources.
+    /// For example: predecessor workspace states or declared dependency
+    /// sources in a downstream work model.
     fn parents(&self) -> Vec<ContextId>;
 
     /// Whether this context is a root (no parents).

@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "executable",
-  "result": "accepted",
-  "assertions": [
-    "lease projection reports deterministic stale and contended sets"
-  ]
-}

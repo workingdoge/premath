@@ -3,49 +3,24 @@
 //! This crate evaluates a machine contract artifact against repository surfaces
 //! and emits deterministic witnesses.
 
-mod instruction;
 mod proposal;
-mod required;
-mod required_decide;
-mod required_decision_verify;
-mod required_gate_ref;
 mod required_projection;
-mod required_verify;
+mod work_tracker_checker;
 
-pub use instruction::{
-    ExecutedInstructionCheck, InstructionError, InstructionProposalIngest, InstructionTypingPolicy,
-    InstructionWitness, InstructionWitnessRuntime, ValidatedInstructionEnvelope,
-    ValidatedInstructionProposal, build_instruction_witness, build_pre_execution_reject_witness,
-    validate_instruction_envelope_payload,
-};
 pub use proposal::{
     CanonicalProposal, ProposalBinding, ProposalDischarge, ProposalError, ProposalObligation,
     ProposalStep, ProposalTargetJudgment, ValidatedProposal, compile_proposal_obligations,
     compute_proposal_digest, compute_proposal_kcir_ref, discharge_proposal_obligations,
     validate_proposal_payload,
 };
-pub use required::{
-    ExecutedRequiredCheck, RequiredGateWitnessRef, RequiredWitness, RequiredWitnessError,
-    RequiredWitnessRuntime, build_required_witness,
-};
-pub use required_decide::{
-    RequiredWitnessDecideRequest, RequiredWitnessDecideResult, decide_required_witness_request,
-};
-pub use required_decision_verify::{
-    RequiredDecisionVerifyDerived, RequiredDecisionVerifyRequest, RequiredDecisionVerifyResult,
-    verify_required_decision_request,
-};
-pub use required_gate_ref::{
-    RequiredGateRefFallback, RequiredGateRefRequest, RequiredGateRefResult, build_required_gate_ref,
-};
 pub use required_projection::{
     PROJECTION_POLICY, PROJECTION_SCHEMA, RequiredProjectionRequest, RequiredProjectionResult,
     normalize_paths as normalize_projection_paths, project_required_checks,
     projection_plan_payload,
 };
-pub use required_verify::{
-    RequiredWitnessVerifyDerived, RequiredWitnessVerifyRequest, RequiredWitnessVerifyResult,
-    verify_required_witness_payload, verify_required_witness_request,
+pub use work_tracker_checker::{
+    CHECKER_PROFILE_REF, WorkClaim, WorkProjectionCheck, WorkTrackerCheckInput,
+    WorkTrackerCheckOutput, evaluate_work_tracker_checker,
 };
 
 use premath_kernel::{obligation_gate_registry, obligation_gate_registry_json};
@@ -146,19 +121,12 @@ const STAGE2_CORE_OBLIGATION_FIELD_REF: &str = "coreObligationCheckerKinds";
 const STAGE2_CORE_OBLIGATION_FALLBACK_MODE: &str = "profile_gated_sentinel";
 const WORKER_MUTATION_DEFAULT_MODE: &str = "instruction-linked";
 const WORKER_ALLOWED_MUTATION_MODES: &[&str] = &["instruction-linked", "human-override"];
-const WORKER_ROUTE_ISSUE_CLAIM: &str = "capabilities.change_morphisms.issue_claim";
-const WORKER_ROUTE_ISSUE_LEASE_RENEW: &str = "capabilities.change_morphisms.issue_lease_renew";
-const WORKER_ROUTE_ISSUE_LEASE_RELEASE: &str = "capabilities.change_morphisms.issue_lease_release";
-const WORKER_ROUTE_ISSUE_DISCOVER: &str = "capabilities.change_morphisms.issue_discover";
 const WORKER_CLASS_POLICY_DRIFT: &str = "worker_lane_policy_drift";
 const WORKER_CLASS_MUTATION_MODE_DRIFT: &str = "worker_lane_mutation_mode_drift";
-const WORKER_CLASS_ROUTE_UNBOUND: &str = "worker_lane_route_unbound";
 const GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE: &str =
     "coherence.gate_chain_parity.worker_lane_policy_drift";
 const GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE: &str =
     "coherence.gate_chain_parity.worker_lane_mutation_mode_drift";
-const GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE: &str =
-    "coherence.gate_chain_parity.worker_lane_route_unbound";
 const STAGE2_REQUIRED_KERNEL_OBLIGATIONS: &[&str] = &[
     "stability",
     "locality",
@@ -168,15 +136,8 @@ const STAGE2_REQUIRED_KERNEL_OBLIGATIONS: &[&str] = &[
     "ext_gap",
     "ext_ambiguous",
 ];
-const REQUIRED_SCHEMA_LIFECYCLE_FAMILIES: &[&str] = &[
-    "controlPlaneContractKind",
-    "requiredWitnessKind",
-    "requiredDecisionKind",
-    "instructionWitnessKind",
-    "instructionPolicyKind",
-    "requiredProjectionPolicy",
-    "requiredDeltaKind",
-];
+const REQUIRED_SCHEMA_LIFECYCLE_FAMILIES: &[&str] =
+    &["controlPlaneContractKind", "requiredProjectionPolicy"];
 
 #[derive(Debug, Error)]
 pub enum CoherenceError {
@@ -225,20 +186,20 @@ pub struct CoherenceObligationSpec {
 pub struct CoherenceSurfaces {
     pub capability_registry_path: String,
     pub capability_registry_kind: String,
-    #[serde(default = "default_conformance_path")]
-    pub conformance_path: String,
+    #[serde(default = "default_checker_claims_path")]
+    pub checker_claims_path: String,
     pub capability_manifest_root: String,
     pub readme_path: String,
-    pub conformance_readme_path: String,
+    pub checker_claims_readme_path: String,
     pub spec_index_path: String,
     pub spec_index_capability_heading: String,
     pub spec_index_informative_heading: String,
     pub spec_index_overlay_heading: String,
-    pub ci_closure_path: String,
-    pub ci_closure_baseline_start: String,
-    pub ci_closure_baseline_end: String,
-    pub ci_closure_projection_start: String,
-    pub ci_closure_projection_end: String,
+    pub local_check_path: String,
+    pub local_check_baseline_start: String,
+    pub local_check_baseline_end: String,
+    pub local_check_projection_start: String,
+    pub local_check_projection_end: String,
     pub baseline_manifest_path: String,
     pub baseline_task: String,
     pub control_plane_contract_path: String,
@@ -257,8 +218,8 @@ pub struct CoherenceSurfaces {
     pub site_fixture_root_path: String,
 }
 
-fn default_conformance_path() -> String {
-    "specs/premath/draft/CONFORMANCE.md".to_string()
+fn default_checker_claims_path() -> String {
+    "specs/premath/draft/CHECKER-CLAIMS.md".to_string()
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -297,8 +258,6 @@ struct ControlPlaneProjectionContract {
     #[serde(default)]
     worker_lane_authority: Option<ControlPlaneWorkerLaneAuthority>,
     required_gate_projection: RequiredGateProjection,
-    required_witness: ControlPlaneRequiredWitness,
-    instruction_witness: ControlPlaneInstructionWitness,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -329,7 +288,6 @@ struct ControlPlaneCrossLaneWitnessRoute {
 #[serde(rename_all = "camelCase")]
 struct ControlPlaneWorkerLaneAuthority {
     mutation_policy: ControlPlaneWorkerMutationPolicy,
-    mutation_routes: ControlPlaneWorkerMutationRoutes,
     failure_classes: ControlPlaneWorkerLaneFailureClasses,
 }
 
@@ -357,26 +315,11 @@ struct ControlPlaneWorkerMutationOverride {
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct ControlPlaneWorkerMutationRoutes {
-    #[serde(default)]
-    issue_claim: String,
-    #[serde(default)]
-    issue_lease_renew: String,
-    #[serde(default)]
-    issue_lease_release: String,
-    #[serde(default)]
-    issue_discover: String,
-}
-
-#[derive(Debug, Clone, Deserialize, Serialize, Default)]
-#[serde(rename_all = "camelCase")]
 struct ControlPlaneWorkerLaneFailureClasses {
     #[serde(default)]
     policy_drift: String,
     #[serde(default)]
     mutation_mode_drift: String,
-    #[serde(default)]
-    route_unbound: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize, Default)]
@@ -421,21 +364,6 @@ struct ControlPlaneEvidenceFactorizationFailureClasses {
 struct RequiredGateProjection {
     projection_policy: String,
     check_order: Vec<String>,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ControlPlaneRequiredWitness {
-    witness_kind: String,
-    decision_kind: String,
-}
-
-#[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct ControlPlaneInstructionWitness {
-    witness_kind: String,
-    policy_kind: String,
-    policy_digest_prefix: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -1017,11 +945,12 @@ fn check_scope_noncontradiction(
     }
 
     let capability_registry = load_capability_registry(repo_root, contract)?;
-    let conformance_path = resolve_path(repo_root, contract.surfaces.conformance_path.as_str());
-    let conformance_text = read_text(&conformance_path)?;
-    let conformance_overlay_section = extract_heading_section(&conformance_text, "2.4")?;
-    let conformance_profile_claims =
-        parse_backticked_profile_overlay_claims(&conformance_overlay_section)?;
+    let checker_claims_path =
+        resolve_path(repo_root, contract.surfaces.checker_claims_path.as_str());
+    let checker_claims_text = read_text(&checker_claims_path)?;
+    let checker_claims_overlay_section = extract_heading_section(&checker_claims_text, "2.4")?;
+    let checker_profile_claims =
+        parse_backticked_profile_overlay_claims(&checker_claims_overlay_section)?;
     let registry_profile_claims: BTreeSet<String> = capability_registry
         .profile_overlay_claims
         .iter()
@@ -1032,7 +961,7 @@ fn check_scope_noncontradiction(
             "coherence.scope_noncontradiction.profile_overlay_registry_duplicate".to_string(),
         );
     }
-    if registry_profile_claims != conformance_profile_claims {
+    if registry_profile_claims != checker_profile_claims {
         failures
             .push("coherence.scope_noncontradiction.profile_overlay_claim_mismatch".to_string());
     }
@@ -1106,7 +1035,7 @@ fn check_scope_noncontradiction(
             "conditionalCapabilityDocs": contract.conditional_capability_docs,
             "specIndexCapabilityDocMap": spec_index_doc_map,
             "registryProfileOverlayClaims": registry_profile_claims,
-            "conformanceProfileOverlayClaims": conformance_profile_claims,
+            "checkerProfileOverlayClaims": checker_profile_claims,
             "requiredCoreObligationKinds": contract.required_core_obligation_kinds,
             "coreObligationSpecKinds": core_obligation_spec_kinds,
             "coreObligationCheckerKinds": core_obligation_checker_kinds,
@@ -1177,10 +1106,20 @@ fn check_capability_parity(
         repo_root,
         contract.surfaces.readme_path.as_str(),
     ))?;
-    let conformance_readme_text = read_text(&resolve_path(
-        repo_root,
-        contract.surfaces.conformance_readme_path.as_str(),
-    ))?;
+    let checker_claims_readme_set = if contract
+        .surfaces
+        .checker_claims_readme_path
+        .trim()
+        .is_empty()
+    {
+        BTreeSet::new()
+    } else {
+        let checker_claims_readme_text = read_text(&resolve_path(
+            repo_root,
+            contract.surfaces.checker_claims_readme_path.as_str(),
+        ))?;
+        parse_backticked_capabilities(&checker_claims_readme_text)?
+    };
     let spec_index_text = read_text(&resolve_path(
         repo_root,
         contract.surfaces.spec_index_path.as_str(),
@@ -1191,7 +1130,6 @@ fn check_capability_parity(
     )?;
 
     let readme_set = parse_backticked_capabilities(&readme_text)?;
-    let conformance_readme_set = parse_backticked_capabilities(&conformance_readme_text)?;
     let spec_index_set = parse_backticked_capabilities(&section_54)?;
 
     let mut failures = Vec::new();
@@ -1201,8 +1139,14 @@ fn check_capability_parity(
     if readme_set != executable_set {
         failures.push("coherence.capability_parity.readme_set_mismatch".to_string());
     }
-    if conformance_readme_set != executable_set {
-        failures.push("coherence.capability_parity.conformance_readme_set_mismatch".to_string());
+    if !contract
+        .surfaces
+        .checker_claims_readme_path
+        .trim()
+        .is_empty()
+        && checker_claims_readme_set != executable_set
+    {
+        failures.push("coherence.capability_parity.checker_claims_readme_set_mismatch".to_string());
     }
     if spec_index_set != executable_set {
         failures.push("coherence.capability_parity.spec_index_set_mismatch".to_string());
@@ -1216,7 +1160,8 @@ fn check_capability_parity(
             "capabilityRegistryPath": to_repo_relative_or_absolute(repo_root, &capability_registry_path),
             "manifest": sorted_vec_from_set(&manifest_set),
             "readme": sorted_vec_from_set(&readme_set),
-            "conformanceReadme": sorted_vec_from_set(&conformance_readme_set),
+            "checkerClaimsReadme": sorted_vec_from_set(&checker_claims_readme_set),
+            "checkerClaimsReadmePath": contract.surfaces.checker_claims_readme_path,
             "specIndex": sorted_vec_from_set(&spec_index_set),
         }),
     })
@@ -1559,46 +1504,6 @@ fn evaluate_control_plane_schema_lifecycle(
     ) {
         resolved["requiredProjectionPolicy"] = json!(kind);
     }
-    if let Some(kind) = resolve_or_record_schema_kind(
-        schema_lifecycle,
-        "requiredWitnessKind",
-        "requiredWitness.witnessKind",
-        &control_plane_contract.required_witness.witness_kind,
-        &mut failures,
-        &mut reasons,
-    ) {
-        resolved["requiredWitnessKind"] = json!(kind);
-    }
-    if let Some(kind) = resolve_or_record_schema_kind(
-        schema_lifecycle,
-        "requiredDecisionKind",
-        "requiredWitness.decisionKind",
-        &control_plane_contract.required_witness.decision_kind,
-        &mut failures,
-        &mut reasons,
-    ) {
-        resolved["requiredDecisionKind"] = json!(kind);
-    }
-    if let Some(kind) = resolve_or_record_schema_kind(
-        schema_lifecycle,
-        "instructionWitnessKind",
-        "instructionWitness.witnessKind",
-        &control_plane_contract.instruction_witness.witness_kind,
-        &mut failures,
-        &mut reasons,
-    ) {
-        resolved["instructionWitnessKind"] = json!(kind);
-    }
-    if let Some(kind) = resolve_or_record_schema_kind(
-        schema_lifecycle,
-        "instructionPolicyKind",
-        "instructionWitness.policyKind",
-        &control_plane_contract.instruction_witness.policy_kind,
-        &mut failures,
-        &mut reasons,
-    ) {
-        resolved["instructionPolicyKind"] = json!(kind);
-    }
 
     ObligationCheck {
         failure_classes: dedupe_sorted(failures),
@@ -1620,26 +1525,45 @@ fn check_gate_chain_parity(
     repo_root: &Path,
     contract: &CoherenceContract,
 ) -> Result<ObligationCheck, CoherenceError> {
-    let baseline_manifest_path =
-        resolve_path(repo_root, contract.surfaces.baseline_manifest_path.as_str());
-    let baseline_manifest_text = read_text(&baseline_manifest_path)?;
-    let baseline_tasks = parse_baseline_task_ids_from_manifest(
-        &baseline_manifest_text,
-        contract.surfaces.baseline_task.as_str(),
-        &baseline_manifest_path,
-    )?;
+    let baseline_tasks = if contract.surfaces.baseline_manifest_path.trim().is_empty() {
+        Vec::new()
+    } else {
+        let baseline_manifest_path =
+            resolve_path(repo_root, contract.surfaces.baseline_manifest_path.as_str());
+        let baseline_manifest_text = read_text(&baseline_manifest_path)?;
+        parse_baseline_task_ids_from_manifest(
+            &baseline_manifest_text,
+            contract.surfaces.baseline_task.as_str(),
+            &baseline_manifest_path,
+        )?
+    };
     let baseline_set: BTreeSet<String> = baseline_tasks.iter().cloned().collect();
 
-    let ci_closure_text = read_text(&resolve_path(
-        repo_root,
-        contract.surfaces.ci_closure_path.as_str(),
-    ))?;
-    let ci_baseline_section = extract_section_between(
-        &ci_closure_text,
-        contract.surfaces.ci_closure_baseline_start.as_str(),
-        contract.surfaces.ci_closure_baseline_end.as_str(),
-    )?;
-    let ci_baseline_set = parse_backticked_tasks(ci_baseline_section)?;
+    let closure_text = if contract.surfaces.local_check_path.trim().is_empty() {
+        None
+    } else {
+        Some(read_text(&resolve_path(
+            repo_root,
+            contract.surfaces.local_check_path.as_str(),
+        ))?)
+    };
+    let local_baseline_set = if let Some(local_check_text) = closure_text.as_ref()
+        && !contract
+            .surfaces
+            .local_check_baseline_start
+            .trim()
+            .is_empty()
+        && !contract.surfaces.local_check_baseline_end.trim().is_empty()
+    {
+        let local_baseline_section = extract_section_between(
+            local_check_text,
+            contract.surfaces.local_check_baseline_start.as_str(),
+            contract.surfaces.local_check_baseline_end.as_str(),
+        )?;
+        parse_backticked_tasks(local_baseline_section)?
+    } else {
+        BTreeSet::new()
+    };
 
     let control_plane_contract_path = resolve_path(
         repo_root,
@@ -1666,12 +1590,27 @@ fn check_gate_chain_parity(
     );
     let projection_set: BTreeSet<String> = projection_checks.iter().cloned().collect();
 
-    let ci_projection_section = extract_section_between(
-        &ci_closure_text,
-        contract.surfaces.ci_closure_projection_start.as_str(),
-        contract.surfaces.ci_closure_projection_end.as_str(),
-    )?;
-    let ci_projection_set = parse_backticked_tasks(ci_projection_section)?;
+    let local_projection_set = if let Some(local_check_text) = closure_text.as_ref()
+        && !contract
+            .surfaces
+            .local_check_projection_start
+            .trim()
+            .is_empty()
+        && !contract
+            .surfaces
+            .local_check_projection_end
+            .trim()
+            .is_empty()
+    {
+        let local_projection_section = extract_section_between(
+            local_check_text,
+            contract.surfaces.local_check_projection_start.as_str(),
+            contract.surfaces.local_check_projection_end.as_str(),
+        )?;
+        parse_backticked_tasks(local_projection_section)?
+    } else {
+        BTreeSet::new()
+    };
 
     let mut failures = Vec::new();
     if control_plane_contract
@@ -1682,41 +1621,12 @@ fn check_gate_chain_parity(
     {
         failures.push("coherence.gate_chain_parity.projection_policy_invalid".to_string());
     }
-    if control_plane_contract
-        .required_witness
-        .witness_kind
-        .trim()
-        .is_empty()
-        || control_plane_contract
-            .required_witness
-            .decision_kind
-            .trim()
-            .is_empty()
+    if (!baseline_set.is_empty() || !local_baseline_set.is_empty())
+        && baseline_set != local_baseline_set
     {
-        failures.push("coherence.gate_chain_parity.required_witness_shape_invalid".to_string());
-    }
-    if control_plane_contract
-        .instruction_witness
-        .witness_kind
-        .trim()
-        .is_empty()
-        || control_plane_contract
-            .instruction_witness
-            .policy_kind
-            .trim()
-            .is_empty()
-        || control_plane_contract
-            .instruction_witness
-            .policy_digest_prefix
-            .trim()
-            .is_empty()
-    {
-        failures.push("coherence.gate_chain_parity.instruction_witness_shape_invalid".to_string());
-    }
-    if baseline_set != ci_baseline_set {
         failures.push("coherence.gate_chain_parity.baseline_set_mismatch".to_string());
     }
-    if projection_set != ci_projection_set {
+    if !local_projection_set.is_empty() && projection_set != local_projection_set {
         failures.push("coherence.gate_chain_parity.projection_set_mismatch".to_string());
     }
 
@@ -1766,15 +1676,11 @@ fn check_gate_chain_parity(
         failure_classes: dedupe_sorted(failures),
         details: json!({
             "baselineFromManifest": baseline_tasks,
-            "baselineFromCiClosure": sorted_vec_from_set(&ci_baseline_set),
+            "baselineFromLocalChecks": sorted_vec_from_set(&local_baseline_set),
+            "closureParityActive": closure_text.is_some(),
             "projectionPolicy": control_plane_contract.required_gate_projection.projection_policy,
             "projectionFromControlPlane": projection_checks,
-            "projectionFromCiClosure": sorted_vec_from_set(&ci_projection_set),
-            "requiredWitnessKind": control_plane_contract.required_witness.witness_kind,
-            "requiredDecisionKind": control_plane_contract.required_witness.decision_kind,
-            "instructionWitnessKind": control_plane_contract.instruction_witness.witness_kind,
-            "instructionPolicyKind": control_plane_contract.instruction_witness.policy_kind,
-            "instructionPolicyDigestPrefix": control_plane_contract.instruction_witness.policy_digest_prefix,
+            "projectionFromLocalChecks": sorted_vec_from_set(&local_projection_set),
             "schemaLifecycle": schema_lifecycle_check.details,
             "stage1Parity": stage1_parity_check.details,
             "stage1Rollback": stage1_rollback_check.details,
@@ -2752,19 +2658,11 @@ fn evaluate_gate_chain_worker_lane_authority(
         "activeEpoch": active_epoch.clone(),
         "requiredDefaultMode": WORKER_MUTATION_DEFAULT_MODE,
         "requiredAllowedModes": required_allowed_modes,
-        "requiredMutationRoutes": {
-            "issueClaim": WORKER_ROUTE_ISSUE_CLAIM,
-            "issueLeaseRenew": WORKER_ROUTE_ISSUE_LEASE_RENEW,
-            "issueLeaseRelease": WORKER_ROUTE_ISSUE_LEASE_RELEASE,
-            "issueDiscover": WORKER_ROUTE_ISSUE_DISCOVER,
-        },
         "requiredFailureClasses": {
             "policyDrift": WORKER_CLASS_POLICY_DRIFT,
             "mutationModeDrift": WORKER_CLASS_MUTATION_MODE_DRIFT,
-            "routeUnbound": WORKER_CLASS_ROUTE_UNBOUND,
         },
         "mutationPolicy": null,
-        "mutationRoutes": null,
         "failureClasses": null,
         "compatibilityOverrides": null,
     });
@@ -2787,7 +2685,6 @@ fn evaluate_gate_chain_worker_lane_authority(
     };
 
     details["mutationPolicy"] = json!(&worker_lane.mutation_policy);
-    details["mutationRoutes"] = json!(&worker_lane.mutation_routes);
     details["failureClasses"] = json!(&worker_lane.failure_classes);
     details["compatibilityOverrides"] = json!(&worker_lane.mutation_policy.compatibility_overrides);
 
@@ -2853,23 +2750,11 @@ fn evaluate_gate_chain_worker_lane_authority(
         failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
     }
 
-    if worker_lane.mutation_routes.issue_claim.trim() != WORKER_ROUTE_ISSUE_CLAIM
-        || worker_lane.mutation_routes.issue_lease_renew.trim() != WORKER_ROUTE_ISSUE_LEASE_RENEW
-        || worker_lane.mutation_routes.issue_lease_release.trim()
-            != WORKER_ROUTE_ISSUE_LEASE_RELEASE
-        || worker_lane.mutation_routes.issue_discover.trim() != WORKER_ROUTE_ISSUE_DISCOVER
-    {
-        failures.push(GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE.to_string());
-    }
-
     if worker_lane.failure_classes.policy_drift.trim() != WORKER_CLASS_POLICY_DRIFT {
         failures.push(GATE_CHAIN_WORKER_POLICY_DRIFT_FAILURE.to_string());
     }
     if worker_lane.failure_classes.mutation_mode_drift.trim() != WORKER_CLASS_MUTATION_MODE_DRIFT {
         failures.push(GATE_CHAIN_WORKER_MUTATION_MODE_DRIFT_FAILURE.to_string());
-    }
-    if worker_lane.failure_classes.route_unbound.trim() != WORKER_CLASS_ROUTE_UNBOUND {
-        failures.push(GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE.to_string());
     }
 
     ObligationCheck {
@@ -5556,10 +5441,10 @@ mod tests {
         );
     }
 
-    fn write_gate_chain_ci_closure(path: &Path) {
+    fn write_gate_chain_local_checks(path: &Path) {
         write_text_file(
             path,
-            r#"Current full baseline gate (`sh tools/ci/run_task.sh baseline`) includes:
+            r#"Current local checker gate (`cargo test --workspace`) includes:
 - `baseline`
 - `build`
 - `test`
@@ -5597,80 +5482,21 @@ Current deterministic projected check IDs include:
                             }
                         ]
                     },
-                    "requiredWitnessKind": {
-                        "canonicalKind": "ci.required.v1",
-                        "compatibilityAliases": [
-                            {
-                                "aliasKind": "ci.required.v0",
-                                "supportUntilEpoch": "2026-06",
-                                "replacementKind": "ci.required.v1"
-                            }
-                        ]
-                    },
-                    "requiredDecisionKind": {
-                        "canonicalKind": "ci.required.decision.v1",
-                        "compatibilityAliases": [
-                            {
-                                "aliasKind": "ci.required.decision.v0",
-                                "supportUntilEpoch": "2026-06",
-                                "replacementKind": "ci.required.decision.v1"
-                            }
-                        ]
-                    },
-                    "instructionWitnessKind": {
-                        "canonicalKind": "ci.instruction.v1",
-                        "compatibilityAliases": [
-                            {
-                                "aliasKind": "ci.instruction.v0",
-                                "supportUntilEpoch": "2026-06",
-                                "replacementKind": "ci.instruction.v1"
-                            }
-                        ]
-                    },
-                    "instructionPolicyKind": {
-                        "canonicalKind": "ci.instruction.policy.v1",
-                        "compatibilityAliases": [
-                            {
-                                "aliasKind": "ci.instruction.policy.v0",
-                                "supportUntilEpoch": "2026-06",
-                                "replacementKind": "ci.instruction.policy.v1"
-                            }
-                        ]
-                    },
                     "requiredProjectionPolicy": {
-                        "canonicalKind": "ci-topos-v0",
+                        "canonicalKind": "premath-local-checks-v0",
                         "compatibilityAliases": [
                             {
-                                "aliasKind": "ci-topos-v0-preview",
+                                "aliasKind": "premath-local-checks-v0-preview",
                                 "supportUntilEpoch": "2026-06",
-                                "replacementKind": "ci-topos-v0"
-                            }
-                        ]
-                    },
-                    "requiredDeltaKind": {
-                        "canonicalKind": "ci.required.delta.v1",
-                        "compatibilityAliases": [
-                            {
-                                "aliasKind": "ci.delta.v1",
-                                "supportUntilEpoch": "2026-06",
-                                "replacementKind": "ci.required.delta.v1"
+                                "replacementKind": "premath-local-checks-v0"
                             }
                         ]
                     }
                 }
             },
             "requiredGateProjection": {
-                "projectionPolicy": "ci-topos-v0",
+                "projectionPolicy": "premath-local-checks-v0",
                 "checkOrder": ["baseline", "build", "test"]
-            },
-            "requiredWitness": {
-                "witnessKind": "ci.required.v1",
-                "decisionKind": "ci.required.decision.v1"
-            },
-            "instructionWitness": {
-                "witnessKind": "ci.instruction.v1",
-                "policyKind": "ci.instruction.policy.v1",
-                "policyDigestPrefix": "pol1_"
             },
             "evidenceStage1Parity": {
                 "profileKind": "ev.stage1.core.v1",
@@ -5810,16 +5636,9 @@ Current deterministic projected check IDs include:
                         }
                     ]
                 },
-                "mutationRoutes": {
-                    "issueClaim": "capabilities.change_morphisms.issue_claim",
-                    "issueLeaseRenew": "capabilities.change_morphisms.issue_lease_renew",
-                    "issueLeaseRelease": "capabilities.change_morphisms.issue_lease_release",
-                    "issueDiscover": "capabilities.change_morphisms.issue_discover"
-                },
                 "failureClasses": {
                     "policyDrift": "worker_lane_policy_drift",
-                    "mutationModeDrift": "worker_lane_mutation_mode_drift",
-                    "routeUnbound": "worker_lane_route_unbound"
+                    "mutationModeDrift": "worker_lane_mutation_mode_drift"
                 }
             }
         })
@@ -5827,15 +5646,16 @@ Current deterministic projected check IDs include:
 
     fn test_contract_for_gate_chain(control_plane_contract_path: &str) -> CoherenceContract {
         let mut contract = test_contract_with_fixture_roots("", "");
-        contract.surfaces.baseline_manifest_path = "tools/ci/baseline_tasks.json".to_string();
+        contract.surfaces.baseline_manifest_path = "tests/check-manifest.json".to_string();
         contract.surfaces.baseline_task = "baseline".to_string();
-        contract.surfaces.ci_closure_path = "docs/design/control-plane/CI-CLOSURE.md".to_string();
-        contract.surfaces.ci_closure_baseline_start =
-            "Current full baseline gate (`sh tools/ci/run_task.sh baseline`) includes:".to_string();
-        contract.surfaces.ci_closure_baseline_end = "Local command:".to_string();
-        contract.surfaces.ci_closure_projection_start =
+        contract.surfaces.local_check_path =
+            "docs/design/control-plane/LOCAL-CHECKS.md".to_string();
+        contract.surfaces.local_check_baseline_start =
+            "Current local checker gate (`cargo test --workspace`) includes:".to_string();
+        contract.surfaces.local_check_baseline_end = "Local command:".to_string();
+        contract.surfaces.local_check_projection_start =
             "Current deterministic projected check IDs include:".to_string();
-        contract.surfaces.ci_closure_projection_end =
+        contract.surfaces.local_check_projection_end =
             "## 5. Variants and capability projection".to_string();
         contract.surfaces.control_plane_contract_path = control_plane_contract_path.to_string();
         contract
@@ -6082,19 +5902,19 @@ Current deterministic projected check IDs include:
             surfaces: CoherenceSurfaces {
                 capability_registry_path: String::new(),
                 capability_registry_kind: String::new(),
-                conformance_path: String::new(),
+                checker_claims_path: String::new(),
                 capability_manifest_root: String::new(),
                 readme_path: String::new(),
-                conformance_readme_path: String::new(),
+                checker_claims_readme_path: String::new(),
                 spec_index_path: String::new(),
                 spec_index_capability_heading: String::new(),
                 spec_index_informative_heading: String::new(),
                 spec_index_overlay_heading: String::new(),
-                ci_closure_path: String::new(),
-                ci_closure_baseline_start: String::new(),
-                ci_closure_baseline_end: String::new(),
-                ci_closure_projection_start: String::new(),
-                ci_closure_projection_end: String::new(),
+                local_check_path: String::new(),
+                local_check_baseline_start: String::new(),
+                local_check_baseline_end: String::new(),
+                local_check_projection_start: String::new(),
+                local_check_projection_end: String::new(),
                 baseline_manifest_path: String::new(),
                 baseline_task: String::new(),
                 control_plane_contract_path: String::new(),
@@ -6148,8 +5968,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_accepts_valid_lane_registry() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-valid");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         write_json_file(
             &temp
                 .path()
@@ -6167,8 +5991,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_missing_schema_lifecycle() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-missing");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload
             .as_object_mut()
@@ -6195,10 +6023,15 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_expired_schema_alias() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-expired-alias");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
-        payload["requiredWitness"]["witnessKind"] = json!("ci.required.v0");
+        payload["requiredGateProjection"]["projectionPolicy"] =
+            json!("premath-local-checks-v0-preview");
         payload["schemaLifecycle"]["activeEpoch"] = json!("2026-07");
         write_json_file(
             &temp
@@ -6221,8 +6054,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_freeze_with_active_aliases() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-with-aliases");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["schemaLifecycle"]["governance"] = json!({
             "mode": "freeze",
@@ -6251,8 +6088,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_accepts_freeze_without_aliases() {
         let temp = TempDirGuard::new("gate-chain-schema-lifecycle-freeze-no-aliases");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["schemaLifecycle"]["governance"] = json!({
             "mode": "freeze",
@@ -6286,8 +6127,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_duplicate_lane_ids() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-duplicate-ids");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceLanes"]["runtimeTransport"] = json!("strict_checker");
         write_json_file(
@@ -6311,8 +6156,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_unknown_lane_artifact_kind_mapping() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-unknown-lane-kind");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["laneArtifactKinds"]["unknown_lane"] = json!(["opaque_kind"]);
         write_json_file(
@@ -6336,8 +6185,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_missing_cross_lane_route() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-missing-route");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["laneOwnership"]["requiredCrossLaneWitnessRoute"] = Value::Null;
         write_json_file(
@@ -6361,8 +6214,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_checker_core_ownership_violation() {
         let temp = TempDirGuard::new("gate-chain-lane-registry-ownership-violation");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["laneOwnership"]["checkerCoreOnlyObligations"] =
             json!(["cwf_substitution_identity", "span_square_commutation"]);
@@ -6387,8 +6244,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_worker_lane_default_mode_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-default-mode-drift");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationPolicy"]["defaultMode"] = json!("human-override");
         write_json_file(
@@ -6410,35 +6271,14 @@ Current deterministic projected check IDs include:
     }
 
     #[test]
-    fn check_gate_chain_parity_rejects_worker_lane_route_drift() {
-        let temp = TempDirGuard::new("gate-chain-worker-lane-route-drift");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
-        let mut payload = base_control_plane_contract_payload();
-        payload["workerLaneAuthority"]["mutationRoutes"]["issueDiscover"] = json!("issue_discover");
-        write_json_file(
-            &temp
-                .path()
-                .join("specs/premath/draft/CONTROL-PLANE-CONTRACT.json"),
-            &payload,
-        );
-        let contract =
-            test_contract_for_gate_chain("specs/premath/draft/CONTROL-PLANE-CONTRACT.json");
-
-        let evaluated =
-            check_gate_chain_parity(temp.path(), &contract).expect("gate parity should evaluate");
-        assert!(
-            evaluated
-                .failure_classes
-                .contains(&GATE_CHAIN_WORKER_ROUTE_UNBOUND_FAILURE.to_string())
-        );
-    }
-
-    #[test]
     fn check_gate_chain_parity_rejects_worker_lane_policy_drift() {
         let temp = TempDirGuard::new("gate-chain-worker-lane-policy-drift");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["workerLaneAuthority"]["mutationPolicy"]["compatibilityOverrides"][0]["supportUntilEpoch"] =
             json!("2026-01");
@@ -6463,8 +6303,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_evidence_factorization_missing_route() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-missing-route");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["factorizationRoutes"] = json!([]);
         write_json_file(
@@ -6488,8 +6332,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_evidence_factorization_ambiguous_routes() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-ambiguous-routes");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["factorizationRoutes"] =
             json!(["eta.route_a", "eta.route_b"]);
@@ -6514,8 +6362,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_evidence_factorization_unbound_binding() {
         let temp = TempDirGuard::new("gate-chain-evidence-factorization-unbound-binding");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceFactorization"]["binding"]["policyDigestRef"] = json!("policy");
         write_json_file(
@@ -6539,8 +6391,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_missing_route() {
         let temp = TempDirGuard::new("gate-chain-stage1-missing-route");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["authorityToTypedCoreRoute"] = json!("");
         write_json_file(
@@ -6564,8 +6420,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage1-unbound-binding");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["comparisonTuple"]["normalizerIdRef"] = json!("normalizer");
         write_json_file(
@@ -6589,8 +6449,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage1-failure-class-mismatch");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["failureClasses"]["mismatch"] = json!("ev.parity.mismatch");
         write_json_file(
@@ -6614,8 +6478,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_missing_profile_kind() {
         let temp = TempDirGuard::new("gate-chain-stage1-missing-profile-kind");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Parity"]["profileKind"] = json!("");
         write_json_file(
@@ -6639,8 +6507,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_rollback_missing_trigger_classes() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-missing-triggers");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["triggerFailureClasses"] =
             json!(["unification.evidence_stage1.parity.missing"]);
@@ -6665,8 +6537,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_rollback_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-unbound-binding");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["identityRefs"]["policyDigestRef"] = json!("policy");
         write_json_file(
@@ -6690,8 +6566,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage1_rollback_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage1-rollback-class-mismatch");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage1Rollback"]["failureClasses"]["identityDrift"] =
             json!("ev.rollback.identity");
@@ -6716,8 +6596,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_alias_role_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-alias-role-mismatch");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["compatibilityAlias"]["role"] = json!("authority");
         write_json_file(
@@ -6741,8 +6625,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_alias_window_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-alias-window-mismatch");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["compatibilityAlias"]["supportUntilEpoch"] =
             json!("2026-07");
@@ -6767,8 +6655,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_unbound_binding_tuple() {
         let temp = TempDirGuard::new("gate-chain-stage2-unbound-binding");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["typedAuthority"]["policyDigestRef"] = json!("policy");
         write_json_file(
@@ -6792,8 +6684,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-failure-class-mismatch");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["failureClasses"]["unbound"] =
             json!("unification.evidence_stage2.not_bound");
@@ -6818,8 +6714,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_core_obligation_route_obligation_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-core-obligation-route-mismatch");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["coreObligationEvidenceRoute"]["requiredObligations"] =
             json!(["stability"]);
@@ -6844,8 +6744,12 @@ Current deterministic projected check IDs include:
     #[test]
     fn check_gate_chain_parity_rejects_stage2_core_obligation_route_failure_class_mismatch() {
         let temp = TempDirGuard::new("gate-chain-stage2-core-obligation-route-class-mismatch");
-        write_gate_chain_baseline_manifest(&temp.path().join("tools/ci/baseline_tasks.json"));
-        write_gate_chain_ci_closure(&temp.path().join("docs/design/control-plane/CI-CLOSURE.md"));
+        write_gate_chain_baseline_manifest(&temp.path().join("tests/check-manifest.json"));
+        write_gate_chain_local_checks(
+            &temp
+                .path()
+                .join("docs/design/control-plane/LOCAL-CHECKS.md"),
+        );
         let mut payload = base_control_plane_contract_payload();
         payload["evidenceStage2Authority"]["coreObligationEvidenceRoute"]["failureClasses"]["drift"] =
             json!("unification.evidence_stage2.kernel_drift");

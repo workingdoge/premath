@@ -22,10 +22,10 @@ Promotion bar used for this review:
 
 - `specs/premath/draft/README.md`
 - `specs/premath/draft/SPEC-INDEX.md`
-- `specs/premath/draft/CONFORMANCE.md`
+- `specs/premath/draft/CHECKER-CLAIMS.md`
 - `specs/premath/draft/SPEC-TRACEABILITY.md`
 - `specs/process/coss.md`
-- `specs/process/HARNESS-SPEC-PROMOTION-MAP.md`
+- the retired draft-promotion checklist used during the earlier runtime split
 - `specs/process/decision-log.md` Decision 0038
 
 ## 2. Review Outcome
@@ -50,13 +50,13 @@ authority model.
 ### 3.1 No draft claim or profile placement exists yet
 
 Promoted draft specs in this repo are active, claim-bearing contracts. The
-current draft surface routes normativity through `SPEC-INDEX`, `CONFORMANCE`,
+current draft surface routes normativity through `SPEC-INDEX`, `CHECKER-CLAIMS`,
 optional capability claims, and optional profile overlays.
 
 The absorbed ASP/IDENT/JWT pack currently has no such placement:
 
 - no `SPEC-INDEX` claim or profile entry,
-- no `CONFORMANCE` claim behavior,
+- no `CHECKER-CLAIMS` claim behavior,
 - no `CAPABILITY-REGISTRY` or profile-overlay binding,
 - no draft `README` or index integration.
 
@@ -71,12 +71,12 @@ Promoted draft docs in this repo are expected to land with an explicit
 The absorbed pack currently has:
 
 - no `SPEC-TRACEABILITY` rows,
-- no canonical vector suites named from `CONFORMANCE`,
+- no canonical vector suites named from `CHECKER-CLAIMS`,
 - no deterministic witness/failure mapping surface comparable to other promoted
   draft docs.
 
-This misses the promotion bar documented in the harness promotion map and in
-Decision 0038's raw-to-draft policy.
+This misses the promotion bar documented in Decision 0038's raw-to-draft
+policy.
 
 ### 3.3 The absorbed tree and manifest are archival, not repo-native
 
@@ -134,7 +134,7 @@ unclaimed parallel stack. The likely clean shape is:
    - a separate retained raw research line that never becomes draft authority
 2. define that placement in:
    - `specs/premath/draft/SPEC-INDEX.md`
-   - `specs/premath/draft/CONFORMANCE.md`
+   - `specs/premath/draft/CHECKER-CLAIMS.md`
    - `specs/premath/draft/CAPABILITY-REGISTRY.json` and/or `specs/premath/profile/`
 3. choose the promoted target set and names rather than mechanically mirroring
    the absorbed package tree
@@ -147,7 +147,7 @@ Before re-review for draft adoption, the promotion-prep lane should close all of
 the following:
 
 - [ ] claim/profile placement chosen and recorded in `SPEC-INDEX`
-- [ ] `CONFORMANCE` updated with deterministic behavior and vector ownership for
+- [ ] `CHECKER-CLAIMS` updated with deterministic behavior and vector ownership for
       the claimed surfaces
 - [ ] `SPEC-TRACEABILITY` rows defined for every promoted target
 - [ ] deterministic witness/failure mappings named for obstruction/search/trust

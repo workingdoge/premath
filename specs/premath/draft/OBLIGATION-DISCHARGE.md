@@ -152,5 +152,5 @@ Not preserved:
 
 - `dm.transport.world` (handled by `raw/SQUEAK-CORE`)
 - `dm.transport.location` (handled by `raw/SQUEAK-SITE`)
-- `dm.profile.execution` (handled by runtime/CI layer)
+- `dm.profile.execution` (handled by runtime layer)
 - `dm.presentation.projection` (handled by projection layer)

@@ -8,7 +8,5 @@ This directory contains lifecycle and governance documents for the Premath spec 
   rollover/freeze transitions in control-plane schema tables.
 - `IMPLEMENTATION-STATUS.md` — non-normative historical status snapshot moved
   out of `draft/SPEC-INDEX.md`; live status remains issue-memory authority.
-- `HARNESS-SPEC-PROMOTION-MAP.md` — parallel-safe preflight map/checklist for
-  promoting harness design docs into draft spec surfaces.
 - `PREMATH-SPECS-0.1.0-DRAFT-PROMOTION-REVIEW.md` — non-normative review
   artifact for the absorbed ASP/IDENT/JWT raw pack and its draft-promotion bar.

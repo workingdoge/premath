@@ -11,10 +11,6 @@
       "capabilityId": "capabilities.squeak_site"
     },
     {
-      "docRef": "raw/PREMATH-CI",
-      "capabilityId": "capabilities.ci_witnesses"
-    },
-    {
       "docRef": "draft/LLM-INSTRUCTION-DOCTRINE",
       "capabilityId": "capabilities.instruction_typing"
     },
@@ -29,10 +25,6 @@
     {
       "docRef": "draft/CHANGE-MORPHISMS",
       "capabilityId": "capabilities.change_morphisms"
-    },
-    {
-      "docRef": "draft/HARNESS-TYPESTATE",
-      "capabilityId": "capabilities.change_morphisms"
     }
   ],
   "executableCapabilities": [
@@ -40,7 +32,6 @@
     "capabilities.kcir_witnesses",
     "capabilities.commitment_checkpoints",
     "capabilities.squeak_site",
-    "capabilities.ci_witnesses",
     "capabilities.instruction_typing",
     "capabilities.adjoints_sites",
     "capabilities.change_morphisms"

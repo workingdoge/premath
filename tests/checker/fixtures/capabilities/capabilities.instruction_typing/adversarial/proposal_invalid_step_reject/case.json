@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "status": "executable",
+  "capabilityId": "capabilities.instruction_typing",
+  "vectorId": "adversarial/proposal_invalid_step_reject",
+  "description": "Derivation proposals reject when a step cannot be replayed deterministically.",
+  "semanticScenarioId": "instruction_proposal_invalid_step_01",
+  "artifacts": {
+    "claimedCapabilities": ["capabilities.instruction_typing"],
+    "policy": {
+      "allowUnknown": false
+    },
+    "classificationA": {
+      "state": "typed",
+      "kind": "proposal.derivation"
+    },
+    "classificationB": {
+      "state": "typed",
+      "kind": "proposal.derivation"
+    },
+    "proposalA": {
+      "proposalKind": "derivation",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "mor",
+        "shape": "mor:eq"
+      },
+      "steps": [
+        {
+          "ruleId": "",
+          "inputs": ["ref:a"],
+          "outputs": ["ref:b"],
+          "claim": "broken step"
+        }
+      ],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_d75dd14779526e6ffbe41629291fe70646afa8b870560cc21b3097160758f9aa"
+      }
+    },
+    "proposalB": {
+      "proposalKind": "derivation",
+      "targetCtxRef": "ctx:repo.main",
+      "targetJudgment": {
+        "kind": "mor",
+        "shape": "mor:eq"
+      },
+      "steps": [
+        {
+          "ruleId": "",
+          "inputs": ["ref:a"],
+          "outputs": ["ref:b"],
+          "claim": "broken step"
+        }
+      ],
+      "binding": {
+        "normalizerId": "normalizer.test.v1",
+        "policyDigest": "pol1_d75dd14779526e6ffbe41629291fe70646afa8b870560cc21b3097160758f9aa"
+      }
+    }
+  }
+}

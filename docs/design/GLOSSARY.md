@@ -9,13 +9,11 @@ Scope: design-level, non-normative
 - Full constructor environment: contexts, covers, indexed definables, admissibility checks, witnesses.
 
 `Tusk`
-- Runtime/integration layer that realizes Premath laws in execution.
+- Downstream runtime/integration layer that consumes Premath checker and witness
+  artifacts.
 
 `Tusk unit`
 - Recursive local solver with downward spawning and upward summary/obligation/witness return.
-
-`tusk-core`
-- Single-world execution contracts and interfaces.
 
 `tusk-sigpi`
 - Inter-world transport/composition layer.
@@ -26,9 +24,7 @@ Scope: design-level, non-normative
 `DoctrineOperationSite`
 - Site-shaped map from doctrine declarations to operational entrypoints.
 - In this repo: `specs/premath/draft/DOCTRINE-SITE.{md,json}` validated by
-  doctrine-site + MCP parity checks
-  (`tools/conformance/check_doctrine_site.py`,
-  `tools/conformance/check_doctrine_mcp_parity.py`).
+  doctrine-site checks (`crates/premath-cli/src/commands/traceability_check.rs`).
 
 `LLM Instruction Doctrine`
 - Doctrine-level constraints for typed instruction handling, unknown classification, and deterministic instruction-to-witness binding.
@@ -65,21 +61,6 @@ Scope: design-level, non-normative
 `OverlapId`
 - World-defined overlap obligation identifier between cover parts.
 
-`DescentCore`
-- Core presheaf-like package of locals, overlap evidence, and mode (no glue proposals).
-
-`DescentPack`
-- `DescentCore` plus `GlueProposalSet`.
-
-`GlueProposal`
-- Adapter-proposed global assembly from local states.
-
-`GlueResult`
-- World-selected global result under declared mode (or explicit non-contractibility failure).
-
-`GlueSelectionFailure`
-- World-side glue selection failure mapped to `descent_failure` or `glue_non_contractible`.
-
 `QueryProjection`
 - Rebuildable read model/index layer.
 
@@ -96,18 +77,6 @@ Scope: design-level, non-normative
 `executor_runner`
 - Executable adapter used by `executor_profile=external` to provision/target host substrate.
 - Responsible for startup/teardown/routing diagnostics; not admissibility semantics.
-
-`infra_profile`
-- Provisioning-plane selector for substrate startup/binding (for example Terraform/OpenTofu).
-- Must not alter required check semantics or Gate-class outcomes.
-
-`hk`
-- Hook/gate runner used to execute check/fix profiles.
-- Executes policy-defined checks; does not define kernel admissibility semantics.
-
-`pitchfork`
-- Optional local daemon/orchestration runtime for long-lived or scheduled dev processes.
-- Operational executor only; does not alter gate semantics.
 
 `intent_id`
 - Stable identifier for declared run intent.

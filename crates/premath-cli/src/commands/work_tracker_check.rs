@@ -1,4 +1,4 @@
-use premath_kernel::{WorkTrackerCheckInput, evaluate_work_tracker_checker};
+use premath_coherence::{WorkTrackerCheckInput, evaluate_work_tracker_checker};
 use std::fs;
 use std::path::PathBuf;
 

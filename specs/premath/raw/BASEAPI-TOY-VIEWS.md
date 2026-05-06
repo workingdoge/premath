@@ -218,4 +218,4 @@ encoded as canonical mapIds per §3.1.
 - It is sufficient to exercise locality, descent, and BC-style base-change in a
   small, auditable setting.
 - Production deployments MAY use different context models; they should add new
-  Base API specifications and conformance suites rather than mutating this one.
+  Base API specifications and checker suites rather than mutating this one.

@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "result": "rejected",
-  "expectedFailureClasses": [
-    "handoff.required_artifact_missing"
-  ],
-  "expectedJoinClosed": false
-}

@@ -51,8 +51,9 @@ Conforming stacks SHOULD be read as:
 
 1. Doctrine layer (`draft/DOCTRINE-INF`)
 2. Institution/kernel layer (`draft/PREMATH-KERNEL`, `draft/GATE`)
-3. Obligation/runtime layer (`raw/TUSK-CORE`, `raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`)
-4. CI/projection layer (`raw/PREMATH-CI`, `raw/CI-TOPOS`)
+3. Obligation/runtime layer (`raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`)
+4. Checker/projection layer (`draft/PREMATH-COHERENCE`,
+   `draft/CONTROL-PLANE-CONTRACT`)
 
 Lower layers MUST publish which doctrine morphism classes they preserve.
 
@@ -121,7 +122,7 @@ Morphisms from `unknown(reason)` MAY be restricted by policy (for example:
 clarify-only, plan-only, escalation-required), but this restriction MUST be
 explicitly declared in runtime/profile policy material.
 
-## 7. Conformance expectations
+## 7. Checker expectations
 
 Conforming implementations SHOULD:
 
@@ -155,7 +156,7 @@ Applicability (conditional normative):
 - this profile is normative only for surfaces that explicitly claim
   `profile.doctrine_inf_governance.v0`,
 - surfaces that do not claim this profile MAY omit §9 obligations and MUST NOT
-  advertise governance-profile conformance.
+  advertise governance-profile claim.
 
 ### 9.1 Policy provenance binding
 

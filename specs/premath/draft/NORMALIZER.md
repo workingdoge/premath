@@ -92,7 +92,7 @@ If a policy flag is false, the normalizer MUST reject corresponding NF
 tags/constructors.
 
 `adoptPullAtomMor` is an internal normalization policy flag. It is not an active
-conformance capability claim unless promoted by `draft/CAPABILITY-REGISTRY.json`.
+capability claim unless promoted by `draft/CAPABILITY-REGISTRY.json`.
 
 ## 4. Normalizer identity and policy digest
 

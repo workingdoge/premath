@@ -11,7 +11,7 @@
 //!
 //! The Gate is parameterized by a `World` trait that provides the constructor
 //! interface. This allows the same Gate logic to work with the toy bit-worlds
-//! (for testing) and with real bd/JJ backends.
+//! (for testing) and with real profile/domain implementations.
 
 use crate::witness::{GateFailure, GateResult, failure_class, law_ref};
 use serde_json::Value;
@@ -20,8 +20,8 @@ use serde_json::Value;
 ///
 /// A World provides all the operations the Gate needs to check admissibility.
 /// This is deliberately abstract — the toy bit-worlds implement it with
-/// bitmasks and lookup tables; the real bd backend implements it with
-/// JJ repos and SurrealDB.
+/// bitmasks and lookup tables; real profile/domain implementations can use
+/// concrete stores.
 ///
 /// All operations are parameterized by bitmask-style context identifiers
 /// (u64) for simplicity. Real implementations may use richer context types.

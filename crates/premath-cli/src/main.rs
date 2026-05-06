@@ -2,156 +2,14 @@
 
 mod cli;
 mod commands;
-mod support;
 
 use clap::Parser;
-use cli::{
-    Cli, Commands, HarnessFeatureCommands, HarnessSessionCommands, HarnessTrajectoryCommands,
-    RefCommands,
-};
+use cli::{Cli, Commands, RefCommands};
 
 fn main() {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Check {
-            id,
-            level,
-            issues,
-            repo,
-            json,
-        } => commands::check::run(id, level, issues, repo, json),
-
-        Commands::Verify {
-            id,
-            level,
-            issues,
-            repo,
-            json,
-        } => commands::verify::run(id, level, issues, repo, json),
-
-        Commands::MockGate {
-            world_id,
-            unit_id,
-            parent_unit_id,
-            context_id,
-            cover_id,
-            ctx_ref,
-            data_head_ref,
-            adapter_id,
-            adapter_version,
-            normalizer_id,
-            policy_digest,
-            cover_strategy_digest,
-            intent_kind,
-            target_scope,
-            outcomes,
-            failures,
-            include_cover_strategy_in_run_id,
-            json,
-        } => commands::mock_gate::run(commands::mock_gate::Args {
-            world_id,
-            unit_id,
-            parent_unit_id,
-            context_id,
-            cover_id,
-            ctx_ref,
-            data_head_ref,
-            adapter_id,
-            adapter_version,
-            normalizer_id,
-            policy_digest,
-            cover_strategy_digest,
-            intent_kind,
-            target_scope,
-            outcomes,
-            failures,
-            include_cover_strategy_in_run_id,
-            json,
-        }),
-
-        Commands::TuskEval {
-            identity,
-            descent_pack,
-            include_cover_strategy_in_run_id,
-            json,
-        } => commands::tusk_eval::run(
-            identity,
-            descent_pack,
-            include_cover_strategy_in_run_id,
-            json,
-        ),
-
-        Commands::Init { path } => commands::init::run(path),
-
-        Commands::Observe {
-            surface,
-            mode,
-            instruction_id,
-            projection_digest,
-            projection_match,
-            json,
-        } => commands::observe::run(commands::observe::Args {
-            surface,
-            mode,
-            instruction_id,
-            projection_digest,
-            projection_match,
-            json,
-        }),
-
-        Commands::ObserveBuild {
-            repo_root,
-            ciwitness_dir,
-            issues_path,
-            out_json,
-            out_jsonl,
-            json,
-        } => commands::observe_build::run(commands::observe_build::Args {
-            repo_root,
-            ciwitness_dir,
-            issues_path,
-            out_json,
-            out_jsonl,
-            json,
-        }),
-
-        Commands::ObserveCheck {
-            repo_root,
-            ciwitness_dir,
-            issues_path,
-            surface,
-            json,
-        } => commands::observe_check::run(commands::observe_check::Args {
-            repo_root,
-            ciwitness_dir,
-            issues_path,
-            surface,
-            json,
-        }),
-
-        Commands::ObserveServe { surface, bind } => commands::observe_serve::run(surface, bind),
-
-        Commands::McpServe {
-            issues,
-            issue_query_backend,
-            issue_query_projection,
-            mutation_policy,
-            surface,
-            repo_root,
-            server_name,
-            server_version,
-        } => commands::mcp_serve::run(commands::mcp_serve::Args {
-            issues,
-            issue_query_backend,
-            issue_query_projection,
-            mutation_policy,
-            surface,
-            repo_root,
-            server_name,
-            server_version,
-        }),
-
         Commands::CoherenceCheck {
             contract,
             repo_root,
@@ -170,19 +28,9 @@ fn main() {
             json,
         }),
 
-        Commands::ConformanceCheck { fixtures, json } => {
-            commands::conformance_check::run(fixtures, json)
-        }
-
         Commands::CommandSurfaceCheck { repo_root, json } => {
             commands::command_surface_check::run(repo_root, json)
         }
-
-        Commands::PipelineWiringCheck {
-            repo_root,
-            contract,
-            json,
-        } => commands::pipeline_wiring_check::run(repo_root, contract, json),
 
         Commands::RepoHygieneCheck {
             repo_root,
@@ -190,72 +38,22 @@ fn main() {
             json,
         } => commands::repo_hygiene_check::run(repo_root, paths, json),
 
+        Commands::DriftBudgetCheck {
+            repo_root,
+            coherence_json,
+            topology_budget,
+            json,
+        } => commands::drift_budget_check::run(commands::drift_budget_check::Args {
+            repo_root,
+            coherence_json,
+            topology_budget,
+            json,
+        }),
+
         Commands::ProposalCheck { proposal, json } => commands::proposal_check::run(proposal, json),
-
-        Commands::InstructionCheck {
-            instruction,
-            repo_root,
-            json,
-        } => commands::instruction_check::run(instruction, repo_root, json),
-
-        Commands::InstructionWitness {
-            instruction,
-            runtime,
-            pre_execution_failure_class,
-            pre_execution_reason,
-            repo_root,
-            json,
-        } => commands::instruction_witness::run(
-            instruction,
-            runtime,
-            pre_execution_failure_class,
-            pre_execution_reason,
-            repo_root,
-            json,
-        ),
-
-        Commands::RequiredWitness { runtime, json } => {
-            commands::required_witness::run(runtime, json)
-        }
 
         Commands::RequiredProjection { input, json } => {
             commands::required_projection::run(input, json)
-        }
-
-        Commands::RequiredDelta { input, json } => commands::required_delta::run(input, json),
-
-        Commands::RequiredGateRef {
-            input,
-            fallback_check_id,
-            fallback_exit_code,
-            fallback_projection_digest,
-            fallback_policy_digest,
-            fallback_ctx_ref,
-            fallback_data_head_ref,
-            gate_payload_out,
-            json,
-        } => commands::required_gate_ref::run(commands::required_gate_ref::RunOptions {
-            input,
-            fallback_check_id,
-            fallback_exit_code,
-            fallback_projection_digest,
-            fallback_policy_digest,
-            fallback_ctx_ref,
-            fallback_data_head_ref,
-            gate_payload_out,
-            json_output: json,
-        }),
-
-        Commands::RequiredWitnessVerify { input, json } => {
-            commands::required_witness_verify::run(input, json)
-        }
-
-        Commands::RequiredWitnessDecide { input, json } => {
-            commands::required_witness_decide::run(input, json)
-        }
-
-        Commands::RequiredDecisionVerify { input, json } => {
-            commands::required_decision_verify::run(input, json)
         }
 
         Commands::ObligationRegistry { json } => commands::obligation_registry::run(json),
@@ -290,125 +88,10 @@ fn main() {
             }),
         },
 
-        Commands::Issue { command } => commands::issue::run(command),
-
-        Commands::HarnessSession { command } => match command {
-            HarnessSessionCommands::Read { path, json } => {
-                commands::harness_session::run_read(path, json)
-            }
-            HarnessSessionCommands::Write {
-                path,
-                session_id,
-                state,
-                issue_id,
-                summary,
-                next_step,
-                instruction_refs,
-                witness_refs,
-                lineage_refs,
-                issues,
-                json,
-            } => commands::harness_session::run_write(commands::harness_session::WriteArgs {
-                path,
-                session_id,
-                state,
-                issue_id,
-                summary,
-                next_step,
-                instruction_refs,
-                witness_refs,
-                lineage_refs,
-                issues,
-                json,
-            }),
-            HarnessSessionCommands::Bootstrap {
-                path,
-                feature_ledger,
-                json,
-            } => commands::harness_session::run_bootstrap(path, feature_ledger, json),
-        },
-
-        Commands::HarnessFeature { command } => match command {
-            HarnessFeatureCommands::Read { path, json } => {
-                commands::harness_feature::run_read(path, json)
-            }
-            HarnessFeatureCommands::Write {
-                path,
-                feature_id,
-                status,
-                issue_id,
-                summary,
-                session_ref,
-                instruction_refs,
-                verification_refs,
-                json,
-            } => commands::harness_feature::run_write(commands::harness_feature::WriteArgs {
-                path,
-                feature_id,
-                status,
-                issue_id,
-                summary,
-                session_ref,
-                instruction_refs,
-                verification_refs,
-                json,
-            }),
-            HarnessFeatureCommands::Check {
-                path,
-                require_closure,
-                json,
-            } => commands::harness_feature::run_check(path, require_closure, json),
-            HarnessFeatureCommands::Next { path, json } => {
-                commands::harness_feature::run_next(path, json)
-            }
-        },
-
-        Commands::HarnessTrajectory { command } => match command {
-            HarnessTrajectoryCommands::Append {
-                path,
-                step_id,
-                issue_id,
-                action,
-                result_class,
-                instruction_refs,
-                witness_refs,
-                lineage_refs,
-                started_at,
-                finished_at,
-                json,
-            } => {
-                commands::harness_trajectory::run_append(commands::harness_trajectory::AppendArgs {
-                    path,
-                    step_id,
-                    issue_id,
-                    action,
-                    result_class,
-                    instruction_refs,
-                    witness_refs,
-                    lineage_refs,
-                    started_at,
-                    finished_at,
-                    json,
-                })
-            }
-            HarnessTrajectoryCommands::Query {
-                path,
-                mode,
-                limit,
-                json,
-            } => commands::harness_trajectory::run_query(path, mode, limit, json),
-        },
-
-        Commands::HarnessJoinCheck { input, json } => {
-            commands::harness_join_check::run(input, json)
-        }
-
         Commands::WorkTrackerCheck { input, json } => {
             commands::work_tracker_check::run(input, json)
         }
 
         Commands::ToyGateCheck { input, json } => commands::toy_gate_check::run(input, json),
-
-        Commands::Dep { command } => commands::dep::run(command),
     }
 }

@@ -35,5 +35,5 @@ Current overlays and profile maps:
 Related:
 
 - `../draft/SPEC-INDEX.md` — claim/profile front door.
-- `../draft/CONFORMANCE.md` — executable conformance contract.
+- `../draft/CHECKER-CLAIMS.md` — executable checker-claims contract.
 - `../../process/coss.md` — lifecycle/process policy.

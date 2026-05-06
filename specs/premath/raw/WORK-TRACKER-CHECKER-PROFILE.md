@@ -51,7 +51,7 @@ This profile defines:
 - admissibility decision output;
 - failure classes;
 - projection-separation checks;
-- conformance expectations for a future executable checker.
+- checker expectations for a future executable checker.
 
 It does not define tracker runtime, UI, daemon behavior, storage, board layout,
 or generic work semantics.
@@ -64,7 +64,7 @@ Premath owns only the checker/kernel-facing surface:
 - `premath.work_checker.admissibility_check`
 - `premath.work_checker.decision`
 - `premath.work_checker.failure_classes`
-- `premath.work_checker.conformance_vectors`
+- `premath.work_checker.checker_vectors`
 
 Premath does not own:
 
@@ -216,9 +216,9 @@ compare, or project tracker state.
 They MUST NOT define work authority. A compatibility import must become a
 `WorkClaimNF` or projection check before Premath can accept or reject it.
 
-## 8. Conformance Sketch
+## 8. Checker Sketch
 
-A future conformance suite for this profile should include vectors for:
+A future checker suite for this profile should include vectors for:
 
 - accepting a simple transition with explicit authority inputs;
 - rejecting a transition with missing boundary evidence;
@@ -227,7 +227,7 @@ A future conformance suite for this profile should include vectors for:
 - accepting a projection check that cites an accepted decision;
 - checking a handoff claim with required recovery evidence.
 
-No implementation claims conformance to this raw profile until vectors and a
+No implementation claims checker compatibility with this raw profile until vectors and a
 promotion path are declared.
 
 ## 9. Non-Goals
@@ -244,15 +244,14 @@ This profile does not define:
 - issue ID format;
 - worker scheduling policy;
 - retry/escalation policy;
-- migration of existing `.premath/issues.jsonl` data.
+- migration of existing tracker data.
 
 ## 10. Next Promotion Step
 
 Current fixture reference:
 
-- `tests/conformance/fixtures/work-tracker-checker/`
+- `tests/checker/fixtures/work-tracker-checker/`
 - `cargo run --package premath-cli -- work-tracker-check --input <input.json> --json`
-- `python3 tools/conformance/run_work_tracker_checker_vectors.py`
 
 Current Tusk instrument reference:
 
@@ -261,7 +260,7 @@ Current Tusk instrument reference:
 Before promotion, this profile needs:
 
 1. alignment with Atlas `work-tracker.v0`;
-2. expanded conformance fixture coverage beyond the initial raw vectors;
+2. expanded checker fixture coverage beyond the initial raw vectors;
 3. implementation guidance that continues to cite the Tusk instrument note
    rather than redefining mutation authority;
 4. a compatibility rule for importing and exporting current `bd` state;

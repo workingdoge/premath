@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "executable",
-  "result": "accepted",
-  "assertions": [
-    "claim transitions include deterministic active lease binding"
-  ]
-}

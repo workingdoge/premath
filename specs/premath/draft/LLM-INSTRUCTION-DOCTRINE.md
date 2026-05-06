@@ -47,7 +47,8 @@ This specification complements:
 - `draft/DOCTRINE-INF` (morphism registry),
 - `draft/DOCTRINE-SITE` (doctrine-to-operation map),
 - `draft/LLM-PROPOSAL-CHECKING` (proposal ingestion/checking contract),
-- `raw/PREMATH-CI` (CI control-loop execution contract).
+- downstream/control-site execution contracts when instruction envelopes are
+  executed.
 
 Design map reference (non-normative):
 
@@ -114,7 +115,7 @@ LLM layers MUST NOT self-authorize admissibility or gate outcomes.
 
 Authority remains split as:
 
-- kernel/runtime (`draft/PREMATH-KERNEL`, `draft/GATE`, `raw/TUSK-CORE`):
+- kernel/runtime (`draft/PREMATH-KERNEL`, `draft/GATE`):
   admissibility and Gate-class outcomes,
 - Squeak/runtime-location layer (`raw/SQUEAK-CORE`, `raw/SQUEAK-SITE`):
   transport/location execution,
@@ -128,7 +129,7 @@ Instruction operation SHOULD follow this chain:
 ```text
 envelope -> classify -> bind(normalizer_id, policy_digest)
 -> project(allowed_checks(policy_digest, scope))
--> execute(check runner) -> attest(CIWitness)
+-> execute(check runner) -> attest(CheckerWitness)
 ```
 
 When an instruction carries or references LLM proposal material, operation SHOULD
@@ -138,7 +139,7 @@ extend as:
 envelope -> classify -> bind(normalizer_id, policy_digest)
 -> proposal_ingest(checking-only) -> obligations -> discharge
 -> project(allowed_checks(policy_digest, scope))
--> execute(check runner) -> attest(CIWitness)
+-> execute(check runner) -> attest(CheckerWitness)
 ```
 
 The chain MUST preserve:
@@ -149,8 +150,8 @@ The chain MUST preserve:
 - deterministic check ID sets,
 - deterministic verdict-class attribution for fixed inputs/bindings.
 
-Operational scripts (for example `tools/ci/run_instruction.sh`) are execution
-surfaces only. They do not define semantic admissibility.
+Operational instruction runners are execution surfaces owned by downstream
+runtime/control sites. They do not define semantic admissibility.
 
 ## 6. Determinism and attestation requirements
 
@@ -184,7 +185,7 @@ When proposal material is present, witnesses SHOULD additionally include:
 - deterministic normalized `discharge` result,
 - discharge failure classes (if any), bound to `(normalizer_id, policy_digest)`.
 
-## 7. Conformance expectations
+## 7. Checker expectations
 
 Implementations exposing instruction-envelope control loops SHOULD:
 
@@ -193,8 +194,8 @@ Implementations exposing instruction-envelope control loops SHOULD:
 - reject `requested_checks` outside policy-bound allowlists deterministically,
 - emit first-class pre-execution reject witnesses with deterministic
   `failure_classes` when envelope/policy/proposal validation fails,
-- emit auditable CI witness artifacts bound to instruction identity material,
-- keep instruction flow compatible with `raw/PREMATH-CI` invariance rules.
+- emit auditable checker witnesses bound to instruction identity material when
+  an owning downstream/control site claims this profile.
 
 ## 8. Security and robustness
 
@@ -222,4 +223,4 @@ Not preserved:
 
 - `dm.transport.world` / `dm.transport.location` (delegated to Squeak layer)
 - `dm.refine.context` / `dm.refine.cover` (delegated to kernel/runtime layer)
-- `dm.profile.evidence` (delegated to capability profile contracts in conformance/CI specs)
+- `dm.profile.evidence` (delegated to capability profile contracts in checker/profile specs)

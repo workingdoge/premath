@@ -87,7 +87,7 @@
       "statementDigest": "59e9eab01731797e03c0a1d9541de0314cbe37598f0b4fb19496833387e42c7f",
       "relationKind": "verified_by",
       "targetKind": "checker",
-      "targetRef": "tools/conformance/check_statement_index.py",
+      "targetRef": "crates/premath-cli/src/commands/traceability_check.rs",
       "required": false
     },
     {
@@ -95,7 +95,7 @@
       "statementDigest": "f06f3078fe37d4627c0167b26f6f5d4a670d18e7d62ad204fb7ce848a4dc3f8f",
       "relationKind": "covered_by_vector",
       "targetKind": "vector",
-      "targetRef": "tests/conformance/fixtures/coherence-site/golden/glue_or_witness_glue_accept/case.json",
+      "targetRef": "tests/checker/fixtures/coherence-site/golden/glue_or_witness_glue_accept/case.json",
       "required": false
     }
   ]

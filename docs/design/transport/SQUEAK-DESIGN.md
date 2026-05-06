@@ -18,7 +18,6 @@ Normative surfaces remain under `specs/`:
 
 - `specs/premath/raw/SQUEAK-CORE.md`
 - `specs/premath/raw/SQUEAK-SITE.md`
-- `specs/premath/raw/CI-TOPOS.md` (execution substrate mapping at CI layer)
 
 ## 2. Relationship to SigPi
 

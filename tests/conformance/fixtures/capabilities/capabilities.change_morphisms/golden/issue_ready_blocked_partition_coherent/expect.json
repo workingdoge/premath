@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "executable",
-  "result": "accepted",
-  "assertions": [
-    "ready and blocked outputs are coherent and open-set partitioning is preserved"
-  ]
-}

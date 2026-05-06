@@ -28,7 +28,7 @@ Atlas exists to prevent those roles from collapsing into each other.
 Atlas is not:
 
 - a replacement for Nerve simplex semantics,
-- a replacement for Premath kernel, law, checker, or conformance surfaces,
+- a replacement for Premath kernel, law, checker, or checker surfaces,
 - a replacement for Tusk runtime, tracker, daemon, MCP, CLI, or UI behavior,
 - a reusable executable carrier implementation,
 - a downstream product or proof repo.
@@ -189,15 +189,15 @@ Authority split:
 | --- | --- |
 | simplex, boundary, patch, local-to-global vocabulary | candidate `simplex` site; provisionally `nerve` |
 | work-state meaning, acceptance, verification, handoff/session semantics | candidate `work` site; no Premath host; current Premath surface is checker-only |
-| `WorkClaimNF`, admissibility decision, failure classes, conformance vectors | `premath` checker surface; see `specs/premath/raw/WORK-TRACKER-CHECKER-PROFILE.md` |
+| `WorkClaimNF`, admissibility decision, failure classes, checker vectors | `premath` checker surface; see `specs/premath/raw/WORK-TRACKER-CHECKER-PROFILE.md` |
 | CLI/MCP/daemon/UI, worker loop, repo binding, compatibility adapter | `tusk` |
 | ready/blocked/dependency graph/board views | projection surfaces |
 | `bd` import/export | compatibility projection |
 
 Descent conditions:
 
-- `tusk` may expose `claim`, `close`, `discover`, and lease operations only as
-  instruments over Premath law.
+- `tusk` may expose `claim`, `close`, `discover`, and lease operations as
+  tracker-owned instruments that can emit normalized Premath acceptances.
 - ready/blocked/dependency graph views are derived projections, not authority.
 - `bd` state can seed or compare tracker state but cannot define the
   simplex-native authority object.
@@ -218,7 +218,7 @@ A valid work-tracker implementation is a global section over `work-tracker.v0`.
 | Tusk `design/notes/tusk-workflow-topology.md` | instrument-local workflow topology | keep in Tusk; reference Atlas for placement doctrine |
 | Tusk `design/notes/tusk-topology-reconciliation.md` | repo-scoped placement audit | migrate general placement rules into Atlas; keep Tusk-specific decisions local |
 | Nerve draft simplex specs | substrate authority | keep in Nerve; Atlas references, not copies |
-| Premath kernel/checker/conformance specs | checker authority | keep in Premath |
+| Premath kernel/checker/claim specs | checker authority | keep in Premath |
 
 This table is a migration map, not a move command.
 

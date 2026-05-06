@@ -2,19 +2,13 @@
 
 from __future__ import annotations
 
+import json
 import subprocess
-import sys
+import tempfile
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict
 
 ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(ROOT / "tools" / "ci"))
-
-from core_cli_client import (  # type: ignore  # noqa: E402
-    CoreCliClientError,
-    resolve_premath_cli as _resolve_premath_cli,
-    run_core_json_command,
-)
 
 
 class ToyGateCheckError(ValueError):
@@ -24,10 +18,6 @@ class ToyGateCheckError(ValueError):
         self.failure_class = failure_class
         self.reason = message
         super().__init__(f"{failure_class}: {message}")
-
-
-def resolve_premath_cli(root: Path) -> List[str]:
-    return _resolve_premath_cli(root)
 
 
 def _validate_payload(payload: Any) -> Dict[str, Any]:
@@ -45,18 +35,45 @@ def _validate_payload(payload: Any) -> Dict[str, Any]:
 
 
 def run_case(case: Dict[str, Any]) -> Dict[str, Any]:
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False, encoding="utf-8") as f:
+        json.dump(case, f, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        f.write("\n")
+        input_path = Path(f.name)
+
     try:
-        return run_core_json_command(
-            ROOT,
-            subcommand="toy-gate-check",
-            input_flag="--input",
-            request_payload=case,
-            validate_payload=_validate_payload,
-            default_failure_class="toy_gate_check_invalid",
-            default_failure_message="toy_gate_check_invalid: toy-gate-check failed",
-            invalid_json_message="toy-gate-check returned invalid JSON",
-            resolve_cli=resolve_premath_cli,
-            run_process=subprocess.run,
+        completed = subprocess.run(
+            [
+                "cargo",
+                "run",
+                "--quiet",
+                "--package",
+                "premath-cli",
+                "--",
+                "toy-gate-check",
+                "--input",
+                str(input_path),
+                "--json",
+            ],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
         )
-    except CoreCliClientError as exc:
-        raise ToyGateCheckError(exc.failure_class, exc.reason) from exc
+        if completed.returncode != 0:
+            message = completed.stderr.strip() or completed.stdout.strip() or "toy-gate-check failed"
+            if ":" in message:
+                failure_class, reason = message.split(":", 1)
+                raise ToyGateCheckError(failure_class.strip(), reason.strip() or message)
+            raise ToyGateCheckError("toy_gate_check_invalid", message)
+        try:
+            payload = json.loads(completed.stdout)
+        except json.JSONDecodeError as exc:
+            raise ToyGateCheckError("toy_gate_check_invalid", "toy-gate-check returned invalid JSON") from exc
+        try:
+            return _validate_payload(payload)
+        except ValueError as exc:
+            raise ToyGateCheckError("toy_gate_check_invalid", str(exc)) from exc
+    finally:
+        try:
+            input_path.unlink()
+        except FileNotFoundError:
+            pass

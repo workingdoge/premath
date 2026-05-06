@@ -47,11 +47,10 @@ Coherence role:
 - semantic admissibility remains kernel/Gate-owned,
 - cross-lane composition claims route through typed span/square witnesses.
 
-Issue-memory posture:
+Tracker posture:
 
-- historical closure work (algebraic closure + note compaction) is complete,
-- active sequencing is dynamic and sourced from `.premath/issues.jsonl`,
-- docs do not carry authoritative "current issue" pointers.
+- active sequencing is dynamic and sourced from the owning tracker,
+- docs do not carry authoritative "current tracker item" pointers.
 
 ## 4. Operational Invariants
 
@@ -59,22 +58,20 @@ Issue-memory posture:
 2. Deterministic binding for equality/comparison (`normalizerId`, `policyDigest`).
 3. Proposal/projection outputs never self-authorize admissibility.
 4. Fail closed on unknown/unbound/ambiguous factorization paths.
-5. Keep issue ordering dynamic from `.premath/issues.jsonl` (`issue_ready`), not
-   hardcoded in docs.
+5. Keep tracker ordering dynamic in the owning tracker, not hardcoded in docs.
 
 ## 5. Verification Surfaces
 
 Core checks:
 
-- `sh tools/ci/run_task.sh coherence-check`
-- `sh tools/ci/run_task.sh traceability-check`
-- `sh tools/ci/run_task.sh ci-drift-budget-check`
-- `sh tools/ci/run_task.sh ci-hygiene-check`
+- `premath coherence-check`
+- `premath traceability-check`
+- `premath drift-budget-check`
+- `premath repo-hygiene-check`
 
-Issue graph status:
+Tracker status:
 
-- `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json`
-- `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json`
+- external to Premath; query the owning Tusk/downstream tracker.
 
 ## 6. Next Execution Lane
 
@@ -83,8 +80,7 @@ opened for `§10.6` Stage 1 (typed-core dual projection).
 
 Live roadmap source (authoritative):
 
-- `cargo run --package premath-cli -- issue list --issues .premath/issues.jsonl --json`
-- `cargo run --package premath-cli -- issue ready --issues .premath/issues.jsonl --json`
+- owning Tusk/downstream tracker
 
 If Stage 1 begins, keep scope minimal:
 
@@ -136,10 +132,10 @@ Stage 1 checklist:
 
 Validation commands:
 
-- `sh tools/ci/run_task.sh coherence-check`
-- `sh tools/ci/run_task.sh traceability-check`
-- `sh tools/ci/run_task.sh ci-drift-budget-check`
-- `sh tools/ci/run_task.sh ci-hygiene-check`
+- `premath coherence-check`
+- `premath traceability-check`
+- `premath drift-budget-check`
+- `premath repo-hygiene-check`
 
 Execution note (2026-02-22):
 
@@ -164,43 +160,32 @@ Normative authority remains in:
 Historical note:
 
 - stage-3 issue IDs below are historical execution references,
-- active ordering always comes from `.premath/issues.jsonl` via
-  `premath issue ready` / `premath issue list`.
+- active ordering always comes from the owning tracker.
 
 Deterministic Stage 3 order:
 
-1. `bd-148` typed-only authority reads in CI/CLI/MCP consumers
-2. `bd-152` required pipeline summary removes alias-as-authority fallback
-3. `bd-153` decision verification reporting removes alias fallback
-4. `bd-155` required-decision verify client adds typed-authority fail-closed checks
-5. `bd-149` typed-first observation/projection query contract
-6. `bd-154` explicit alias compatibility mode for projection queries
-7. `bd-150` replace transitional kernel sentinel with direct Core-obligation evidence path
-8. `bd-151` docs/traceability/decision closure
+1. `bd-148` typed-only authority reads in checker consumers
+2. `bd-152` required local-check projection removes alias-as-authority fallback
+3. `bd-153` checker reporting removes alias fallback
+4. `bd-155` local-check verification adds typed-authority fail-closed checks
+5. `bd-150` replace transitional kernel sentinel with direct Core-obligation evidence path
+6. `bd-151` docs/traceability/decision closure
 
 Per-task gate set:
 
 - consumer/runtime checks (`bd-148`, `bd-152`, `bd-153`, `bd-155`):
-  - `sh tools/ci/run_task.sh ci-pipeline-test`
-  - `python3 tools/conformance/run_capability_vectors.py --capability capabilities.ci_witnesses`
+  - `premath coherence-check`
   - `cargo test -p premath-coherence`
   - `cargo test -p premath-cli`
-- observation/query checks (`bd-149`, `bd-154`):
-  - `sh tools/ci/run_task.sh ci-observation-test`
-  - `cargo test -p premath-surreal`
-  - `cargo test -p premath-ux`
 - Core-obligation handoff checks (`bd-150`):
-  - `sh tools/ci/run_task.sh coherence-check`
-  - `python3 tools/conformance/run_fixture_suites.py --suite coherence-contract`
-  - `python3 tools/ci/test_drift_budget.py`
+  - `premath coherence-check`
+  - `premath drift-budget-check`
 - docs closure (`bd-151`):
-  - `sh tools/ci/run_task.sh traceability-check`
-  - `sh tools/ci/run_task.sh ci-drift-budget-check`
-  - `sh tools/ci/run_task.sh ci-hygiene-check`
+  - `premath traceability-check`
+  - `premath drift-budget-check`
+  - `premath repo-hygiene-check`
 
-Before push:
-
-- `sh tools/ci/run_task.sh ci-required-attested`
+Before handoff, run the direct checker sequence in `README.md`.
 
 Commit and issue cadence:
 

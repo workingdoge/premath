@@ -12,7 +12,7 @@ This directory contains Premath's spec authority, grouped by lifecycle state.
 - `profile/README.md` summarizes optional overlays that become normative only
   when explicitly claimed.
 - `raw/README.md` summarizes exploratory or informational specs that are not
-  active conformance authority.
+  active checker-claims authority.
 
 ## Authority Split
 

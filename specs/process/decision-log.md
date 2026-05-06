@@ -103,7 +103,7 @@ while still allowing KCIR traces to carry their own uniqueness certificates.
 Promote the governance/conformance spine to `draft` status:
 
 - `draft/SPEC-INDEX`
-- `draft/CONFORMANCE`
+- `draft/CHECKER-CLAIMS`
 - `draft/CAPABILITY-VECTORS`
 - `draft/CHANGE-MORPHISMS`
 
@@ -252,7 +252,7 @@ Keeping this layer raw allows iteration without prematurely hardening runtime
 interfaces as conformance requirements.
 
 ### Consequences
-- The kernel/draft conformance surface remains unchanged.
+- The kernel/draft checker surface remains unchanged.
 - KCIR remains optional capability/evidence machinery, not a kernel dependency.
 - Promotion of operational specs to draft requires dedicated vectors and
   conformance claims.
@@ -325,7 +325,7 @@ Promote instruction typing checks into executable capability conformance with:
 
 - capability id: `capabilities.instruction_typing`
 - vectors under:
-  `tests/conformance/fixtures/capabilities/capabilities.instruction_typing/`
+  `tests/checker/fixtures/capabilities/capabilities.instruction_typing/`
 - runner support in:
   `tools/conformance/run_capability_vectors.py`
 
@@ -338,7 +338,7 @@ this behavior regression-resistant and profile-invariant.
 - `python3 tools/conformance/run_capability_vectors.py` now executes instruction
   typing vectors by default.
 - Fixture/invariance stub checks now include this capability track.
-- Claim surfaces (`SPEC-INDEX`, `CAPABILITY-VECTORS`, `CONFORMANCE`) now
+- Claim surfaces (`SPEC-INDEX`, `CAPABILITY-VECTORS`, `CHECKER-CLAIMS`) now
   include `capabilities.instruction_typing`.
 
 ---
@@ -374,7 +374,7 @@ collapsing aliases:
 - `capabilities.change_projection` -> `capabilities.change_morphisms`
 - `capabilities.ci_required_witness` -> `capabilities.ci_witnesses`
 
-The executable conformance surface now uses:
+The executable checker surface now uses:
 
 - `capabilities.normal_forms`
 - `capabilities.kcir_witnesses`
@@ -386,7 +386,7 @@ The executable conformance surface now uses:
 
 ### Rationale
 Governance drift appeared when runtime/docs used capability IDs not present in
-`draft/CAPABILITY-VECTORS` and `draft/CONFORMANCE`. We prefer minimal encoding:
+`draft/CAPABILITY-VECTORS` and `draft/CHECKER-CLAIMS`. We prefer minimal encoding:
 one canonical identifier per capability claim unless expansion is explicitly
 promoted as new doctrine.
 
@@ -488,7 +488,7 @@ Adding vectors keeps overlay claims auditable and regression-resistant.
   `capabilities.adjoints_sites`.
 - Conformance fixtures now include golden/adversarial/invariance vectors for
   adjoint/site obligations.
-- `draft/CAPABILITY-VECTORS`, `draft/CONFORMANCE`, and `draft/SPEC-INDEX`
+- `draft/CAPABILITY-VECTORS`, `draft/CHECKER-CLAIMS`, and `draft/SPEC-INDEX`
   now include the new capability claim semantics.
 
 ---
@@ -574,7 +574,7 @@ gives issue discovery a deterministic source of truth.
 
 ### Consequences
 - `draft/SPEC-TRACEABILITY` is now part of promoted draft documentation and is
-  linked from `draft/README`, `draft/SPEC-INDEX`, and `draft/CONFORMANCE`.
+  linked from `draft/README`, `draft/SPEC-INDEX`, and `draft/CHECKER-CLAIMS`.
 - current explicit targets include:
   - `T-IC-01` (interop-core executable vectors),
   - `T-GATE-01` (canonical gate vectors),
@@ -589,7 +589,7 @@ gives issue discovery a deterministic source of truth.
 
 ### Decision
 Implement and merge executable Interop Core vector coverage under
-`tests/conformance/fixtures/interop-core/` with deterministic runner
+`tests/checker/fixtures/interop-core/` with deterministic runner
 `tools/conformance/run_interop_core_vectors.py`, and wire it into
 `mise run conformance-run`.
 
@@ -620,7 +620,7 @@ deterministic vectored surface in merge-gated conformance runs.
 
 ### Decision
 Implement and merge executable Gate vectors under
-`tests/conformance/fixtures/gate/` with deterministic runner
+`tests/checker/fixtures/gate/` with deterministic runner
 `tools/conformance/run_gate_vectors.py`, and wire it into
 `mise run conformance-run`.
 
@@ -633,7 +633,7 @@ Covered gate-law classes:
 
 ### Rationale
 `GATE` coverage previously depended on unit/toy paths without a canonical
-conformance fixture suite in `tests/conformance/fixtures/gate/`. This made the
+checker fixture suite in `tests/checker/fixtures/gate/`. This made the
 traceability target `T-GATE-01` an explicit open gap.
 
 ### Consequences
@@ -649,7 +649,7 @@ traceability target `T-GATE-01` an explicit open gap.
 
 ### Decision
 Implement and merge executable Witness-ID vectors under
-`tests/conformance/fixtures/witness-id/` with deterministic runner
+`tests/checker/fixtures/witness-id/` with deterministic runner
 `tools/conformance/run_witness_id_vectors.py`, and wire it into
 `mise run conformance-run` through the fixture-suite runner.
 
@@ -662,7 +662,7 @@ Covered Witness-ID requirements:
 
 ### Rationale
 `WITNESS-ID.md` was only instrumented via unit tests. `T-WID-01` required a
-first-class conformance vector suite in the merge-gated conformance surface so
+first-class conformance vector suite in the merge-gated checker surface so
 determinism/sensitivity behavior is validated at fixture level.
 
 ### Consequences
@@ -707,7 +707,7 @@ between promoted draft spec inventory and matrix rows.
 Extend doctrine validation with executable law-level checks for declared
 preserved/not-preserved morphism boundaries via
 `tools/conformance/run_doctrine_inf_vectors.py` and fixture suite
-`tests/conformance/fixtures/doctrine-inf/`, and include these vectors in
+`tests/checker/fixtures/doctrine-inf/`, and include these vectors in
 `mise run doctrine-check`.
 
 Covered doctrine boundary checks:
@@ -734,7 +734,7 @@ declaration meaning, not just declaration presence.
 
 ### Decision
 Implement and merge a canonical cross-model kernel profile vector suite under
-`tests/conformance/fixtures/kernel-profile/` with deterministic runner
+`tests/checker/fixtures/kernel-profile/` with deterministic runner
 `tools/conformance/run_kernel_profile_vectors.py`, and wire it into
 `mise run conformance-run` via the cached fixture-suite runner.
 
@@ -1215,14 +1215,14 @@ identity validator and documenting the explicit KCIR boundary profile:
   `ci-pipeline-test`.
 
 ### Rationale
-Duplicate proposal identity validation logic across CI and conformance surfaces
+Duplicate proposal identity validation logic across CI and checker surfaces
 creates unnecessary degrees of freedom and drift risk. A single validation path
 keeps minimum encoding at the authority boundary while preserving expressive
 projections.
 
 ### Consequences
 - proposal identity checks now have one authoritative implementation path
-  reused by instruction and conformance surfaces.
+  reused by instruction and checker surfaces.
 - KCIR proposal projection shape is explicit and portable (`kcir.proposal.v1`).
 - migration away from duplicate proposal identity encodings is now concrete and
   test-gated.
@@ -1257,7 +1257,7 @@ checker surface.
 
 ---
 
-## 2026-02-22 — Decision 0044: Run coherence-contract checks through cached conformance fixture-suite surface
+## 2026-02-22 — Decision 0044: Run coherence-contract checks through cached checker fixture-suite surface
 
 ### Decision
 Add `coherence-contract` as a first-class suite in
@@ -1269,7 +1269,7 @@ command:
 and bind cache materialization to:
 
 - `draft/COHERENCE-CONTRACT.json`,
-- `tests/conformance/fixtures/coherence-transport`,
+- `tests/checker/fixtures/coherence-transport`,
 - `crates/premath-coherence/src`,
 - CLI coherence command wrapper source.
 
@@ -1286,7 +1286,7 @@ semantic authority path.
 - repeated coherence-contract runs can short-circuit on deterministic cache
   hits.
 - docs/fixture entrypoints now expose `coherence-contract` as a first-class
-  executable suite in the conformance surface.
+  executable suite in the checker surface.
 
 ---
 
@@ -1332,7 +1332,7 @@ required obligations:
 - `coverage_transitivity`
 - `glue_or_witness_contractibility`
 
-backed by executable vectors under `tests/conformance/fixtures/coherence-site`.
+backed by executable vectors under `tests/checker/fixtures/coherence-site`.
 
 ### Rationale
 Transport functoriality alone does not cover the full site/descent contract.
@@ -1463,7 +1463,7 @@ hidden drift.
 ### Consequences
 - capability parity now binds to a machine artifact (`CAPABILITY-REGISTRY.json`)
   instead of source constants.
-- conformance/docs/coherence surfaces now share the same executable capability
+- checker/docs/coherence surfaces now share the same executable capability
   authority input.
 - coherence scope checks now bind to kernel registry kind + obligation set via
   typed API export rather than parsing source text maps.
@@ -1562,7 +1562,7 @@ surfaces were introduced (`bd-57`, `bd-58`, `bd-59`, `bd-60`, `bd-63`).
 ### Consequences
 - `tools/conformance/run_capability_vectors.py` now includes boundary-authority
   lineage validation in the `capabilities.ci_witnesses` evaluator.
-- `tests/conformance/fixtures/capabilities/capabilities.ci_witnesses/` now
+- `tests/checker/fixtures/capabilities/capabilities.ci_witnesses/` now
   contains:
   - `golden/boundary_authority_lineage_accept`,
   - `adversarial/boundary_authority_registry_mismatch_reject`,
@@ -1649,7 +1649,7 @@ strict CwF obligations:
 - `cwf_comprehension_eta`
 
 Bind them to executable vectors under
-`tests/conformance/fixtures/coherence-site/` and evaluate them through the same
+`tests/checker/fixtures/coherence-site/` and evaluate them through the same
 deterministic site-obligation runner already used for cover/glue obligations.
 
 ### Rationale
@@ -2190,7 +2190,7 @@ coverage closes two important boundaries:
 
 ### Consequences
 - span/square layer now has explicit invariance + digest-integrity checks in
-  executable conformance fixtures.
+  executable checker fixtures.
 
 ---
 
@@ -2543,7 +2543,7 @@ Extend `gate_chain_parity` with executable vector coverage for lane-ownership
 boundaries by routing it through the existing coherence-site fixture harness:
 
 1. add `gate_chain_parity` vector scope to
-   `tests/conformance/fixtures/coherence-site/manifest.json`,
+   `tests/checker/fixtures/coherence-site/manifest.json`,
 2. add smoke vectors for:
    - accepted canonical lane ownership + span/square route,
    - rejected checker-core ownership violation,
@@ -2588,7 +2588,7 @@ traceability gap between profile doctrine and conformance execution.
   adjoints-site vectors with deterministic failure classes:
   `cross_lane_capability_missing`, `cross_lane_route_missing`,
   `cross_lane_witness_mismatch`, and `cross_lane_transport_mismatch`.
-- `tests/conformance/fixtures/capabilities/capabilities.adjoints_sites/`
+- `tests/checker/fixtures/capabilities/capabilities.adjoints_sites/`
   includes composed golden/adversarial/invariance vectors.
 - `draft/CAPABILITY-VECTORS` and
   `profile/ADJOINTS-AND-SITES` now explicitly require composed route/transport
@@ -3402,7 +3402,7 @@ coverage gaps:
    claim semantics and harness stop/handoff contract checks.
 4. capability docs are updated:
    - `draft/CAPABILITY-VECTORS`
-   - `draft/CONFORMANCE`
+   - `draft/CHECKER-CLAIMS`
 
 ### Rationale
 Harness runtime/retry contracts were promoted to draft (Decision 0111), but
@@ -3444,7 +3444,7 @@ Adopt a bundled claim policy for harness typestate closure/mutation gating:
    coordinated updates to:
    - `draft/CAPABILITY-REGISTRY.json`,
    - `draft/SPEC-INDEX`,
-   - `draft/CONFORMANCE`,
+   - `draft/CHECKER-CLAIMS`,
    - `draft/CAPABILITY-VECTORS`,
    - docs/coherence marker checks.
 
@@ -3519,7 +3519,7 @@ Adopt a fail-closed runtime-route parity contract and executable checker path:
      `tools/conformance/check_runtime_orchestration.py`
    via `draft/DOCTRINE-SITE-INPUT.json` (with generated site/registry refresh).
 4. Add deterministic runtime orchestration vectors and cached suite integration:
-   - `tests/conformance/fixtures/runtime-orchestration/`
+   - `tests/checker/fixtures/runtime-orchestration/`
    - `tools/conformance/run_runtime_orchestration_vectors.py`
    - `tools/conformance/run_fixture_suites.py --suite runtime-orchestration`.
 5. Promote doctrine gate command surface to include runtime-route parity:
@@ -3701,7 +3701,7 @@ authority; prose docs are projections.
 - Authority classification remains machine-checked through
   `specs/premath/AUTHORITY-MAP.json` plus `SPEC-TRACEABILITY.md`.
 - Any future invariant worth keeping must move into a real contract checker,
-  drift-budget sentinel, conformance fixture, or Rust CLI surface rather than a
+  drift-budget sentinel, checker fixture, or Rust CLI surface rather than a
   broad docs-to-executable prose scanner.
 
 ---
@@ -3753,7 +3753,7 @@ deterministic discharge, Gate failure-class mapping, and replay invariance.
 
 ### Consequences
 - Premath Core authority is now `PREMATH-KERNEL`,
-  `OBLIGATION-DISCHARGE`, `GATE`, `WITNESS-ID`, and `CONFORMANCE` §§1-2.1.
+  `OBLIGATION-DISCHARGE`, `GATE`, `WITNESS-ID`, and `CHECKER-CLAIMS` §§1-2.1.
 - Interop Full may still require `profile/interop/BIDIR-DESCENT`, but that
   requirement is profile-local and does not expand Core.
 - `COHERENCE-CONTRACT.json` now checks Core obligation vocabulary from
@@ -3814,7 +3814,7 @@ exist.
 ### Consequences
 - Authority-index parity now composes with the Premath CLI.
 - The baseline no longer has a Python dependency setup stage.
-- Python remains only for remaining CI/helper/conformance surfaces that have
+- Python remains only for remaining CI/helper/checker surfaces that have
   not yet been migrated or deleted; those are follow-up shrink lanes, not
   authority-index blockers.
 
@@ -4233,7 +4233,7 @@ Delete `tools/harness/multithread_loop.py`, its unit test, and the
 ### Rationale
 The coordinator/worker loop is runtime orchestration over issue memory and
 harness projection commands. It is not Premath admissibility, witness/replay
-law, or a checker-owned conformance surface. Keeping the loop in Premath made
+law, or a checker-owned checker surface. Keeping the loop in Premath made
 the control-plane profile look like Premath owned worker scheduling.
 
 ### Consequences
@@ -4271,3 +4271,717 @@ required chain.
   `ci-verify-decision`, `ci-required-verified`) are removed.
 - Doctrine operation routing now binds required attestation to
   `tools/ci/run_required_attested.py`.
+
+---
+
+## 2026-05-05 — Decision 0145: Collapse CI client adapter modules
+
+### Decision
+Delete the thin per-command CI client modules and expose their native Premath
+CLI adapter functions from `tools/ci/core_cli_client.py`.
+
+### Rationale
+The deleted files only wrapped `premath <subcommand>` JSON transport and local
+payload validation. They were not independent checker surfaces, and the
+transport-parity meta-test existed only to police that wrapper style.
+
+### Consequences
+- Required-gate, instruction, proposal, and conformance callers import from the
+  single core CLI adapter module.
+- Existing behavior tests remain wired through `ci-pipeline-test`.
+- The Python CI surface loses ten files without changing the native checker
+  commands.
+
+---
+
+## 2026-05-05 — Decision 0146: Fold projection and provider-env helpers
+
+### Decision
+Delete `tools/ci/change_projection.py`, `tools/ci/provider_env.py`, and
+`tools/ci/delta_snapshot.py`, and move their remaining helper functions into
+`tools/ci/core_cli_client.py`.
+
+### Rationale
+Required delta/projection semantics are already native Premath commands. The
+deleted files only provided transport-side convenience helpers, GitHub env
+normalization, and delta snapshot plumbing, so keeping them as separate modules
+made CI look like it had additional authority surfaces.
+
+### Consequences
+- Required-gate execution, pipelines, and capability vectors use the single
+  core CLI adapter module for transport helpers.
+- Provider-specific env mapping remains a thin compatibility helper, not an
+  independent CI/provider layer.
+- The Python CI surface loses three more files without changing required
+  projection semantics.
+
+---
+
+## 2026-05-05 — Decision 0147: Remove optional pitchfork and JJ wrappers
+
+### Decision
+Delete `pitchfork.toml`, remove `pf-*` task aliases, and delete the repo-local
+JJ alias installer.
+
+### Rationale
+Pitchfork daemon orchestration and JJ aliases were optional operator
+conveniences. They did not define Premath admissibility, checker behavior, or
+CI witness semantics, and they made the repository command surface look larger
+than the active checker/control-plane boundary.
+
+### Consequences
+- Docs preview can still be run directly when needed.
+- Required-gate and instruction pipeline semantics are unchanged.
+- The command-surface and required-projection sentinels no longer treat
+  pitchfork/JJ wrapper files as active Premath surfaces.
+
+---
+
+## 2026-05-05 — Decision 0148: Remove Terraform/OpenTofu runner scaffold
+
+### Decision
+Delete the concrete Terraform/OpenTofu external-runner scaffold, its task
+aliases, and the checked-in runner example scripts.
+
+### Rationale
+External runner provisioning is carriage/runtime placement, not Premath
+admissibility law. Premath should keep the generic `run_gate.sh` external
+runner protocol but not own a concrete Terraform profile, microVM runner, or
+operator substrate lifecycle.
+
+### Consequences
+- `PREMATH_SQUEAK_SITE_PROFILE=external` remains supported through a
+  user-provided runner executable.
+- The control-plane runtime-route contract now binds only `op/ci.run_gate`.
+- Doctrine operation registry and runtime-orchestration fixtures no longer
+  publish `op/ci.run_gate_terraform`.
+
+---
+
+## 2026-05-05 — Decision 0149: Remove Observation Surface from Premath
+
+### Decision
+Delete the Premath-owned Observation Surface projection/API stack:
+
+- `crates/premath-ux`,
+- `crates/premath-surreal/src/observation.rs`,
+- `premath observe*` CLI commands,
+- `observe_*` MCP tools,
+- `ci-observation-*` task aliases,
+- `docs/observation/*`.
+
+### Rationale
+Observation dashboards and operator query projections are Tusk/downstream
+operator surfaces. Premath should preserve deterministic checker outputs,
+instruction witnesses, required-gate witnesses, and issue-memory checks without
+owning a dashboard/API read model.
+
+### Consequences
+- Premath no longer publishes `artifacts/observation/*` or `premath observe*`.
+- MCP doctrine routing now covers issue/dep and instruction tools only.
+- The instruction policy allowlist and digest shrink with the removed
+  observation checks.
+- `premath-surreal` remains only as an issue-query and harness-trajectory
+  projection adapter.
+
+---
+
+## 2026-05-05 — Decision 0150: Remove Premath MCP and REPL host-action surface
+
+### Decision
+Delete the Premath-owned MCP server and REPL host-action contract surface:
+
+- `premath mcp-serve`,
+- `crates/premath-cli/src/commands/mcp_serve.rs`,
+- `rust-mcp-sdk` / `async-trait` CLI dependencies,
+- MCP doctrine parity scripts,
+- `replHostActionBindings` from `CONTROL-PLANE-CONTRACT.json`,
+- the Steel/REPL control-surface design note.
+
+### Rationale
+MCP/REPL host control is operator integration. It belongs in Tusk or a
+downstream operator surface over stable Premath CLI/checker artifacts, not in
+Premath's admissibility kernel, witness/replay interface, or conformance
+surface.
+
+### Consequences
+- Doctrine-site operation routing now covers CI/harness/checker operation nodes
+  only.
+- Issue/dep mutation remains available through native Premath CLI issue-memory
+  utilities.
+- Tusk/downstream surfaces may build MCP or richer operator transports over the
+  CLI/checker boundary without making Premath own that transport.
+
+---
+
+## 2026-05-05 — Decision 0151: Remove Premath-owned Tusk Core evaluator
+
+### Decision
+Delete the Premath-owned single-world Tusk Core evaluator surface:
+
+- `premath mock-gate`,
+- `premath tusk-eval`,
+- `raw/TUSK-CORE`,
+- `tusk-core` conformance vectors,
+- Premath-hosted Tusk runtime design notes for identity, descent packs,
+  refinement, witnessing, domain adapters, and architecture.
+
+### Rationale
+Single-world runtime orchestration and Tusk-specific artifact shapes are
+downstream runtime concerns. Premath should expose checker/kernel, Gate,
+obligation discharge, witness/replay, and checker surfaces without owning a
+Tusk runtime evaluator or DescentPack/GateWitnessEnvelope schema.
+
+### Consequences
+- `premath-tusk` remains temporarily as a typestate-only harness normalization
+  crate for `premath harness-join-check`.
+- Squeak and CI docs now bind destination-local admissibility to checker/Gate
+  artifacts instead of `raw/TUSK-CORE`.
+- Downstream Tusk/Kurma sites may define runtime identity, descent-pack, and
+  operator witness-envelope shapes over stable Premath checker artifacts.
+
+---
+
+## 2026-05-05 — Decision 0152: Remove Premath-owned harness typestate normalization
+
+### Decision
+Delete the remaining Premath-owned harness typestate normalization surface:
+
+- `premath harness-join-check`,
+- `crates/premath-tusk`,
+- `draft/HARNESS-TYPESTATE`,
+- harness-typestate conformance vectors,
+- tool-calling harness typestate design notes.
+
+### Rationale
+Tool-calling typestate and continuation closure are governed-runtime/operator
+site concerns. Premath can consume compiled checker or witness artifacts from a
+Tusk/Continuation site, but it should not own the typestate schema, normalizer,
+or join-closure gate.
+
+### Consequences
+- Premath no longer has a `premath-tusk` crate.
+- `HARNESS-RUNTIME` keeps only runtime artifact and retry/escalation boundary
+  wiring; it explicitly treats typestate normalization as downstream.
+- `capabilities.change_morphisms` no longer imports typestate closure as a
+  bundled Premath capability surface.
+
+---
+
+## 2026-05-05 — Decision 0153: Remove Premath-owned harness runtime and retry surfaces
+
+### Decision
+Delete the remaining Premath-owned harness/operator runtime surface:
+
+- `premath harness-session`,
+- `premath harness-feature`,
+- `premath harness-trajectory`,
+- `draft/HARNESS-RUNTIME`,
+- `draft/HARNESS-RETRY-ESCALATION`,
+- Tusk harness design/runbook docs,
+- harness retry/escalation CI helpers and policy artifact,
+- runtime-orchestration conformance vectors,
+- harness recovery vectors from `capabilities.ci_witnesses`.
+
+### Rationale
+Harness session state, feature ledgers, trajectory rows, retry policy, and
+terminal escalation are governed-runtime/operator concerns. They belong in
+Tusk, Continuation, or another downstream operator site. Premath should not own
+operator lifecycle state; it should own admissibility checking, deterministic
+witness/replay, issue/dependency memory, and CI witness verification surfaces.
+
+### Consequences
+- Provider-neutral CI wrappers now run once and apply governance/KCIR
+  fail-closed gates; retry/escalation policy is downstream.
+- Doctrine-site no longer lists harness operation nodes or a runtime
+  orchestration conformance checker.
+- `premath-surreal` is reduced to issue-query/index projection.
+- Downstream runtime sites can reintroduce harness/session/trajectory artifacts
+  over stable Premath checker and witness outputs without making Premath the
+  operator control plane.
+
+---
+
+## 2026-05-06 — Decision 0154: Factor KCIR into a separate carrier site boundary
+
+### Decision
+Treat KCIR as a separate site authority rather than a Premath-owned
+implementation surface.
+
+Premath now records a `profile/kcir` adapter boundary:
+
+- `fish/sites/premath` owns admissibility law, Core obligation/Gate behavior,
+  witness/replay sufficiency, and Premath claim tokens.
+- `fish/sites/kcir` owns generic carrier-substrate vocabulary: artifacts,
+  refs, rows, nodes, dependencies, normal-form records, witness records,
+  failure reports, carrier profiles, and carrier conformance vocabulary.
+- `/Users/arj/irai/kurma` owns executable lowering, builders, stores, codecs,
+  normalizers, validation, adapters, and realization receipts.
+- `tusk` owns operator workflow/projection around stable refs, not KCIR
+  substrate meaning.
+
+### Rationale
+KCIR was overloaded between Premath profile law, carrier substrate meaning, and
+runtime implementation. Keeping all KCIR-shaped material under Premath makes
+Premath look like the owner of artifact carriage, even though Premath should
+only decide whether a carried artifact is acceptable for a Premath claim.
+
+The existing `fish/sites/kcir` site supplies the missing middle authority
+vertex between Premath law and Kurma realization.
+
+### Consequences
+- Transitional Premath draft files (`KCIR-CORE`, `REF-BINDING`, `NF`,
+  `NORMALIZER`, `WIRE-FORMATS`, `ERROR-CODES`) remain path-stable adapter files
+  until KCIR has equivalent migrated draft coverage and Premath traceability is
+  updated.
+- `premath.interop-core.v0` and `premath.interop-full.v0` are now interpreted
+  as Premath-side acceptance claims over KCIR-carried artifacts, not as KCIR
+  site ownership.
+- Broad KCIR Rust implementation pressure should move toward Kurma or be
+  reduced to a narrow Premath checker/profile shim.
+
+---
+
+## 2026-05-06 — Decision 0155: Remove broad KCIR Rust implementation crates from Premath
+
+### Decision
+Remove the newly added broad KCIR Rust implementation crates from the Premath
+workspace:
+
+- `crates/premath-kcir-kernel`
+- `crates/premath-kcir`
+
+Keep the existing Python KCIR toy/checker fixtures for now as Premath-side
+adapter checks.
+
+### Rationale
+After Decision 0154, KCIR substrate authority belongs to `fish/sites/kcir` and
+executable KCIR carriage belongs in Kurma. The Rust crates were not used by
+Premath checker commands and added roughly 9.8k lines of standalone KCIR
+builder/verifier/runtime-shaped implementation surface to the Premath
+workspace.
+
+That conflicts with the reduced Premath shape: Premath should accept or reject
+KCIR-carried artifacts at a profile boundary, not host the broad carrier
+implementation.
+
+### Consequences
+- Premath's Rust workspace no longer builds `premath-kcir` or
+  `premath-kcir-kernel`.
+- KCIR error-code names and Python toy/checker fixtures remain as
+  transitional Premath adapter coverage.
+- Future Rust implementation of KCIR lowering, stores, codecs, normalizers, or
+  receipts should land in Kurma, or return to Premath only as a deliberately
+  tiny checker/profile shim with direct CLI/conformance callers.
+
+---
+
+## 2026-05-06 — Decision 0156: Remove generic domain trait crate from Premath
+
+### Decision
+Remove `crates/premath-domain` from the Premath Rust workspace.
+
+### Rationale
+`premath-domain` had no workspace reverse dependencies and defined a generic
+domain/receipt/commitment trait surface rather than Premath checker law. That
+kind of domain abstraction belongs with downstream realization sites or Kurma
+carriage, not in the reduced Premath kernel/checker surface.
+
+### Consequences
+- Premath no longer exposes a generic Rust domain trait crate.
+- Domain-specific receipt/commitment abstractions must be owned by the site or
+  runtime that gives them meaning.
+- Premath may still check domain-carried artifacts through explicit promoted
+  profile claims.
+
+---
+
+## 2026-05-06 — Decision 0157: Remove token-pack compose crates from Premath
+
+### Decision
+Remove the unused Rust token-pack composition crates from the Premath
+workspace:
+
+- `crates/premath-composability`
+- `crates/premath-compose`
+
+### Rationale
+Both crates were leaf workspace packages with no Premath callers. Their APIs
+model token-pack gap/conflict analysis and multi-pack composition witnesses,
+which are consumer/product-site concerns rather than Premath checker/kernel
+law.
+
+### Consequences
+- Premath no longer exposes standalone Rust crates for token-pack
+  composability or compose-level conflict assembly.
+- Consumer sites may own these kernels directly if they still need them.
+- Premath keeps only explicit promoted checker/profile obligations and
+  checker fixtures that are still part of its acceptance boundary.
+
+---
+
+## 2026-05-06 — Decision 0158: Remove transitional admissibility, DSL, and gate crates
+
+### Decision
+Remove the remaining unused transitional Rust crates from the Premath
+workspace:
+
+- `crates/premath-admissibility`
+- `crates/premath-dsl`
+- `crates/premath-gate`
+
+### Rationale
+These crates had no workspace reverse dependencies and no executable Premath
+CLI callers. The real promoted checker law now lives in `premath-kernel` and
+the narrow checker/profile crates that actually feed CLI commands. Keeping
+standalone admissibility, DSL, and gate packages preserved duplicate authority
+surface without adding conformance coverage.
+
+### Consequences
+- `premath-kernel` remains the Rust home for core laws, gate behavior, and
+  witness IDs.
+- New Rust crates must be justified by a promoted checker command or explicit
+  downstream site boundary.
+- Authoring DSLs and product-specific gate wrappers should live in the owning
+  site unless they compile directly to Premath checker inputs.
+
+---
+
+## 2026-05-06 — Decision 0159: Remove JJ and Surreal adapter crates from Premath
+
+### Decision
+Remove the dedicated adapter crates from the Premath Rust workspace:
+
+- `crates/premath-jj`
+- `crates/premath-surreal`
+
+Premath CLI issue commands now use JSONL-backed `premath-bd` queries directly.
+Backend-status keeps compatibility fields for projection and VCS status, but no
+longer probes `jj` or exposes a Surreal-named projection kind.
+
+### Rationale
+VCS lineage and query acceleration are workflow/runtime concerns. Keeping
+separate JJ and Surreal adapter crates inside Premath made the checker repo
+look responsible for workspace orchestration and graph database projection.
+That conflicts with the reduced boundary: Premath can check issue-memory and
+artifact claims, but Tusk/downstream sites should own workflow instrumentation.
+
+### Consequences
+- Premath's Rust workspace now contains only the kernel, coherence checker,
+  JSONL issue-memory model, and CLI composition surface.
+- Issue-query projection vocabulary is renamed to
+  `premath.issue_query_projection.v0`.
+- Reintroducing VCS or graph-query adapters requires an explicit owning site
+  boundary or a promoted checker command that depends on them.
+
+---
+
+## 2026-05-06 — Decision 0160: Remove Premath-owned tracker runtime
+
+### Decision
+Remove the remaining Premath-owned tracker runtime and mutation surface:
+
+- `crates/premath-bd`
+- CLI `issue` and `dep` command groups
+- CLI tracker initialization and issue-backed `check`/`verify` commands
+- Premath-local issue graph integrity checks from the default hygiene gate
+
+Premath keeps only `work-tracker-check` as a checker-facing validation surface
+for normalized work-tracker claims.
+
+### Rationale
+Tracker authority, mutation, ready queues, leases, dependency editing, and
+runtime projection are workflow-site concerns. Keeping them inside Premath made
+Premath look like the work system rather than the admissibility checker beneath
+work-system claims.
+
+The clean boundary is:
+
+- Tusk/downstream owns tracker state, mutation, scheduling, and projection.
+- Premath checks normalized work claims and emits deterministic accept/reject
+  witnesses.
+
+### Consequences
+- Premath's Rust workspace is reduced to `premath-kernel`,
+  `premath-coherence`, and `premath-cli`.
+- Statement-projection conformance no longer depends on a Premath issue-memory
+  crate.
+- Any future tracker runtime must live in Tusk or another owning site, with
+  Premath receiving only checker input normal forms.
+
+---
+
+## 2026-05-06 — Decision 0161: Remove provider pipeline wrappers from Premath
+
+### Decision
+Remove the Premath-owned provider workflow wrapper layer:
+
+- `premath pipeline-wiring-check`
+- `tools/ci/pipeline_required.py`
+- `tools/ci/pipeline_instruction.py`
+- provider pipeline wrapper validation from `CONTROL-PLANE-CONTRACT.json`
+- the manual instruction GitHub workflow
+
+The GitHub required status now calls the reduced direct baseline:
+`sh tools/ci/run_task.sh baseline`.
+
+### Rationale
+Provider wrapper orchestration is operator/workflow infrastructure, not Premath
+admissibility law. Keeping wrapper policy in Premath made the checker repo look
+responsible for provider-specific CI routing and workflow publication.
+
+### Consequences
+- Premath keeps direct checker and local gate primitives.
+- Python adapter tests are grouped under `sh tools/ci/run_task.sh tools-test`.
+- Provider workflow wrappers, retry policy, and provider ref adaptation belong
+  in Tusk or the owning downstream control surface.
+
+---
+
+## 2026-05-06 — Decision 0162: Remove instruction execution runtime from Premath
+
+### Decision
+Remove the Premath-owned instruction execution route:
+
+- `tools/ci/run_instruction.py`
+- `tools/ci/run_instruction.sh`
+- `sh tools/ci/run_task.sh ci-instruction`
+- instruction execution smoke/reject-witness runner tests
+- `instructionDecision` from `CONTROL-PLANE-CONTRACT.json`
+- `op/ci.run_instruction` from the doctrine operation site
+
+Premath keeps `instruction-check` and `instruction-witness` checker semantics.
+
+### Rationale
+Instruction execution is workflow/runtime infrastructure. Premath should check
+instruction envelopes, proposal ingest, and witness payloads, but it should not
+own the command that turns an accepted envelope into host effects.
+
+### Consequences
+- Instruction envelopes remain valid checker inputs.
+- Runtime/control sites such as Tusk may own instruction execution and artifact
+  production.
+- Premath's doctrine operation surface exposes checker operations, not runtime
+  runners.
+
+---
+
+## 2026-05-06 — Decision 0163: Remove required-gate runtime and hook orchestration from Premath
+
+### Decision
+Remove the remaining Premath-owned local runtime and hook orchestration layer:
+
+- `tools/ci/run_required_checks.py`
+- `tools/ci/run_required_attested.py`
+- `tools/ci/run_gate.sh`
+- `hk.pkl`
+- `.githooks/pre-commit`
+- `ci-required`, `ci-required-attested`, `ci-check`, and hook-manager tasks
+- `runtimeRouteBindings` and `requiredDecision` command-surface bindings from
+  `CONTROL-PLANE-CONTRACT.json`
+- `op/ci.run_gate` and `op/ci.required_attested` from the doctrine operation
+  site
+- root-level `docs/design/*` compatibility stubs and the worker-orchestration
+  design node now owned by external runtime/control sites
+- the Premath raw Meta-Harness placement pointer now that MH ownership is
+  external to Premath
+
+Premath keeps required-checker semantics: projection, delta normalization,
+gate-ref construction, witness verification, witness decision, decision-chain
+verification, and instruction envelope checking.
+
+### Rationale
+Required-gate execution and hook management are workflow-site concerns. Keeping
+them in Premath made the checker repo appear responsible for running host
+effects, publishing local hook policy, and owning provider-neutral CI runtime
+shape.
+
+The durable Premath boundary is the checker contract:
+
+- given normalized inputs, project required semantic check IDs;
+- verify witness and decision payloads deterministically;
+- emit replayable accept/reject evidence.
+
+### Consequences
+- Runtime execution, hook installation, retry/escalation policy, and provider
+  artifact publication belong in Tusk or downstream operational sites.
+- Premath's `tools/ci` surface is reduced to contract/drift checks plus the
+  direct `run_task.sh` gate.
+- Doctrine operation reachability and coherence closure no longer include local
+  runtime runner paths.
+- Premath no longer carries compatibility stubs for moved design docs.
+
+---
+
+## 2026-05-06 — Decision 0164: Remove Python checker-client abstraction from Premath CI
+
+### Decision
+Remove the Python client abstraction over native Premath checker commands:
+
+- `tools/ci/core_cli_client.py`
+- Python unit tests for the deleted client wrappers around required projection,
+  required delta, gate-ref construction, required witness verification/decision,
+  instruction checking, and proposal checking
+
+The remaining Python conformance runners call the Rust `premath-cli` checker
+commands directly when fixture execution requires native semantics.
+
+### Rationale
+The client abstraction was a leftover runtime-adapter shape. It duplicated
+transport/error handling around Rust commands and made `tools/ci` look like a
+second checker API. Premath should expose native checker commands and conformance
+fixtures, not a parallel Python client layer over the same commands.
+
+### Consequences
+- The only remaining `tools/ci` Python surfaces are contract loading and
+  drift-budget checking.
+- Capability vectors still exercise instruction/proposal/required-witness
+  semantics through the Rust CLI.
+- Any future reusable client SDK belongs outside Premath or in a deliberate
+  profile, not as CI helper scaffolding.
+
+---
+
+## 2026-05-06 — Decision 0165: Remove `tools-test` wrapper task
+
+### Decision
+Remove the `tools-test` task and the remaining Python unit-test files that only
+rechecked contract/drift/conformance helper internals:
+
+- `tools/ci/test_control_plane_contract.py`
+- `tools/ci/test_drift_budget.py`
+- `tools/conformance/test_run_fixture_suites.py`
+- `tools/conformance/test_doctrine_site_contract.py`
+
+The baseline now relies on the executable closure itself: `coherence-check`,
+`ci-drift-budget-check`, `doctrine-check`, and `conformance-run`.
+
+### Rationale
+After removing runtime wrappers and Python checker clients, `tools-test` was a
+meta-test wrapper rather than a distinct Premath checker surface. Keeping it
+made `tools/ci` appear larger than the actual contract/drift boundary.
+
+### Consequences
+- `tools/ci` is reduced to task dispatch and task metadata.
+- Instruction/check fixtures use the real checker task name `coherence-check`
+  instead of the removed wrapper name.
+- Future helper-specific unit testing should be added only when it protects a
+  live contract not already covered by the executable gate.
+
+---
+
+## 2026-05-06 — Decision 0166: Move drift-budget sentinel into Premath CLI
+
+### Decision
+Replace the remaining Premath-owned CI Python drift surface with a native CLI
+checker:
+
+- add `premath drift-budget-check`,
+- route `sh tools/ci/run_task.sh ci-drift-budget-check` through that command,
+- delete `tools/ci/check_drift_budget.py`,
+- delete `tools/ci/control_plane_contract.py`,
+- remove the Python control-plane loader from the coherence-contract cache
+  input closure.
+
+### Rationale
+The Python drift checker and control-plane loader were the last `tools/ci`
+surfaces that made CI look like a second checker implementation. The reduced
+boundary is simpler: Premath CLI owns deterministic checker commands; `tools/ci`
+only dispatches named local tasks.
+
+### Consequences
+- `tools/ci` contains only `run_task.sh`, `baseline_tasks.json`, and README
+  metadata.
+- Drift-budget checking still covers spec/index maps, control-plane lane
+  bindings, KCIR mapping shape, required obligation parity, SigPi notation,
+  cache closure, and topology budgets.
+- Loader-vs-contract parity is removed because there is no longer a separate
+  Python loader authority to keep in sync.
+
+---
+
+## 2026-05-06 — Decision 0167: Collapse statement checker wrapper files
+
+### Decision
+Remove the standalone statement checker wrapper files:
+
+- `tools/conformance/run_statement_index_vectors.py`
+- `tools/conformance/run_statement_binding_vectors.py`
+- `tools/conformance/run_statement_kcir_vectors.py`
+
+Statement-index and statement-binding suites now use their checker files
+directly. Statement KCIR projection vectors are a mode of
+`tools/conformance/check_statement_index.py --kcir-fixtures`.
+
+### Rationale
+The deleted files were not independent semantic owners. They duplicated the
+statement checker surface as separate runner files and made the conformance
+directory look larger than the actual promoted checker boundary.
+
+### Consequences
+- `tools/conformance` has one statement-index checker surface for statement
+  extraction and statement KCIR projection vectors.
+- Statement binding and statement projection checks remain separate only where
+  they validate distinct binding/projection contracts.
+- Traceability rows point to the active checker commands instead of deleted
+  wrapper scripts.
+
+---
+
+## 2026-05-06 — Decision 0168: Remove stale root posture surfaces
+
+### Decision
+Delete the root-level historical posture files:
+
+- `COMMITMENT.md`
+- `RELEASE_NOTES.md`
+
+Remove both paths from the special root-document projection list in
+`premath-coherence`.
+
+### Rationale
+`COMMITMENT.md` duplicated the current README/SPEC-INDEX posture and referenced
+already-removed harness draft specs. `RELEASE_NOTES.md` was historical v0.1.0
+context and pointed at a non-existent root roadmap. Keeping them made the root
+surface look like it still carried old control-plane commitments.
+
+### Consequences
+- Root documentation authority is reduced to `README.md`, `AGENTS.md`, and
+  `LICENSE`.
+- Current lifecycle/boundary decisions remain in `specs/process/decision-log.md`
+  and promoted Premath specs.
+- Required-check projection no longer treats the deleted historical files as
+  special root documents.
+
+---
+
+## 2026-05-06 — Decision 0169: Remove Premath CI and conformance surfaces
+
+### Decision
+Delete the Premath-owned CI and conformance-runner surfaces and reduce the
+remaining promoted boundary to native checker commands:
+
+- delete `tools/ci`, `tools/conformance`, `.github`, `tests/ci`, raw CI specs,
+  instruction policies/envelopes, and CI witness capability fixtures,
+- remove native instruction/required-witness/required-decision command modules,
+- rename `draft/CONFORMANCE.md` to `draft/CHECKER-CLAIMS.md`,
+- rename retained fixture material from `tests/conformance` to `tests/checker`,
+- keep `required-projection` only as a local checker projection, not as CI
+  witness semantics.
+
+### Rationale
+Premath owns admissibility, Gate verdicts, deterministic witnesses, checker
+claims, and replay boundaries. It should not own provider workflows, runner
+wrappers, CI witness semantics, instruction execution, or suite-runner
+orchestration. Those belong to Tusk, Kurma, or downstream operational sites
+when needed.
+
+### Consequences
+- The active Premath check surface is direct Cargo plus `premath
+  traceability-check`, `premath coherence-check`, `premath drift-budget-check`,
+  `premath command-surface-check`, and `premath repo-hygiene-check`.
+- Checker fixtures remain as data under `tests/checker`; Python runner
+  orchestration is intentionally absent.
+- Runtime attestation, instruction execution, workflow dispatch, and provider
+  artifact publication must be reintroduced only in an owning site, not as
+  Premath core/profile surface.

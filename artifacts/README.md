@@ -4,9 +4,7 @@ Runtime-generated artifacts are written here.
 
 Current artifact classes:
 
-- `ciwitness/<instruction-id>.json`: CI instruction witness records emitted by
-  `tools/ci/run_instruction.sh`.
-- `observation/latest.json`: deterministic observation read model built from
-  CI witness artifacts (`premath observe-build`).
-- `observation/events.jsonl`: projection/event feed exported from the
-  observation surface (suitable for downstream query/index adapters).
+- No artifact class is tracked as Premath authority.
+- Local checker outputs are generated-only and should not be committed.
+- Runtime, observation, and provider artifacts belong in the owning
+  operational site.

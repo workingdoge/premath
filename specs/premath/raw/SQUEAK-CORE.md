@@ -38,11 +38,11 @@ between Premath worlds.
 
 Boundary:
 
-- `raw/TUSK-CORE` governs execution inside one world.
+- `draft/PREMATH-KERNEL` and `draft/GATE` govern local admissibility inside one world.
 - `raw/SQUEAK-CORE` governs world-to-world mapping and transport.
 - `raw/SQUEAK-SITE` governs runtime-location site structure (`Loc`, covers, overlap/glue).
-- `draft/HARNESS-RUNTIME` governs runtime control loops and delegates inter-world
-  dispatch through Squeak.
+- Downstream operator runtimes may delegate inter-world dispatch through Squeak;
+  Premath does not own those runtime control loops.
 
 `Squeak` is the operational SigPi layer.
 
@@ -95,22 +95,22 @@ Transported artifacts MUST include source lineage pointers (`src_world_id`,
 ### 4.1 Destination handoff (required)
 
 After transport, Squeak MUST hand destination-scoped artifacts to destination
-`tusk-core` admissibility checks.
+checker/Gate admissibility checks.
 
 Squeak MAY orchestrate this handoff directly or by delegation, but there is no
 separate semantic “bridge” authority. Handoff is part of Squeak transport
 responsibility.
 
-### 4.2 Harness interop route (required)
+### 4.2 Runtime orchestrator interop route (required)
 
-When Squeak is invoked from harness runtime orchestration, Squeak MUST:
+When Squeak is invoked by an external runtime orchestrator, Squeak MUST:
 
 1. consume deterministic handoff inputs (source world/context refs plus witness
    lineage refs),
 2. perform negotiation/transport under this spec,
-3. hand destination-scoped artifacts to destination `tusk-core` checks,
+3. hand destination-scoped artifacts to destination checker/Gate checks,
 4. return deterministic transport outcomes and destination evidence references to
-   harness projection surfaces.
+   the orchestrator's projection surfaces.
 
 This route is operational composition only and MUST NOT bypass destination
 admissibility checks.
@@ -175,7 +175,7 @@ transport failures as Gate failures.
 
 Squeak transport NEVER grants local admissibility.
 
-Destination-world admissibility MUST still be checked by destination `tusk-core`
+Destination-world admissibility MUST still be checked by destination checker/Gate
 under destination policy bindings.
 
 TransportWitness certifies transport compatibility only.
@@ -231,7 +231,7 @@ Preserved morphisms:
 
 Not preserved:
 
-- `dm.refine.context` (handled locally by world/kernel and `raw/TUSK-CORE`)
-- `dm.refine.cover` (handled locally by world/kernel and `raw/TUSK-CORE`)
+- `dm.refine.context` (handled locally by world/kernel/Gate)
+- `dm.refine.cover` (handled locally by world/kernel/Gate)
 - `dm.transport.location` (handled by `raw/SQUEAK-SITE`)
 - `dm.presentation.projection` (handled by projection layer)

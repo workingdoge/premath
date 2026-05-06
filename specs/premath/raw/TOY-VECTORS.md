@@ -26,8 +26,8 @@ This document is governed by the process in `../../process/coss.md`.
 
 ## 1. Purpose
 
-Premath conformance is ultimately established by **running code** on canonical
-vectors (`draft/CONFORMANCE`).
+Premath checker acceptance is ultimately established by **running code** on canonical
+vectors (`draft/CHECKER-CLAIMS`).
 
 Before a full KCIR compiler/verifier stack exists, it is useful to have a
 minimal, auditable, **semantic** vector suite that exercises the core Gate law
@@ -178,9 +178,9 @@ At minimum:
 Runners MAY ignore `message` and other non-key fields when comparing, but MUST
 enforce `class`, `lawRef`, and `witnessId`.
 
-## 5. Relationship to KCIR conformance
+## 5. Relationship to KCIR checker compatibility
 
-This suite is **not** a replacement for KCIR-based conformance.
+This suite is **not** a replacement for KCIR-based checker compatibility.
 
 It is a stopgap to lock the meaning of the Gate law classes while the KCIR
 compiler/verifier is developed.

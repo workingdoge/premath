@@ -52,7 +52,8 @@ The current host map is secondary to the shape layer:
 | Host | Default layer |
 | --- | --- |
 | candidate `simplex`; provisionally `fish/sites/nerve` | substrate language for simplex, boundary, incidence, patch, and local-to-global coherence |
-| `fish/sites/premath` | checker/kernel profile for admissibility decisions, witnesses, failures, and conformance |
+| `fish/sites/premath` | checker/kernel profile for admissibility decisions, witnesses, failures, and checker claims |
+| `fish/sites/kcir` | generic carrier-substrate vocabulary for durable artifacts, refs, rows, nodes, dependencies, normal forms, witness records, failure reports, and carrier profiles |
 | `kurma` | reusable carriage once a method becomes generally executable beyond one tool |
 | `tusk` | instrument layer for operator workflow, MCP/CLI/daemon surfaces, worker loops, repo binding, and compatibility adapters |
 | downstream repos | projection and proof under local product or operator policy |
@@ -121,7 +122,33 @@ Use these before making a repo decision:
 Do not route by overloaded nouns such as `tracker`, `memory`, `runtime`,
 `backend`, or `knowledge`. Decompose the noun into shape layers first.
 
-## 7. Compatibility Rule
+## 7. KCIR Worked Example
+
+KCIR should be modeled as a carrier-substrate site, not as a Premath submodule
+or a Kurma runtime package.
+
+KCIR shape:
+
+- `KCIRArtifact`: durable carried object after a source site has authored
+  meaning.
+- `KCIRRef`: stable artifact reference.
+- `KCIRNode`: typed payload member.
+- `KCIRDependency`: carried edge vocabulary.
+- `KCIRNormalForm`: normalized record over a carried artifact or node.
+- `KCIRWitnessRecord`: evidence record associated with a carried target.
+- `KCIRFailureReport`: preserved negative/obstructed evidence.
+
+Routing:
+
+| Slice | Shape layer | Host |
+| --- | --- | --- |
+| Premath admissibility law and Gate verdict | law/checker | `fish/sites/premath` |
+| Generic artifact/ref/node/dependency vocabulary | substrate | `fish/sites/kcir` |
+| Executable lowering, stores, codecs, normalizers, receipts | carriage | `kurma` |
+| Operator workflow around stable refs | instrument/projection | `tusk` |
+| Theory-specific `ObjNF`/`MorNF` meaning | law/substrate | source theory site, for example `fish/sites/nerve` |
+
+## 8. Compatibility Rule
 
 Compatibility surfaces are projections or adapters unless they explicitly carry
 the new authority object.
@@ -135,7 +162,7 @@ For the current tracker transition:
   expose operator tooling through Tusk.
 - Graph exports should be treated as derived compatibility views.
 
-## 8. Lane Wire Template
+## 9. Lane Wire Template
 
 Every consequential lane should declare:
 
@@ -153,17 +180,16 @@ landing boundary:
 
 This keeps repo placement subordinate to the architectural shape.
 
-## 9. Verification
+## 10. Verification
 
 This note is non-normative. It should remain coherent with:
 
 - `docs/design/control-plane/ATLAS.md`
+- `fish/sites/kcir/specs/draft/KCIR-0001-SUBSTRATE.md`
 - `fish/sites/atlas/specs/raw/ATLAS-0002-WORK-TRACKER-COVER.md`
 - `fish/sites/atlas/specs/raw/ATLAS-0003-SIMPLEX-FACTOR-CANDIDATE.md`
 - `specs/premath/raw/WORK-TRACKER-CHECKER-PROFILE.md`
 - `docs/design/control-plane/MEMORY-LANES-CONTRACT.md`
-- `docs/design/control-plane/ISSUE-GRAPH-CORE-CHECKING.md`
-- `docs/design/runtime/TUSK-ARCHITECTURE.md`
 - `specs/premath/draft/CONTROL-PLANE-CONTRACT.json`
 
 Future normative work should promote only the law-bearing portions into

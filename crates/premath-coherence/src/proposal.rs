@@ -612,7 +612,7 @@ mod tests {
             },
             "candidateRefs": ["obj:alpha"],
             "binding": {
-                "normalizerId": "normalizer.ci.v1",
+                "normalizerId": "normalizer.local.v1",
                 "policyDigest": "pol1_demo"
             }
         })
@@ -668,7 +668,7 @@ mod tests {
             },
             "candidateRefs": [],
             "binding": {
-                "normalizerId": "normalizer.ci.v1",
+                "normalizerId": "normalizer.local.v1",
                 "policyDigest": "pol1_demo"
             }
         });

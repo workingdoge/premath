@@ -84,7 +84,7 @@ fn jcs_serialize(value: &Value) -> Vec<u8> {
     // - canonical number formatting
     // - sorted keys (BTreeMap default)
     //
-    // This is sufficient for RFC 8785 conformance for our use case
+    // This is sufficient for RFC 8785 compatibility for our use case
     // (integer schema, string values, null, and small context objects).
     jcs_serialize_value(value)
 }
@@ -276,7 +276,7 @@ pub struct GateResult {
     /// Schema version (always 1).
     pub witness_schema: u32,
 
-    /// Conformance profile.
+    /// Checker profile.
     pub profile: String,
 
     /// "accepted" or "rejected".

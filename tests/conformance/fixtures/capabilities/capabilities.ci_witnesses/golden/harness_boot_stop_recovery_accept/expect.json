@@ -1,8 +1,0 @@
-{
-  "schema": 1,
-  "status": "executable",
-  "result": "accepted",
-  "assertions": [
-    "harness session bootstrap mode and stop/handoff recovery mapping are deterministic"
-  ]
-}

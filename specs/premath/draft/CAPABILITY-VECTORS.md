@@ -2,13 +2,13 @@
 slug: draft
 shortname: CAPABILITY-VECTORS
 title: workingdoge.com/premath/CAPABILITY-VECTORS
-name: Optional Capability Conformance Vectors
+name: Optional Capability Checker Vectors
 status: draft
 category: Standards Track
 tags:
   - premath
   - kernel
-  - conformance
+  - checker-claims
 editor: arj <arj@workingdoge.com>
 contributors: []
 ---
@@ -41,11 +41,11 @@ deterministically (no silent fallback).
 Active capability identifiers are exact claim tokens declared in
 `draft/CAPABILITY-REGISTRY.json`.
 Implementations MAY expose them as namespaced manifest keys (for example
-`capabilities.normal_forms`), but conformance checks them as exact identifiers.
+`capabilities.normal_forms`), but checker checks them as exact identifiers.
 
 Sections 2.1-2.3 are inactive extension notes retained to preserve pre-registry
 design intent. They are not active capability claim tokens and MUST NOT be
-asserted as conformance claims unless a future `draft/CAPABILITY-REGISTRY.json`
+asserted as checker claims unless a future `draft/CAPABILITY-REGISTRY.json`
 entry promotes them.
 
 ### 2.1 Inactive extension note: `capabilities.pull_atom_mor`
@@ -55,7 +55,7 @@ Meaning:
 - MorNF tag `0x16` (`PullAtom`) is accepted (see `draft/NF`).
 - MOR pull classification may use `PullAtom` fusion (see `draft/NORMALIZER`).
 - Former draft flag: `adoptPullAtomMor`.
-- Current status: not an active conformance claim.
+- Current status: not an active checker-claims surface.
 
 Future vectors if promoted and NOT claimed:
 
@@ -73,7 +73,7 @@ Future vectors if promoted and claimed:
 Meaning:
 
 - The optional hyperdescent strengthening specified in `raw/HYPERDESCENT`.
-- Current status: raw proposal, not an active conformance claim.
+- Current status: raw proposal, not an active checker-claims surface.
 
 Future vectors if promoted and NOT claimed:
 
@@ -90,7 +90,7 @@ Future vectors if promoted and claimed:
 Meaning:
 
 - The optional universe/comprehension extension specified in `raw/UNIVERSE`.
-- Current status: raw proposal, not an active conformance claim.
+- Current status: raw proposal, not an active checker-claims surface.
 
 This repository bundle does not yet standardize an operational code format for universes.
 Vectors for this capability are deferred until a code/cert format is specified.
@@ -160,9 +160,6 @@ Meaning:
   (`Delta -> requiredChecks`) with stable projection digest material.
 - Provider-wrapper environments (local and mapped external env) preserve the
   same projection/references for the same semantic delta.
-- Tool-calling harness typestate closure/mutation-gate enforcement
-  (`draft/HARNESS-TYPESTATE`) is currently exercised within this same capability
-  claim surface.
 - This capability expresses operational change-morphism discipline for gate
   selection; it does not alter kernel admissibility semantics.
 
@@ -174,41 +171,15 @@ Required vectors when NOT claimed:
 Required vectors when claimed:
 
 - golden: deterministic required-check projection for representative deltas
-  (docs-only, kernel-touch, conformance-touch, unknown-surface fallback,
+  (docs-only, kernel-touch, checker-touch, unknown-surface fallback,
   mixed known+unknown fail-closed baseline fallback).
 - golden: provider env mapping (direct vs mapped GitHub env) yields equivalent
   projection/reference material.
-- golden: work-memory mutation morphisms preserve deterministic claim/discover
-  transitions (`issue_claim` and `issue_discover` non-loss linkage), including
-  lease binding (`lease_id`, owner, expiry) for multiagent claim discipline.
-- golden: deterministic lease lifecycle mutations preserve coherent claim
-  ownership transitions for `issue_lease_renew` and `issue_lease_release`
-  operations.
-- golden: deterministic lease projection separates stale leases from contended
-  active leases.
-- golden: CLI issue command-surface parity preserves coherent
-  `issue_ready`/`issue_blocked` partition semantics over the same graph state.
-- golden: same-owner active claim preserves existing `lease_id` (no overwrite
-  churn) under deterministic renewal/claim paths.
 - adversarial: requesting change-morphism projection checks without claim rejects
   deterministically.
-- adversarial: active lease contention rejects deterministically
-  (`lease_contention_active`).
-- adversarial: same-owner active claim override attempts reject deterministic
-  transition checks (`issue_claim_transition_mismatch`).
-- adversarial: stale renew or mismatched lease-owner/lease-id release requests
-  reject deterministically (`lease_stale`, `lease_owner_mismatch`,
-  `lease_id_mismatch`).
-- adversarial: work-memory discover morphism rejects when parent lineage is
-  missing.
-- adversarial: incoherent stale/contended lease projection expectations reject
-  deterministically (`lease_stale_set_mismatch`, `lease_contended_set_mismatch`).
-- adversarial: incoherent `issue_ready`/`issue_blocked` partition expectations
-  reject with deterministic failure classification (`issue_ready_set_mismatch`
-  and `issue_blocked_set_mismatch`).
 - invariance: paired profile outputs for the same semantic scenario preserve
   kernel verdict and Gate failure classes (local/external and provider-wrapper
-  invariance), including same-owner active lease-id preservation rows.
+  invariance).
 
 ### 2.8 `capabilities.squeak_site`
 
@@ -235,55 +206,7 @@ Required vectors when claimed:
 - invariance: local and external runtime profiles preserve kernel verdict and
   Gate failure classes for the same semantic scenario.
 
-### 2.9 `capabilities.ci_witnesses`
-
-Meaning:
-
-- The implementation supports instruction-envelope CI witness artifacts in the
-  higher-order CI loop (`raw/PREMATH-CI`).
-- This capability checks:
-  - deterministic instruction-witness binding, and
-  - deterministic required-gate witness verification/decision attestation over
-    projected checks.
-- It does not alter kernel admissibility semantics.
-
-Required vectors when NOT claimed:
-
-- adversarial: explicit requests for CI witness determinism/verification checks
-  reject deterministically.
-
-Required vectors when claimed:
-
-- golden: same instruction envelope yields stable verdict class and stable
-  required/executed check sets.
-- golden: required-gate witness verification succeeds for matching projection,
-  gate witness refs, and native required-check bindings.
-- golden: strict-delta compare and decision-attestation chain are stable for
-  fixed inputs.
-- golden: boundary authority lineage remains coherent across kernel obligation
-  registry mapping, proposal discharge classes, coherence checker scope
-  obligations, and CI semantic witness failure classes.
-- golden: cross-layer obstruction rows roundtrip deterministically between
-  source failure classes and typed constructors (`semantic`, `structural`,
-  `lifecycle`, `commutation`) with stable issue-discovery tags.
-- golden: harness v1 boot/stop/recovery rows preserve deterministic bootstrap
-  mode, recovery action mapping, and stop-row lease handoff witness linkage.
-- adversarial: mismatched verdict class or required/executed check sets for the
-  same instruction envelope reject deterministically.
-- adversarial: required-gate witness digest/source/projection mismatches reject
-  deterministically.
-- adversarial: obligation-registry mapping mismatches reject deterministically.
-- adversarial: stale generated doctrine-site digest material rejects
-  deterministically.
-- adversarial: obstruction constructor/class roundtrip mismatches reject
-  deterministically.
-- adversarial: harness v1 bootstrap-mode mismatch and missing lease-handoff refs
-  reject deterministically.
-- invariance: local/external execution profiles preserve kernel verdict and Gate
-  failure classes for paired instruction, required-gate, and boundary-authority
-  lineage scenarios, including harness recovery rows.
-
-### 2.10 `capabilities.instruction_typing`
+### 2.9 `capabilities.instruction_typing`
 
 Meaning:
 
@@ -317,7 +240,7 @@ Required vectors when claimed:
 - invariance: local/external instruction-typing execution profiles preserve
   kernel verdict and Gate failure classes for paired scenarios.
 
-### 2.11 `capabilities.adjoints_sites`
+### 2.10 `capabilities.adjoints_sites`
 
 Meaning:
 

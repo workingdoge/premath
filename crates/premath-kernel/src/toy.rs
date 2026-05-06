@@ -1,6 +1,6 @@
-//! Toy bit-worlds for Gate conformance testing.
+//! Toy bit-worlds for Gate checker testing.
 //!
-//! These are the Rust-native toy semantics used by Gate conformance vectors.
+//! These are the Rust-native toy semantics used by Gate checker vectors.
 //! The Python toy-world helpers are now adapter-only and must preserve this
 //! behavior when decoding KCIR-shaped fixtures.
 //!
